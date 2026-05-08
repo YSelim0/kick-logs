@@ -1,0 +1,4 @@
+interface:
+  display_name: "Commit Message Conventions"
+  short_description: "Use project commit naming rules."
+  default_prompt: "Use this skill when preparing or creating git commits."
