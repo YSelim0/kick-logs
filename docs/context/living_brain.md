@@ -8,7 +8,11 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Commit convention skill exists under `.agents/skills/commit-message-conventions`.
 - The first local commit was created:
   - `679d936 feat(repo): add commit convention skill`
+- Latest local commit:
+  - `8a32d8d feat(docs): add search design guidelines`
 - The project implementation has not been scaffolded yet.
+- Sequential implementation plan exists at `docs/implementation_plan.md`.
+- Phase task files exist under `docs/tasks/phase1_tasks.md` through `docs/tasks/phase10_tasks.md`.
 
 ## Kick Chat Ingestion Method
 
@@ -87,6 +91,8 @@ Build an MVP monorepo with:
 ## Operational Rules
 
 - Every agent must read `AGENTS.md` and context files before making changes.
+- Every implementation agent must read `docs/implementation_plan.md` and the matching phase task file before changing files.
+- Phase task files are scoped handoff contracts; do not implement work from a later phase unless the user explicitly changes the plan.
 - Keep documentation and context current with implementation changes.
 - Update `docs/context/recent_changes.md` with a short latest-change handoff after each meaningful change.
 - Multi-agent work is allowed for non-overlapping scopes; assign clear file/subsystem ownership and integrate outputs before committing.

@@ -37,6 +37,7 @@ docker compose up --build
 - Python dependency/project tooling uses `uv`.
 - Frontend package management uses `pnpm`.
 - Detailed backend/frontend structure lives in `docs/architecture.md`.
+- Sequential implementation phases and handoff task files live in `docs/implementation_plan.md` and `docs/tasks/`.
 
 ## Docker Services
 

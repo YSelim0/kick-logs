@@ -49,3 +49,5 @@
 - Parse `[emote:id:name]` tokens and render image fallback URLs.
 - Use `/search`, `/admin`, and reserve `/` for later landing content.
 - Allow multi-agent development for non-overlapping work scopes.
+- Use `docs/implementation_plan.md` as the sequential MVP implementation plan.
+- Use `docs/tasks/phaseN_tasks.md` files as phase-scoped task contracts; agents must not cross into later phase scope without explicit direction.

@@ -21,3 +21,5 @@ This is a living implementation log. Add new entries for each meaningful project
 - Refined search design guidance so the provided reference image is used for form structure only, while the app keeps its dark `#26001B` / `#FFF600` palette and avoids blur, glow, and oversized typography.
 - Refined `/search` result design to use one outer list container with stacked message rows, circular avatars, inline emotes, and adjusted spacing below the search button.
 - Clarified route access: `/search` is public, while `/admin` is the authenticated backend management dashboard for operational tasks like followed-channel management.
+- Added `docs/implementation_plan.md` and phase-scoped task files from `docs/tasks/phase1_tasks.md` through `docs/tasks/phase10_tasks.md`.
+- Updated agent instructions so implementation agents read the plan and only the matching phase task file before working.
