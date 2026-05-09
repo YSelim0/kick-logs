@@ -27,3 +27,7 @@ This is a living implementation log. Add new entries for each meaningful project
 ## 2026-05-10
 
 - Locked Phase 1 Docker Compose scope to `postgres` and `api` only; `web` and `listener` services must be added later in their owning phases, with no placeholder services.
+- Started Phase 1 by adding root local development defaults:
+  - `.gitignore`
+  - `.env.example`
+  - `README.md`
