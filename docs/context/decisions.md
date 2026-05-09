@@ -18,6 +18,22 @@
 - Use Next.js for frontend.
 - Use pnpm as frontend package manager.
 - Use Tailwind, shadcn/ui, and lucide-react for frontend UI.
+- Defer UI implementation until the backend API is working end-to-end.
+- Use `docs/design/design.md` as the source of truth for UI/UX decisions.
+- Use a fixed dark-only UI theme.
+- Use UI palette `#26001B`, `#810034`, `#FF005C`, `#FFF600`, black, and white.
+- Prefer `#FFF600` for primary buttons.
+- Do not use blur, glow, colored lighting, or atmospheric background effects.
+- Keep UI typography compact; do not use landing-page-scale text in app screens.
+- Keep button/control corner radii modest for a serious professional feel.
+- Use the provided search UI reference as structural guidance only; do not copy the green visual style exactly.
+- Design the `/search` screen first and wait for approval before designing admin panel screens.
+- Use the user-provided logo asset where a product mark is needed.
+- Search results use one shared outer list container with stacked message rows, not per-message modal/card components.
+- Sender avatars in search results should be fully circular.
+- Emotes should render inline where they appear in message content.
+- `/search` is public and does not require login.
+- `/admin` is an authenticated backend management dashboard for operational tasks such as managing followed channels.
 - Implement admin authentication in MVP; production hardening can be refined later.
 - Use Kick web Pusher chat events, not official Kick webhooks, for MVP ingestion.
 - Use commit message format `feat(scope): title`.
@@ -32,3 +48,4 @@
 - Enrich sender profile images through Kick web endpoints when possible.
 - Parse `[emote:id:name]` tokens and render image fallback URLs.
 - Use `/search`, `/admin`, and reserve `/` for later landing content.
+- Allow multi-agent development for non-overlapping work scopes.

@@ -257,6 +257,11 @@ Endpoint:
 GET /messages?sender=&channel=&q=&start=&end=&cursor=&limit=
 ```
 
+Access:
+
+- Public endpoint for the public `/search` screen.
+- No login is required to search historical messages.
+
 Rules:
 
 - All filters are optional.
@@ -293,6 +298,7 @@ Rules:
 - Passwords are hashed with Passlib.
 - `super_admin` can create admin users.
 - Admin routes require authenticated admin or super admin user.
+- Public search routes do not require authentication.
 - Login route returns user info and sets the session cookie.
 
 ## Listener Runtime
@@ -365,26 +371,29 @@ Frontend rules:
 - Use lucide-react icons for UI controls.
 - Use Tailwind for layout and visual styling.
 - Keep `/` reserved for a later landing page.
-- `/search` is the primary app screen.
-- `/admin` requires login.
+- `/search` is the primary public app screen.
+- `/admin` requires login and manages backend operational state such as followed channels.
 
 ## Frontend UI Direction
 
-Search UI should follow the dark/neon-green reference provided during planning:
+Search UI should follow the dark professional palette documented in `docs/design/design.md`:
 
 - dark background
-- neon green labels/icons/actions
+- yellow primary actions
+- restrained pink accent icons
 - compact form-first layout
 - fields for user nickname, channel nickname, keyword, start datetime, end datetime
 - infinite scroll results below the search form
 
-Result cards show:
+Result rows render inside one shared outer list container and show:
 
 - sender avatar
 - sender nickname
 - channel nickname/slug
 - timestamp
 - content with emote image rendering and fallback
+
+Avoid per-message modal/card components in the high-volume message list. Keep rows dense, with a flexible message column and fixed metadata columns.
 
 ## Docker Runtime
 
@@ -424,4 +433,3 @@ Docker:
 - Verify API health route.
 - Verify web route loads.
 - Verify PostgreSQL volume persists data.
-

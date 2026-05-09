@@ -15,3 +15,9 @@ This is a living implementation log. Add new entries for each meaningful project
 - Expanded MVP plan with auth, search semantics, date filters, full payload storage, sender profile enrichment, emote rendering fallback, and one-worker listener model.
 - Added `docs/context/recent_changes.md` as the short latest-change handoff file and linked it from `AGENTS.md`.
 - Added architecture plan covering clean architecture backend structure, SQLAlchemy/Alembic ORM choice, listener entrypoint, frontend structure, and Docker runtime shape.
+- Added UI design guide under `docs/design/design.md` and documented the backend-first development rule.
+- Documented that multi-agent development is allowed for non-overlapping work scopes.
+- Added search screen design to `docs/design/design.pen` and updated UI palette/rules.
+- Refined search design guidance so the provided reference image is used for form structure only, while the app keeps its dark `#26001B` / `#FFF600` palette and avoids blur, glow, and oversized typography.
+- Refined `/search` result design to use one outer list container with stacked message rows, circular avatars, inline emotes, and adjusted spacing below the search button.
+- Clarified route access: `/search` is public, while `/admin` is the authenticated backend management dashboard for operational tasks like followed-channel management.

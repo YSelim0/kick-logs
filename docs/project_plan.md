@@ -48,6 +48,7 @@ docker compose up --build
 ## Auth And Admin
 
 - Full login system is required for MVP.
+- Login is required only for admin/backend management flows, not for public search.
 - Roles:
   - `super_admin`
   - `admin`
@@ -59,11 +60,14 @@ docker compose up --build
   - `DEFAULT_SUPER_ADMIN_PASSWORD`
 - Passwords must be hashed, never stored as plain text.
 - Super admin can create new admin users from the UI.
-- Admin panel route: `/admin`.
+- Admin dashboard route: `/admin`.
+- Admin dashboard manages backend operational state, including followed channels for ingestion.
 
 ## Search Behavior
 
 Search route: `/search`.
+
+The `/search` screen is public and does not require login. It exposes historical chat search to any visitor.
 
 Search API:
 
@@ -162,19 +166,19 @@ If the image fails, fall back to emote name or original token.
 ## Frontend Draft
 
 - `/search`: primary app search screen.
-- `/admin`: authenticated admin panel.
+- `/admin`: authenticated admin dashboard for backend operations.
 - `/`: reserved for a future landing page.
 
-Search UI follows the dark/neon-green reference provided during planning:
+Search UI follows the dark professional palette documented in `docs/design/design.md`:
 
 - `Kullanıcı Adı`
 - `Kanal Adı`
 - `Aramak istediğiniz kelime`
 - `Başlangıç`
 - `Bitiş`
-- green search button with lucide search icon
+- yellow search button with lucide search icon
 
-Result cards should show:
+Result rows should render inside one shared outer list container and show:
 
 - sender avatar
 - sender nickname
@@ -182,9 +186,12 @@ Result cards should show:
 - timestamp
 - message content with emote image rendering/fallback
 
+Do not render each message as its own modal-like card. The list should stay dense and efficient for many messages.
+
 Admin UI should support:
 
 - login
+- backend operational management
 - followed channel list
 - add channel by slug/nickname
 - remove/disable channel

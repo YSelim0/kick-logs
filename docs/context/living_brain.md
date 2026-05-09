@@ -48,6 +48,20 @@ Build an MVP monorepo with:
 - Domain entities stay independent from SQLAlchemy, FastAPI, Pydantic, and external clients.
 - Frontend uses Next.js App Router with feature-oriented folders and shadcn/ui primitives in `components/ui`.
 
+## Design Direction
+
+- UI implementation is deferred until the backend API and listener are working end-to-end.
+- `docs/design/design.md` is the source of truth for future UI and UX decisions.
+- Any future UI/frontend agent must read `docs/design/design.md` before changing frontend code.
+- The UI is dark-only with palette `#26001B`, `#810034`, `#FF005C`, `#FFF600`, black, and white.
+- Primary buttons should use `#FFF600`.
+- Do not use blur, glow, colored lighting, or atmospheric background effects.
+- The provided search screenshot is a layout/workflow reference only; do not copy its green visual style exactly.
+- The user-provided logo should be used where a product mark is needed.
+- The search screen is the first design target in `docs/design/design.pen`; admin panel screens should not be designed until the search screen is approved.
+- Search results should render as dense rows inside one shared outer container, not as separate modal/card components per message.
+- Sender avatars should be circular, and emotes should render inline at their message positions.
+
 ## Locked Product Decisions
 
 - Store messages indefinitely.
@@ -56,7 +70,9 @@ Build an MVP monorepo with:
   - email: `admin@kicklogs.local`
   - password: `admin123`
 - Allow env override for default super admin credentials.
-- Use `/search` for the app search screen, `/admin` for admin, and reserve `/` for a future landing page.
+- Use `/search` for the public app search screen, `/admin` for authenticated backend management, and reserve `/` for a future landing page.
+- `/search` does not require login.
+- `/admin` manages backend operational state such as followed channels and admin users.
 - Search filters are optional and combined with `AND`:
   - sender nickname
   - channel nickname/slug
@@ -73,5 +89,6 @@ Build an MVP monorepo with:
 - Every agent must read `AGENTS.md` and context files before making changes.
 - Keep documentation and context current with implementation changes.
 - Update `docs/context/recent_changes.md` with a short latest-change handoff after each meaningful change.
+- Multi-agent work is allowed for non-overlapping scopes; assign clear file/subsystem ownership and integrate outputs before committing.
 - Commit after each completed unit of work when requested.
 - User will manually push commits.
