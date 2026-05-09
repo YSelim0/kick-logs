@@ -51,3 +51,4 @@
 - Allow multi-agent development for non-overlapping work scopes.
 - Use `docs/implementation_plan.md` as the sequential MVP implementation plan.
 - Use `docs/tasks/phaseN_tasks.md` files as phase-scoped task contracts; agents must not cross into later phase scope without explicit direction.
+- Do not add placeholder `web` or `listener` services in Phase 1; add each service only in its owning phase.

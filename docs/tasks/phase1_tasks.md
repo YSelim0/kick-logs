@@ -24,7 +24,7 @@ Do not implement database tables, auth, admin APIs, message search, listener log
   - [ ] `api` service built from `apps/api`, depending on `postgres`.
   - [ ] API env wired from `.env`/defaults.
   - [ ] API port exposed for local development.
-  - [ ] No `web` or `listener` service yet unless they are inert placeholders that do not fail startup.
+  - [ ] No `web`, `listener`, or placeholder services in Phase 1.
 - [ ] Scaffold `apps/api` as a `uv` Python project:
   - [ ] `pyproject.toml` with FastAPI, Uvicorn, Pydantic settings, pytest, pytest-asyncio, ruff or equivalent dev tooling.
   - [ ] Package layout under `apps/api/src/kick_logs/`.

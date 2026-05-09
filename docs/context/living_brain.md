@@ -9,10 +9,11 @@ This file is the active project memory. Keep it updated whenever project behavio
 - The first local commit was created:
   - `679d936 feat(repo): add commit convention skill`
 - Latest local commit:
-  - `8a32d8d feat(docs): add search design guidelines`
+  - `5f24f5f feat(docs): add implementation plan`
 - The project implementation has not been scaffolded yet.
 - Sequential implementation plan exists at `docs/implementation_plan.md`.
 - Phase task files exist under `docs/tasks/phase1_tasks.md` through `docs/tasks/phase10_tasks.md`.
+- Phase 1 Compose scope is only `postgres` and `api`; do not add placeholder `web` or `listener` services early.
 
 ## Kick Chat Ingestion Method
 

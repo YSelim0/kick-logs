@@ -23,3 +23,7 @@ This is a living implementation log. Add new entries for each meaningful project
 - Clarified route access: `/search` is public, while `/admin` is the authenticated backend management dashboard for operational tasks like followed-channel management.
 - Added `docs/implementation_plan.md` and phase-scoped task files from `docs/tasks/phase1_tasks.md` through `docs/tasks/phase10_tasks.md`.
 - Updated agent instructions so implementation agents read the plan and only the matching phase task file before working.
+
+## 2026-05-10
+
+- Locked Phase 1 Docker Compose scope to `postgres` and `api` only; `web` and `listener` services must be added later in their owning phases, with no placeholder services.

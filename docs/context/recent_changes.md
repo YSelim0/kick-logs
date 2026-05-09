@@ -4,24 +4,12 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
-- Added `docs/implementation_plan.md` as the sequential MVP execution plan.
-- Added phase-scoped task files under `docs/tasks/`:
-  - `phase1_tasks.md` through `phase10_tasks.md`
-- Phase order is backend-first:
-  - backend/Docker foundation
-  - database/domain/repositories
-  - auth/admin users
-  - channel/search/ingestion APIs
-  - listener worker
-  - backend acceptance
-  - frontend foundation
-  - public search UI
-  - admin dashboard
-  - full-stack polish
-- `AGENTS.md` now requires agents to read the implementation plan and the matching phase task file before implementation work.
-- Task files explicitly forbid crossing into later phase scope unless the user changes the plan.
+- Phase 1 Docker Compose scope is locked to `postgres` and `api` only.
+- Do not add `web`, `listener`, or placeholder services in Phase 1.
+- `listener` is added in Phase 5, and `web` is added in Phase 7 when those phases own the work.
+- The implementation plan and phase task files remain the execution source of truth.
 
 ## Commit Context
 
 - Last committed docs unit:
-  - `8a32d8d feat(docs): add search design guidelines`
+  - `5f24f5f feat(docs): add implementation plan`
