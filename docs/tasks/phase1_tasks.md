@@ -16,40 +16,42 @@ Do not implement database tables, auth, admin APIs, message search, listener log
 ## Tasks
 
 - [ ] Create root development files:
-  - [ ] `.gitignore` excluding `.env`, virtual environments, `__pycache__`, `.pytest_cache`, build outputs, logs, dependency folders.
-  - [ ] `.env.example` with non-secret local defaults for database URL, API settings, JWT placeholder, and default super admin env names.
-  - [ ] `README.md` with local prerequisites, Docker startup command, backend-only health check, and commit/push note.
-- [ ] Create `compose.yaml` with:
-  - [ ] `postgres` service using PostgreSQL and a named volume.
-  - [ ] `api` service built from `apps/api`, depending on `postgres`.
-  - [ ] API env wired from `.env`/defaults.
-  - [ ] API port exposed for local development.
-  - [ ] No `web`, `listener`, or placeholder services in Phase 1.
-- [ ] Scaffold `apps/api` as a `uv` Python project:
-  - [ ] `pyproject.toml` with FastAPI, Uvicorn, Pydantic settings, pytest, pytest-asyncio, ruff or equivalent dev tooling.
-  - [ ] Package layout under `apps/api/src/kick_logs/`.
-  - [ ] Empty clean architecture folders matching `docs/architecture.md`.
-- [ ] Implement backend foundation:
-  - [ ] Settings object in `core/config.py`.
-  - [ ] Logging setup in `core/logging.py`.
-  - [ ] FastAPI app factory in `presentation/http/app.py`.
-  - [ ] Entrypoint in `main.py`.
-  - [ ] `GET /health` returning stable JSON such as `{"status":"ok"}`.
-- [ ] Add container files:
-  - [ ] `apps/api/Dockerfile` for local dev.
-  - [ ] Volume mount or dev command for hot reload.
-- [ ] Add minimal tests:
-  - [ ] Health route test.
-  - [ ] Settings import test.
-  - [ ] App factory import test.
+  - [x] `.gitignore` excluding `.env`, virtual environments, `__pycache__`, `.pytest_cache`, build outputs, logs, dependency folders.
+  - [x] `.env.example` with non-secret local defaults for database URL, API settings, JWT placeholder, and default super admin env names.
+  - [x] `README.md` with local prerequisites, Docker startup command, backend-only health check, and commit/push note.
+- [x] Create `compose.yaml` with:
+  - [x] `postgres` service using PostgreSQL and a named volume.
+  - [x] `api` service built from `apps/api`, depending on `postgres`.
+  - [x] API env wired from `.env`/defaults.
+  - [x] API port exposed for local development.
+  - [x] No `web`, `listener`, or placeholder services in Phase 1.
+- [x] Scaffold `apps/api` as a `uv` Python project:
+  - [x] `pyproject.toml` with FastAPI, Uvicorn, Pydantic settings, pytest, pytest-asyncio, ruff or equivalent dev tooling.
+  - [x] Package layout under `apps/api/src/kick_logs/`.
+  - [x] Empty clean architecture folders matching `docs/architecture.md`.
+- [x] Implement backend foundation:
+  - [x] Settings object in `core/config.py`.
+  - [x] Logging setup in `core/logging.py`.
+  - [x] FastAPI app factory in `presentation/http/app.py`.
+  - [x] Entrypoint in `main.py`.
+  - [x] `GET /health` returning stable JSON such as `{"status":"ok"}`.
+- [x] Add container files:
+  - [x] `apps/api/Dockerfile` for local dev.
+  - [x] Volume mount or dev command for hot reload.
+- [x] Add minimal tests:
+  - [x] Health route test.
+  - [x] Settings import test.
+  - [x] App factory import test.
 
 ## Acceptance Criteria
 
 - [ ] `docker compose up --build postgres api` starts without frontend/listener.
-- [ ] `GET /health` returns success.
-- [ ] `uv run pytest` from `apps/api` passes.
-- [ ] No business logic from later phases is implemented.
-- [ ] Docs/context are updated with what was created.
+- [x] `GET /health` returns success.
+- [x] `uv run pytest` from `apps/api` passes.
+- [x] No business logic from later phases is implemented.
+- [x] Docs/context are updated with what was created.
+
+Note: `docker compose config --services` was verified and returned only `postgres` and `api`. Live `docker compose up --build postgres api` verification is pending because the local Docker daemon was not running during this phase.
 
 ## Handoff
 

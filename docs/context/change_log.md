@@ -37,3 +37,14 @@ This is a living implementation log. Add new entries for each meaningful project
   - settings and logging core modules
   - FastAPI app factory and `GET /health`
   - minimal tests for settings, app factory, and health route
+- Added Phase 1 Docker runtime files:
+  - root `compose.yaml` with `postgres` and `api` services only
+  - `apps/api/Dockerfile`
+  - `apps/api/.dockerignore`
+  - API hot reload volume setup through Docker Compose
+- Updated backend lint instructions in `README.md`.
+- Verified backend package import through `uv`.
+- Verified `uv run pytest` from `apps/api`: 3 tests passed.
+- Verified `uv run ruff check .` from `apps/api`: all checks passed.
+- Verified `docker compose config --services`: only `postgres` and `api` are present.
+- Attempted `docker compose up --build -d postgres api`, but live Docker startup is pending because the local Docker daemon was not running.

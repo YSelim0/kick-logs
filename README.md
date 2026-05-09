@@ -21,6 +21,8 @@ Frontend, listener runtime, auth, database models, admin APIs, and message searc
 - Python 3.12+
 - `uv`
 
+If `uv` was installed through `python -m pip install --user uv` and is not on `PATH`, either add the Python user `Scripts` directory to `PATH` or run commands as `python -m uv ...`.
+
 ## Environment
 
 Create a local `.env` from the committed example:
@@ -58,6 +60,20 @@ From the backend project directory:
 ```powershell
 cd apps/api
 uv run pytest
+```
+
+Equivalent fallback when `uv` is installed but not on `PATH`:
+
+```powershell
+cd apps/api
+python -m uv run pytest
+```
+
+Lint:
+
+```powershell
+cd apps/api
+uv run ruff check .
 ```
 
 ## Git Workflow

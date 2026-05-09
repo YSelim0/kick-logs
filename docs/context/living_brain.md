@@ -6,14 +6,20 @@ This file is the active project memory. Keep it updated whenever project behavio
 
 - Repository `kick-logs` has been initialized locally.
 - Commit convention skill exists under `.agents/skills/commit-message-conventions`.
-- The first local commit was created:
-  - `679d936 feat(repo): add commit convention skill`
-- Latest local commit:
-  - `5f24f5f feat(docs): add implementation plan`
-- The project implementation has not been scaffolded yet.
+- Phase 1 backend/Docker foundation implementation has started.
+- Root local development defaults are committed.
+- `apps/api` contains the initial FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
+- Root `compose.yaml` has only the Phase 1 services:
+  - `postgres`
+  - `api`
 - Sequential implementation plan exists at `docs/implementation_plan.md`.
 - Phase task files exist under `docs/tasks/phase1_tasks.md` through `docs/tasks/phase10_tasks.md`.
 - Phase 1 Compose scope is only `postgres` and `api`; do not add placeholder `web` or `listener` services early.
+- Local verification:
+  - `uv run pytest` passes from `apps/api`.
+  - `uv run ruff check .` passes from `apps/api`.
+  - `docker compose config --services` returns only `postgres` and `api`.
+  - `docker compose up --build -d postgres api` is pending because the local Docker daemon was not running.
 
 ## Kick Chat Ingestion Method
 

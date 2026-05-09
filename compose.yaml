@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-kick_logs}
+      POSTGRES_USER: ${POSTGRES_USER:-kick_logs}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kick_logs}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+    environment:
+      APP_NAME: ${APP_NAME:-Kick Logs}
+      APP_ENV: ${APP_ENV:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://kick_logs:kick_logs@postgres:5432/kick_logs}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-for-local-development}
+      JWT_COOKIE_NAME: ${JWT_COOKIE_NAME:-kick_logs_session}
+      DEFAULT_SUPER_ADMIN_EMAIL: ${DEFAULT_SUPER_ADMIN_EMAIL:-admin@kicklogs.local}
+      DEFAULT_SUPER_ADMIN_PASSWORD: ${DEFAULT_SUPER_ADMIN_PASSWORD:-admin123}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - ./apps/api:/app
+      - api_venv:/app/.venv
+    command:
+      - uv
+      - run
+      - uvicorn
+      - kick_logs.main:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --reload
+
+volumes:
+  postgres_data:
+  api_venv:
