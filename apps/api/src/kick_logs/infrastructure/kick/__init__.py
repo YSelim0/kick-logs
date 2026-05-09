@@ -1,0 +1,1 @@
+"""Kick integration infrastructure."""

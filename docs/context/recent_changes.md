@@ -4,13 +4,12 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
-- Phase 1 implementation has started.
-- Root local development defaults were added:
-  - `.gitignore`
-  - `.env.example`
-  - `README.md`
+- Phase 1 API scaffold is in progress.
+- `apps/api` now contains a FastAPI skeleton, settings/logging modules, `GET /health`, and minimal tests.
 - Phase 1 Docker Compose scope remains locked to `postgres` and `api` only.
 
 ## Commit Context
 
-- Next commit should cover root development defaults only.
+- Last committed Phase 1 unit:
+  - `fa19484 feat(repo): add local dev defaults`
+- Next commit should cover only the API skeleton and health endpoint.

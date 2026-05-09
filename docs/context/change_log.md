@@ -31,3 +31,9 @@ This is a living implementation log. Add new entries for each meaningful project
   - `.gitignore`
   - `.env.example`
   - `README.md`
+- Added the initial `apps/api` FastAPI project skeleton with:
+  - `uv` project metadata in `apps/api/pyproject.toml`
+  - clean architecture package folders
+  - settings and logging core modules
+  - FastAPI app factory and `GET /health`
+  - minimal tests for settings, app factory, and health route
