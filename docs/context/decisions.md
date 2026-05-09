@@ -7,13 +7,18 @@
 - Use `uv` for Python project/dependency management.
 - Use FastAPI for the backend API.
 - Use PostgreSQL for persistence.
+- Use SQLAlchemy 2.x async ORM with asyncpg for PostgreSQL access.
+- Use Alembic for database migrations.
+- Use pragmatic clean architecture for backend code.
+- Keep domain entities independent from SQLAlchemy, FastAPI, Pydantic, and external clients.
+- Use one Python backend package shared by API and listener entrypoints.
 - Run PostgreSQL in Docker.
 - Use Docker Compose as the default local runtime.
 - Use a development Docker stack with hot reload.
 - Use Next.js for frontend.
 - Use pnpm as frontend package manager.
 - Use Tailwind, shadcn/ui, and lucide-react for frontend UI.
-- Do not implement production authentication in MVP unless requested later.
+- Implement admin authentication in MVP; production hardening can be refined later.
 - Use Kick web Pusher chat events, not official Kick webhooks, for MVP ingestion.
 - Use commit message format `feat(scope): title`.
 - Store messages indefinitely.

@@ -38,6 +38,16 @@ Build an MVP monorepo with:
 - Admin channel management
 - Searchable historical Kick chat logs
 
+## Architecture Direction
+
+- `docs/architecture.md` is the source of truth for backend/frontend structure.
+- Backend uses pragmatic clean architecture with domain, application, infrastructure, and presentation layers.
+- HTTP API and listener are separate Docker services but share one Python backend package.
+- Backend uses OOP for use cases, services, repositories, integration clients, and unit-of-work boundaries.
+- ORM decision is SQLAlchemy 2.x async ORM with asyncpg and Alembic.
+- Domain entities stay independent from SQLAlchemy, FastAPI, Pydantic, and external clients.
+- Frontend uses Next.js App Router with feature-oriented folders and shadcn/ui primitives in `components/ui`.
+
 ## Locked Product Decisions
 
 - Store messages indefinitely.

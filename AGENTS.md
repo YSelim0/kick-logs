@@ -3,10 +3,11 @@
 Before making any code, docs, config, dependency, database, Docker, or commit changes in this repository, every agent must read:
 
 1. `docs/project_plan.md`
-2. `docs/context/living_brain.md`
-3. `docs/context/decisions.md`
-4. `docs/context/change_log.md`
-5. `docs/context/recent_changes.md`
+2. `docs/architecture.md`
+3. `docs/context/living_brain.md`
+4. `docs/context/decisions.md`
+5. `docs/context/change_log.md`
+6. `docs/context/recent_changes.md`
 
 Keep these files current. When implementation decisions change, update the relevant context document in the same unit of work.
 Use `recent_changes.md` for the latest short handoff summary after each meaningful change, and `change_log.md` for chronological history.

@@ -32,10 +32,11 @@ docker compose up --build
 
 - `apps/api`: FastAPI backend for auth, search, channel admin, user admin, health checks, and database access.
 - `apps/web`: Next.js frontend using pnpm, Tailwind, shadcn/ui, and lucide-react.
-- `apps/listener`: Python Kick chat ingestion worker using Kick web chat Pusher events.
+- `listener` Docker service: Python Kick chat ingestion worker entrypoint from the backend package.
 - PostgreSQL runs in Docker with a named volume.
 - Python dependency/project tooling uses `uv`.
 - Frontend package management uses `pnpm`.
+- Detailed backend/frontend structure lives in `docs/architecture.md`.
 
 ## Docker Services
 

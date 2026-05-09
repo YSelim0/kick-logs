@@ -4,27 +4,18 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
-- Added repository agent instructions in `AGENTS.md`.
-- Added `CLAUDE.md` to route Claude agents through `AGENTS.md`.
-- Added `docs/project_plan.md` with the Kick Logs MVP plan.
-- Added context memory files under `docs/context`.
-- Removed references to the external/non-repo prototype folder from project docs.
-- Expanded the MVP plan with:
-  - Docker Compose dev stack
-  - FastAPI backend
-  - Next.js frontend
-  - PostgreSQL persistence
-  - full admin login
-  - default super admin credentials
-  - `/search` and `/admin` routes
-  - optional AND-based search filters
-  - date range filters
-  - one listener worker for all enabled channels
-  - raw Kick payload storage
-  - sender profile image enrichment
-  - emote parsing and image fallback rendering
+- Added `docs/architecture.md`.
+- Architecture locks backend clean architecture layers:
+  - domain
+  - application
+  - infrastructure
+  - presentation
+- Backend ORM choice is SQLAlchemy 2.x async ORM with asyncpg and Alembic.
+- API and listener run as separate Docker services but share one Python backend package.
+- Frontend architecture uses Next.js App Router with feature-oriented folders.
+- `AGENTS.md` now requires agents to read `docs/architecture.md`.
 
 ## Commit Context
 
-- This context scaffold is the next docs unit of work after:
-  - `679d936 feat(repo): add commit convention skill`
+- Last committed docs unit:
+  - `a6b5105 feat(docs): add project planning context`
