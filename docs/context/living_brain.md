@@ -19,7 +19,8 @@ This file is the active project memory. Keep it updated whenever project behavio
   - `uv run pytest` passes from `apps/api`.
   - `uv run ruff check .` passes from `apps/api`.
   - `docker compose config --services` returns only `postgres` and `api`.
-  - `docker compose up --build -d postgres api` is pending because the local Docker daemon was not running.
+  - `docker compose up --build -d postgres api` starts the Phase 1 stack successfully.
+  - `GET http://localhost:8000/health` returns `{"status":"ok"}`.
 
 ## Kick Chat Ingestion Method
 

@@ -9,10 +9,15 @@ This file is the short handoff summary of the latest project changes. Keep it co
 - `apps/api/Dockerfile` builds the FastAPI backend with `uv`.
 - API remains limited to `GET /health`; no auth, search, database models, frontend, or listener code has been added.
 - Verification passed for backend import, `uv run pytest`, `uv run ruff check .`, and `docker compose config --services`.
-- Live `docker compose up --build -d postgres api` verification is pending because the local Docker daemon was not running.
+- Live Docker verification was retried after daemon access was available.
+- The first API image build failed because package metadata referenced root `README.md` outside the Docker context and because editable project install ran before `src/` was copied.
+- API Docker build metadata/order has been adjusted.
+- `docker compose up --build -d postgres api` now starts successfully.
+- `GET http://localhost:8000/health` returns `{"status":"ok"}`.
+- Phase 1 acceptance is complete.
 
 ## Commit Context
 
 - Last committed Phase 1 unit:
   - `c25186d feat(api): add fastapi health scaffold`
-- Next commit should cover Docker runtime and Phase 1 verification docs.
+- Next commit should cover Docker build fix and completed Phase 1 verification docs.

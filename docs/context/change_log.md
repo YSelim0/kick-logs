@@ -48,3 +48,10 @@ This is a living implementation log. Add new entries for each meaningful project
 - Verified `uv run ruff check .` from `apps/api`: all checks passed.
 - Verified `docker compose config --services`: only `postgres` and `api` are present.
 - Attempted `docker compose up --build -d postgres api`, but live Docker startup is pending because the local Docker daemon was not running.
+- Retried Docker Compose after daemon access was available. The API image build exposed two container-build issues:
+  - `apps/api/pyproject.toml` referenced root `README.md`, which is outside the Docker build context.
+  - `uv sync` attempted editable project installation before `src/` was copied into the image.
+- Updated API packaging/build flow so dependency sync happens before source copy with `--no-install-project`, then installs the project after `src/` is present.
+- Re-ran `docker compose up --build -d postgres api` successfully.
+- Verified `GET http://localhost:8000/health` returned `{"status":"ok"}`.
+- Phase 1 acceptance is complete.

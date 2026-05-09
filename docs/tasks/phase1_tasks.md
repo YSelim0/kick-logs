@@ -45,13 +45,13 @@ Do not implement database tables, auth, admin APIs, message search, listener log
 
 ## Acceptance Criteria
 
-- [ ] `docker compose up --build postgres api` starts without frontend/listener.
+- [x] `docker compose up --build postgres api` starts without frontend/listener.
 - [x] `GET /health` returns success.
 - [x] `uv run pytest` from `apps/api` passes.
 - [x] No business logic from later phases is implemented.
 - [x] Docs/context are updated with what was created.
 
-Note: `docker compose config --services` was verified and returned only `postgres` and `api`. Live `docker compose up --build postgres api` verification is pending because the local Docker daemon was not running during this phase.
+Note: `docker compose config --services` was verified and returned only `postgres` and `api`. Live Docker verification was completed with `docker compose up --build -d postgres api`, followed by `GET /health` returning `{"status":"ok"}`.
 
 ## Handoff
 
