@@ -78,3 +78,11 @@ This is a living implementation log. Add new entries for each meaningful project
   - list admin users
   - create admin user
   - idempotent default super admin seed
+- Added Phase 3 HTTP auth/admin user surface:
+  - `POST /auth/login`
+  - `POST /auth/logout`
+  - `GET /auth/me`
+  - `GET /admin/users`
+  - `POST /admin/users`
+  - cookie-based current-user and role dependencies
+  - startup super admin seed wiring

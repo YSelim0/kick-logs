@@ -4,7 +4,7 @@ from kick_logs.presentation.http.app import create_app
 
 
 def test_health_route_returns_ok() -> None:
-    client = TestClient(create_app())
+    client = TestClient(create_app(seed_super_admin_on_startup=False))
 
     response = client.get("/health")
 

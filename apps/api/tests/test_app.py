@@ -4,4 +4,4 @@ from kick_logs.presentation.http.app import create_app
 
 
 def test_create_app_returns_fastapi_instance() -> None:
-    assert isinstance(create_app(), FastAPI)
+    assert isinstance(create_app(seed_super_admin_on_startup=False), FastAPI)
