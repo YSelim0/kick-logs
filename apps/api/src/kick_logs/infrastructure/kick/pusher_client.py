@@ -24,7 +24,7 @@ class KickPusherClient:
         connect: ConnectWebSocket | None = None,
     ) -> None:
         self._url = url
-        self._connect = connect or websockets_connect
+        self._connect = connect or self._connect_with_defaults
 
     async def listen(self, channels: list[ListenerChannelDTO]) -> AsyncIterator[str]:
         async with self._connect(self._url) as websocket:
@@ -46,10 +46,13 @@ class KickPusherClient:
                 json.dumps(
                     {
                         "event": "pusher:subscribe",
-                        "data": {"channel": channel_name},
+                        "data": {"auth": "", "channel": channel_name},
                     }
                 )
             )
+
+    def _connect_with_defaults(self, url: str) -> AbstractAsyncContextManager[WebSocketConnection]:
+        return websockets_connect(url, ping_interval=30, ping_timeout=10)
 
     def _subscription_names(self, channels: list[ListenerChannelDTO]) -> list[str]:
         names: list[str] = []

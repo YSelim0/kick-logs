@@ -32,7 +32,7 @@ class KickWebChannelResolver:
             raise ChannelResolutionError("Kick channel metadata could not be resolved.") from exc
 
     async def _fetch_channel_payload(self, slug: str) -> dict[str, Any]:
-        async with AsyncSession(impersonate="chrome") as session:
+        async with AsyncSession(impersonate="chrome124") as session:
             response = await session.get(f"{self._base_url}/{slug}", timeout=15)
             if response.status_code >= 400:
                 raise ChannelResolutionError("Kick channel endpoint returned an error.")

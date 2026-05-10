@@ -239,6 +239,10 @@ Build an MVP monorepo with:
 - `KickPusherClient` connects to the configured Kick Pusher websocket URL and subscribes to:
   - `chatrooms.{kick_chatroom_id}.v2`
   - `channel.{kick_channel_id}`
+- Pusher subscription payload includes an empty `auth` field and channel name:
+  - `{"event":"pusher:subscribe","data":{"auth":"","channel":"chatrooms.{id}.v2"}}`
+- Websocket runtime uses 30 second ping interval and 10 second ping timeout.
+- Kick web HTTP resolvers use `curl_cffi` browser impersonation `chrome124`.
 - `ListenerService` composes enabled-channel loading, Pusher event streaming, event parsing, sender profile enrichment, and `IngestMessageUseCase`.
 - `ListenerService.run_forever()` reconnects with backoff and reloads enabled channels on each reconnect.
 - Sender profile enrichment uses Kick web channel metadata by sender slug and continues ingestion when enrichment fails.

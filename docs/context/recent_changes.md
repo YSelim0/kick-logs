@@ -20,6 +20,10 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - sender profile resolver/enrichment fallback
 - Listener Docker Compose service is implemented and starts with `postgres` and `api`.
 - Phase 5 acceptance is complete.
+- Listener runtime was aligned with the verified Kick web chat flow:
+  - Pusher subscribe payload includes empty `auth`
+  - websocket ping interval/timeout are set to 30/10 seconds
+  - Kick web HTTP resolvers use `chrome124` impersonation
 - Final verification:
   - `uv run pytest`: 65 passed
   - `uv run ruff check .`: passed
@@ -34,5 +38,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 - Last committed unit:
   - `29abaf8 feat(listener): add pusher runtime`
-- Next commit should cover Phase 5 Docker/docs completion:
-  - suggested message: `feat(listener): add docker service`
+  - `1f98b3a feat(listener): add docker service`
+- Next commit should cover listener runtime alignment:
+  - suggested message: `feat(listener): align pusher subscription`

@@ -58,11 +58,11 @@ async def test_pusher_client_subscribes_to_chatroom_and_channel_events() -> None
     assert [json.loads(message) for message in websocket.sent_messages] == [
         {
             "event": "pusher:subscribe",
-            "data": {"channel": "chatrooms.200.v2"},
+            "data": {"auth": "", "channel": "chatrooms.200.v2"},
         },
         {
             "event": "pusher:subscribe",
-            "data": {"channel": "channel.100"},
+            "data": {"auth": "", "channel": "channel.100"},
         },
     ]
 

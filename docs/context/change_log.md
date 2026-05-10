@@ -174,3 +174,7 @@ This is a living implementation log. Add new entries for each meaningful project
   - `docker compose up --build -d postgres api listener`: backend stack starts
   - `GET http://localhost:8000/health`: returned `{"status":"ok"}`
   - listener logs show idle no-channel checks without crashing
+- Aligned listener runtime with the verified Kick web chat flow:
+  - Pusher subscription payload now includes empty `auth`
+  - websocket connection uses 30 second ping interval and 10 second ping timeout
+  - Kick web HTTP resolvers use `chrome124` impersonation

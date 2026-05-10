@@ -34,7 +34,7 @@ class KickWebSenderProfileResolver:
             ) from exc
 
     async def _fetch_profile_payload(self, slug: str) -> dict[str, Any]:
-        async with AsyncSession(impersonate="chrome") as session:
+        async with AsyncSession(impersonate="chrome124") as session:
             response = await session.get(f"{self._base_url}/{slug}", timeout=15)
             if response.status_code >= 400:
                 raise SenderProfileResolutionError("Kick profile endpoint returned an error.")
