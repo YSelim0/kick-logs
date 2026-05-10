@@ -13,8 +13,10 @@ RUN uv sync --frozen --group dev --no-install-project
 
 COPY src ./src
 COPY tests ./tests
+COPY alembic.ini ./
+COPY alembic ./alembic
 RUN uv sync --frozen --group dev
 
 EXPOSE 8000
 
-CMD ["uv", "run", "uvicorn", "kick_logs.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uv run alembic upgrade head && uv run uvicorn kick_logs.main:app --host 0.0.0.0 --port 8000"]

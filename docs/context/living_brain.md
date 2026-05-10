@@ -8,6 +8,7 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Commit convention skill exists under `.agents/skills/commit-message-conventions`.
 - Phase 1 backend/Docker foundation is complete.
 - Phase 2 persistence foundation is complete.
+- Phase 3 auth/admin user foundation is complete.
 - `apps/api` contains the FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
 - Root `compose.yaml` has only the Phase 1 services:
   - `postgres`
@@ -26,6 +27,13 @@ This file is the active project memory. Keep it updated whenever project behavio
   - `alembic current` reports `20260510_0001 (head)`
   - `uv run pytest` passes with 27 tests
   - `uv run ruff check .` passes
+- Phase 3 verification:
+  - `uv run pytest` passes with 45 tests
+  - `uv run ruff check .` passes
+  - `docker compose up --build -d postgres api` succeeds with auth dependencies
+  - default super admin startup seed is available at `admin@kicklogs.local` / `admin123`
+  - real API smoke for `POST /auth/login` and `GET /auth/me` passes
+- Docker API startup runs `alembic upgrade head` before Uvicorn so startup seed has the required database schema.
 
 ## Kick Chat Ingestion Method
 
@@ -101,6 +109,34 @@ Build an MVP monorepo with:
   - `SqlAlchemySenderRepository`
   - `SqlAlchemyMessageRepository`
   - `SqlAlchemyUnitOfWork`
+
+## Auth Details
+
+- Auth uses Passlib bcrypt password hashing through `PasslibPasswordHasher`.
+- Auth uses signed JWTs through `JwtTokenService`.
+- Session tokens are stored in an HttpOnly cookie named by `JWT_COOKIE_NAME`.
+- Cookie settings:
+  - `JWT_COOKIE_NAME`
+  - `JWT_COOKIE_SECURE`
+  - `JWT_COOKIE_SAMESITE`
+  - `JWT_EXPIRES_MINUTES`
+- Default super admin seed runs at API startup when `SEED_SUPER_ADMIN_ON_STARTUP=true`.
+- Default super admin env:
+  - `DEFAULT_SUPER_ADMIN_EMAIL`
+  - `DEFAULT_SUPER_ADMIN_PASSWORD`
+- Seed is idempotent:
+  - creates the user when missing
+  - promotes/reactivates an existing default user if needed
+  - does not reset an existing password
+- Auth/admin routes implemented:
+  - `POST /auth/login`
+  - `POST /auth/logout`
+  - `GET /auth/me`
+  - `GET /admin/users`
+  - `POST /admin/users`
+- `GET /admin/users` requires an authenticated admin or super admin.
+- `POST /admin/users` requires `super_admin`.
+- Public routes such as `GET /health` remain unauthenticated.
 
 ## Design Direction
 

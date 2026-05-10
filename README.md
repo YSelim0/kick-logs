@@ -2,18 +2,22 @@
 
 Kick Logs is an MVP monorepo for collecting public Kick chat messages from followed channels, storing them in PostgreSQL, and searching historical chat logs through a web UI.
 
-## Current Phase
+## Current Status
 
-Development is currently in Phase 1: backend and Docker foundation.
+Backend implementation is complete through Phase 3.
 
-Phase 1 contains only:
+Implemented so far:
 
 - FastAPI backend skeleton.
 - `GET /health`.
 - PostgreSQL and API services in Docker Compose.
+- SQLAlchemy async persistence and Alembic initial migration.
+- Admin authentication with HttpOnly JWT cookies.
+- Default super admin seed.
+- Admin user list/create APIs.
 - Backend test/tooling setup.
 
-Frontend, listener runtime, auth, database models, admin APIs, and message search are intentionally added in later phases.
+Frontend, listener runtime, followed channel management, message ingestion, and public message search are intentionally added in later phases.
 
 ## Prerequisites
 
@@ -35,10 +39,19 @@ Copy-Item .env.example .env
 
 ## Start Backend Stack
 
-After Phase 1 files are complete, start PostgreSQL and the API:
+Start PostgreSQL and the API:
 
 ```powershell
 docker compose up --build postgres api
+```
+
+The Docker API service applies Alembic migrations before starting Uvicorn.
+
+To apply migrations manually from the backend project directory:
+
+```powershell
+cd apps/api
+uv run alembic upgrade head
 ```
 
 Health check:
@@ -51,6 +64,13 @@ Expected response:
 
 ```json
 {"status":"ok"}
+```
+
+Default admin login:
+
+```text
+email: admin@kicklogs.local
+password: admin123
 ```
 
 ## Backend Tests

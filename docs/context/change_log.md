@@ -86,3 +86,9 @@ This is a living implementation log. Add new entries for each meaningful project
   - `POST /admin/users`
   - cookie-based current-user and role dependencies
   - startup super admin seed wiring
+- Verified full backend test suite: 45 tests passed.
+- Verified `ruff check .`: all checks passed.
+- Verified Docker rebuild/start with auth dependencies.
+- Verified real API login/me smoke with default super admin credentials.
+- Updated Docker API startup to run `alembic upgrade head` before Uvicorn so the startup super admin seed runs after migrations.
+- Phase 3 acceptance is complete.

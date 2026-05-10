@@ -39,15 +39,9 @@ services:
       - ./apps/api:/app
       - api_venv:/app/.venv
     command:
-      - uv
-      - run
-      - uvicorn
-      - kick_logs.main:app
-      - --host
-      - 0.0.0.0
-      - --port
-      - "8000"
-      - --reload
+      - sh
+      - -c
+      - uv run alembic upgrade head && uv run uvicorn kick_logs.main:app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
   postgres_data:
