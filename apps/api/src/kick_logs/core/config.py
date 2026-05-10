@@ -21,8 +21,13 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://kick_logs:kick_logs@localhost:5432/kick_logs"
     database_echo: bool = False
 
-    jwt_secret_key: str = Field(default="change-me-for-local-development", repr=False)
+    jwt_secret_key: str = Field(default="change-me-for-local-development-secret", repr=False)
+    jwt_algorithm: str = "HS256"
+    jwt_expires_minutes: int = 60 * 24 * 7
     jwt_cookie_name: str = "kick_logs_session"
+    jwt_cookie_secure: bool = False
+    jwt_cookie_samesite: str = "lax"
+    seed_super_admin_on_startup: bool = True
 
     default_super_admin_email: str = "admin@kicklogs.local"
     default_super_admin_password: str = Field(default="admin123", repr=False)

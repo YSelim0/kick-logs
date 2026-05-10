@@ -68,3 +68,7 @@ This is a living implementation log. Add new entries for each meaningful project
 - Verified `ruff check .`: all checks passed.
 - Verified `alembic current`: `20260510_0001 (head)`.
 - Phase 2 acceptance is complete.
+- Started Phase 3 by adding auth security ports and infrastructure services:
+  - Passlib password hasher
+  - PyJWT token service
+  - JWT cookie/session settings
