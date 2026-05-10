@@ -4,6 +4,7 @@ import {
   EMPTY_SEARCH_STATE,
   appendUniqueMessages,
   getActiveFilters,
+  getDefaultSearchState,
   readSearchState,
   searchStateToMessageParams,
   searchStateToUrlSearchParams
@@ -32,16 +33,38 @@ describe("search params", () => {
     expect(searchStateToUrlSearchParams(EMPTY_SEARCH_STATE).toString()).toBe("");
   });
 
+  it("defaults the date range to the previous seven days", () => {
+    expect(getDefaultSearchState(new Date("2026-05-10T15:30:45"))).toMatchObject({
+      start: "2026-05-03T15:30",
+      end: "2026-05-10T15:30"
+    });
+  });
+
+  it("fills missing URL date filters with the default search range", () => {
+    const state = readSearchState(
+      new URLSearchParams("sender=yavuz"),
+      new Date("2026-05-10T15:30:45")
+    );
+
+    expect(state).toMatchObject({
+      sender: "yavuz",
+      start: "2026-05-03T15:30",
+      end: "2026-05-10T15:30"
+    });
+  });
+
   it("reads supported filters from URL state", () => {
     const state = readSearchState(
-      new URLSearchParams("sender=yavuz&channel=hype&q=hello&start=2026-05-02T02:43")
+      new URLSearchParams("sender=yavuz&channel=hype&q=hello&start=2026-05-02T02:43"),
+      new Date("2026-05-10T15:30:45")
     );
 
     expect(state).toMatchObject({
       sender: "yavuz",
       channel: "hype",
       q: "hello",
-      start: "2026-05-02T02:43"
+      start: "2026-05-02T02:43",
+      end: "2026-05-10T15:30"
     });
   });
 

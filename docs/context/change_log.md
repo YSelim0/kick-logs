@@ -245,3 +245,8 @@ This is a living implementation log. Add new entries for each meaningful project
   - `GET http://localhost:3000/search?sender=yavuz&q=selam`: HTTP 200 and no admin placeholder content
   - `GET http://localhost:8000/health`: returned `{"status":"ok"}`
 - Updated `README.md` and marked Phase 8 task file acceptance as complete.
+- Updated `/search` date range defaults:
+  - `Başlangıç` defaults to current local date/time minus 7 days.
+  - `Bitiş` defaults to current local date/time.
+  - clearing either date field still omits that filter from the API query.
+- Added frontend tests for the default date range behavior.

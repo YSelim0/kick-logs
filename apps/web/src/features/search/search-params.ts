@@ -22,6 +22,8 @@ export const EMPTY_SEARCH_STATE: SearchFormState = {
   end: ""
 };
 
+export const DEFAULT_SEARCH_RANGE_DAYS = 7;
+
 const filterLabels: Record<keyof SearchFormState, string> = {
   sender: "Kullanıcı",
   channel: "Kanal",
@@ -30,13 +32,31 @@ const filterLabels: Record<keyof SearchFormState, string> = {
   end: "Bitiş"
 };
 
-export function readSearchState(params: URLSearchParams): SearchFormState {
+export function getDefaultSearchState(now = new Date()): SearchFormState {
+  const end = new Date(now);
+  end.setSeconds(0, 0);
+
+  const start = new Date(end);
+  start.setDate(start.getDate() - DEFAULT_SEARCH_RANGE_DAYS);
+
+  return {
+    sender: "",
+    channel: "",
+    q: "",
+    start: toDateTimeLocalValue(start),
+    end: toDateTimeLocalValue(end)
+  };
+}
+
+export function readSearchState(params: URLSearchParams, now = new Date()): SearchFormState {
+  const defaults = getDefaultSearchState(now);
+
   return {
     sender: params.get("sender") ?? "",
     channel: params.get("channel") ?? "",
     q: params.get("q") ?? "",
-    start: normalizeDateInputValue(params.get("start") ?? ""),
-    end: normalizeDateInputValue(params.get("end") ?? "")
+    start: normalizeDateInputValue(params.get("start") ?? defaults.start),
+    end: normalizeDateInputValue(params.get("end") ?? defaults.end)
   };
 }
 
@@ -120,4 +140,18 @@ export function normalizeDateInputValue(value: string) {
 function optionalParam(key: keyof MessageSearchParams, value: string) {
   const trimmed = value.trim();
   return trimmed ? { [key]: trimmed } : {};
+}
+
+function toDateTimeLocalValue(date: Date) {
+  const year = date.getFullYear();
+  const month = padDatePart(date.getMonth() + 1);
+  const day = padDatePart(date.getDate());
+  const hours = padDatePart(date.getHours());
+  const minutes = padDatePart(date.getMinutes());
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function padDatePart(value: number) {
+  return String(value).padStart(2, "0");
 }

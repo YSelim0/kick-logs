@@ -29,7 +29,7 @@ Implemented so far:
 - Tailwind/shadcn/ui base setup with the dark-only Kick Logs palette.
 - Shared typed frontend API client.
 - Frontend Docker Compose service.
-- Public `/search` UI with filters, URL state, infinite scroll, dense rows, circular avatars, and inline emotes.
+- Public `/search` UI with filters, default last-7-days date range, URL state, infinite scroll, dense rows, circular avatars, and inline emotes.
 
 Final `/admin` UI workflow is intentionally implemented in a later phase.
 
@@ -150,7 +150,6 @@ Default local value:
 http://localhost:8000
 ```
 
-The current frontend routes are foundation shells only:
 The public search route is functional. Other frontend routes remain shells:
 
 ```text

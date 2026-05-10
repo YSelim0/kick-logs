@@ -8,8 +8,8 @@ import { MessageList } from "@/features/search/message-list";
 import { searchMessages } from "@/features/search/api";
 import { SearchForm } from "@/features/search/search-form";
 import {
-  EMPTY_SEARCH_STATE,
   appendUniqueMessages,
+  getDefaultSearchState,
   readSearchState,
   searchStateToMessageParams,
   searchStateToUrlSearchParams,
@@ -33,9 +33,9 @@ function SearchScreenInner() {
   const queryKey = searchParams.toString();
   const sentinelRef = useRef<HTMLDivElement>(null);
   const requestSequenceRef = useRef(0);
-  const [formState, setFormState] = useState<SearchFormState>(EMPTY_SEARCH_STATE);
+  const [formState, setFormState] = useState<SearchFormState>(() => getDefaultSearchState());
   const [submittedState, setSubmittedState] =
-    useState<SearchFormState>(EMPTY_SEARCH_STATE);
+    useState<SearchFormState>(() => getDefaultSearchState());
   const [messages, setMessages] = useState<Message[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(false);
@@ -149,11 +149,12 @@ function SearchScreenInner() {
   }
 
   function resetSearch() {
-    setFormState(EMPTY_SEARCH_STATE);
-    setSubmittedState(EMPTY_SEARCH_STATE);
+    const defaultState = getDefaultSearchState();
+    setFormState(defaultState);
+    setSubmittedState(defaultState);
 
     if (!queryKey) {
-      void loadFirstPage(EMPTY_SEARCH_STATE);
+      void loadFirstPage(defaultState);
       return;
     }
 

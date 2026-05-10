@@ -110,6 +110,10 @@ Field behavior:
 - Empty fields are not included in the API query.
 - Search semantics must match backend `/messages` behavior.
 - Date fields map to `start` and `end`.
+- On first `/search` load and on reset, date fields default to the last 7 days:
+  - `Başlangıç`: current local date/time minus 7 days.
+  - `Bitiş`: current local date/time.
+- Users can still clear or change the date fields; cleared date fields are omitted from the API query.
 
 Backend query mapping:
 

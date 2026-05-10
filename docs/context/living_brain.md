@@ -366,6 +366,10 @@ Build an MVP monorepo with:
   - `Bitiş` -> `end`
 - Empty form fields are omitted from URL/backend query params.
 - Empty all filters fetches latest messages.
+- Missing date filters default in the `/search` UI to the last 7 days:
+  - `Başlangıç` is current local date/time minus 7 days.
+  - `Bitiş` is current local date/time.
+  - users can clear date fields to omit date filters.
 - Submitted filter state is preserved in the URL query string.
 - Result fetching uses public `GET /messages` through the shared frontend API client.
 - Cursor pagination is wired to an IntersectionObserver sentinel for infinite scroll.

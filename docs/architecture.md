@@ -274,6 +274,7 @@ Rules:
 - `start` and `end` filter by `message_created_at`.
 - Results are ordered newest-first.
 - Cursor pagination uses `(message_created_at, id)`.
+- Frontend `/search` initializes missing date inputs to the last 7 days by default, but the API keeps date filters optional.
 
 ## Auth Contract
 

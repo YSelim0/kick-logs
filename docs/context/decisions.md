@@ -52,3 +52,7 @@
 - Use `docs/implementation_plan.md` as the sequential MVP implementation plan.
 - Use `docs/tasks/phaseN_tasks.md` files as phase-scoped task contracts; agents must not cross into later phase scope without explicit direction.
 - Do not add placeholder `web` or `listener` services in Phase 1; add each service only in its owning phase.
+
+## 2026-05-10
+
+- Public `/search` date inputs default to the last 7 days: `Başlangıç` is current local date/time minus 7 days and `Bitiş` is current local date/time. Users can clear date fields to omit date filters.

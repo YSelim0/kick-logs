@@ -116,6 +116,7 @@ Implement the public search experience from `docs/design/design.md` and `docs/de
 
 - `/search` public route with no login requirement.
 - Search filters mapped to backend query params.
+- Default date range set to the last 7 days in the UI.
 - Infinite-scroll message rows.
 - Circular avatars.
 - Inline emote rendering.

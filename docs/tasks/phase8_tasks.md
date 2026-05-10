@@ -23,6 +23,7 @@ Do not implement admin dashboard workflows, login UI beyond shared layout needs,
   - [x] Map fields to `sender`, `channel`, `q`, `start`, and `end`.
   - [x] Omit empty fields from query params.
   - [x] Preserve submitted filter state in URL or local route state consistently.
+  - [x] Default `Başlangıç` to 7 days before current local date/time and `Bitiş` to current local date/time.
   - [x] Use yellow `#FFF600` primary `Ara` button.
 - [x] Results fetching:
   - [x] Fetch newest-first public messages.
