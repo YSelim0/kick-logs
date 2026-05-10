@@ -264,3 +264,14 @@ This is a living implementation log. Add new entries for each meaningful project
   - `pnpm --filter @kick-logs/web test`: 4 files, 14 tests passed
   - `pnpm --filter @kick-logs/web typecheck`: passed
   - `pnpm --filter @kick-logs/web lint`: passed
+- Added Phase 9 followed-channel admin UI:
+  - authenticated `/admin` now mounts channel management
+  - channel list calls `GET /admin/channels`
+  - add form calls `POST /admin/channels` with slug/nickname and shows resolver/loading/error state
+  - disable action calls `DELETE /admin/channels/{id}`
+  - admin session panel shows current email, role, and active state
+- Added mocked API tests for channel list/add/disable flows.
+- Verified channel admin unit:
+  - `pnpm --filter @kick-logs/web test`: 5 files, 17 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed

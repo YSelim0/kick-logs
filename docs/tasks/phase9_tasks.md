@@ -26,15 +26,15 @@ Do not redesign public `/search`, implement landing page content, or change back
   - [x] Keep `/search` public and unaffected.
   - [x] Add logout action using `POST /auth/logout`.
 - [ ] Admin dashboard layout:
-  - [ ] Serious, dense, dark-only operations UI.
-  - [ ] No landing-page hero sections.
+  - [x] Serious, dense, dark-only operations UI.
+  - [x] No landing-page hero sections.
   - [ ] Clear distinction between channel management and user management.
-- [ ] Followed channel management:
-  - [ ] List followed channels with enabled state and Kick metadata.
-  - [ ] Add channel by slug/nickname.
-  - [ ] Show resolver/loading/error state.
-  - [ ] Remove/disable channel.
-  - [ ] Refresh list after mutations.
+- [x] Followed channel management:
+  - [x] List followed channels with enabled state and Kick metadata.
+  - [x] Add channel by slug/nickname.
+  - [x] Show resolver/loading/error state.
+  - [x] Remove/disable channel.
+  - [x] Refresh list after mutations.
 - [ ] Admin user management:
   - [ ] Show only when current user role is `super_admin`.
   - [ ] List admin users.
@@ -43,7 +43,7 @@ Do not redesign public `/search`, implement landing page content, or change back
 - [ ] Tests/checks:
   - [x] Login success/failure.
   - [x] Admin route guard.
-  - [ ] Channel add/remove flow with mocked API.
+  - [x] Channel add/remove flow with mocked API.
   - [ ] Super admin-only user creation visibility.
   - [ ] Public search still loads without auth.
 

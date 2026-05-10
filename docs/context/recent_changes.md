@@ -4,20 +4,19 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
-- Phase 9 admin auth foundation is implemented.
+- Phase 9 followed-channel admin UI is implemented.
 - Added:
-  - `/login` email/password form wired to `POST /auth/login`
-  - compact login error handling
-  - safe post-login redirect to `/admin` or local `next` path
-  - `useCurrentUser` hook using `GET /auth/me`
-  - `/admin` route guard redirecting unauthenticated users to `/login?next=/admin`
-  - logout action using `POST /auth/logout`
+  - `/admin` channel management panel
+  - `GET /admin/channels` list with enabled state and Kick metadata
+  - `POST /admin/channels` add flow by slug/nickname
+  - resolver/loading/error UI for channel add
+  - `DELETE /admin/channels/{id}` disable action
+  - admin session summary panel
 - Verification:
-  - `pnpm --filter @kick-logs/web test`: 4 files, 14 tests passed
+  - `pnpm --filter @kick-logs/web test`: 5 files, 17 tests passed
   - `pnpm --filter @kick-logs/web typecheck`: passed
   - `pnpm --filter @kick-logs/web lint`: passed
 - Next Phase 9 work:
-  - followed-channel management UI
   - super admin user management UI
 
 ## Commit Context
@@ -28,7 +27,8 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `f2250a9 feat(docs): complete phase seven foundation`
   - `619f4f9 feat(search): add public message search ui`
   - `2ab7c91 feat(search): default date range filters`
+  - `813d713 feat(auth): add admin login guard`
 - Latest completed unit:
-  - Phase 9 auth foundation
+  - Phase 9 followed-channel admin UI
 - Commit message for this unit:
-  - `feat(auth): add admin login guard`
+  - `feat(admin): add channel management ui`

@@ -9,6 +9,7 @@ import { LogOut, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logout } from "@/features/auth/api";
 import { useCurrentUser } from "@/features/auth/use-auth";
+import { ChannelAdmin } from "@/features/channels/channel-admin";
 
 export function AdminDashboard() {
   const router = useRouter();
@@ -93,21 +94,38 @@ export function AdminDashboard() {
           </div>
         ) : null}
 
-        <section className="rounded-lg border border-border bg-black p-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-kick-background text-primary">
-              <ShieldCheck className="h-4 w-4" />
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <ChannelAdmin />
+
+          <aside className="rounded-lg border border-border bg-black p-5">
+            <div className="mb-5 flex items-center gap-3 border-b border-border pb-4">
+              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-kick-background text-primary">
+                <ShieldCheck className="h-4 w-4" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold">Admin Oturumu</h2>
+                <p className="text-xs text-muted-foreground">Aktif kullanıcı ve yetki durumu</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-base font-semibold">Admin oturumu aktif</h2>
-              <p className="text-xs text-muted-foreground">
-                Kanal ve kullanıcı yönetimi bu panelde tamamlanacak.
-              </p>
+
+            <div className="space-y-3 text-sm">
+              <SessionLine label="E-posta" value={user.email} />
+              <SessionLine label="Rol" value={user.role} />
+              <SessionLine label="Durum" value={user.is_active ? "Aktif" : "Pasif"} />
             </div>
-          </div>
-        </section>
+          </aside>
+        </div>
       </div>
     </main>
+  );
+}
+
+function SessionLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-border pb-3 last:border-b-0 last:pb-0">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="truncate text-right text-foreground">{value}</span>
+    </div>
   );
 }
 

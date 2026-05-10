@@ -35,6 +35,10 @@ vi.mock("@/features/auth/use-auth", () => ({
   useCurrentUser: () => authMocks.state
 }));
 
+vi.mock("@/features/channels/channel-admin", () => ({
+  ChannelAdmin: () => <section>Channel admin</section>
+}));
+
 describe("AdminDashboard", () => {
   beforeEach(() => {
     navigationMocks.replace.mockReset();
@@ -76,7 +80,7 @@ describe("AdminDashboard", () => {
 
     render(<AdminDashboard />);
 
-    expect(screen.getByText("admin@kicklogs.local")).toBeInTheDocument();
+    expect(screen.getAllByText("admin@kicklogs.local")).toHaveLength(2);
     fireEvent.click(screen.getByRole("button", { name: /çıkış/i }));
 
     await waitFor(() => expect(authMocks.logout).toHaveBeenCalledTimes(1));

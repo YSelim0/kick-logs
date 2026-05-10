@@ -24,6 +24,11 @@ This file is the active project memory. Keep it updated whenever project behavio
   - `/admin` uses `GET /auth/me` for client-side route guarding
   - unauthenticated `/admin` users are redirected to `/login?next=/admin`
   - admin header includes logout through `POST /auth/logout`
+- Phase 9 followed-channel management UI is implemented:
+  - `/admin` lists followed channels with enabled state, Kick channel id, and Kick chatroom id
+  - admins can add a channel by slug/nickname through `POST /admin/channels`
+  - add flow shows resolver/loading/error state while backend resolves Kick metadata
+  - admins can disable channels through `DELETE /admin/channels/{id}`
 - `apps/api` contains the FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
 - Root `compose.yaml` currently has Phase 7 services:
   - `postgres`
@@ -426,6 +431,26 @@ Build an MVP monorepo with:
   - authenticated users see a compact admin shell and logout action
 - Verification:
   - `pnpm --filter @kick-logs/web test`: 4 files, 14 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+
+## Phase 9 Channel Admin Details
+
+- `ChannelAdmin` is mounted inside `/admin` for authenticated users.
+- Channel list behavior:
+  - calls `GET /admin/channels`
+  - shows display name, slug, Kick channel id, Kick chatroom id, and enabled state
+  - provides a manual refresh action
+- Channel add behavior:
+  - accepts a Kick slug/nickname
+  - calls `POST /admin/channels`
+  - relies on the backend resolver for Kick metadata
+  - merges the created/refreshed channel into the list
+- Channel disable behavior:
+  - calls `DELETE /admin/channels/{id}`
+  - merges the returned disabled channel into the list
+- Verification:
+  - `pnpm --filter @kick-logs/web test`: 5 files, 17 tests passed
   - `pnpm --filter @kick-logs/web typecheck`: passed
   - `pnpm --filter @kick-logs/web lint`: passed
 
