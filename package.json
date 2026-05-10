@@ -6,7 +6,8 @@
     "dev": "pnpm --filter @kick-logs/web dev",
     "build": "pnpm --filter @kick-logs/web build",
     "lint": "pnpm --filter @kick-logs/web lint",
-    "typecheck": "pnpm --filter @kick-logs/web typecheck"
+    "typecheck": "pnpm --filter @kick-logs/web typecheck",
+    "test": "pnpm --filter @kick-logs/web test"
   },
   "engines": {
     "node": ">=20.0.0",
