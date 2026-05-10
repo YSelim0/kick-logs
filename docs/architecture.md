@@ -371,7 +371,7 @@ Frontend rules:
 - `lib/api-client.ts` owns base URL, credentials, and response handling.
 - Use lucide-react icons for UI controls.
 - Use Tailwind for layout and visual styling.
-- Keep `/` reserved for a later landing page.
+- Keep `/` reserved for a later landing page; current MVP redirects `/` to `/search`.
 - `/search` is the primary public app screen.
 - `/admin` requires login and manages backend operational state such as followed channels.
 

@@ -13,41 +13,41 @@ Do not add new product features, redesign UI, or change backend/frontend contrac
 
 ## Tasks
 
-- [ ] Full Docker Compose:
-  - [ ] `docker compose up --build` starts all services.
-  - [ ] API health route passes from host.
-  - [ ] Web route loads from host.
-  - [ ] Listener starts and logs channel subscription status.
-  - [ ] PostgreSQL volume persists data across restart.
-- [ ] End-to-end MVP smoke:
-  - [ ] Seed or log in as default super admin.
-  - [ ] Add followed channel in `/admin`.
-  - [ ] Confirm backend stores channel metadata.
-  - [ ] Ingest a sample or live message.
-  - [ ] Find message through public `/search`.
-  - [ ] Confirm `/search` works without auth.
-- [ ] Documentation:
-  - [ ] Finalize `README.md` with local setup, env, Docker, API, listener, frontend, and test commands.
-  - [ ] Document default super admin credentials and env overrides.
-  - [ ] Document manual push workflow.
-  - [ ] Update context files with final MVP state.
-- [ ] Cleanup:
-  - [ ] Remove unused scaffold files.
-  - [ ] Ensure no generated caches/logs/dependency folders are tracked.
-  - [ ] Ensure `.env` and secrets are untracked.
-  - [ ] Run final status check before commit.
-- [ ] Final checks:
-  - [ ] Backend tests pass.
-  - [ ] Frontend typecheck/build passes.
-  - [ ] Docker smoke passes or documented blocker exists.
+- [x] Full Docker Compose:
+  - [x] `docker compose up --build` starts all services.
+  - [x] API health route passes from host.
+  - [x] Web route loads from host.
+  - [x] Listener starts and logs channel subscription status.
+  - [x] PostgreSQL volume persists data across restart.
+- [x] End-to-end MVP smoke:
+  - [x] Seed or log in as default super admin.
+  - [x] Add followed channel in `/admin`.
+  - [x] Confirm backend stores channel metadata.
+  - [x] Ingest a sample or live message.
+  - [x] Find message through public `/search`.
+  - [x] Confirm `/search` works without auth.
+- [x] Documentation:
+  - [x] Finalize `README.md` with local setup, env, Docker, API, listener, frontend, and test commands.
+  - [x] Document default super admin credentials and env overrides.
+  - [x] Document manual push workflow.
+  - [x] Update context files with final MVP state.
+- [x] Cleanup:
+  - [x] Remove unused scaffold files.
+  - [x] Ensure no generated caches/logs/dependency folders are tracked.
+  - [x] Ensure `.env` and secrets are untracked.
+  - [x] Run final status check before commit.
+- [x] Final checks:
+  - [x] Backend tests pass.
+  - [x] Frontend typecheck/build passes.
+  - [x] Docker smoke passes or documented blocker exists.
 
 ## Acceptance Criteria
 
-- [ ] Project can be started locally with documented commands.
-- [ ] Public search and authenticated admin flows both work.
-- [ ] Listener can ingest messages into searchable storage.
-- [ ] Docs reflect actual startup and operational behavior.
-- [ ] Repo is ready for user-managed push.
+- [x] Project can be started locally with documented commands.
+- [x] Public search and authenticated admin flows both work.
+- [x] Listener can ingest messages into searchable storage.
+- [x] Docs reflect actual startup and operational behavior.
+- [x] Repo is ready for user-managed push.
 
 ## Handoff
 

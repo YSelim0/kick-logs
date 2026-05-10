@@ -4,8 +4,7 @@ Kick Logs is an MVP monorepo for collecting public Kick chat messages from follo
 
 ## Current Status
 
-Backend implementation is complete and verified through Phase 6.
-Public search and admin UI are complete through Phase 9.
+The MVP implementation plan is complete through Phase 10.
 
 Implemented so far:
 
@@ -33,8 +32,9 @@ Implemented so far:
 - `/login` UI wired to backend auth.
 - Authenticated `/admin` dashboard with followed-channel management.
 - Super-admin-only admin user management UI.
+- Full Docker Compose smoke and sample ingestion-to-search smoke.
 
-Final full-stack polish and end-to-end MVP smoke checks remain for Phase 10.
+The repository is ready for user-managed push.
 
 ## Prerequisites
 
@@ -156,7 +156,7 @@ http://localhost:8000
 Current frontend routes:
 
 ```text
-/       reserved for future landing content
+/       redirects to /search until future landing content exists
 /search  public message search
 /login   admin login
 /admin   authenticated backend management
@@ -177,6 +177,13 @@ postgres  http://localhost:5432
 api       http://localhost:8000
 listener  background worker
 web       http://localhost:3000
+```
+
+For detached local development:
+
+```powershell
+docker compose up --build -d
+docker compose ps
 ```
 
 ## Backend Tests
@@ -212,6 +219,8 @@ pnpm --filter @kick-logs/web lint
 pnpm --filter @kick-logs/web test
 pnpm --filter @kick-logs/web build
 ```
+
+Run `typecheck` and `build` sequentially. Running both at the same time can race on Next.js generated `.next/types` files.
 
 ## Backend Verification
 
@@ -264,6 +273,24 @@ Phase 9 admin dashboard UI was verified with:
 - `GET http://localhost:3000/login` returns HTTP 200.
 - `GET http://localhost:3000/admin` returns HTTP 200; the client guard redirects unauthenticated users.
 - `GET http://localhost:8000/health` returns `{"status":"ok"}`.
+
+Phase 10 final MVP smoke was verified with:
+
+- `python -m uv run pytest` from `apps/api`: 83 tests passed.
+- `python -m uv run ruff check .` from `apps/api`: passed.
+- `pnpm --filter @kick-logs/web test`: 6 files, 20 tests passed.
+- `pnpm --filter @kick-logs/web typecheck`: passed.
+- `pnpm --filter @kick-logs/web lint`: passed.
+- `pnpm --filter @kick-logs/web build`: passed.
+- `docker compose up --build -d`: starts `postgres`, `api`, `listener`, and `web`.
+- `GET http://localhost:8000/health`: `{"status":"ok"}`.
+- `GET http://localhost:3000/`: HTTP 307 to `/search`.
+- `GET http://localhost:3000/search`, `/login`, and `/admin`: HTTP 200.
+- Default super admin login succeeds with `admin@kicklogs.local` / `admin123`.
+- Authenticated channel add smoke stores Kick channel metadata for `hype`.
+- Sample message ingestion through the backend ingestion use case stores a searchable message.
+- Public `GET /messages?q=phase10-smoke-20260510235338&limit=5` finds the sample message without authentication.
+- Restarting PostgreSQL preserves the sample message in the named volume.
 
 ## Kick Integration Notes
 

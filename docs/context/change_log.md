@@ -294,3 +294,18 @@ This is a living implementation log. Add new entries for each meaningful project
   - final frontend test/typecheck/lint/build passed
   - Docker `web` rebuild/start passed
   - route smoke checks for `/search`, `/login`, `/admin`, and API `/health` passed
+- Completed Phase 10 final MVP smoke and cleanup:
+  - backend tests and ruff passed
+  - frontend tests, typecheck, lint, and build passed
+  - `docker compose up --build -d` starts all services
+  - API health and web `/search`, `/login`, `/admin` routes return from host
+  - `/` returns HTTP 307 to `/search`
+  - listener logs idle status and then channel subscription status after `hype` is enabled
+  - default super admin login succeeds
+  - authenticated channel add stores Kick metadata for `hype`
+  - sample message ingestion stores marker `phase10-smoke-20260510235338`
+  - public search finds the sample message without authentication
+  - PostgreSQL restart preserves the sample message in the named volume
+  - README and context files now reflect final MVP startup and smoke behavior
+  - no tracked generated cache, dependency folder, `.env`, secret, log, or build output was found
+- Removed the unused frontend `RouteShell` scaffold and changed `/` to redirect to `/search` until a future landing page is intentionally designed.

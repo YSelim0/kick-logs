@@ -31,7 +31,7 @@ Do not commit screenshots or exported images unless explicitly requested.
 - `/search`: public primary application search screen. No login is required.
 - `/admin`: authenticated admin dashboard for backend operations.
 - `/login`: login screen.
-- `/`: reserved for a future landing page.
+- `/`: redirects to `/search` until a future landing page is intentionally designed.
 
 Do not build a landing page before the application screens exist.
 

@@ -56,3 +56,4 @@
 ## 2026-05-10
 
 - Public `/search` date inputs default to the last 7 days: `Başlangıç` is current local date/time minus 7 days and `Bitiş` is current local date/time. Users can clear date fields to omit date filters.
+- MVP root route `/` redirects to `/search`; future landing content can replace this deliberately after the application screens are stable.

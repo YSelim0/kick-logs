@@ -19,6 +19,8 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Phase 7 frontend foundation is complete.
 - Phase 8 public search UI is complete.
 - Phase 9 admin UI is complete.
+- Phase 10 final MVP smoke and documentation cleanup are complete.
+- Root `/` redirects to `/search` in the MVP; landing content remains a future post-MVP decision.
 - Phase 9 auth foundation is implemented:
   - `/login` has an email/password form wired to `POST /auth/login`
   - `/admin` uses `GET /auth/me` for client-side route guarding
@@ -489,6 +491,43 @@ Build an MVP monorepo with:
 - `GET http://localhost:3000/admin`: HTTP 200; client guard handles unauthenticated redirect.
 - `GET http://localhost:8000/health`: returns `{"status":"ok"}`.
 
+## Phase 10 Final Smoke
+
+- Backend checks:
+  - `python -m uv run pytest`: 83 tests passed.
+  - `python -m uv run ruff check .`: passed.
+- Frontend checks:
+  - `pnpm --filter @kick-logs/web test`: 6 files, 20 tests passed.
+  - `pnpm --filter @kick-logs/web typecheck`: passed.
+  - `pnpm --filter @kick-logs/web lint`: passed.
+  - `pnpm --filter @kick-logs/web build`: passed.
+- Full Docker stack:
+  - `docker compose up --build -d`: starts `postgres`, `api`, `listener`, and `web`.
+  - `docker compose ps`: all four services are up.
+  - `GET http://localhost:8000/health`: returns `{"status":"ok"}`.
+  - `GET http://localhost:3000/`: HTTP 307 to `/search`.
+  - `GET http://localhost:3000/search`: HTTP 200 without login.
+  - `GET http://localhost:3000/login`: HTTP 200.
+  - `GET http://localhost:3000/admin`: HTTP 200; client guard owns unauthenticated redirect.
+- Listener:
+  - initially logs idle status when no channels are ready.
+  - after enabling `hype`, logs `Subscribing to 1 enabled Kick channels.`
+- End-to-end smoke:
+  - default super admin login succeeds through `POST /auth/login`.
+  - authenticated channel add for slug `hype` succeeds and stores Kick metadata:
+    - `channel_slug`: `hype`
+    - `kick_chatroom_id`: `24495088`
+  - sample message ingested through `IngestMessageUseCase`:
+    - marker: `phase10-smoke-20260510235338`
+    - sender: `PhaseTenSmoke`
+    - content includes `[emote:37226:KEKW]`
+  - public `GET /messages?q=phase10-smoke-20260510235338&limit=5` finds the sample without authentication.
+  - emote metadata in the search response includes `KEKW`.
+  - restarting the `postgres` service preserves the sample message in the named volume.
+- Cleanup:
+  - no tracked `.env`, generated cache, dependency folder, log, or build output was found.
+  - removed the unused `RouteShell` scaffold and changed `/` to redirect to `/search`.
+
 ## Design Direction
 
 - UI implementation is deferred until the backend API and listener are working end-to-end.
@@ -511,7 +550,7 @@ Build an MVP monorepo with:
   - email: `admin@kicklogs.local`
   - password: `admin123`
 - Allow env override for default super admin credentials.
-- Use `/search` for the public app search screen, `/admin` for authenticated backend management, and reserve `/` for a future landing page.
+- Use `/search` for the public app search screen, `/admin` for authenticated backend management, and redirect `/` to `/search` until a future landing page is intentionally designed.
 - `/search` does not require login.
 - `/admin` manages backend operational state such as followed channels and admin users.
 - Search filters are optional and combined with `AND`:

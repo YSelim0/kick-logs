@@ -169,7 +169,7 @@ If the image fails, fall back to emote name or original token.
 
 - `/search`: primary app search screen.
 - `/admin`: authenticated admin dashboard for backend operations.
-- `/`: reserved for a future landing page.
+- `/`: redirects to `/search` until a future landing page is intentionally designed.
 
 Search UI follows the dark professional palette documented in `docs/design/design.md`:
 
