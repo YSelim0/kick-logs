@@ -12,6 +12,7 @@ from kick_logs.domain.entities.user import User
 from kick_logs.infrastructure.auth import JwtTokenService, PasslibPasswordHasher
 from kick_logs.infrastructure.database import SqlAlchemyUnitOfWork, create_session_factory
 from kick_logs.infrastructure.database.unit_of_work import SessionFactory
+from kick_logs.infrastructure.kick import KickWebChannelResolver
 
 UnitOfWorkFactory = Callable[[], UnitOfWork]
 
@@ -38,6 +39,11 @@ def get_password_hasher() -> PasslibPasswordHasher:
 @lru_cache
 def get_token_service() -> JwtTokenService:
     return JwtTokenService(get_settings())
+
+
+@lru_cache
+def get_channel_resolver() -> KickWebChannelResolver:
+    return KickWebChannelResolver()
 
 
 SettingsDep = Annotated[Settings, Depends(get_settings_dependency)]

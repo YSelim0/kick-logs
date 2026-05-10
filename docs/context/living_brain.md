@@ -9,6 +9,7 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Phase 1 backend/Docker foundation is complete.
 - Phase 2 persistence foundation is complete.
 - Phase 3 auth/admin user foundation is complete.
+- Phase 4 channel management unit is implemented and awaiting commit.
 - `apps/api` contains the FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
 - Root `compose.yaml` has only the Phase 1 services:
   - `postgres`
@@ -137,6 +138,26 @@ Build an MVP monorepo with:
 - `GET /admin/users` requires an authenticated admin or super admin.
 - `POST /admin/users` requires `super_admin`.
 - Public routes such as `GET /health` remain unauthenticated.
+
+## Channel Management Details
+
+- Kick channel resolution uses `curl_cffi` browser impersonation against `https://kick.com/api/v2/channels/{slug}`.
+- Resolved channel metadata includes:
+  - Kick channel id
+  - Kick chatroom id
+  - normalized slug
+  - display name
+  - profile image URL when available
+  - banner image URL when available
+  - raw Kick payload
+- Admin channel routes implemented:
+  - `GET /admin/channels`
+  - `POST /admin/channels`
+  - `DELETE /admin/channels/{id}`
+- `POST /admin/channels` resolves Kick metadata before persistence.
+- Re-adding an existing disabled channel re-enables it and refreshes stored metadata.
+- `DELETE /admin/channels/{id}` disables the channel for the MVP instead of hard-deleting it.
+- Channel resolver and admin channel route tests are covered under `apps/api/tests/channels/`.
 
 ## Design Direction
 

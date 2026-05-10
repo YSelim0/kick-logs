@@ -14,21 +14,21 @@ Do not implement websocket/Pusher listener loops, frontend screens, or Docker we
 
 ## Tasks
 
-- [ ] Kick channel resolver:
-  - [ ] Add application port for resolving channel slug/nickname.
-  - [ ] Implement resolver with Kick web endpoint `https://kick.com/api/v2/channels/{slug}`.
-  - [ ] Extract Kick channel id, chatroom id, slug/display metadata, profile image/banner when available, and raw payload.
-  - [ ] Fail gracefully when Kick endpoint changes or returns an error.
-- [ ] Admin channel use cases:
-  - [ ] List followed channels.
-  - [ ] Add channel by slug/nickname; resolve metadata before persisting.
-  - [ ] Re-enable existing disabled channel when re-added.
-  - [ ] Disable or remove channel through `DELETE /admin/channels/{id}` according to MVP behavior.
-- [ ] Admin channel routes:
-  - [ ] `GET /admin/channels`
-  - [ ] `POST /admin/channels`
-  - [ ] `DELETE /admin/channels/{id}`
-  - [ ] Require authenticated admin or super admin.
+- [x] Kick channel resolver:
+  - [x] Add application port for resolving channel slug/nickname.
+  - [x] Implement resolver with Kick web endpoint `https://kick.com/api/v2/channels/{slug}`.
+  - [x] Extract Kick channel id, chatroom id, slug/display metadata, profile image/banner when available, and raw payload.
+  - [x] Fail gracefully when Kick endpoint changes or returns an error.
+- [x] Admin channel use cases:
+  - [x] List followed channels.
+  - [x] Add channel by slug/nickname; resolve metadata before persisting.
+  - [x] Re-enable existing disabled channel when re-added.
+  - [x] Disable or remove channel through `DELETE /admin/channels/{id}` according to MVP behavior.
+- [x] Admin channel routes:
+  - [x] `GET /admin/channels`
+  - [x] `POST /admin/channels`
+  - [x] `DELETE /admin/channels/{id}`
+  - [x] Require authenticated admin or super admin.
 - [ ] Message ingestion use case:
   - [ ] Normalize Kick chat payload into sender + chat message records.
   - [ ] Deduplicate by Kick message id.
@@ -48,8 +48,8 @@ Do not implement websocket/Pusher listener loops, frontend screens, or Docker we
   - [ ] Cursor pagination based on `(message_created_at, id)`.
   - [ ] Return sender avatar/profile fields and parsed emotes for frontend rendering.
 - [ ] Tests:
-  - [ ] Channel resolver success/failure with mocked HTTP.
-  - [ ] Admin channel add/list/delete auth checks.
+  - [x] Channel resolver success/failure with mocked HTTP.
+  - [x] Admin channel add/list/delete auth checks.
   - [ ] Emote parser cases.
   - [ ] Ingest idempotency.
   - [ ] Search filter combinations and pagination.

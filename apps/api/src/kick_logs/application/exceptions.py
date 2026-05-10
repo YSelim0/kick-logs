@@ -16,3 +16,11 @@ class DuplicateUserEmailError(ApplicationError):
 
 class UserNotFoundError(ApplicationError):
     """Raised when a user cannot be found or is inactive."""
+
+
+class ChannelResolutionError(ApplicationError):
+    """Raised when Kick channel metadata cannot be resolved."""
+
+
+class ChannelNotFoundError(ApplicationError):
+    """Raised when a followed channel cannot be found."""

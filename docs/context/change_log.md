@@ -92,3 +92,15 @@ This is a living implementation log. Add new entries for each meaningful project
 - Verified real API login/me smoke with default super admin credentials.
 - Updated Docker API startup to run `alembic upgrade head` before Uvicorn so the startup super admin seed runs after migrations.
 - Phase 3 acceptance is complete.
+- Started Phase 4 by adding Kick channel resolver, admin channel use cases, and admin channel route scaffolding.
+- Added Phase 4 channel management implementation:
+  - Kick web channel resolver using `curl_cffi`
+  - channel DTOs and resolver port
+  - list/add/remove channel use cases
+  - `GET /admin/channels`
+  - `POST /admin/channels`
+  - `DELETE /admin/channels/{id}`
+  - tests for resolver parsing/failure and authenticated admin channel management
+- Verified Phase 4 channel management scope:
+  - `uv run pytest tests/channels`: 7 tests passed
+  - `uv run ruff check .`: all checks passed
