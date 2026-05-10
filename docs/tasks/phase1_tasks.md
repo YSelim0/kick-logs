@@ -15,7 +15,7 @@ Do not implement database tables, auth, admin APIs, message search, listener log
 
 ## Tasks
 
-- [ ] Create root development files:
+- [x] Create root development files:
   - [x] `.gitignore` excluding `.env`, virtual environments, `__pycache__`, `.pytest_cache`, build outputs, logs, dependency folders.
   - [x] `.env.example` with non-secret local defaults for database URL, API settings, JWT placeholder, and default super admin env names.
   - [x] `README.md` with local prerequisites, Docker startup command, backend-only health check, and commit/push note.
