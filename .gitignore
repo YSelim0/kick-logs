@@ -22,6 +22,7 @@ node_modules/
 .next/
 out/
 pnpm-debug.log*
+*.tsbuildinfo
 
 logs/
 *.log

@@ -1,0 +1,15 @@
+{
+  "name": "kick-logs",
+  "private": true,
+  "packageManager": "pnpm@8.11.0",
+  "scripts": {
+    "dev": "pnpm --filter @kick-logs/web dev",
+    "build": "pnpm --filter @kick-logs/web build",
+    "lint": "pnpm --filter @kick-logs/web lint",
+    "typecheck": "pnpm --filter @kick-logs/web typecheck"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.11.0"
+  }
+}

@@ -66,7 +66,27 @@ services:
       - -c
       - uv run alembic upgrade head && uv run python -m kick_logs.presentation.worker.main
 
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+      NEXT_TELEMETRY_DISABLED: 1
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    volumes:
+      - ./apps/web:/repo/apps/web
+      - web_node_modules:/repo/node_modules
+      - web_app_node_modules:/repo/apps/web/node_modules
+      - web_next:/repo/apps/web/.next
+
 volumes:
   postgres_data:
   api_venv:
   listener_venv:
+  web_node_modules:
+  web_app_node_modules:
+  web_next:

@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --kick-background: #26001B;
+    --kick-surface: #810034;
+    --kick-border: #810034;
+    --kick-accent: #FF005C;
+    --kick-action: #FFF600;
+    --kick-black: #000000;
+    --kick-white: #FFFFFF;
+
+    --background: 317 100% 7%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 0%;
+    --card-foreground: 0 0% 100%;
+    --primary: 58 100% 50%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 336 100% 25%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 336 100% 16%;
+    --muted-foreground: 0 0% 74%;
+    --accent: 338 100% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 338 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 336 100% 25%;
+    --input: 336 100% 25%;
+    --ring: 58 100% 50%;
+    --radius: 0.375rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply min-h-screen bg-background text-foreground antialiased;
+  }
+}
