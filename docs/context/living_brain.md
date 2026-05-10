@@ -11,7 +11,8 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Phase 3 auth/admin user foundation is complete.
 - Phase 4 channel management unit is implemented and committed.
 - Phase 4 message ingestion foundation is implemented and committed.
-- Phase 4 public message search API is implemented and awaiting commit.
+- Phase 4 public message search API is implemented and committed.
+- Phase 4 acceptance is complete.
 - `apps/api` contains the FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
 - Root `compose.yaml` has only the Phase 1 services:
   - `postgres`
@@ -214,6 +215,14 @@ Build an MVP monorepo with:
   - sender profile fields including avatar URL
   - channel metadata including profile/banner URLs
 - Search use case batches sender/channel lookup by id after message search to avoid one metadata query per row.
+
+## Phase 4 Verification
+
+- `uv run pytest`: 65 tests passed.
+- `uv run ruff check .`: all checks passed.
+- `docker compose up --build -d postgres api`: backend stack builds and starts.
+- `GET http://localhost:8000/health`: returns `{"status":"ok"}`.
+- `GET http://localhost:8000/messages?limit=1`: returns public search response successfully.
 
 ## Design Direction
 

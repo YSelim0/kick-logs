@@ -124,3 +124,14 @@ This is a living implementation log. Add new entries for each meaningful project
 - Verified Phase 4 search scope:
   - `uv run pytest tests/messages`: 13 tests passed
   - `uv run ruff check .`: all checks passed
+- Completed Phase 4 acceptance:
+  - admins can manage followed channels through API
+  - public message search works without login
+  - ingestion use case persists normalized messages without listener runtime
+  - documented search filter combinations and cursor pagination are covered by tests
+- Final Phase 4 verification:
+  - `uv run pytest`: 65 tests passed
+  - `uv run ruff check .`: all checks passed
+  - `docker compose up --build -d postgres api`: backend stack starts
+  - `GET http://localhost:8000/health`: returned `{"status":"ok"}`
+  - `GET http://localhost:8000/messages?limit=1`: returned a public search response

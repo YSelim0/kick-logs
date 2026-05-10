@@ -4,7 +4,7 @@ Kick Logs is an MVP monorepo for collecting public Kick chat messages from follo
 
 ## Current Status
 
-Backend implementation is complete through Phase 3.
+Backend implementation is complete through Phase 4.
 
 Implemented so far:
 
@@ -15,9 +15,13 @@ Implemented so far:
 - Admin authentication with HttpOnly JWT cookies.
 - Default super admin seed.
 - Admin user list/create APIs.
+- Admin followed-channel management APIs.
+- Kick channel metadata resolver.
+- Message ingestion use case and emote parser.
+- Public `GET /messages` search API with optional filters and cursor pagination.
 - Backend test/tooling setup.
 
-Frontend, listener runtime, followed channel management, message ingestion, and public message search are intentionally added in later phases.
+Frontend and the live listener runtime are intentionally added in later phases.
 
 ## Prerequisites
 
@@ -71,6 +75,21 @@ Default admin login:
 ```text
 email: admin@kicklogs.local
 password: admin123
+```
+
+Phase 4 backend API routes:
+
+```text
+GET    /messages
+GET    /admin/channels
+POST   /admin/channels
+DELETE /admin/channels/{id}
+```
+
+Public message search example:
+
+```powershell
+curl "http://localhost:8000/messages?sender=yavuz&q=selam&limit=50"
 ```
 
 ## Backend Tests

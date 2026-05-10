@@ -47,7 +47,7 @@ Do not implement websocket/Pusher listener loops, frontend screens, or Docker we
   - [x] Newest-first ordering.
   - [x] Cursor pagination based on `(message_created_at, id)`.
   - [x] Return sender avatar/profile fields and parsed emotes for frontend rendering.
-- [ ] Tests:
+- [x] Tests:
   - [x] Channel resolver success/failure with mocked HTTP.
   - [x] Admin channel add/list/delete auth checks.
   - [x] Emote parser cases.
@@ -56,11 +56,11 @@ Do not implement websocket/Pusher listener loops, frontend screens, or Docker we
 
 ## Acceptance Criteria
 
-- [ ] Admins can manage followed channels through API.
-- [ ] Public message search works without login.
-- [ ] Ingest use case can persist normalized messages without listener runtime.
-- [ ] Search tests cover all documented filter combinations.
-- [ ] Docs/context are updated with implemented API details.
+- [x] Admins can manage followed channels through API.
+- [x] Public message search works without login.
+- [x] Ingest use case can persist normalized messages without listener runtime.
+- [x] Search tests cover all documented filter combinations.
+- [x] Docs/context are updated with implemented API details.
 
 ## Handoff
 
