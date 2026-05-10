@@ -2,6 +2,18 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-11
+
+- Fixed browser CORS for the frontend login flow:
+  - added FastAPI `CORSMiddleware`
+  - wired allowed origins from comma-separated `BACKEND_CORS_ORIGINS`
+  - covered `/auth/login` preflight with a backend test
+  - hardened the message repository pagination test with a unique query term so existing local chat history cannot affect it
+  - verified `python -m uv run pytest`: 85 passed
+  - verified `python -m uv run ruff check .`: passed
+  - verified live Docker `OPTIONS /auth/login` from `http://localhost:3000` returns CORS headers
+  - verified live Docker `POST /auth/login` returns 200 and sets the auth cookie
+
 ## 2026-05-09
 
 - Created project context structure request.

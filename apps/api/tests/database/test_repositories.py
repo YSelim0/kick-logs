@@ -141,6 +141,7 @@ async def test_message_repository_create_read_and_search(db_session: AsyncSessio
     channel, sender = await create_channel_and_sender(db_session)
     repository = SqlAlchemyMessageRepository(db_session)
     now = datetime.now(UTC)
+    search_term = unique_value("hello")
 
     old_message = await repository.add(
         ChatMessage(
@@ -148,7 +149,7 @@ async def test_message_repository_create_read_and_search(db_session: AsyncSessio
             channel_id=channel.id or 0,
             sender_id=sender.id or 0,
             chatroom_id=channel.kick_chatroom_id or 1,
-            content="older hello message",
+            content=f"older {search_term} message",
             message_type="message",
             sender_username_snapshot=sender.username,
             sender_slug_snapshot=sender.slug,
@@ -161,7 +162,7 @@ async def test_message_repository_create_read_and_search(db_session: AsyncSessio
             channel_id=channel.id or 0,
             sender_id=sender.id or 0,
             chatroom_id=channel.kick_chatroom_id or 1,
-            content="newest hello message",
+            content=f"newest {search_term} message",
             message_type="message",
             sender_username_snapshot=sender.username,
             sender_slug_snapshot=sender.slug,
@@ -174,13 +175,13 @@ async def test_message_repository_create_read_and_search(db_session: AsyncSessio
     assert loaded.id == newest_message.id
 
     results = await repository.search(
-        MessageSearchFilters(sender="yav", channel=channel.slug, q="hello"),
+        MessageSearchFilters(sender="yav", channel=channel.slug, q=search_term),
         CursorPagination(limit=10),
     )
     assert [message.id for message in results] == [newest_message.id, old_message.id]
 
     paged = await repository.search(
-        MessageSearchFilters(q="hello"),
+        MessageSearchFilters(q=search_term),
         CursorPagination(
             limit=10,
             cursor=MessageCursor(

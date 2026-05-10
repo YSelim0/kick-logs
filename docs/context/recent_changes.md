@@ -4,6 +4,20 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Fixed browser CORS for frontend-to-backend API calls:
+  - FastAPI now installs `CORSMiddleware` from comma-separated `BACKEND_CORS_ORIGINS`
+  - `OPTIONS /auth/login` from `http://localhost:3000` returns `200`
+  - `Access-Control-Allow-Origin: http://localhost:3000`
+  - `Access-Control-Allow-Credentials: true`
+  - actual `POST /auth/login` returns `200` and sets `kick_logs_session`
+- Hardened the message repository pagination test so existing local chat history cannot pollute its `q` filter.
+- Verification:
+  - `python -m uv run pytest`: 85 passed
+  - `python -m uv run ruff check .`: passed
+  - live Docker preflight and login smoke passed against `http://localhost:8000`
+
+## Previous
+
 - Phase 10 final MVP smoke and cleanup are complete.
 - Latest smoke:
   - full Docker stack starts with `docker compose up --build -d`

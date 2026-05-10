@@ -46,8 +46,10 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Phase task files exist under `docs/tasks/phase1_tasks.md` through `docs/tasks/phase10_tasks.md`.
 - Frontend `web` service exists and runs the Next.js development server.
 - Current backend verification:
-  - `python -m uv run pytest` passes from `apps/api` with 83 tests.
+  - `python -m uv run pytest` passes from `apps/api` with 85 tests.
   - `python -m uv run ruff check .` passes from `apps/api`.
+  - `OPTIONS http://localhost:8000/auth/login` from origin `http://localhost:3000` returns the expected CORS headers.
+  - `POST http://localhost:8000/auth/login` from origin `http://localhost:3000` returns 200 and sets `kick_logs_session`.
   - `docker compose config --services` returns `postgres`, `api`, and `listener`.
   - `docker compose up --build -d postgres api listener` starts the backend stack successfully.
   - `GET http://localhost:8000/health` returns `{"status":"ok"}`.
@@ -154,6 +156,7 @@ Build an MVP monorepo with:
 - Auth uses Passlib bcrypt password hashing through `PasslibPasswordHasher`.
 - Auth uses signed JWTs through `JwtTokenService`.
 - Session tokens are stored in an HttpOnly cookie named by `JWT_COOKIE_NAME`.
+- FastAPI CORS middleware is enabled from comma-separated `BACKEND_CORS_ORIGINS` so browser clients such as `http://localhost:3000` can call cookie-backed auth routes.
 - Cookie settings:
   - `JWT_COOKIE_NAME`
   - `JWT_COOKIE_SECURE`

@@ -3,6 +3,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from kick_logs.core.config import Settings, get_settings
 from kick_logs.core.logging import configure_logging
@@ -53,9 +54,23 @@ def create_app(
         title=resolved_settings.app_name,
         lifespan=build_lifespan(resolved_settings, should_seed),
     )
+    cors_origins = parse_cors_origins(resolved_settings.backend_cors_origins)
+    if cors_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=cors_origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(messages_router)
     app.include_router(admin_channels_router)
     app.include_router(admin_users_router)
     return app
+
+
+def parse_cors_origins(value: str) -> list[str]:
+    return [origin.strip() for origin in value.split(",") if origin.strip()]
