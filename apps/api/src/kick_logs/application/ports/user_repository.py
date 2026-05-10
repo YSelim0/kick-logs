@@ -1,0 +1,13 @@
+from typing import Protocol
+
+from kick_logs.domain.entities.user import User
+
+
+class UserRepository(Protocol):
+    async def add(self, user: User) -> User: ...
+
+    async def get_by_id(self, user_id: int) -> User | None: ...
+
+    async def get_by_email(self, email: str) -> User | None: ...
+
+    async def list_active(self) -> list[User]: ...

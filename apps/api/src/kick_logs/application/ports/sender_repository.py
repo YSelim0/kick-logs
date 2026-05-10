@@ -1,0 +1,13 @@
+from typing import Protocol
+
+from kick_logs.domain.entities.sender import Sender
+
+
+class SenderRepository(Protocol):
+    async def add(self, sender: Sender) -> Sender: ...
+
+    async def get_by_id(self, sender_id: int) -> Sender | None: ...
+
+    async def get_by_kick_user_id(self, kick_user_id: int) -> Sender | None: ...
+
+    async def get_by_slug(self, slug: str) -> Sender | None: ...

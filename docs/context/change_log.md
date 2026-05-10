@@ -55,3 +55,4 @@ This is a living implementation log. Add new entries for each meaningful project
 - Re-ran `docker compose up --build -d postgres api` successfully.
 - Verified `GET http://localhost:8000/health` returned `{"status":"ok"}`.
 - Phase 1 acceptance is complete.
+- Started Phase 2 by adding framework-independent domain entities/value objects and application repository/unit-of-work ports.
