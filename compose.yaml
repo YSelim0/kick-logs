@@ -26,7 +26,7 @@ services:
       API_PORT: 8000
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000}
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://kick_logs:kick_logs@postgres:5432/kick_logs}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-for-local-development}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-for-local-development-secret-key}
       JWT_COOKIE_NAME: ${JWT_COOKIE_NAME:-kick_logs_session}
       DEFAULT_SUPER_ADMIN_EMAIL: ${DEFAULT_SUPER_ADMIN_EMAIL:-admin@kicklogs.local}
       DEFAULT_SUPER_ADMIN_PASSWORD: ${DEFAULT_SUPER_ADMIN_PASSWORD:-admin123}

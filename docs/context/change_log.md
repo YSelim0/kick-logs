@@ -178,3 +178,19 @@ This is a living implementation log. Add new entries for each meaningful project
   - Pusher subscription payload now includes empty `auth`
   - websocket connection uses 30 second ping interval and 10 second ping timeout
   - Kick web HTTP resolvers use `chrome124` impersonation
+- Completed Phase 6 backend verification and acceptance:
+  - `python -m uv run pytest`: 83 tests passed
+  - `python -m uv run ruff check .`: passed
+  - `python -m uv run alembic current`: `20260510_0001 (head)`
+  - `docker compose up --build -d postgres api listener`: passed
+  - `GET /health`: passed
+  - default super admin login and `GET /auth/me`: passed
+  - unauthenticated `GET /admin/channels`: returned 401
+  - admin channel add/disable smoke with slug `hype`: passed
+  - public `GET /messages?limit=1`: passed without login
+  - listener Docker logs show useful idle status without crashing
+- Cleaned Phase 6 runtime warnings:
+  - increased default local/Compose `JWT_SECRET_KEY` length for HS256
+  - pinned `bcrypt` to `>=4.0.1,<4.1` for Passlib compatibility
+- Updated `README.md` with backend verification steps, access model, env/local secret expectations, and Kick integration fragility notes.
+- Marked Phase 6 task file acceptance as complete.

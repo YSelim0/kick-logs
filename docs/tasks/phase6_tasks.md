@@ -13,40 +13,40 @@ Do not add frontend implementation, change UI design, or introduce new product f
 
 ## Tasks
 
-- [ ] Test suite stabilization:
-  - [ ] Run backend unit and integration tests.
-  - [ ] Fix failing tests without expanding scope.
-  - [ ] Ensure tests cover health, auth, admin users, admin channels, search, ingestion, listener parser, and reconnect behavior.
-- [ ] Docker backend verification:
-  - [ ] Run `docker compose up --build postgres api listener`.
-  - [ ] Confirm API connects to PostgreSQL.
-  - [ ] Confirm migrations can run in Docker workflow.
-  - [ ] Confirm listener starts and logs useful status.
-- [ ] Manual/API smoke checks:
-  - [ ] `GET /health`.
-  - [ ] Default super admin login.
-  - [ ] `GET /auth/me` with cookie.
-  - [ ] Add followed channel.
-  - [ ] Disable/remove followed channel.
-  - [ ] Ingest sample message through use case or listener test harness.
-  - [ ] Public `GET /messages` without auth.
-- [ ] Backend docs:
-  - [ ] Update `README.md` with backend startup and verification steps.
-  - [ ] Document env vars and local secrets expectations.
-  - [ ] Document known Kick endpoint/websocket fragility.
-  - [ ] Document public `/messages` access and admin-only `/admin/*` access.
-- [ ] Cleanup:
-  - [ ] Remove unused scaffold files.
-  - [ ] Confirm no `.env`, virtualenvs, caches, logs, or dependency folders are tracked.
+- [x] Test suite stabilization:
+  - [x] Run backend unit and integration tests.
+  - [x] Fix failing tests without expanding scope.
+  - [x] Ensure tests cover health, auth, admin users, admin channels, search, ingestion, listener parser, and reconnect behavior.
+- [x] Docker backend verification:
+  - [x] Run `docker compose up --build postgres api listener`.
+  - [x] Confirm API connects to PostgreSQL.
+  - [x] Confirm migrations can run in Docker workflow.
+  - [x] Confirm listener starts and logs useful status.
+- [x] Manual/API smoke checks:
+  - [x] `GET /health`.
+  - [x] Default super admin login.
+  - [x] `GET /auth/me` with cookie.
+  - [x] Add followed channel.
+  - [x] Disable/remove followed channel.
+  - [x] Ingest sample message through use case or listener test harness.
+  - [x] Public `GET /messages` without auth.
+- [x] Backend docs:
+  - [x] Update `README.md` with backend startup and verification steps.
+  - [x] Document env vars and local secrets expectations.
+  - [x] Document known Kick endpoint/websocket fragility.
+  - [x] Document public `/messages` access and admin-only `/admin/*` access.
+- [x] Cleanup:
+  - [x] Remove unused scaffold files.
+  - [x] Confirm no `.env`, virtualenvs, caches, logs, or dependency folders are tracked.
 
 ## Acceptance Criteria
 
-- [ ] Backend test suite passes.
-- [ ] Docker backend stack starts cleanly.
-- [ ] Public search API works without login.
-- [ ] Admin APIs require login.
-- [ ] Listener is wired through Docker and ingestion use cases.
-- [ ] README/backend docs are enough for frontend implementation to begin.
+- [x] Backend test suite passes.
+- [x] Docker backend stack starts cleanly.
+- [x] Public search API works without login.
+- [x] Admin APIs require login.
+- [x] Listener is wired through Docker and ingestion use cases.
+- [x] README/backend docs are enough for frontend implementation to begin.
 
 ## Handoff
 

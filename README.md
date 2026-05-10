@@ -4,7 +4,7 @@ Kick Logs is an MVP monorepo for collecting public Kick chat messages from follo
 
 ## Current Status
 
-Backend implementation is complete through Phase 5.
+Backend implementation is complete and verified through Phase 6.
 
 Implemented so far:
 
@@ -22,6 +22,7 @@ Implemented so far:
 - Kick listener worker with Pusher websocket ingestion runtime.
 - Listener Docker Compose service.
 - Backend test/tooling setup.
+- Backend Docker/API acceptance checks.
 
 Frontend is intentionally added in later phases.
 
@@ -42,6 +43,14 @@ Copy-Item .env.example .env
 ```
 
 `.env` is ignored by Git and must not be committed.
+
+Local secrets and credentials live in `.env`. Keep `JWT_SECRET_KEY` at least 32 bytes for HS256, and override the default super admin credentials before using the stack outside local development:
+
+```text
+JWT_SECRET_KEY
+DEFAULT_SUPER_ADMIN_EMAIL
+DEFAULT_SUPER_ADMIN_PASSWORD
+```
 
 ## Start Backend Stack
 
@@ -80,10 +89,21 @@ email: admin@kicklogs.local
 password: admin123
 ```
 
-Phase 4 backend API routes:
+Backend API access model:
 
 ```text
+Public:
+GET    /health
 GET    /messages
+
+Authentication:
+POST   /auth/login
+POST   /auth/logout
+GET    /auth/me
+
+Admin-only:
+GET    /admin/users
+POST   /admin/users
 GET    /admin/channels
 POST   /admin/channels
 DELETE /admin/channels/{id}
@@ -117,6 +137,37 @@ Lint:
 cd apps/api
 uv run ruff check .
 ```
+
+## Backend Verification
+
+Phase 6 backend acceptance was verified with:
+
+```powershell
+cd apps/api
+python -m uv run pytest
+python -m uv run ruff check .
+cd ..\..
+docker compose up --build -d postgres api listener
+docker compose ps
+```
+
+Manual smoke checks:
+
+- `GET /health` returns `{"status":"ok"}`.
+- `GET /admin/channels` returns `401` without login.
+- Default super admin can login and call `GET /auth/me`.
+- Admin can add and disable a followed Kick channel.
+- `GET /messages?limit=1` works without login.
+- Listener starts through Docker and stays alive when no enabled channels are ready.
+
+## Kick Integration Notes
+
+The MVP uses Kick web endpoints, Kick Pusher chat events, and inferred emote image URLs. These are not a stable official API contract. If channel resolution, websocket subscription, sender enrichment, or emote images fail after a Kick-side change, inspect:
+
+- `KICK_PUSHER_URL`
+- `apps/api/src/kick_logs/infrastructure/kick/channel_resolver.py`
+- `apps/api/src/kick_logs/infrastructure/kick/pusher_client.py`
+- `apps/api/src/kick_logs/infrastructure/kick/sender_profile_resolver.py`
 
 ## Git Workflow
 

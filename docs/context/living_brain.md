@@ -15,20 +15,27 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Phase 4 acceptance is complete.
 - Phase 5 listener foundation is complete.
 - Phase 5 listener runtime and Docker service are complete.
+- Phase 6 backend verification and acceptance is complete.
 - `apps/api` contains the FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
-- Root `compose.yaml` currently has backend Phase 5 services:
+- Root `compose.yaml` currently has backend Phase 6 services:
   - `postgres`
   - `api`
   - `listener`
 - Sequential implementation plan exists at `docs/implementation_plan.md`.
 - Phase task files exist under `docs/tasks/phase1_tasks.md` through `docs/tasks/phase10_tasks.md`.
 - Frontend `web` service is still deferred until its owning frontend phase.
-- Local verification:
-  - `uv run pytest` passes from `apps/api`.
-  - `uv run ruff check .` passes from `apps/api`.
-  - `docker compose config --services` returns only `postgres` and `api`.
-  - `docker compose up --build -d postgres api` starts the Phase 1 stack successfully.
+- Current backend verification:
+  - `python -m uv run pytest` passes from `apps/api` with 83 tests.
+  - `python -m uv run ruff check .` passes from `apps/api`.
+  - `docker compose config --services` returns `postgres`, `api`, and `listener`.
+  - `docker compose up --build -d postgres api listener` starts the backend stack successfully.
   - `GET http://localhost:8000/health` returns `{"status":"ok"}`.
+  - `GET http://localhost:8000/messages?limit=1` works without login.
+  - `GET http://localhost:8000/admin/channels` returns 401 without login.
+  - Default super admin login and `GET /auth/me` pass.
+  - Admin channel add/disable smoke passes with slug `hype`.
+  - Listener logs useful idle status when no enabled channels are ready.
+  - `alembic current` reports `20260510_0001 (head)`.
 - Phase 2 verification:
   - `alembic upgrade head` applies revision `20260510_0001`
   - `alembic current` reports `20260510_0001 (head)`
@@ -257,6 +264,25 @@ Build an MVP monorepo with:
 - `docker compose ps`: `postgres`, `api`, and `listener` are up.
 - `GET http://localhost:8000/health`: returns `{"status":"ok"}`.
 - Listener logs show idle no-channel checks without crashing when no channels are enabled.
+
+## Phase 6 Verification
+
+- `python -m uv run pytest`: 83 tests passed.
+- `python -m uv run ruff check .`: all checks passed.
+- `python -m uv run alembic current`: reports `20260510_0001 (head)`.
+- `docker compose up --build -d postgres api listener`: backend stack builds and starts.
+- `docker compose ps`: `postgres`, `api`, and `listener` are up.
+- API logs show Alembic migration startup, default super admin seed, and clean request handling.
+- Listener logs show Alembic migration startup and useful idle status when no enabled channels are ready.
+- Public `GET /messages?limit=1` works without authentication.
+- Admin `GET /admin/channels` returns 401 without authentication.
+- Default super admin can login and call `GET /auth/me`.
+- Admin channel add/disable smoke passes with slug `hype`.
+- No `.env`, virtualenv, cache, log, or dependency directory is tracked.
+- No repository files reference the local-only reference project.
+- Runtime warning cleanup:
+  - default local/Compose `JWT_SECRET_KEY` is now at least 32 bytes
+  - `bcrypt` is pinned to `>=4.0.1,<4.1` for Passlib compatibility
 
 ## Design Direction
 

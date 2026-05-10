@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://kick_logs:kick_logs@localhost:5432/kick_logs"
     database_echo: bool = False
 
-    jwt_secret_key: str = Field(default="change-me-for-local-development-secret", repr=False)
+    jwt_secret_key: str = Field(default="change-me-for-local-development-secret-key", repr=False)
     jwt_algorithm: str = "HS256"
     jwt_expires_minutes: int = 60 * 24 * 7
     jwt_cookie_name: str = "kick_logs_session"

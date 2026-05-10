@@ -4,40 +4,35 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
-- Phase 4 channel management was committed as `7baac1d feat(channels): add admin channel management`.
-- Phase 4 ingestion foundation was committed as `8808d48 feat(messages): add ingestion foundation`.
-- Phase 4 public search was committed as `cb704bd feat(messages): add public search api`.
-- Phase 4 acceptance is complete.
-- Phase 4 completion docs were committed as `93d7a97 feat(docs): complete phase four`.
-- Phase 5 listener foundation has started:
-  - enabled-channel loading
-  - Kick chat event parsing
-  - reconnect backoff policy
-- Phase 5 listener runtime is implemented:
-  - Pusher client
-  - listener service
-  - worker entrypoint
-  - sender profile resolver/enrichment fallback
-- Listener Docker Compose service is implemented and starts with `postgres` and `api`.
-- Phase 5 acceptance is complete.
-- Listener runtime was aligned with the verified Kick web chat flow:
-  - Pusher subscribe payload includes empty `auth`
-  - websocket ping interval/timeout are set to 30/10 seconds
-  - Kick web HTTP resolvers use `chrome124` impersonation
-- Final verification:
-  - `uv run pytest`: 65 passed
-  - `uv run ruff check .`: passed
-  - `docker compose up --build -d postgres api`: passed
-  - `GET /health`: passed
-  - `GET /messages?limit=1`: passed
-  - `uv run pytest`: 83 passed after Phase 5
+- Phase 5 is complete and committed through:
+  - `b0eee69 feat(listener): add worker foundation`
+  - `29abaf8 feat(listener): add pusher runtime`
+  - `1f98b3a feat(listener): add docker service`
+  - `c80afaa feat(listener): align pusher subscription`
+- Phase 6 backend verification and acceptance is complete.
+- Phase 6 fixes:
+  - default local/Compose `JWT_SECRET_KEY` is now at least 32 bytes
+  - `bcrypt` is pinned to `>=4.0.1,<4.1` for Passlib compatibility
+- Phase 6 verification:
+  - `python -m uv run pytest`: 83 passed
+  - `python -m uv run ruff check .`: passed
+  - `python -m uv run alembic current`: `20260510_0001 (head)`
   - `docker compose up --build -d postgres api listener`: passed
+  - `docker compose ps`: `postgres`, `api`, and `listener` up
+  - `GET /health`: passed
+  - unauthenticated `GET /admin/channels`: 401
+  - default super admin login and `GET /auth/me`: passed
+  - admin channel add/disable smoke with slug `hype`: passed
+  - public `GET /messages?limit=1`: passed without login
+  - listener logs useful idle status when no enabled channels are ready
+- README now documents backend startup, verification, route access, env/local secrets, and Kick integration fragility.
 - Scope remains backend-only: no frontend or web Docker service.
 
 ## Commit Context
 
-- Last committed unit:
-  - `29abaf8 feat(listener): add pusher runtime`
-  - `1f98b3a feat(listener): add docker service`
-- Next commit should cover listener runtime alignment:
-  - suggested message: `feat(listener): align pusher subscription`
+- Previous committed unit:
+  - `c80afaa feat(listener): align pusher subscription`
+- Latest completed unit:
+  - Phase 6 backend acceptance
+- Commit message for this unit:
+  - `feat(backend): complete phase six acceptance`
