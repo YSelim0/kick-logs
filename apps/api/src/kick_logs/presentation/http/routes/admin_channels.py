@@ -47,7 +47,7 @@ async def add_channel(
         )
     except ChannelResolutionError as exc:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=422,
             detail="Kick channel could not be resolved.",
         ) from exc
 

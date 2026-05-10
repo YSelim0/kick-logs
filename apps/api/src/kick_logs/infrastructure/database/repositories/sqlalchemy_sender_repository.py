@@ -52,3 +52,12 @@ class SqlAlchemySenderRepository:
         )
         model = result.scalar_one_or_none()
         return sender_to_domain(model) if model else None
+
+    async def list_by_ids(self, sender_ids: set[int]) -> list[Sender]:
+        if not sender_ids:
+            return []
+
+        result = await self._session.execute(
+            select(SenderModel).where(SenderModel.id.in_(sender_ids))
+        )
+        return [sender_to_domain(model) for model in result.scalars().all()]

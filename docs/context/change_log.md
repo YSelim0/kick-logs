@@ -114,3 +114,13 @@ This is a living implementation log. Add new entries for each meaningful project
 - Verified Phase 4 ingestion scope:
   - `uv run pytest tests/messages`: 8 tests passed
   - `uv run ruff check .`: all checks passed
+- Added Phase 4 public message search API:
+  - `SearchMessagesUseCase`
+  - public `GET /messages`
+  - response schemas with sender/channel metadata and parsed emotes
+  - cursor encoding as `{message_created_at.isoformat()}|{message_id}`
+  - batch sender/channel lookup for search response enrichment
+  - public HTTP tests for empty filters, optional filter combinations, date range, cursor pagination, and invalid cursor handling
+- Verified Phase 4 search scope:
+  - `uv run pytest tests/messages`: 13 tests passed
+  - `uv run ruff check .`: all checks passed

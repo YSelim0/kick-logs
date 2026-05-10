@@ -55,6 +55,15 @@ class SqlAlchemyChannelRepository:
         model = result.scalar_one_or_none()
         return channel_to_domain(model) if model else None
 
+    async def list_by_ids(self, channel_ids: set[int]) -> list[Channel]:
+        if not channel_ids:
+            return []
+
+        result = await self._session.execute(
+            select(ChannelModel).where(ChannelModel.id.in_(channel_ids))
+        )
+        return [channel_to_domain(model) for model in result.scalars().all()]
+
     async def list_enabled(self) -> list[Channel]:
         result = await self._session.execute(
             select(ChannelModel)

@@ -10,7 +10,8 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Phase 2 persistence foundation is complete.
 - Phase 3 auth/admin user foundation is complete.
 - Phase 4 channel management unit is implemented and committed.
-- Phase 4 message ingestion foundation is implemented and awaiting commit.
+- Phase 4 message ingestion foundation is implemented and committed.
+- Phase 4 public message search API is implemented and awaiting commit.
 - `apps/api` contains the FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
 - Root `compose.yaml` has only the Phase 1 services:
   - `postgres`
@@ -181,6 +182,38 @@ Build an MVP monorepo with:
   - raw message payload
 - Ingestion deduplicates by Kick message id and returns the existing stored message on duplicate input.
 - Ingestion resolves the followed channel by Kick chatroom id; unknown chatrooms fail with `ChannelNotFoundError`.
+
+## Public Search API Details
+
+- Public route implemented:
+  - `GET /messages`
+- Query parameters:
+  - `sender`
+  - `channel`
+  - `q`
+  - `start`
+  - `end`
+  - `cursor`
+  - `limit`
+- The route requires no authentication.
+- Empty filters return latest messages across all channels.
+- Non-empty filters combine with `AND`.
+- Sender, channel, and content filters use case-insensitive contains matching.
+- Date filters apply to `message_created_at`.
+- Results are newest-first.
+- Cursor format is:
+  - `{message_created_at.isoformat()}|{message_id}`
+- Cursor pagination uses `(message_created_at, id)`.
+- Search response includes:
+  - message content and timestamps
+  - sender snapshot fields
+  - sender badges
+  - reply metadata
+  - thread parent id
+  - parsed emotes with image URLs
+  - sender profile fields including avatar URL
+  - channel metadata including profile/banner URLs
+- Search use case batches sender/channel lookup by id after message search to avoid one metadata query per row.
 
 ## Design Direction
 

@@ -38,21 +38,21 @@ Do not implement websocket/Pusher listener loops, frontend screens, or Docker we
   - [x] Parse `[emote:id:name]` tokens.
   - [x] Store `id`, `name`, original token, and inferred image URL.
   - [x] Keep original message content unchanged for search/display.
-- [ ] Public search use case and route:
-  - [ ] `GET /messages?sender=&channel=&q=&start=&end=&cursor=&limit=`
-  - [ ] No authentication required.
-  - [ ] Optional filters combine with `AND`.
-  - [ ] Case-insensitive contains for sender, channel, and content.
-  - [ ] Date filtering on `message_created_at`.
-  - [ ] Newest-first ordering.
-  - [ ] Cursor pagination based on `(message_created_at, id)`.
-  - [ ] Return sender avatar/profile fields and parsed emotes for frontend rendering.
+- [x] Public search use case and route:
+  - [x] `GET /messages?sender=&channel=&q=&start=&end=&cursor=&limit=`
+  - [x] No authentication required.
+  - [x] Optional filters combine with `AND`.
+  - [x] Case-insensitive contains for sender, channel, and content.
+  - [x] Date filtering on `message_created_at`.
+  - [x] Newest-first ordering.
+  - [x] Cursor pagination based on `(message_created_at, id)`.
+  - [x] Return sender avatar/profile fields and parsed emotes for frontend rendering.
 - [ ] Tests:
   - [x] Channel resolver success/failure with mocked HTTP.
   - [x] Admin channel add/list/delete auth checks.
   - [x] Emote parser cases.
   - [x] Ingest idempotency.
-  - [ ] Search filter combinations and pagination.
+  - [x] Search filter combinations and pagination.
 
 ## Acceptance Criteria
 
