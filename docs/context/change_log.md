@@ -62,3 +62,7 @@ This is a living implementation log. Add new entries for each meaningful project
   - Alembic async environment
   - initial migration with `pg_trgm`, JSONB columns, dedupe constraints, and search indexes
 - Verified the initial migration applies cleanly to local Docker PostgreSQL with `alembic upgrade head`.
+- Added SQLAlchemy repository implementations and async unit of work wiring for users, channels, senders, and chat messages.
+- Added repository tests for create/read/update flows and message search/pagination repository behavior using isolated transactions.
+- Verified full backend test suite: 27 tests passed.
+- Verified `ruff check .`: all checks passed.

@@ -29,19 +29,19 @@ Do not implement HTTP auth, admin endpoints, Kick listener websocket code, front
   - [x] Enable `pg_trgm`.
   - [x] Add indexes for message timestamp, Kick message id, channel slug, sender username/slug, and text search.
   - [x] Add unique constraints for Kick ids where required to deduplicate messages.
-- [ ] Repositories and unit of work:
-  - [ ] Define application ports for user, channel, sender, and message repositories.
-  - [ ] Implement SQLAlchemy repositories.
-  - [ ] Implement async unit of work with commit/rollback boundaries.
-- [ ] Tests:
-  - [ ] Unit tests for domain/value object behavior.
-  - [ ] Repository tests for create/read/update flows.
-  - [ ] Migration metadata smoke test.
+- [x] Repositories and unit of work:
+  - [x] Define application ports for user, channel, sender, and message repositories.
+  - [x] Implement SQLAlchemy repositories.
+  - [x] Implement async unit of work with commit/rollback boundaries.
+- [x] Tests:
+  - [x] Unit tests for domain/value object behavior.
+  - [x] Repository tests for create/read/update flows.
+  - [x] Migration metadata smoke test.
 
 ## Acceptance Criteria
 
 - [x] Alembic migration applies cleanly to local PostgreSQL.
-- [ ] Repository tests pass against a test database or isolated transaction strategy.
+- [x] Repository tests pass against a test database or isolated transaction strategy.
 - [x] Domain imports remain framework-independent.
 - [x] No API auth/search/listener behavior is implemented yet.
 - [ ] Docs/context are updated with the actual DB details.

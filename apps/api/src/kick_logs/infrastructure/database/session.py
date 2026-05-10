@@ -1,4 +1,5 @@
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -29,6 +30,7 @@ def create_session_factory(
     )
 
 
+@asynccontextmanager
 async def session_scope(
     session_factory: async_sessionmaker[AsyncSession] | None = None,
 ) -> AsyncIterator[AsyncSession]:

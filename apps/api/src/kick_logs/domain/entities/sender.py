@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 from kick_logs.domain.exceptions import DomainError
@@ -13,6 +14,8 @@ class Sender:
     profile_image_url: str | None = None
     last_seen_color: str | None = None
     raw_profile_payload: dict[str, Any] = field(default_factory=dict)
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
     def __post_init__(self) -> None:
         normalized_slug = self.slug.strip().lower()
