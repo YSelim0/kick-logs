@@ -13,6 +13,11 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - enabled-channel loading
   - Kick chat event parsing
   - reconnect backoff policy
+- Phase 5 listener runtime is implemented:
+  - Pusher client
+  - listener service
+  - worker entrypoint
+  - sender profile resolver/enrichment fallback
 - Final verification:
   - `uv run pytest`: 65 passed
   - `uv run ruff check .`: passed
@@ -24,6 +29,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
 ## Commit Context
 
 - Last committed unit:
-  - `93d7a97 feat(docs): complete phase four`
-- Next commit should cover Phase 5 listener foundation:
-  - suggested message: `feat(listener): add worker foundation`
+  - `b0eee69 feat(listener): add worker foundation`
+- Next commit should cover Phase 5 listener runtime:
+  - suggested message: `feat(listener): add pusher runtime`

@@ -13,6 +13,7 @@ from kick_logs.application.dto.messages import (
     MessageSenderDTO,
     chat_message_to_dto,
 )
+from kick_logs.application.dto.senders import ResolvedSenderProfileDTO
 from kick_logs.application.dto.users import AdminUserDTO, admin_user_to_dto
 
 __all__ = [
@@ -27,6 +28,7 @@ __all__ = [
     "MessageSearchPageDTO",
     "MessageSenderDTO",
     "ResolvedKickChannelDTO",
+    "ResolvedSenderProfileDTO",
     "SkippedListenerChannelDTO",
     "admin_user_to_dto",
     "chat_message_to_dto",

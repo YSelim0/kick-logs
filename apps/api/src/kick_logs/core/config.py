@@ -32,6 +32,14 @@ class Settings(BaseSettings):
     default_super_admin_email: str = "admin@kicklogs.local"
     default_super_admin_password: str = Field(default="admin123", repr=False)
 
+    kick_pusher_url: str = (
+        "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679"
+        "?protocol=7&client=js&version=8.4.0-rc2&flash=false"
+    )
+    listener_reconnect_initial_delay_seconds: float = 1.0
+    listener_reconnect_max_delay_seconds: float = 30.0
+    listener_reconnect_multiplier: float = 2.0
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -14,39 +14,39 @@ Do not change public search UI, admin UI, auth contracts, or database schema exc
 
 ## Tasks
 
-- [ ] Listener service composition:
-  - [ ] Add `presentation/worker/main.py`.
-  - [ ] Add `presentation/worker/listener_service.py`.
-  - [ ] Wire settings, unit of work, channel resolver, event parser, sender resolver, and ingestion use case.
+- [x] Listener service composition:
+  - [x] Add `presentation/worker/main.py`.
+  - [x] Add `presentation/worker/listener_service.py`.
+  - [x] Wire settings, unit of work, channel resolver, event parser, sender resolver, and ingestion use case.
 - [x] Load enabled channels:
   - [x] Query enabled channels from DB.
   - [x] Resolve missing Kick channel id/chatroom id before subscribing.
   - [x] Skip disabled or unresolvable channels with structured logs.
-- [ ] Pusher client:
-  - [ ] Connect to `wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0-rc2&flash=false`.
-  - [ ] Subscribe to `chatrooms.{chatroom_id}.v2`.
-  - [ ] Subscribe to `channel.{channel_id}` only if required by implemented behavior.
-  - [ ] Handle `App\Events\ChatMessageEvent`.
+- [x] Pusher client:
+  - [x] Connect to `wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0-rc2&flash=false`.
+  - [x] Subscribe to `chatrooms.{chatroom_id}.v2`.
+  - [x] Subscribe to `channel.{channel_id}` only if required by implemented behavior.
+  - [x] Handle `App\Events\ChatMessageEvent`.
 - [x] Event parser:
   - [x] Parse JSON payloads safely.
   - [x] Extract message id, chatroom id, content, type, created_at, sender fields, identity color, badges, metadata, reply fields, and thread parent id.
   - [x] Reject malformed events without crashing the worker.
-- [ ] Sender profile enrichment:
-  - [ ] Add sender profile resolver by sender slug.
-  - [ ] Cache/store profile image URL when available.
-  - [ ] Continue ingestion if enrichment fails.
-- [ ] Reconnect policy:
+- [x] Sender profile enrichment:
+  - [x] Add sender profile resolver by sender slug.
+  - [x] Cache/store profile image URL when available.
+  - [x] Continue ingestion if enrichment fails.
+- [x] Reconnect policy:
   - [x] Backoff after websocket failures.
-  - [ ] Re-subscribe enabled channels after reconnect.
-  - [ ] Log connection, subscription, parse, and ingest events.
+  - [x] Re-subscribe enabled channels after reconnect.
+  - [x] Log connection, subscription, parse, and ingest events.
 - [ ] Docker Compose:
   - [ ] Add `listener` service using same backend image/source as `api`.
   - [ ] Ensure listener depends on `postgres` and uses backend env.
 - [ ] Tests:
   - [x] Event parser with representative Kick payloads.
-  - [ ] Listener service with fake Pusher client and fake repositories.
+  - [x] Listener service with fake Pusher client and fake repositories.
   - [x] Reconnect policy unit tests.
-  - [ ] Sender enrichment fallback.
+  - [x] Sender enrichment fallback.
 
 ## Acceptance Criteria
 

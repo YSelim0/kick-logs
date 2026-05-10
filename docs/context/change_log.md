@@ -145,3 +145,14 @@ This is a living implementation log. Add new entries for each meaningful project
 - Verified Phase 5 listener foundation:
   - `uv run pytest tests/listener`: 10 tests passed
   - `uv run ruff check .`: all checks passed
+- Added Phase 5 listener runtime:
+  - direct `websockets` runtime dependency
+  - `KickPusherClient`
+  - sender profile resolver port and Kick web implementation
+  - listener settings for Pusher URL and reconnect backoff
+  - `ListenerService`
+  - worker entrypoint at `kick_logs.presentation.worker.main`
+  - tests for fake Pusher ingestion, malformed event handling, Pusher subscriptions, sender profile resolver, and enrichment fallback
+- Verified Phase 5 listener runtime:
+  - `uv run pytest tests/listener`: 17 tests passed
+  - `uv run ruff check .`: all checks passed

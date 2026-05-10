@@ -234,6 +234,13 @@ Build an MVP monorepo with:
 - `KickEventParser` parses Pusher envelopes and extracts only `App\Events\ChatMessageEvent` payloads.
 - Malformed JSON, non-chat events, and incomplete chat payloads are ignored without raising.
 - `ReconnectPolicy` computes exponential backoff delays with a maximum cap.
+- `KickPusherClient` connects to the configured Kick Pusher websocket URL and subscribes to:
+  - `chatrooms.{kick_chatroom_id}.v2`
+  - `channel.{kick_channel_id}`
+- `ListenerService` composes enabled-channel loading, Pusher event streaming, event parsing, sender profile enrichment, and `IngestMessageUseCase`.
+- `ListenerService.run_forever()` reconnects with backoff and reloads enabled channels on each reconnect.
+- Sender profile enrichment uses Kick web channel metadata by sender slug and continues ingestion when enrichment fails.
+- Worker entrypoint is `kick_logs.presentation.worker.main`.
 
 ## Design Direction
 

@@ -28,3 +28,7 @@ class ChannelNotFoundError(ApplicationError):
 
 class MessageIngestionError(ApplicationError):
     """Raised when an incoming Kick chat message payload cannot be normalized."""
+
+
+class SenderProfileResolutionError(ApplicationError):
+    """Raised when Kick sender profile metadata cannot be resolved."""
