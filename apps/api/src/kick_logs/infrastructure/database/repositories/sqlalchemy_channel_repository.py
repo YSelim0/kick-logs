@@ -48,6 +48,13 @@ class SqlAlchemyChannelRepository:
         model = result.scalar_one_or_none()
         return channel_to_domain(model) if model else None
 
+    async def get_by_chatroom_id(self, kick_chatroom_id: int) -> Channel | None:
+        result = await self._session.execute(
+            select(ChannelModel).where(ChannelModel.kick_chatroom_id == kick_chatroom_id)
+        )
+        model = result.scalar_one_or_none()
+        return channel_to_domain(model) if model else None
+
     async def list_enabled(self) -> list[Channel]:
         result = await self._session.execute(
             select(ChannelModel)

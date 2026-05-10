@@ -9,7 +9,8 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Phase 1 backend/Docker foundation is complete.
 - Phase 2 persistence foundation is complete.
 - Phase 3 auth/admin user foundation is complete.
-- Phase 4 channel management unit is implemented and awaiting commit.
+- Phase 4 channel management unit is implemented and committed.
+- Phase 4 message ingestion foundation is implemented and awaiting commit.
 - `apps/api` contains the FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
 - Root `compose.yaml` has only the Phase 1 services:
   - `postgres`
@@ -158,6 +159,28 @@ Build an MVP monorepo with:
 - Re-adding an existing disabled channel re-enables it and refreshes stored metadata.
 - `DELETE /admin/channels/{id}` disables the channel for the MVP instead of hard-deleting it.
 - Channel resolver and admin channel route tests are covered under `apps/api/tests/channels/`.
+
+## Message Ingestion Details
+
+- Emote parsing is implemented by `EmoteParser`.
+- Supported emote token format:
+  - `[emote:id:name]`
+- Parsed emote data stores:
+  - `id`
+  - `name`
+  - original `token`
+  - inferred `image_url`
+- Message content remains unchanged after emote parsing.
+- `IngestMessageUseCase` normalizes Kick chat event payloads into:
+  - sender record
+  - chat message record
+  - sender snapshots
+  - sender badges
+  - reply metadata
+  - thread parent id
+  - raw message payload
+- Ingestion deduplicates by Kick message id and returns the existing stored message on duplicate input.
+- Ingestion resolves the followed channel by Kick chatroom id; unknown chatrooms fail with `ChannelNotFoundError`.
 
 ## Design Direction
 

@@ -24,3 +24,7 @@ class ChannelResolutionError(ApplicationError):
 
 class ChannelNotFoundError(ApplicationError):
     """Raised when a followed channel cannot be found."""
+
+
+class MessageIngestionError(ApplicationError):
+    """Raised when an incoming Kick chat message payload cannot be normalized."""

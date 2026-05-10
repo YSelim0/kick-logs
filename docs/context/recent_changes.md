@@ -4,14 +4,14 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
-- Phase 4 implementation has started.
-- Kick channel resolver, admin channel DTOs/use cases, and `/admin/channels` routes are implemented.
-- Channel management tests pass with 7 focused tests.
+- Phase 4 channel management was committed as `7baac1d feat(channels): add admin channel management`.
+- Emote parsing and idempotent message ingestion are implemented.
+- Message ingestion tests pass with 8 focused tests.
 - Scope remains backend-only: no listener loop, frontend, or web Docker service.
 
 ## Commit Context
 
-- Last committed Phase 3 unit:
-  - `2a78ee8 feat(auth): complete phase three sessions`
-- Next commit should cover Phase 4 channel management:
-  - suggested message: `feat(channels): add admin channel management`
+- Last committed Phase 4 unit:
+  - `7baac1d feat(channels): add admin channel management`
+- Next commit should cover Phase 4 ingestion foundation:
+  - suggested message: `feat(messages): add ingestion foundation`

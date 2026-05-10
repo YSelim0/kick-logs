@@ -104,3 +104,13 @@ This is a living implementation log. Add new entries for each meaningful project
 - Verified Phase 4 channel management scope:
   - `uv run pytest tests/channels`: 7 tests passed
   - `uv run ruff check .`: all checks passed
+- Added Phase 4 message ingestion foundation:
+  - emote parser for `[emote:id:name]` tokens
+  - chat message DTO mapping
+  - channel lookup by Kick chatroom id
+  - idempotent `IngestMessageUseCase`
+  - sender upsert from Kick sender payload
+  - raw payload, badges, reply metadata, thread parent id, timestamp, and parsed emote persistence
+- Verified Phase 4 ingestion scope:
+  - `uv run pytest tests/messages`: 8 tests passed
+  - `uv run ruff check .`: all checks passed

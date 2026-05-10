@@ -29,15 +29,15 @@ Do not implement websocket/Pusher listener loops, frontend screens, or Docker we
   - [x] `POST /admin/channels`
   - [x] `DELETE /admin/channels/{id}`
   - [x] Require authenticated admin or super admin.
-- [ ] Message ingestion use case:
-  - [ ] Normalize Kick chat payload into sender + chat message records.
-  - [ ] Deduplicate by Kick message id.
-  - [ ] Store raw payload JSONB.
-  - [ ] Store sender snapshots, badges, reply metadata, thread parent id, and message timestamp.
-- [ ] Emote parser:
-  - [ ] Parse `[emote:id:name]` tokens.
-  - [ ] Store `id`, `name`, original token, and inferred image URL.
-  - [ ] Keep original message content unchanged for search/display.
+- [x] Message ingestion use case:
+  - [x] Normalize Kick chat payload into sender + chat message records.
+  - [x] Deduplicate by Kick message id.
+  - [x] Store raw payload JSONB.
+  - [x] Store sender snapshots, badges, reply metadata, thread parent id, and message timestamp.
+- [x] Emote parser:
+  - [x] Parse `[emote:id:name]` tokens.
+  - [x] Store `id`, `name`, original token, and inferred image URL.
+  - [x] Keep original message content unchanged for search/display.
 - [ ] Public search use case and route:
   - [ ] `GET /messages?sender=&channel=&q=&start=&end=&cursor=&limit=`
   - [ ] No authentication required.
@@ -50,8 +50,8 @@ Do not implement websocket/Pusher listener loops, frontend screens, or Docker we
 - [ ] Tests:
   - [x] Channel resolver success/failure with mocked HTTP.
   - [x] Admin channel add/list/delete auth checks.
-  - [ ] Emote parser cases.
-  - [ ] Ingest idempotency.
+  - [x] Emote parser cases.
+  - [x] Ingest idempotency.
   - [ ] Search filter combinations and pagination.
 
 ## Acceptance Criteria
