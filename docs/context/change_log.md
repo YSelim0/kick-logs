@@ -214,3 +214,34 @@ This is a living implementation log. Add new entries for each meaningful project
   - `GET http://localhost:8000/health`: returned `{"status":"ok"}`
 - Documented frontend install/scripts, full dev stack startup, and Phase 7 verification in `README.md`.
 - Marked Phase 7 task file acceptance as complete.
+- Started and completed Phase 8 public search UI:
+  - read `docs/design/design.pen` JSON directly because Pencil MCP app connection was unavailable
+  - used `Search Screen / Desktop (User Friendly ReTouch Current)` as the implementation reference
+  - replaced the `/search` placeholder with the public search screen
+  - added search form fields mapped to `sender`, `channel`, `q`, `start`, and `end`
+  - preserves submitted filters in the URL
+  - omits empty filter values from backend query params
+  - fetches public `GET /messages` without auth
+  - implements cursor-based infinite scroll
+  - renders dense message rows inside one shared list container
+  - renders circular sender avatars and fallback initials
+  - renders `[emote:id:name]` tokens inline with image fallback text
+  - added compact loading, empty, and error states
+  - added the app logo to `apps/web/public/app-logo.png`
+- Added frontend test tooling and Phase 8 tests:
+  - Vitest
+  - React Testing Library
+  - query mapping tests
+  - empty filter tests
+  - infinite-scroll append helper test
+  - emote fallback rendering test
+- Verified Phase 8:
+  - `pnpm --filter @kick-logs/web test`: 2 files, 7 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `docker compose up --build -d web`: passed
+  - `GET http://localhost:3000/search`: HTTP 200
+  - `GET http://localhost:3000/search?sender=yavuz&q=selam`: HTTP 200 and no admin placeholder content
+  - `GET http://localhost:8000/health`: returned `{"status":"ok"}`
+- Updated `README.md` and marked Phase 8 task file acceptance as complete.

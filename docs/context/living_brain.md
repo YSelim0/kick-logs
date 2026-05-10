@@ -17,6 +17,7 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Phase 5 listener runtime and Docker service are complete.
 - Phase 6 backend verification and acceptance is complete.
 - Phase 7 frontend foundation is complete.
+- Phase 8 public search UI is complete.
 - `apps/api` contains the FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
 - Root `compose.yaml` currently has Phase 7 services:
   - `postgres`
@@ -41,6 +42,7 @@ This file is the active project memory. Keep it updated whenever project behavio
   - `pnpm --filter @kick-logs/web typecheck`, `lint`, and `build` pass.
   - `docker compose up --build -d web` builds and starts `web`.
   - `GET http://localhost:3000` returns HTTP 200.
+  - `GET http://localhost:3000/search` returns HTTP 200 without login.
 - Phase 2 verification:
   - `alembic upgrade head` applies revision `20260510_0001`
   - `alembic current` reports `20260510_0001 (head)`
@@ -348,6 +350,56 @@ Build an MVP monorepo with:
 - `docker compose ps`: `postgres`, `api`, `listener`, and `web` are up.
 - `GET http://localhost:3000`: returns HTTP 200.
 - `GET http://localhost:8000/health`: returns `{"status":"ok"}`.
+
+## Public Search UI Details
+
+- `/search` is implemented as a public client route with no auth gate.
+- The implementation used `docs/design/design.pen` directly by reading the JSON frame:
+  - `Search Screen / Desktop (User Friendly ReTouch Current)`
+- The Pencil MCP app was unavailable during implementation, but the `.pen` file was readable as JSON and used for structure, labels, colors, spacing, and result-row behavior.
+- `/search` does not show admin-only controls or admin placeholder content.
+- Search form fields:
+  - `Kullanıcı Adı` -> `sender`
+  - `Kanal Adı` -> `channel`
+  - `Aramak istediğiniz Kelime` -> `q`
+  - `Başlangıç` -> `start`
+  - `Bitiş` -> `end`
+- Empty form fields are omitted from URL/backend query params.
+- Empty all filters fetches latest messages.
+- Submitted filter state is preserved in the URL query string.
+- Result fetching uses public `GET /messages` through the shared frontend API client.
+- Cursor pagination is wired to an IntersectionObserver sentinel for infinite scroll.
+- Result rows render inside one shared list container with:
+  - circular sender avatar or circular fallback initial
+  - sender
+  - channel
+  - message content
+  - timestamp
+- Rows are dense and table-like on desktop, then collapse to a readable mobile layout.
+- Inline emote rendering:
+  - replaces `[emote:id:name]` tokens at their original message positions
+  - prefers backend parsed emote image URL
+  - falls back to `https://files.kick.com/emotes/{id}/fullsize`
+  - falls back to emote text if the image fails
+- Search summary panel shows loading/error status, loaded count, scope, last match, and active filters.
+- The app logo has been copied into `apps/web/public/app-logo.png` for the search header.
+- Frontend tests added with Vitest and React Testing Library:
+  - query mapping
+  - empty filter behavior
+  - active filter labels
+  - infinite-scroll append dedupe helper
+  - inline emote split/fallback rendering
+
+## Phase 8 Verification
+
+- `pnpm --filter @kick-logs/web test`: 2 files, 7 tests passed.
+- `pnpm --filter @kick-logs/web typecheck`: passed.
+- `pnpm --filter @kick-logs/web lint`: passed.
+- `pnpm --filter @kick-logs/web build`: passed.
+- `docker compose up --build -d web`: builds and starts `web` with current lockfile.
+- `GET http://localhost:3000/search`: returns HTTP 200 without login.
+- `GET http://localhost:3000/search?sender=yavuz&q=selam`: returns the search page and does not include admin placeholder content.
+- `GET http://localhost:8000/health`: returns `{"status":"ok"}` after Docker rebuild startup.
 
 ## Design Direction
 

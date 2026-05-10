@@ -5,7 +5,7 @@ Kick Logs is an MVP monorepo for collecting public Kick chat messages from follo
 ## Current Status
 
 Backend implementation is complete and verified through Phase 6.
-Frontend foundation is complete through Phase 7.
+Public search UI is complete through Phase 8.
 
 Implemented so far:
 
@@ -29,8 +29,9 @@ Implemented so far:
 - Tailwind/shadcn/ui base setup with the dark-only Kick Logs palette.
 - Shared typed frontend API client.
 - Frontend Docker Compose service.
+- Public `/search` UI with filters, URL state, infinite scroll, dense rows, circular avatars, and inline emotes.
 
-Final `/search` and `/admin` UI workflows are intentionally implemented in later phases.
+Final `/admin` UI workflow is intentionally implemented in a later phase.
 
 ## Prerequisites
 
@@ -150,10 +151,11 @@ http://localhost:8000
 ```
 
 The current frontend routes are foundation shells only:
+The public search route is functional. Other frontend routes remain shells:
 
 ```text
 /
-/search
+/search  public message search
 /login
 /admin
 ```
@@ -205,6 +207,7 @@ From the repository root:
 ```powershell
 pnpm --filter @kick-logs/web typecheck
 pnpm --filter @kick-logs/web lint
+pnpm --filter @kick-logs/web test
 pnpm --filter @kick-logs/web build
 ```
 
@@ -237,6 +240,16 @@ Phase 7 frontend foundation was verified with:
 - `pnpm --filter @kick-logs/web build`
 - `docker compose up --build -d web`
 - `GET http://localhost:3000` returns HTTP 200.
+
+Phase 8 public search UI was verified with:
+
+- `pnpm --filter @kick-logs/web test`
+- `pnpm --filter @kick-logs/web typecheck`
+- `pnpm --filter @kick-logs/web lint`
+- `pnpm --filter @kick-logs/web build`
+- `docker compose up --build -d web`
+- `GET http://localhost:3000/search` returns HTTP 200 without login.
+- `GET http://localhost:3000/search?sender=yavuz&q=selam` returns the search page and does not render admin placeholder content.
 
 ## Kick Integration Notes
 
