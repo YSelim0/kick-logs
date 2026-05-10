@@ -18,7 +18,7 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Phase 6 backend verification and acceptance is complete.
 - Phase 7 frontend foundation is complete.
 - Phase 8 public search UI is complete.
-- Phase 9 admin UI is in progress.
+- Phase 9 admin UI is complete.
 - Phase 9 auth foundation is implemented:
   - `/login` has an email/password form wired to `POST /auth/login`
   - `/admin` uses `GET /auth/me` for client-side route guarding
@@ -29,6 +29,11 @@ This file is the active project memory. Keep it updated whenever project behavio
   - admins can add a channel by slug/nickname through `POST /admin/channels`
   - add flow shows resolver/loading/error state while backend resolves Kick metadata
   - admins can disable channels through `DELETE /admin/channels/{id}`
+- Phase 9 super-admin user management UI is implemented:
+  - only `super_admin` users see the admin user management section
+  - user list calls `GET /admin/users`
+  - create form calls `POST /admin/users`
+  - password hashes or secrets are never rendered
 - `apps/api` contains the FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
 - Root `compose.yaml` currently has Phase 7 services:
   - `postgres`
@@ -453,6 +458,36 @@ Build an MVP monorepo with:
   - `pnpm --filter @kick-logs/web test`: 5 files, 17 tests passed
   - `pnpm --filter @kick-logs/web typecheck`: passed
   - `pnpm --filter @kick-logs/web lint`: passed
+
+## Phase 9 User Admin Details
+
+- `UserAdmin` is mounted inside `/admin` only when the current user role is `super_admin`.
+- User list behavior:
+  - calls `GET /admin/users`
+  - shows email, role, and active state only
+  - does not render password hashes or secrets
+- User creation behavior:
+  - accepts email and temporary password
+  - requires at least 8 password characters before enabling submit
+  - calls `POST /admin/users`
+  - merges the created user into the list
+- Verification:
+  - `pnpm --filter @kick-logs/web test`: 6 files, 20 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+
+## Phase 9 Verification
+
+- `pnpm --filter @kick-logs/web test`: 6 files, 20 tests passed.
+- `pnpm --filter @kick-logs/web typecheck`: passed after build/type generation completed.
+- `pnpm --filter @kick-logs/web lint`: passed.
+- `pnpm --filter @kick-logs/web build`: passed.
+- `docker compose up --build -d web`: passed and rebuilt the web/API images.
+- `docker compose ps`: `postgres`, `api`, `listener`, and `web` are up.
+- `GET http://localhost:3000/search`: HTTP 200 without login.
+- `GET http://localhost:3000/login`: HTTP 200.
+- `GET http://localhost:3000/admin`: HTTP 200; client guard handles unauthenticated redirect.
+- `GET http://localhost:8000/health`: returns `{"status":"ok"}`.
 
 ## Design Direction
 

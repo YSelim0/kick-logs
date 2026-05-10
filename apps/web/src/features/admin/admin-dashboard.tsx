@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { logout } from "@/features/auth/api";
 import { useCurrentUser } from "@/features/auth/use-auth";
 import { ChannelAdmin } from "@/features/channels/channel-admin";
+import { UserAdmin } from "@/features/users/user-admin";
 
 export function AdminDashboard() {
   const router = useRouter();
@@ -95,7 +96,10 @@ export function AdminDashboard() {
         ) : null}
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <ChannelAdmin />
+          <div className="flex flex-col gap-6">
+            <ChannelAdmin />
+            {user.role === "super_admin" ? <UserAdmin /> : null}
+          </div>
 
           <aside className="rounded-lg border border-border bg-black p-5">
             <div className="mb-5 flex items-center gap-3 border-b border-border pb-4">

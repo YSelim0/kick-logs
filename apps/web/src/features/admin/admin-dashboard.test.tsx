@@ -39,6 +39,10 @@ vi.mock("@/features/channels/channel-admin", () => ({
   ChannelAdmin: () => <section>Channel admin</section>
 }));
 
+vi.mock("@/features/users/user-admin", () => ({
+  UserAdmin: () => <section>Admin users</section>
+}));
+
 describe("AdminDashboard", () => {
   beforeEach(() => {
     navigationMocks.replace.mockReset();
@@ -81,9 +85,28 @@ describe("AdminDashboard", () => {
     render(<AdminDashboard />);
 
     expect(screen.getAllByText("admin@kicklogs.local")).toHaveLength(2);
+    expect(screen.getByText("Admin users")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /çıkış/i }));
 
     await waitFor(() => expect(authMocks.logout).toHaveBeenCalledTimes(1));
     expect(navigationMocks.replace).toHaveBeenCalledWith("/login");
+  });
+
+  it("hides user management from regular admins", () => {
+    authMocks.state = {
+      ...authMocks.state,
+      status: "authenticated",
+      user: {
+        id: 2,
+        email: "operator@kicklogs.local",
+        role: "admin",
+        is_active: true
+      }
+    };
+
+    render(<AdminDashboard />);
+
+    expect(screen.getByText("Channel admin")).toBeInTheDocument();
+    expect(screen.queryByText("Admin users")).not.toBeInTheDocument();
   });
 });

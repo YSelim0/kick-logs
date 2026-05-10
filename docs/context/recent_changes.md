@@ -4,20 +4,24 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
-- Phase 9 followed-channel admin UI is implemented.
-- Added:
-  - `/admin` channel management panel
-  - `GET /admin/channels` list with enabled state and Kick metadata
-  - `POST /admin/channels` add flow by slug/nickname
-  - resolver/loading/error UI for channel add
-  - `DELETE /admin/channels/{id}` disable action
-  - admin session summary panel
+- Phase 9 admin dashboard UI is complete.
+- Latest additions:
+  - super-admin-only `UserAdmin` section in `/admin`
+  - `GET /admin/users` user list
+  - `POST /admin/users` create-admin form
+  - secret-safe user rows showing only email, role, and active state
+  - dashboard test coverage for hiding user management from regular admins
 - Verification:
-  - `pnpm --filter @kick-logs/web test`: 5 files, 17 tests passed
+  - `pnpm --filter @kick-logs/web test`: 6 files, 20 tests passed
   - `pnpm --filter @kick-logs/web typecheck`: passed
   - `pnpm --filter @kick-logs/web lint`: passed
-- Next Phase 9 work:
-  - super admin user management UI
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `docker compose up --build -d web`: passed
+  - `GET http://localhost:3000/search`: HTTP 200 without login
+  - `GET http://localhost:3000/login`: HTTP 200
+  - `GET http://localhost:3000/admin`: HTTP 200
+  - `GET http://localhost:8000/health`: `{"status":"ok"}`
+- Phase 10 is next: full-stack polish, final README cleanup, and end-to-end smoke path.
 
 ## Commit Context
 
@@ -28,7 +32,8 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `619f4f9 feat(search): add public message search ui`
   - `2ab7c91 feat(search): default date range filters`
   - `813d713 feat(auth): add admin login guard`
+  - `823a8ee feat(admin): add channel management ui`
 - Latest completed unit:
-  - Phase 9 followed-channel admin UI
+  - Phase 9 super-admin user management UI
 - Commit message for this unit:
-  - `feat(admin): add channel management ui`
+  - `feat(admin): add user management ui`

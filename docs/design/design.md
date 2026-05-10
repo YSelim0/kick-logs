@@ -200,6 +200,16 @@ Admin requirements:
 - Channel list shows enabled followed channels.
 - Remove action disables or removes a followed channel according to backend behavior.
 
+Implemented admin layout:
+
+- `/login` uses a compact dark email/password form with the app logo and a restrained link back to public search.
+- `/admin` uses a guarded operations layout with:
+  - channel management in the main work column.
+  - super-admin-only user management below channel management.
+  - current session summary in a right-side panel.
+- Regular `admin` users do not see the user management panel.
+- Channel and user management are visually separate sections; neither uses hero/landing-page treatment.
+
 Default super admin credentials for local MVP:
 
 ```text

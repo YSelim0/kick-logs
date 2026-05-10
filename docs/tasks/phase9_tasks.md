@@ -25,35 +25,35 @@ Do not redesign public `/search`, implement landing page content, or change back
   - [x] Guard `/admin`; unauthenticated users go to `/login`.
   - [x] Keep `/search` public and unaffected.
   - [x] Add logout action using `POST /auth/logout`.
-- [ ] Admin dashboard layout:
+- [x] Admin dashboard layout:
   - [x] Serious, dense, dark-only operations UI.
   - [x] No landing-page hero sections.
-  - [ ] Clear distinction between channel management and user management.
+  - [x] Clear distinction between channel management and user management.
 - [x] Followed channel management:
   - [x] List followed channels with enabled state and Kick metadata.
   - [x] Add channel by slug/nickname.
   - [x] Show resolver/loading/error state.
   - [x] Remove/disable channel.
   - [x] Refresh list after mutations.
-- [ ] Admin user management:
-  - [ ] Show only when current user role is `super_admin`.
-  - [ ] List admin users.
-  - [ ] Create new admin user.
-  - [ ] Do not expose password hashes or secrets.
-- [ ] Tests/checks:
+- [x] Admin user management:
+  - [x] Show only when current user role is `super_admin`.
+  - [x] List admin users.
+  - [x] Create new admin user.
+  - [x] Do not expose password hashes or secrets.
+- [x] Tests/checks:
   - [x] Login success/failure.
   - [x] Admin route guard.
   - [x] Channel add/remove flow with mocked API.
-  - [ ] Super admin-only user creation visibility.
-  - [ ] Public search still loads without auth.
+  - [x] Super admin-only user creation visibility.
+  - [x] Public search still loads without auth.
 
 ## Acceptance Criteria
 
-- [ ] Admin can log in and manage followed channels.
-- [ ] Super admin can create admin users.
-- [ ] Non-authenticated users cannot access `/admin`.
-- [ ] `/search` remains public.
-- [ ] Frontend typecheck/build passes.
+- [x] Admin can log in and manage followed channels.
+- [x] Super admin can create admin users.
+- [x] Non-authenticated users cannot access `/admin`.
+- [x] `/search` remains public.
+- [x] Frontend typecheck/build passes.
 
 ## Handoff
 

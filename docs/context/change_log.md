@@ -275,3 +275,22 @@ This is a living implementation log. Add new entries for each meaningful project
   - `pnpm --filter @kick-logs/web test`: 5 files, 17 tests passed
   - `pnpm --filter @kick-logs/web typecheck`: passed
   - `pnpm --filter @kick-logs/web lint`: passed
+- Added Phase 9 super-admin user management UI:
+  - `UserAdmin` mounts only for current user role `super_admin`
+  - `GET /admin/users` list shows email, role, and active state only
+  - `POST /admin/users` creates new admin users
+  - password hashes/secrets are not rendered
+  - channel management, user management, and session summary are visually separate admin sections
+- Added frontend tests for user list/create and super-admin-only visibility.
+- Verified user admin unit:
+  - `pnpm --filter @kick-logs/web test`: 6 files, 20 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+- Completed Phase 9 admin dashboard acceptance:
+  - login and auth guard implemented
+  - followed-channel management implemented
+  - super-admin user management implemented
+  - `/search` remains public
+  - final frontend test/typecheck/lint/build passed
+  - Docker `web` rebuild/start passed
+  - route smoke checks for `/search`, `/login`, `/admin`, and API `/health` passed
