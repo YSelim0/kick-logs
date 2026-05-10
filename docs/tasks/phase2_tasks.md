@@ -14,21 +14,21 @@ Do not implement HTTP auth, admin endpoints, Kick listener websocket code, front
 
 ## Tasks
 
-- [ ] Domain layer:
-  - [ ] Add `User`, `Channel`, `Sender`, `ChatMessage`, and `Emote` entities.
-  - [ ] Add value objects/enums for roles, search filters, and cursor pagination.
-  - [ ] Keep domain free of FastAPI, SQLAlchemy, Pydantic, HTTP clients, and websocket imports.
-- [ ] Database infrastructure:
-  - [ ] Configure async SQLAlchemy engine/session.
-  - [ ] Add SQLAlchemy models for `users`, `channels`, `senders`, and `chat_messages`.
-  - [ ] Use PostgreSQL `JSONB` for raw payloads, badges, emotes, reply metadata, and raw profile payloads.
-  - [ ] Use timezone-aware timestamps.
-- [ ] Alembic:
-  - [ ] Configure Alembic for async SQLAlchemy metadata.
-  - [ ] Create initial migration.
-  - [ ] Enable `pg_trgm`.
-  - [ ] Add indexes for message timestamp, Kick message id, channel slug, sender username/slug, and text search.
-  - [ ] Add unique constraints for Kick ids where required to deduplicate messages.
+- [x] Domain layer:
+  - [x] Add `User`, `Channel`, `Sender`, `ChatMessage`, and `Emote` entities.
+  - [x] Add value objects/enums for roles, search filters, and cursor pagination.
+  - [x] Keep domain free of FastAPI, SQLAlchemy, Pydantic, HTTP clients, and websocket imports.
+- [x] Database infrastructure:
+  - [x] Configure async SQLAlchemy engine/session.
+  - [x] Add SQLAlchemy models for `users`, `channels`, `senders`, and `chat_messages`.
+  - [x] Use PostgreSQL `JSONB` for raw payloads, badges, emotes, reply metadata, and raw profile payloads.
+  - [x] Use timezone-aware timestamps.
+- [x] Alembic:
+  - [x] Configure Alembic for async SQLAlchemy metadata.
+  - [x] Create initial migration.
+  - [x] Enable `pg_trgm`.
+  - [x] Add indexes for message timestamp, Kick message id, channel slug, sender username/slug, and text search.
+  - [x] Add unique constraints for Kick ids where required to deduplicate messages.
 - [ ] Repositories and unit of work:
   - [ ] Define application ports for user, channel, sender, and message repositories.
   - [ ] Implement SQLAlchemy repositories.
@@ -40,10 +40,10 @@ Do not implement HTTP auth, admin endpoints, Kick listener websocket code, front
 
 ## Acceptance Criteria
 
-- [ ] Alembic migration applies cleanly to local PostgreSQL.
+- [x] Alembic migration applies cleanly to local PostgreSQL.
 - [ ] Repository tests pass against a test database or isolated transaction strategy.
-- [ ] Domain imports remain framework-independent.
-- [ ] No API auth/search/listener behavior is implemented yet.
+- [x] Domain imports remain framework-independent.
+- [x] No API auth/search/listener behavior is implemented yet.
 - [ ] Docs/context are updated with the actual DB details.
 
 ## Handoff

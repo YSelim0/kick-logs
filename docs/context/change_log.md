@@ -56,3 +56,9 @@ This is a living implementation log. Add new entries for each meaningful project
 - Verified `GET http://localhost:8000/health` returned `{"status":"ok"}`.
 - Phase 1 acceptance is complete.
 - Started Phase 2 by adding framework-independent domain entities/value objects and application repository/unit-of-work ports.
+- Added Phase 2 SQLAlchemy/Alembic foundation:
+  - SQLAlchemy async engine/session factory
+  - ORM models for `users`, `channels`, `senders`, and `chat_messages`
+  - Alembic async environment
+  - initial migration with `pg_trgm`, JSONB columns, dedupe constraints, and search indexes
+- Verified the initial migration applies cleanly to local Docker PostgreSQL with `alembic upgrade head`.

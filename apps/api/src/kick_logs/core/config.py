@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     backend_cors_origins: str = "http://localhost:3000"
 
     database_url: str = "postgresql+asyncpg://kick_logs:kick_logs@localhost:5432/kick_logs"
+    database_echo: bool = False
 
     jwt_secret_key: str = Field(default="change-me-for-local-development", repr=False)
     jwt_cookie_name: str = "kick_logs_session"

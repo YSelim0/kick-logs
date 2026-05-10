@@ -5,12 +5,14 @@ This file is the short handoff summary of the latest project changes. Keep it co
 ## Latest
 
 - Phase 2 implementation has started.
-- Domain entities/value objects have been added for users, channels, senders, chat messages, emotes, roles, search filters, and cursor pagination.
-- Application repository and unit-of-work ports have been added.
-- Domain tests include validation behavior and a guard that prevents FastAPI, Pydantic, SQLAlchemy, HTTP, or websocket imports in the domain layer.
+- Domain entities/value objects and application persistence ports are committed.
+- SQLAlchemy, asyncpg, and Alembic dependencies have been added.
+- Database infrastructure now includes async engine/session setup, ORM models, and an async Alembic environment.
+- Initial migration creates `users`, `channels`, `senders`, and `chat_messages`, enables `pg_trgm`, stores payload-heavy fields as JSONB, and adds dedupe/search indexes.
+- `alembic upgrade head` has been verified against the local Docker PostgreSQL database.
 
 ## Commit Context
 
-- Last committed Phase 1 unit:
-  - `a11d2b8 feat(docs): mark phase one root files complete`
-- Next commit should cover Phase 2 domain entities, value objects, ports, and domain tests.
+- Last committed Phase 2 unit:
+  - `31f5613 feat(domain): add persistence entities and ports`
+- Next commit should cover SQLAlchemy models, Alembic setup, and migration metadata tests.

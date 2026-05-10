@@ -21,6 +21,11 @@ This file is the active project memory. Keep it updated whenever project behavio
   - `docker compose config --services` returns only `postgres` and `api`.
   - `docker compose up --build -d postgres api` starts the Phase 1 stack successfully.
   - `GET http://localhost:8000/health` returns `{"status":"ok"}`.
+- Phase 2 persistence foundation is in progress:
+  - domain entities/value objects and application repository ports exist
+  - SQLAlchemy async engine/session setup exists
+  - Alembic initial migration creates `users`, `channels`, `senders`, and `chat_messages`
+  - local PostgreSQL has successfully applied the initial migration
 
 ## Kick Chat Ingestion Method
 
