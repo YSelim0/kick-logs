@@ -34,6 +34,25 @@ class User:
             updated_at=now,
         )
 
+    @classmethod
+    def create_super_admin(cls, email: str, password_hash: str) -> "User":
+        now = datetime.now(UTC)
+        return cls(
+            email=email,
+            password_hash=password_hash,
+            role=UserRole.SUPER_ADMIN,
+            created_at=now,
+            updated_at=now,
+        )
+
     def deactivate(self) -> None:
         self.is_active = False
+        self.updated_at = datetime.now(UTC)
+
+    def activate(self) -> None:
+        self.is_active = True
+        self.updated_at = datetime.now(UTC)
+
+    def promote_to_super_admin(self) -> None:
+        self.role = UserRole.SUPER_ADMIN
         self.updated_at = datetime.now(UTC)

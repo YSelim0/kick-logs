@@ -72,3 +72,9 @@ This is a living implementation log. Add new entries for each meaningful project
   - Passlib password hasher
   - PyJWT token service
   - JWT cookie/session settings
+- Added Phase 3 application use cases and seed support:
+  - login
+  - get current user
+  - list admin users
+  - create admin user
+  - idempotent default super admin seed

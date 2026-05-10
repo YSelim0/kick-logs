@@ -11,9 +11,10 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `PasslibPasswordHasher`
   - `JwtTokenService`
 - JWT/cookie settings were added to config and `.env.example`.
+- Auth/admin application use cases and idempotent super admin seed support are being added.
 
 ## Commit Context
 
 - Last committed Phase 2 unit:
-  - `85dc302 feat(docs): complete phase two persistence`
-- Next commit should cover Phase 3 security services and tests.
+  - `2e564e6 feat(auth): add security services`
+- Next commit should cover Phase 3 auth/admin use cases and seed tests.
