@@ -4,19 +4,21 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
-- `/search` date inputs now default to a 7-day range.
-- Behavior:
-  - `Başlangıç`: current local date/time minus 7 days.
-  - `Bitiş`: current local date/time.
-  - missing URL date params receive these defaults.
-  - manually cleared date fields are still omitted from backend query params.
-- Updated frontend tests and project/context/design docs for the date default behavior.
-- Verification so far:
-  - `pnpm --filter @kick-logs/web test`: 2 files, 9 tests passed
+- Phase 9 admin auth foundation is implemented.
+- Added:
+  - `/login` email/password form wired to `POST /auth/login`
+  - compact login error handling
+  - safe post-login redirect to `/admin` or local `next` path
+  - `useCurrentUser` hook using `GET /auth/me`
+  - `/admin` route guard redirecting unauthenticated users to `/login?next=/admin`
+  - logout action using `POST /auth/logout`
+- Verification:
+  - `pnpm --filter @kick-logs/web test`: 4 files, 14 tests passed
   - `pnpm --filter @kick-logs/web typecheck`: passed
   - `pnpm --filter @kick-logs/web lint`: passed
-  - `pnpm --filter @kick-logs/web build`: passed
-- `/admin` workflow is still deferred to Phase 9.
+- Next Phase 9 work:
+  - followed-channel management UI
+  - super admin user management UI
 
 ## Commit Context
 
@@ -25,7 +27,8 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `c8c5eb9 feat(web): scaffold frontend foundation`
   - `f2250a9 feat(docs): complete phase seven foundation`
   - `619f4f9 feat(search): add public message search ui`
+  - `2ab7c91 feat(search): default date range filters`
 - Latest completed unit:
-  - `/search` default date range behavior
+  - Phase 9 auth foundation
 - Commit message for this unit:
-  - `feat(search): default date range filters`
+  - `feat(auth): add admin login guard`

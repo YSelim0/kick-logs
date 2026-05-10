@@ -18,6 +18,12 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Phase 6 backend verification and acceptance is complete.
 - Phase 7 frontend foundation is complete.
 - Phase 8 public search UI is complete.
+- Phase 9 admin UI is in progress.
+- Phase 9 auth foundation is implemented:
+  - `/login` has an email/password form wired to `POST /auth/login`
+  - `/admin` uses `GET /auth/me` for client-side route guarding
+  - unauthenticated `/admin` users are redirected to `/login?next=/admin`
+  - admin header includes logout through `POST /auth/logout`
 - `apps/api` contains the FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
 - Root `compose.yaml` currently has Phase 7 services:
   - `postgres`
@@ -404,6 +410,24 @@ Build an MVP monorepo with:
 - `GET http://localhost:3000/search`: returns HTTP 200 without login.
 - `GET http://localhost:3000/search?sender=yavuz&q=selam`: returns the search page and does not include admin placeholder content.
 - `GET http://localhost:8000/health`: returns `{"status":"ok"}` after Docker rebuild startup.
+
+## Phase 9 Auth UI Details
+
+- Login route:
+  - `/login`
+  - pre-fills the local MVP super admin email `admin@kicklogs.local`
+  - submits credentials to `POST /auth/login`
+  - relies on the backend HttpOnly cookie for session persistence
+  - redirects to `/admin` or a safe local `next` path after successful login
+  - shows compact credential/API errors
+- Admin guard:
+  - `/admin` is a client route guarded by `GET /auth/me`
+  - unauthenticated users are redirected to `/login?next=/admin`
+  - authenticated users see a compact admin shell and logout action
+- Verification:
+  - `pnpm --filter @kick-logs/web test`: 4 files, 14 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
 
 ## Design Direction
 

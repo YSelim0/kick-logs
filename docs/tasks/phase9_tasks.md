@@ -14,17 +14,17 @@ Do not redesign public `/search`, implement landing page content, or change back
 
 ## Tasks
 
-- [ ] Login UI:
-  - [ ] Email/password form.
-  - [ ] Submit to `POST /auth/login`.
-  - [ ] Store session through HttpOnly cookie returned by backend.
-  - [ ] Show compact error state.
-  - [ ] Redirect authenticated user to `/admin`.
-- [ ] Auth state:
-  - [ ] Use `GET /auth/me` to load current user.
-  - [ ] Guard `/admin`; unauthenticated users go to `/login`.
-  - [ ] Keep `/search` public and unaffected.
-  - [ ] Add logout action using `POST /auth/logout`.
+- [x] Login UI:
+  - [x] Email/password form.
+  - [x] Submit to `POST /auth/login`.
+  - [x] Store session through HttpOnly cookie returned by backend.
+  - [x] Show compact error state.
+  - [x] Redirect authenticated user to `/admin`.
+- [x] Auth state:
+  - [x] Use `GET /auth/me` to load current user.
+  - [x] Guard `/admin`; unauthenticated users go to `/login`.
+  - [x] Keep `/search` public and unaffected.
+  - [x] Add logout action using `POST /auth/logout`.
 - [ ] Admin dashboard layout:
   - [ ] Serious, dense, dark-only operations UI.
   - [ ] No landing-page hero sections.
@@ -41,8 +41,8 @@ Do not redesign public `/search`, implement landing page content, or change back
   - [ ] Create new admin user.
   - [ ] Do not expose password hashes or secrets.
 - [ ] Tests/checks:
-  - [ ] Login success/failure.
-  - [ ] Admin route guard.
+  - [x] Login success/failure.
+  - [x] Admin route guard.
   - [ ] Channel add/remove flow with mocked API.
   - [ ] Super admin-only user creation visibility.
   - [ ] Public search still loads without auth.

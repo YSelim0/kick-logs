@@ -250,3 +250,17 @@ This is a living implementation log. Add new entries for each meaningful project
   - `Bitiş` defaults to current local date/time.
   - clearing either date field still omits that filter from the API query.
 - Added frontend tests for the default date range behavior.
+- Started Phase 9 admin dashboard UI.
+- Added Phase 9 auth foundation:
+  - `/login` email/password UI
+  - `POST /auth/login` integration through shared API client
+  - compact login error state
+  - safe redirect to `/admin` or local `next` path after login
+  - `useCurrentUser` hook backed by `GET /auth/me`
+  - `/admin` route guard redirecting unauthenticated users to `/login?next=/admin`
+  - admin logout action using `POST /auth/logout`
+- Added frontend tests for login success/failure, admin route guard, and logout.
+- Verified Phase 9 auth foundation:
+  - `pnpm --filter @kick-logs/web test`: 4 files, 14 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed

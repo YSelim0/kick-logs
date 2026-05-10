@@ -1,9 +1,5 @@
-import { RouteShell } from "@/components/layout/route-shell";
+import { AdminDashboard } from "@/features/admin/admin-dashboard";
 
 export default function AdminPage() {
-  return (
-    <RouteShell eyebrow="Admin" title="Admin Route">
-      Backend management UI will be implemented in Phase 9 after the public search screen.
-    </RouteShell>
-  );
+  return <AdminDashboard />;
 }

@@ -1,9 +1,5 @@
-import { RouteShell } from "@/components/layout/route-shell";
+import { LoginScreen } from "@/features/auth/login-screen";
 
 export default function LoginPage() {
-  return (
-    <RouteShell eyebrow="Auth" title="Login Route">
-      The admin login screen will be implemented before the admin dashboard workflow.
-    </RouteShell>
-  );
+  return <LoginScreen />;
 }
