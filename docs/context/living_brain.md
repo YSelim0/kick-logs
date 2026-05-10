@@ -391,6 +391,7 @@ Build an MVP monorepo with:
   - `Başlangıç` is current local date/time minus 7 days.
   - `Bitiş` is current local date/time.
   - users can clear date fields to omit date filters.
+- The `/search` initial SSR render uses an empty static search state; the default local date range is filled after hydration to avoid server/client timezone mismatches.
 - Submitted filter state is preserved in the URL query string.
 - Result fetching uses public `GET /messages` through the shared frontend API client.
 - Cursor pagination is wired to an IntersectionObserver sentinel for infinite scroll.

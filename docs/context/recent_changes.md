@@ -4,6 +4,18 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Fixed `/search` hydration mismatch caused by timezone-dependent default date values:
+  - first render now uses static empty search state
+  - default 7-day local date range is applied after client hydration
+  - restarted `web` and confirmed server HTML no longer includes default `datetime-local` values
+- Verification:
+  - `pnpm --filter @kick-logs/web test`: 6 files, 20 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web build`: passed
+
+## Previous
+
 - Fixed browser CORS for frontend-to-backend API calls:
   - FastAPI now installs `CORSMiddleware` from comma-separated `BACKEND_CORS_ORIGINS`
   - `OPTIONS /auth/login` from `http://localhost:3000` returns `200`
@@ -16,7 +28,7 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `python -m uv run ruff check .`: passed
   - live Docker preflight and login smoke passed against `http://localhost:8000`
 
-## Previous
+## Earlier
 
 - Phase 10 final MVP smoke and cleanup are complete.
 - Latest smoke:

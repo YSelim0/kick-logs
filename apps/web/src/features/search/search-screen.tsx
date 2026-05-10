@@ -8,6 +8,7 @@ import { MessageList } from "@/features/search/message-list";
 import { searchMessages } from "@/features/search/api";
 import { SearchForm } from "@/features/search/search-form";
 import {
+  EMPTY_SEARCH_STATE,
   appendUniqueMessages,
   getDefaultSearchState,
   readSearchState,
@@ -33,9 +34,9 @@ function SearchScreenInner() {
   const queryKey = searchParams.toString();
   const sentinelRef = useRef<HTMLDivElement>(null);
   const requestSequenceRef = useRef(0);
-  const [formState, setFormState] = useState<SearchFormState>(() => getDefaultSearchState());
-  const [submittedState, setSubmittedState] =
-    useState<SearchFormState>(() => getDefaultSearchState());
+  // The default date range depends on browser timezone, so fill it after hydration.
+  const [formState, setFormState] = useState<SearchFormState>(EMPTY_SEARCH_STATE);
+  const [submittedState, setSubmittedState] = useState<SearchFormState>(EMPTY_SEARCH_STATE);
   const [messages, setMessages] = useState<Message[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(false);

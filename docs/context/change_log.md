@@ -4,6 +4,14 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-11
 
+- Fixed `/search` hydration mismatch caused by server/client timezone differences in default date range rendering:
+  - changed the search screen's first render to use static empty state
+  - kept the required default 7-day date range by applying it after client hydration
+  - restarted the `web` service and verified server HTML no longer includes dynamic default datetime values
+  - verified `pnpm --filter @kick-logs/web test`: 6 files, 20 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`: passed
+  - verified `pnpm --filter @kick-logs/web lint`: passed
+  - verified `pnpm --filter @kick-logs/web build`: passed
 - Fixed browser CORS for the frontend login flow:
   - added FastAPI `CORSMiddleware`
   - wired allowed origins from comma-separated `BACKEND_CORS_ORIGINS`
