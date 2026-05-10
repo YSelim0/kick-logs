@@ -16,14 +16,16 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Phase 5 listener foundation is complete.
 - Phase 5 listener runtime and Docker service are complete.
 - Phase 6 backend verification and acceptance is complete.
+- Phase 7 frontend foundation is complete.
 - `apps/api` contains the FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
-- Root `compose.yaml` currently has backend Phase 6 services:
+- Root `compose.yaml` currently has Phase 7 services:
   - `postgres`
   - `api`
   - `listener`
+  - `web`
 - Sequential implementation plan exists at `docs/implementation_plan.md`.
 - Phase task files exist under `docs/tasks/phase1_tasks.md` through `docs/tasks/phase10_tasks.md`.
-- Frontend `web` service is still deferred until its owning frontend phase.
+- Frontend `web` service exists and runs the Next.js development server.
 - Current backend verification:
   - `python -m uv run pytest` passes from `apps/api` with 83 tests.
   - `python -m uv run ruff check .` passes from `apps/api`.
@@ -36,6 +38,9 @@ This file is the active project memory. Keep it updated whenever project behavio
   - Admin channel add/disable smoke passes with slug `hype`.
   - Listener logs useful idle status when no enabled channels are ready.
   - `alembic current` reports `20260510_0001 (head)`.
+  - `pnpm --filter @kick-logs/web typecheck`, `lint`, and `build` pass.
+  - `docker compose up --build -d web` builds and starts `web`.
+  - `GET http://localhost:3000` returns HTTP 200.
 - Phase 2 verification:
   - `alembic upgrade head` applies revision `20260510_0001`
   - `alembic current` reports `20260510_0001 (head)`
@@ -283,6 +288,66 @@ Build an MVP monorepo with:
 - Runtime warning cleanup:
   - default local/Compose `JWT_SECRET_KEY` is now at least 32 bytes
   - `bcrypt` is pinned to `>=4.0.1,<4.1` for Passlib compatibility
+
+## Frontend Foundation Details
+
+- Root frontend workspace files:
+  - `package.json`
+  - `pnpm-workspace.yaml`
+  - `pnpm-lock.yaml`
+- `apps/web` uses:
+  - Next.js App Router
+  - TypeScript
+  - Tailwind CSS
+  - shadcn/ui base configuration
+  - lucide-react dependency
+- Root scripts proxy to the web workspace:
+  - `pnpm dev`
+  - `pnpm build`
+  - `pnpm lint`
+  - `pnpm typecheck`
+- Web workspace scripts:
+  - `pnpm --filter @kick-logs/web dev`
+  - `pnpm --filter @kick-logs/web build`
+  - `pnpm --filter @kick-logs/web lint`
+  - `pnpm --filter @kick-logs/web typecheck`
+- Placeholder routes exist:
+  - `/`
+  - `/search`
+  - `/login`
+  - `/admin`
+- No final `/search` UI or `/admin` workflow has been implemented yet.
+- Dark-only palette tokens are defined in `apps/web/src/app/globals.css` and exposed through Tailwind as `kick.*` tokens.
+- shadcn/ui base files:
+  - `apps/web/components.json`
+  - `apps/web/src/lib/utils.ts`
+  - `apps/web/src/components/ui/button.tsx`
+- Shared frontend API layer:
+  - `apps/web/src/lib/api-client.ts`
+  - `apps/web/src/types/api.ts`
+  - feature endpoint wrappers under `apps/web/src/features/*/api.ts`
+- API client defaults:
+  - base URL from `NEXT_PUBLIC_API_BASE_URL`
+  - local fallback `http://localhost:8000`
+  - `credentials: "include"` for cookie sessions
+  - injectable fetcher/client for tests and mocks
+- Web Docker service:
+  - service name `web`
+  - exposed at `http://localhost:3000`
+  - reads `NEXT_PUBLIC_API_BASE_URL` from environment
+  - does not require backend code changes
+
+## Phase 7 Verification
+
+- `pnpm install`: completed and generated `pnpm-lock.yaml`.
+- `pnpm --filter @kick-logs/web typecheck`: passed.
+- `pnpm --filter @kick-logs/web lint`: passed.
+- `pnpm --filter @kick-logs/web build`: passed.
+- `docker compose config --services`: returns `postgres`, `api`, `listener`, and `web`.
+- `docker compose up --build -d web`: builds and starts `web` with API dependency.
+- `docker compose ps`: `postgres`, `api`, `listener`, and `web` are up.
+- `GET http://localhost:3000`: returns HTTP 200.
+- `GET http://localhost:8000/health`: returns `{"status":"ok"}`.
 
 ## Design Direction
 

@@ -14,40 +14,40 @@ Do not implement final `/search` UI, admin dashboard workflows, or new backend b
 
 ## Tasks
 
-- [ ] Workspace setup:
-  - [ ] Add root `package.json` and `pnpm-workspace.yaml`.
-  - [ ] Scaffold `apps/web` with Next.js App Router and TypeScript.
-  - [ ] Add scripts for dev, build, lint, and typecheck.
-- [ ] Styling/tooling:
-  - [ ] Configure Tailwind.
-  - [ ] Install lucide-react.
-  - [ ] Add shadcn/ui base setup.
-  - [ ] Store palette tokens from `docs/design/design.md`.
-  - [ ] Keep app dark-only; no theme switcher.
-- [ ] Route shells:
-  - [ ] `/` reserved placeholder only.
-  - [ ] `/search` placeholder route noting public route behavior.
-  - [ ] `/login` placeholder route.
-  - [ ] `/admin` placeholder route with no final dashboard UI yet.
-- [ ] Shared API layer:
-  - [ ] `lib/api-client.ts` with base URL and credential handling.
-  - [ ] Shared API response/error types.
-  - [ ] Typed functions for health/auth/messages/admin endpoints, but no feature UI wiring yet.
-- [ ] Docker:
-  - [ ] Add `web` service to Compose only after `apps/web` can run.
-  - [ ] Ensure `web` depends on API URL config, not on internal hardcoded localhost.
-- [ ] Tests/checks:
-  - [ ] Typecheck passes.
-  - [ ] Build or lint passes according to configured scripts.
-  - [ ] API client health call can be tested or mocked.
+- [x] Workspace setup:
+  - [x] Add root `package.json` and `pnpm-workspace.yaml`.
+  - [x] Scaffold `apps/web` with Next.js App Router and TypeScript.
+  - [x] Add scripts for dev, build, lint, and typecheck.
+- [x] Styling/tooling:
+  - [x] Configure Tailwind.
+  - [x] Install lucide-react.
+  - [x] Add shadcn/ui base setup.
+  - [x] Store palette tokens from `docs/design/design.md`.
+  - [x] Keep app dark-only; no theme switcher.
+- [x] Route shells:
+  - [x] `/` reserved placeholder only.
+  - [x] `/search` placeholder route noting public route behavior.
+  - [x] `/login` placeholder route.
+  - [x] `/admin` placeholder route with no final dashboard UI yet.
+- [x] Shared API layer:
+  - [x] `lib/api-client.ts` with base URL and credential handling.
+  - [x] Shared API response/error types.
+  - [x] Typed functions for health/auth/messages/admin endpoints, but no feature UI wiring yet.
+- [x] Docker:
+  - [x] Add `web` service to Compose only after `apps/web` can run.
+  - [x] Ensure `web` depends on API URL config, not on internal hardcoded localhost.
+- [x] Tests/checks:
+  - [x] Typecheck passes.
+  - [x] Build or lint passes according to configured scripts.
+  - [x] API client health call can be tested or mocked.
 
 ## Acceptance Criteria
 
-- [ ] `pnpm install` and frontend scripts are documented.
-- [ ] `apps/web` compiles.
-- [ ] Routes exist but final search/admin UI is not implemented.
-- [ ] Shared API client is ready for Phase 8 and Phase 9.
-- [ ] No backend files are changed except docs/config wiring required for web service.
+- [x] `pnpm install` and frontend scripts are documented.
+- [x] `apps/web` compiles.
+- [x] Routes exist but final search/admin UI is not implemented.
+- [x] Shared API client is ready for Phase 8 and Phase 9.
+- [x] No backend files are changed except docs/config wiring required for web service.
 
 ## Handoff
 

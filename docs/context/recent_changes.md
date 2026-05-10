@@ -4,35 +4,33 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
-- Phase 5 is complete and committed through:
-  - `b0eee69 feat(listener): add worker foundation`
-  - `29abaf8 feat(listener): add pusher runtime`
-  - `1f98b3a feat(listener): add docker service`
-  - `c80afaa feat(listener): align pusher subscription`
-- Phase 6 backend verification and acceptance is complete.
-- Phase 6 fixes:
-  - default local/Compose `JWT_SECRET_KEY` is now at least 32 bytes
-  - `bcrypt` is pinned to `>=4.0.1,<4.1` for Passlib compatibility
-- Phase 6 verification:
-  - `python -m uv run pytest`: 83 passed
-  - `python -m uv run ruff check .`: passed
-  - `python -m uv run alembic current`: `20260510_0001 (head)`
-  - `docker compose up --build -d postgres api listener`: passed
-  - `docker compose ps`: `postgres`, `api`, and `listener` up
-  - `GET /health`: passed
-  - unauthenticated `GET /admin/channels`: 401
-  - default super admin login and `GET /auth/me`: passed
-  - admin channel add/disable smoke with slug `hype`: passed
-  - public `GET /messages?limit=1`: passed without login
-  - listener logs useful idle status when no enabled channels are ready
-- README now documents backend startup, verification, route access, env/local secrets, and Kick integration fragility.
-- Scope remains backend-only: no frontend or web Docker service.
+- Phase 7 frontend foundation is complete.
+- Frontend scaffold commit:
+  - `c8c5eb9 feat(web): scaffold frontend foundation`
+- Added:
+  - pnpm workspace files and lockfile
+  - `apps/web` Next.js App Router + TypeScript project
+  - Tailwind/shadcn/ui base setup
+  - lucide-react dependency
+  - dark-only palette tokens from `docs/design/design.md`
+  - placeholder routes for `/`, `/search`, `/login`, and `/admin`
+  - shared typed API client and feature endpoint wrappers
+  - `web` Docker Compose service at `http://localhost:3000`
+- Verification:
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `docker compose up --build -d web`: passed
+  - `GET http://localhost:3000`: HTTP 200
+  - `GET http://localhost:8000/health`: `{"status":"ok"}`
+- Final `/search` and `/admin` UI workflows are still deferred to Phase 8 and Phase 9.
 
 ## Commit Context
 
-- Previous committed unit:
-  - `c80afaa feat(listener): align pusher subscription`
+- Previous committed units:
+  - `3c9178b feat(backend): complete phase six acceptance`
+  - `c8c5eb9 feat(web): scaffold frontend foundation`
 - Latest completed unit:
-  - Phase 6 backend acceptance
+  - Phase 7 documentation and context update
 - Commit message for this unit:
-  - `feat(backend): complete phase six acceptance`
+  - `feat(docs): complete phase seven foundation`

@@ -5,6 +5,7 @@ Kick Logs is an MVP monorepo for collecting public Kick chat messages from follo
 ## Current Status
 
 Backend implementation is complete and verified through Phase 6.
+Frontend foundation is complete through Phase 7.
 
 Implemented so far:
 
@@ -23,14 +24,21 @@ Implemented so far:
 - Listener Docker Compose service.
 - Backend test/tooling setup.
 - Backend Docker/API acceptance checks.
+- pnpm workspace.
+- Next.js App Router frontend shell.
+- Tailwind/shadcn/ui base setup with the dark-only Kick Logs palette.
+- Shared typed frontend API client.
+- Frontend Docker Compose service.
 
-Frontend is intentionally added in later phases.
+Final `/search` and `/admin` UI workflows are intentionally implemented in later phases.
 
 ## Prerequisites
 
 - Docker Desktop
 - Python 3.12+
 - `uv`
+- Node.js 20+
+- pnpm 8.11+
 
 If `uv` was installed through `python -m pip install --user uv` and is not on `PATH`, either add the Python user `Scripts` directory to `PATH` or run commands as `python -m uv ...`.
 
@@ -115,6 +123,58 @@ Public message search example:
 curl "http://localhost:8000/messages?sender=yavuz&q=selam&limit=50"
 ```
 
+## Start Web App
+
+Install frontend dependencies from the repository root:
+
+```powershell
+pnpm install
+```
+
+Run the web app locally:
+
+```powershell
+pnpm --filter @kick-logs/web dev
+```
+
+The web app reads the API URL from:
+
+```text
+NEXT_PUBLIC_API_BASE_URL
+```
+
+Default local value:
+
+```text
+http://localhost:8000
+```
+
+The current frontend routes are foundation shells only:
+
+```text
+/
+/search
+/login
+/admin
+```
+
+## Start Full Dev Stack
+
+From the repository root:
+
+```powershell
+docker compose up --build
+```
+
+Services:
+
+```text
+postgres  http://localhost:5432
+api       http://localhost:8000
+listener  background worker
+web       http://localhost:3000
+```
+
 ## Backend Tests
 
 From the backend project directory:
@@ -138,6 +198,16 @@ cd apps/api
 uv run ruff check .
 ```
 
+## Frontend Checks
+
+From the repository root:
+
+```powershell
+pnpm --filter @kick-logs/web typecheck
+pnpm --filter @kick-logs/web lint
+pnpm --filter @kick-logs/web build
+```
+
 ## Backend Verification
 
 Phase 6 backend acceptance was verified with:
@@ -159,6 +229,14 @@ Manual smoke checks:
 - Admin can add and disable a followed Kick channel.
 - `GET /messages?limit=1` works without login.
 - Listener starts through Docker and stays alive when no enabled channels are ready.
+
+Phase 7 frontend foundation was verified with:
+
+- `pnpm --filter @kick-logs/web typecheck`
+- `pnpm --filter @kick-logs/web lint`
+- `pnpm --filter @kick-logs/web build`
+- `docker compose up --build -d web`
+- `GET http://localhost:3000` returns HTTP 200.
 
 ## Kick Integration Notes
 
