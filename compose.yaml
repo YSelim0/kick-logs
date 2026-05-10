@@ -43,6 +43,30 @@ services:
       - -c
       - uv run alembic upgrade head && uv run uvicorn kick_logs.main:app --host 0.0.0.0 --port 8000 --reload
 
+  listener:
+    build:
+      context: ./apps/api
+    environment:
+      APP_NAME: ${APP_NAME:-Kick Logs}
+      APP_ENV: ${APP_ENV:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://kick_logs:kick_logs@postgres:5432/kick_logs}
+      KICK_PUSHER_URL: ${KICK_PUSHER_URL:-wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0-rc2&flash=false}
+      LISTENER_RECONNECT_INITIAL_DELAY_SECONDS: ${LISTENER_RECONNECT_INITIAL_DELAY_SECONDS:-1}
+      LISTENER_RECONNECT_MAX_DELAY_SECONDS: ${LISTENER_RECONNECT_MAX_DELAY_SECONDS:-30}
+      LISTENER_RECONNECT_MULTIPLIER: ${LISTENER_RECONNECT_MULTIPLIER:-2}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./apps/api:/app
+      - listener_venv:/app/.venv
+    command:
+      - sh
+      - -c
+      - uv run alembic upgrade head && uv run python -m kick_logs.presentation.worker.main
+
 volumes:
   postgres_data:
   api_venv:
+  listener_venv:

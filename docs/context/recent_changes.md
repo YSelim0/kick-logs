@@ -18,17 +18,21 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - listener service
   - worker entrypoint
   - sender profile resolver/enrichment fallback
+- Listener Docker Compose service is implemented and starts with `postgres` and `api`.
+- Phase 5 acceptance is complete.
 - Final verification:
   - `uv run pytest`: 65 passed
   - `uv run ruff check .`: passed
   - `docker compose up --build -d postgres api`: passed
   - `GET /health`: passed
   - `GET /messages?limit=1`: passed
-- Scope remains backend-only: no listener loop, frontend, or web Docker service.
+  - `uv run pytest`: 83 passed after Phase 5
+  - `docker compose up --build -d postgres api listener`: passed
+- Scope remains backend-only: no frontend or web Docker service.
 
 ## Commit Context
 
 - Last committed unit:
-  - `b0eee69 feat(listener): add worker foundation`
-- Next commit should cover Phase 5 listener runtime:
-  - suggested message: `feat(listener): add pusher runtime`
+  - `29abaf8 feat(listener): add pusher runtime`
+- Next commit should cover Phase 5 Docker/docs completion:
+  - suggested message: `feat(listener): add docker service`

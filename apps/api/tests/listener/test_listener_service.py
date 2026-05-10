@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 from kick_logs.application.dto.channels import ResolvedKickChannelDTO
@@ -45,6 +46,17 @@ class FakePusherClient:
         self.listen_call_count += 1
         for event in self.events:
             yield event
+
+
+class FailingPusherClient:
+    def __init__(self) -> None:
+        self.listen_call_count = 0
+
+    async def listen(self, _channels):
+        self.listen_call_count += 1
+        if False:
+            yield ""
+        raise RuntimeError("websocket failure")
 
 
 class FakeChannelResolver:
@@ -161,8 +173,9 @@ class FakeUnitOfWork:
 
 def build_service(
     unit_of_work: FakeUnitOfWork,
-    pusher_client: FakePusherClient,
+    pusher_client,
     sender_profile_resolver,
+    sleep=None,
 ) -> ListenerService:
     return ListenerService(
         unit_of_work_factory=lambda: unit_of_work,
@@ -171,6 +184,7 @@ def build_service(
         event_parser=KickEventParser(),
         sender_profile_resolver=sender_profile_resolver,
         reconnect_policy=ReconnectPolicy(initial_delay_seconds=0, max_delay_seconds=0),
+        sleep=sleep or asyncio.sleep,
     )
 
 
@@ -211,3 +225,28 @@ async def test_listener_service_continues_when_sender_enrichment_fails() -> None
 
     assert ingested_count == 1
     assert unit_of_work.senders.senders[0].profile_image_url is None
+
+
+async def test_listener_service_schedules_reconnect_after_pusher_failure() -> None:
+    unit_of_work = FakeUnitOfWork()
+    pusher_client = FailingPusherClient()
+    delays: list[float] = []
+
+    async def stop_after_first_sleep(delay: float) -> None:
+        delays.append(delay)
+        raise asyncio.CancelledError
+
+    service = build_service(
+        unit_of_work,
+        pusher_client,
+        FakeSenderProfileResolver(),
+        sleep=stop_after_first_sleep,
+    )
+
+    try:
+        await service.run_forever()
+    except asyncio.CancelledError:
+        pass
+
+    assert pusher_client.listen_call_count == 1
+    assert delays == [0]

@@ -39,10 +39,10 @@ Do not change public search UI, admin UI, auth contracts, or database schema exc
   - [x] Backoff after websocket failures.
   - [x] Re-subscribe enabled channels after reconnect.
   - [x] Log connection, subscription, parse, and ingest events.
-- [ ] Docker Compose:
-  - [ ] Add `listener` service using same backend image/source as `api`.
-  - [ ] Ensure listener depends on `postgres` and uses backend env.
-- [ ] Tests:
+- [x] Docker Compose:
+  - [x] Add `listener` service using same backend image/source as `api`.
+  - [x] Ensure listener depends on `postgres` and uses backend env.
+- [x] Tests:
   - [x] Event parser with representative Kick payloads.
   - [x] Listener service with fake Pusher client and fake repositories.
   - [x] Reconnect policy unit tests.
@@ -50,11 +50,11 @@ Do not change public search UI, admin UI, auth contracts, or database schema exc
 
 ## Acceptance Criteria
 
-- [ ] Listener can ingest mocked Kick chat events into DB through existing use case.
-- [ ] Listener Docker service starts without breaking API.
-- [ ] Malformed events and transient network errors do not crash permanently.
-- [ ] No frontend work is introduced.
-- [ ] Docs/context are updated with implemented listener behavior.
+- [x] Listener can ingest mocked Kick chat events into DB through existing use case.
+- [x] Listener Docker service starts without breaking API.
+- [x] Malformed events and transient network errors do not crash permanently.
+- [x] No frontend work is introduced.
+- [x] Docs/context are updated with implemented listener behavior.
 
 ## Handoff
 

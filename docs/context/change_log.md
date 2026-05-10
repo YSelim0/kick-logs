@@ -156,3 +156,21 @@ This is a living implementation log. Add new entries for each meaningful project
 - Verified Phase 5 listener runtime:
   - `uv run pytest tests/listener`: 17 tests passed
   - `uv run ruff check .`: all checks passed
+- Added listener Docker Compose service:
+  - same backend source/image pattern as API
+  - separate `listener_venv` volume
+  - depends on healthy PostgreSQL
+  - starts with `uv run alembic upgrade head && uv run python -m kick_logs.presentation.worker.main`
+- Added listener environment defaults to `.env.example`.
+- Completed Phase 5 acceptance:
+  - listener ingests mocked Kick chat events through the existing ingestion use case
+  - listener Docker service starts without breaking API
+  - malformed events and transient websocket failures do not crash permanently
+  - no frontend work was introduced
+- Final Phase 5 verification:
+  - `uv run pytest`: 83 tests passed
+  - `uv run ruff check .`: all checks passed
+  - `docker compose config --services`: returned `postgres`, `api`, `listener`
+  - `docker compose up --build -d postgres api listener`: backend stack starts
+  - `GET http://localhost:8000/health`: returned `{"status":"ok"}`
+  - listener logs show idle no-channel checks without crashing

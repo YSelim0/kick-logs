@@ -13,14 +13,16 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Phase 4 message ingestion foundation is implemented and committed.
 - Phase 4 public message search API is implemented and committed.
 - Phase 4 acceptance is complete.
-- Phase 5 listener foundation has started.
+- Phase 5 listener foundation is complete.
+- Phase 5 listener runtime and Docker service are complete.
 - `apps/api` contains the FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
-- Root `compose.yaml` has only the Phase 1 services:
+- Root `compose.yaml` currently has backend Phase 5 services:
   - `postgres`
   - `api`
+  - `listener`
 - Sequential implementation plan exists at `docs/implementation_plan.md`.
 - Phase task files exist under `docs/tasks/phase1_tasks.md` through `docs/tasks/phase10_tasks.md`.
-- Phase 1 Compose scope is only `postgres` and `api`; do not add placeholder `web` or `listener` services early.
+- Frontend `web` service is still deferred until its owning frontend phase.
 - Local verification:
   - `uv run pytest` passes from `apps/api`.
   - `uv run ruff check .` passes from `apps/api`.
@@ -241,6 +243,16 @@ Build an MVP monorepo with:
 - `ListenerService.run_forever()` reconnects with backoff and reloads enabled channels on each reconnect.
 - Sender profile enrichment uses Kick web channel metadata by sender slug and continues ingestion when enrichment fails.
 - Worker entrypoint is `kick_logs.presentation.worker.main`.
+
+## Phase 5 Verification
+
+- `uv run pytest`: 83 tests passed.
+- `uv run ruff check .`: all checks passed.
+- `docker compose config --services`: returns `postgres`, `api`, `listener`.
+- `docker compose up --build -d postgres api listener`: backend stack builds and starts.
+- `docker compose ps`: `postgres`, `api`, and `listener` are up.
+- `GET http://localhost:8000/health`: returns `{"status":"ok"}`.
+- Listener logs show idle no-channel checks without crashing when no channels are enabled.
 
 ## Design Direction
 

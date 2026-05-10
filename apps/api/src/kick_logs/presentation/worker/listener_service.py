@@ -42,10 +42,13 @@ class ListenerService:
         attempt = 1
         while True:
             try:
-                await self.run_once()
+                ingested_count = await self.run_once()
                 attempt = 1
                 delay = self._reconnect_policy.delay_for_attempt(attempt)
-                logger.warning("Kick listener stream ended; reconnecting in %.2fs.", delay)
+                if ingested_count == 0:
+                    logger.info("Kick listener idle; checking channels again in %.2fs.", delay)
+                else:
+                    logger.warning("Kick listener stream ended; reconnecting in %.2fs.", delay)
             except asyncio.CancelledError:
                 raise
             except Exception:

@@ -4,7 +4,7 @@ Kick Logs is an MVP monorepo for collecting public Kick chat messages from follo
 
 ## Current Status
 
-Backend implementation is complete through Phase 4.
+Backend implementation is complete through Phase 5.
 
 Implemented so far:
 
@@ -19,9 +19,11 @@ Implemented so far:
 - Kick channel metadata resolver.
 - Message ingestion use case and emote parser.
 - Public `GET /messages` search API with optional filters and cursor pagination.
+- Kick listener worker with Pusher websocket ingestion runtime.
+- Listener Docker Compose service.
 - Backend test/tooling setup.
 
-Frontend and the live listener runtime are intentionally added in later phases.
+Frontend is intentionally added in later phases.
 
 ## Prerequisites
 
@@ -43,13 +45,14 @@ Copy-Item .env.example .env
 
 ## Start Backend Stack
 
-Start PostgreSQL and the API:
+Start PostgreSQL, the API, and the listener:
 
 ```powershell
-docker compose up --build postgres api
+docker compose up --build postgres api listener
 ```
 
-The Docker API service applies Alembic migrations before starting Uvicorn.
+The Docker API and listener services apply Alembic migrations before starting.
+When no channels are enabled, the listener stays alive and periodically checks again.
 
 To apply migrations manually from the backend project directory:
 
