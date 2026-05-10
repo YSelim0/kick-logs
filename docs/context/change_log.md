@@ -135,3 +135,13 @@ This is a living implementation log. Add new entries for each meaningful project
   - `docker compose up --build -d postgres api`: backend stack starts
   - `GET http://localhost:8000/health`: returned `{"status":"ok"}`
   - `GET http://localhost:8000/messages?limit=1`: returned a public search response
+- Started Phase 5 listener worker implementation.
+- Added listener foundation:
+  - listener channel DTOs
+  - `LoadEnabledChannelsUseCase`
+  - Kick Pusher chat event parser
+  - reconnect backoff policy
+  - unit tests for enabled-channel loading, event parsing, and reconnect delays
+- Verified Phase 5 listener foundation:
+  - `uv run pytest tests/listener`: 10 tests passed
+  - `uv run ruff check .`: all checks passed

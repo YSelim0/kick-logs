@@ -13,6 +13,7 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Phase 4 message ingestion foundation is implemented and committed.
 - Phase 4 public message search API is implemented and committed.
 - Phase 4 acceptance is complete.
+- Phase 5 listener foundation has started.
 - `apps/api` contains the FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
 - Root `compose.yaml` has only the Phase 1 services:
   - `postgres`
@@ -223,6 +224,16 @@ Build an MVP monorepo with:
 - `docker compose up --build -d postgres api`: backend stack builds and starts.
 - `GET http://localhost:8000/health`: returns `{"status":"ok"}`.
 - `GET http://localhost:8000/messages?limit=1`: returns public search response successfully.
+
+## Listener Foundation Details
+
+- `LoadEnabledChannelsUseCase` loads enabled channels for the worker.
+- Channels missing Kick channel/chatroom metadata are resolved through the existing Kick channel resolver before subscription.
+- Disabled channels are excluded by repository query.
+- Channels still missing subscription metadata after resolution failure are skipped and returned in a skipped list for structured logging.
+- `KickEventParser` parses Pusher envelopes and extracts only `App\Events\ChatMessageEvent` payloads.
+- Malformed JSON, non-chat events, and incomplete chat payloads are ignored without raising.
+- `ReconnectPolicy` computes exponential backoff delays with a maximum cap.
 
 ## Design Direction
 
