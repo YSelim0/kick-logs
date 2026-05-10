@@ -66,3 +66,5 @@ This is a living implementation log. Add new entries for each meaningful project
 - Added repository tests for create/read/update flows and message search/pagination repository behavior using isolated transactions.
 - Verified full backend test suite: 27 tests passed.
 - Verified `ruff check .`: all checks passed.
+- Verified `alembic current`: `20260510_0001 (head)`.
+- Phase 2 acceptance is complete.

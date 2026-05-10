@@ -44,7 +44,15 @@ Do not implement HTTP auth, admin endpoints, Kick listener websocket code, front
 - [x] Repository tests pass against a test database or isolated transaction strategy.
 - [x] Domain imports remain framework-independent.
 - [x] No API auth/search/listener behavior is implemented yet.
-- [ ] Docs/context are updated with the actual DB details.
+- [x] Docs/context are updated with the actual DB details.
+
+Verification note:
+
+- `alembic upgrade head` applied revision `20260510_0001`.
+- `alembic current` reports `20260510_0001 (head)`.
+- `uv run pytest` passes with 27 tests.
+- `uv run ruff check .` passes.
+- Docker Compose still runs only `postgres` and `api`; `postgres` is healthy.
 
 ## Handoff
 

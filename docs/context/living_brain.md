@@ -6,9 +6,9 @@ This file is the active project memory. Keep it updated whenever project behavio
 
 - Repository `kick-logs` has been initialized locally.
 - Commit convention skill exists under `.agents/skills/commit-message-conventions`.
-- Phase 1 backend/Docker foundation implementation has started.
-- Root local development defaults are committed.
-- `apps/api` contains the initial FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
+- Phase 1 backend/Docker foundation is complete.
+- Phase 2 persistence foundation is complete.
+- `apps/api` contains the FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
 - Root `compose.yaml` has only the Phase 1 services:
   - `postgres`
   - `api`
@@ -21,11 +21,11 @@ This file is the active project memory. Keep it updated whenever project behavio
   - `docker compose config --services` returns only `postgres` and `api`.
   - `docker compose up --build -d postgres api` starts the Phase 1 stack successfully.
   - `GET http://localhost:8000/health` returns `{"status":"ok"}`.
-- Phase 2 persistence foundation is in progress:
-  - domain entities/value objects and application repository ports exist
-  - SQLAlchemy async engine/session setup exists
-  - Alembic initial migration creates `users`, `channels`, `senders`, and `chat_messages`
-  - local PostgreSQL has successfully applied the initial migration
+- Phase 2 verification:
+  - `alembic upgrade head` applies revision `20260510_0001`
+  - `alembic current` reports `20260510_0001 (head)`
+  - `uv run pytest` passes with 27 tests
+  - `uv run ruff check .` passes
 
 ## Kick Chat Ingestion Method
 
@@ -64,6 +64,43 @@ Build an MVP monorepo with:
 - ORM decision is SQLAlchemy 2.x async ORM with asyncpg and Alembic.
 - Domain entities stay independent from SQLAlchemy, FastAPI, Pydantic, and external clients.
 - Frontend uses Next.js App Router with feature-oriented folders and shadcn/ui primitives in `components/ui`.
+
+## Persistence Details
+
+- Domain entities/value objects live under `apps/api/src/kick_logs/domain/` and stay framework-independent.
+- Application repository/unit-of-work ports live under `apps/api/src/kick_logs/application/ports/`.
+- SQLAlchemy infrastructure lives under `apps/api/src/kick_logs/infrastructure/database/`.
+- Alembic migration revision `20260510_0001` creates:
+  - `users`
+  - `channels`
+  - `senders`
+  - `chat_messages`
+- PostgreSQL extension:
+  - `pg_trgm`
+- JSONB fields:
+  - `channels.raw_payload`
+  - `senders.raw_profile_payload`
+  - `chat_messages.sender_badges`
+  - `chat_messages.emotes`
+  - `chat_messages.reply_metadata`
+  - `chat_messages.raw_payload`
+- Dedupe/identity constraints:
+  - `users.email`
+  - `channels.kick_channel_id`
+  - `channels.kick_chatroom_id`
+  - `channels.slug`
+  - `senders.kick_user_id`
+  - `senders.slug`
+  - `chat_messages.kick_message_id`
+- Search/index strategy:
+  - btree indexes for message timestamp, cursor tuple support, channel id, sender id, chatroom id, sender username/slug, and channel slug
+  - trigram GIN indexes for lowercased channel slug/display name, sender username/slug, and message content
+- Repository implementations:
+  - `SqlAlchemyUserRepository`
+  - `SqlAlchemyChannelRepository`
+  - `SqlAlchemySenderRepository`
+  - `SqlAlchemyMessageRepository`
+  - `SqlAlchemyUnitOfWork`
 
 ## Design Direction
 
