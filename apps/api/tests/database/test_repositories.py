@@ -7,13 +7,15 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from kick_logs.core.config import get_settings
-from kick_logs.domain.entities import Channel, ChatMessage, Sender, User
+from kick_logs.domain.entities import Channel, ChatMessage, RawKickEvent, Sender, User
 from kick_logs.domain.value_objects.pagination import CursorPagination, MessageCursor
+from kick_logs.domain.value_objects.raw_event_status import RawEventStatus
 from kick_logs.domain.value_objects.roles import UserRole
 from kick_logs.domain.value_objects.search_filters import MessageSearchFilters
 from kick_logs.infrastructure.database.repositories import (
     SqlAlchemyChannelRepository,
     SqlAlchemyMessageRepository,
+    SqlAlchemyRawEventRepository,
     SqlAlchemySenderRepository,
     SqlAlchemyUserRepository,
 )
@@ -191,6 +193,96 @@ async def test_message_repository_create_read_and_search(db_session: AsyncSessio
         ),
     )
     assert [message.id for message in paged] == [old_message.id]
+
+
+@pytest.mark.asyncio
+async def test_raw_event_repository_claim_and_mark_processed(db_session: AsyncSession) -> None:
+    channel, _sender = await create_channel_and_sender(db_session)
+    repository = SqlAlchemyRawEventRepository(db_session)
+
+    event = await repository.add(
+        RawKickEvent.pending(
+            event_name=r"App\Events\ChatMessageEvent",
+            kick_message_id=unique_value("raw-message"),
+            chatroom_id=channel.kick_chatroom_id,
+            kick_channel_id=channel.kick_channel_id,
+            channel_id=channel.id,
+            payload={
+                "id": unique_value("payload-message"),
+                "chatroom_id": channel.kick_chatroom_id,
+            },
+        )
+    )
+
+    loaded = await repository.get_by_kick_message_id(event.kick_message_id or "")
+    assert loaded is not None
+    assert loaded.id == event.id
+
+    claimed = await repository.claim_pending(limit=10, processing_timeout_seconds=300)
+    assert [claimed_event.id for claimed_event in claimed] == [event.id]
+    assert claimed[0].status == RawEventStatus.PROCESSING
+    assert claimed[0].processing_started_at is not None
+
+    processed = await repository.mark_processed(event.id or 0)
+    assert processed.status == RawEventStatus.PROCESSED
+    assert processed.processed_at is not None
+
+
+@pytest.mark.asyncio
+async def test_raw_event_repository_requeues_stale_processing_rows(
+    db_session: AsyncSession,
+) -> None:
+    repository = SqlAlchemyRawEventRepository(db_session)
+    stale_event = await repository.add(
+        RawKickEvent(
+            event_name=r"App\Events\ChatMessageEvent",
+            kick_message_id=unique_value("stale-message"),
+            chatroom_id=123,
+            payload={"id": unique_value("payload-message"), "chatroom_id": 123},
+            status=RawEventStatus.PROCESSING,
+            received_at=datetime.now(UTC) - timedelta(minutes=10),
+            processing_started_at=datetime.now(UTC) - timedelta(minutes=10),
+        )
+    )
+
+    claimed = await repository.claim_pending(limit=10, processing_timeout_seconds=60)
+
+    assert [claimed_event.id for claimed_event in claimed] == [stale_event.id]
+    assert claimed[0].status == RawEventStatus.PROCESSING
+    assert claimed[0].processing_started_at is not None
+
+
+@pytest.mark.asyncio
+async def test_raw_event_repository_marks_failed_with_retry_state(
+    db_session: AsyncSession,
+) -> None:
+    repository = SqlAlchemyRawEventRepository(db_session)
+    event = await repository.add(
+        RawKickEvent.pending(
+            event_name=r"App\Events\ChatMessageEvent",
+            kick_message_id=unique_value("failed-message"),
+            chatroom_id=123,
+            payload={"id": unique_value("payload-message"), "chatroom_id": 123},
+        )
+    )
+
+    retryable = await repository.mark_failed(
+        event_id=event.id or 0,
+        error="temporary failure",
+        max_attempts=2,
+    )
+    assert retryable.status == RawEventStatus.PENDING
+    assert retryable.attempts == 1
+    assert retryable.last_error == "temporary failure"
+
+    final = await repository.mark_failed(
+        event_id=event.id or 0,
+        error="permanent failure",
+        max_attempts=2,
+    )
+    assert final.status == RawEventStatus.FAILED
+    assert final.attempts == 2
+    assert final.last_error == "permanent failure"
 
 
 @pytest.mark.asyncio

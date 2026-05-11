@@ -1,10 +1,12 @@
 from typing import Any
 
-from kick_logs.domain.entities import Channel, ChatMessage, Emote, Sender, User
+from kick_logs.domain.entities import Channel, ChatMessage, Emote, RawKickEvent, Sender, User
+from kick_logs.domain.value_objects.raw_event_status import RawEventStatus
 from kick_logs.domain.value_objects.roles import UserRole
 from kick_logs.infrastructure.database.models import (
     ChannelModel,
     ChatMessageModel,
+    RawKickEventModel,
     SenderModel,
     UserModel,
 )
@@ -86,6 +88,27 @@ def chat_message_to_domain(model: ChatMessageModel) -> ChatMessage:
     )
 
 
+def raw_kick_event_to_domain(model: RawKickEventModel) -> RawKickEvent:
+    return RawKickEvent(
+        id=model.id,
+        event_name=model.event_name,
+        kick_message_id=model.kick_message_id,
+        chatroom_id=model.chatroom_id,
+        kick_channel_id=model.kick_channel_id,
+        channel_id=model.channel_id,
+        payload=model.payload or {},
+        status=RawEventStatus(model.status),
+        attempts=model.attempts,
+        received_at=model.received_at,
+        processing_started_at=model.processing_started_at,
+        processed_at=model.processed_at,
+        last_error=model.last_error,
+        created_at=model.created_at,
+        updated_at=model.updated_at,
+        metadata=model.event_metadata or {},
+    )
+
+
 def user_to_model(entity: User) -> UserModel:
     return UserModel(
         email=entity.email,
@@ -138,3 +161,25 @@ def chat_message_to_model(entity: ChatMessage) -> ChatMessageModel:
         message_created_at=entity.message_created_at,
         ingested_at=entity.ingested_at,
     )
+
+
+def raw_kick_event_to_model(entity: RawKickEvent) -> RawKickEventModel:
+    model = RawKickEventModel(
+        event_name=entity.event_name,
+        kick_message_id=entity.kick_message_id,
+        chatroom_id=entity.chatroom_id,
+        kick_channel_id=entity.kick_channel_id,
+        channel_id=entity.channel_id,
+        payload=entity.payload,
+        status=entity.status.value,
+        attempts=entity.attempts,
+        processing_started_at=entity.processing_started_at,
+        processed_at=entity.processed_at,
+        last_error=entity.last_error,
+        event_metadata=entity.metadata,
+    )
+    if entity.received_at is not None:
+        model.received_at = entity.received_at
+    if entity.id is not None:
+        model.id = entity.id
+    return model

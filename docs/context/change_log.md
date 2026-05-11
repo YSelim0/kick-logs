@@ -4,6 +4,25 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-11
 
+- Started GitHub issue #1 durable Kick ingestion work on branch `feature/issue-1-durable-inbox`:
+  - added `RawKickEvent` and `RawEventStatus`
+  - added `raw_kick_events` SQLAlchemy model and Alembic revision `20260511_0002`
+  - added raw event repository port and SQLAlchemy implementation
+  - added raw event storage and processing use cases
+  - refactored the listener websocket read path to persist raw chat events before normalization/message insert work
+  - added raw event worker loop with batch processing, retry state, stale processing reclaim, and pending-count logging
+  - added periodic listener reconnect for enabled-channel resync
+  - exposed listener worker/batch/retry/resync settings through config, Compose, and `.env.example`
+  - added listener, domain, metadata, migration, and repository tests for durable inbox behavior
+  - verified `python -m uv run ruff check .`: passed
+  - verified `python -m uv run alembic upgrade head`: applied `20260511_0002`
+  - verified `python -m uv run alembic current`: `20260511_0002 (head)`
+  - verified `python -m uv run pytest`: 94 passed
+  - verified `python -m uv run pytest tests/listener tests/domain tests/database/test_models_metadata.py tests/database/test_alembic_migration.py`: 43 passed
+  - verified `python -m uv run pytest tests/database/test_repositories.py tests/messages/test_ingest_message.py tests/listener/test_listener_service.py`: 19 passed against local PostgreSQL
+  - verified `docker compose up --build -d postgres api listener`: passed
+  - verified `GET http://localhost:8000/health`: `{"status":"ok"}`
+  - verified listener logs show raw event storage and raw event worker processing with `pending=0`
 - Fixed `/search` hydration mismatch caused by server/client timezone differences in default date range rendering:
   - changed the search screen's first render to use static empty state
   - kept the required default 7-day date range by applying it after client hydration

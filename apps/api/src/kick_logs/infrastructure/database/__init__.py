@@ -2,6 +2,7 @@ from kick_logs.infrastructure.database.base import Base
 from kick_logs.infrastructure.database.models import (
     ChannelModel,
     ChatMessageModel,
+    RawKickEventModel,
     SenderModel,
     UserModel,
 )
@@ -16,6 +17,7 @@ __all__ = [
     "Base",
     "ChannelModel",
     "ChatMessageModel",
+    "RawKickEventModel",
     "SenderModel",
     "SqlAlchemyUnitOfWork",
     "UserModel",

@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     listener_reconnect_initial_delay_seconds: float = 1.0
     listener_reconnect_max_delay_seconds: float = 30.0
     listener_reconnect_multiplier: float = 2.0
+    listener_worker_count: int = 4
+    listener_raw_event_batch_size: int = 100
+    listener_raw_event_processing_timeout_seconds: int = 300
+    listener_raw_event_max_attempts: int = 5
+    listener_raw_event_worker_idle_delay_seconds: float = 0.25
+    listener_channel_resync_interval_seconds: float = 60.0
 
 
 @lru_cache
