@@ -114,6 +114,9 @@ Field behavior:
   - `Başlangıç`: current local date/time minus 7 days.
   - `Bitiş`: current local date/time.
 - Users can still clear or change the date fields; cleared date fields are omitted from the API query.
+- Opening `/search` without URL query parameters must not call the backend automatically.
+- Before the user submits a search, the results area shows an icon with `Arama yapmak için yukarıdaki formu kullanın.`
+- An explicit search submit can still fetch latest messages when all filters are empty.
 
 Backend query mapping:
 

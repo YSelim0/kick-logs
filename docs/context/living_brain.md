@@ -410,7 +410,9 @@ Build an MVP monorepo with:
   - `Başlangıç` -> `start`
   - `Bitiş` -> `end`
 - Empty form fields are omitted from URL/backend query params.
-- Empty all filters fetches latest messages.
+- Opening bare `/search` does not automatically call the backend.
+- Before the user submits a search, the result area shows `Arama yapmak için yukarıdaki formu kullanın.`
+- Explicitly submitting empty filters still fetches latest messages.
 - Missing date filters default in the `/search` UI to the last 7 days:
   - `Başlangıç` is current local date/time minus 7 days.
   - `Bitiş` is current local date/time.

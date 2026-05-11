@@ -57,3 +57,8 @@
 
 - Public `/search` date inputs default to the last 7 days: `Başlangıç` is current local date/time minus 7 days and `Bitiş` is current local date/time. Users can clear date fields to omit date filters.
 - MVP root route `/` redirects to `/search`; future landing content can replace this deliberately after the application screens are stable.
+
+## 2026-05-12
+
+- Bare `/search` page load does not automatically fetch latest messages; the result area stays idle with `Arama yapmak için yukarıdaki formu kullanın.` until the user submits a search.
+- Explicitly submitting the search form with empty filters still fetches latest messages.

@@ -89,6 +89,7 @@ Filter semantics:
 - Results are ordered newest-first.
 - Infinite scroll uses cursor pagination based on `(created_at, id)`.
 - The public `/search` UI defaults `start` to 7 days before the current local date/time and `end` to the current local date/time. Users can clear those fields to omit date filters.
+- Bare `/search` does not automatically fetch latest messages; the user must submit the form or open a URL with query parameters.
 
 Example queries:
 

@@ -2,6 +2,18 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-12
+
+- Updated public `/search` initial-load behavior:
+  - bare `/search` no longer fetches latest messages automatically
+  - result area shows an icon prompt: `Arama yapmak için yukarıdaki formu kullanın.`
+  - URL query params still trigger search on load
+  - explicitly submitting empty filters still fetches latest messages
+  - added `SearchScreen` tests for no initial fetch, URL query fetch, and explicit empty search
+  - verified `pnpm --filter @kick-logs/web test`: 7 files, 23 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`: passed
+  - verified `pnpm --filter @kick-logs/web lint`: passed
+
 ## 2026-05-11
 
 - Started GitHub issue #1 durable Kick ingestion work on branch `feature/issue-1-durable-inbox`:

@@ -4,6 +4,18 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Updated public `/search` initial-load behavior:
+  - bare `/search` does not call `/messages` automatically anymore
+  - results area shows `Arama yapmak için yukarıdaki formu kullanın.`
+  - URL query params still trigger a search on load
+  - explicit empty search still fetches latest messages
+- Verification:
+  - `pnpm --filter @kick-logs/web test`: 7 files, 23 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+
+## Previous
+
 - Implemented GitHub issue #1 durable Kick ingestion on branch `feature/issue-1-durable-inbox`:
   - added `raw_kick_events` domain entity/status, SQLAlchemy model, Alembic migration, repository port, and repository implementation
   - listener websocket path now stores raw chat events first instead of normalizing/inserting messages inline
@@ -22,7 +34,7 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `GET http://localhost:8000/health`: `{"status":"ok"}`
   - listener logs show raw event storage and worker processing with `pending=0`
 
-## Previous
+## Earlier
 
 - Fixed `/search` hydration mismatch caused by timezone-dependent default date values:
   - first render now uses static empty search state
@@ -34,7 +46,7 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `pnpm --filter @kick-logs/web lint`: passed
   - `pnpm --filter @kick-logs/web build`: passed
 
-## Earlier
+## Older
 
 - Fixed browser CORS for frontend-to-backend API calls:
   - FastAPI now installs `CORSMiddleware` from comma-separated `BACKEND_CORS_ORIGINS`
@@ -48,7 +60,7 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `python -m uv run ruff check .`: passed
   - live Docker preflight and login smoke passed against `http://localhost:8000`
 
-## Older
+## Oldest
 
 - Phase 10 final MVP smoke and cleanup are complete.
 - Latest smoke:

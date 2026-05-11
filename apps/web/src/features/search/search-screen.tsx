@@ -42,6 +42,16 @@ function SearchScreenInner() {
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  const clearResults = useCallback(() => {
+    requestSequenceRef.current += 1;
+    setMessages([]);
+    setNextCursor(null);
+    setIsInitialLoading(false);
+    setIsLoadingMore(false);
+    setError(null);
+  }, []);
 
   const loadFirstPage = useCallback(async (state: SearchFormState) => {
     const requestId = ++requestSequenceRef.current;
@@ -107,11 +117,20 @@ function SearchScreenInner() {
   }, [isInitialLoading, isLoadingMore, nextCursor, submittedState]);
 
   useEffect(() => {
+    const hasUrlSearch = queryKey.length > 0;
     const nextState = readSearchState(new URLSearchParams(queryKey));
+
     setFormState(nextState);
-    setSubmittedState(nextState);
-    void loadFirstPage(nextState);
-  }, [loadFirstPage, queryKey]);
+    setSubmittedState(hasUrlSearch ? nextState : EMPTY_SEARCH_STATE);
+    setHasSearched(hasUrlSearch);
+
+    if (hasUrlSearch) {
+      void loadFirstPage(nextState);
+      return;
+    }
+
+    clearResults();
+  }, [clearResults, loadFirstPage, queryKey]);
 
   useEffect(() => {
     const node = sentinelRef.current;
@@ -140,6 +159,7 @@ function SearchScreenInner() {
 
   function submitSearch() {
     setSubmittedState(formState);
+    setHasSearched(true);
 
     if (activeQueryString === queryKey) {
       void loadFirstPage(formState);
@@ -151,15 +171,15 @@ function SearchScreenInner() {
 
   function resetSearch() {
     const defaultState = getDefaultSearchState();
+
     setFormState(defaultState);
-    setSubmittedState(defaultState);
+    setSubmittedState(EMPTY_SEARCH_STATE);
+    setHasSearched(false);
+    clearResults();
 
-    if (!queryKey) {
-      void loadFirstPage(defaultState);
-      return;
+    if (queryKey) {
+      router.push("/search");
     }
-
-    router.push("/search");
   }
 
   return (
@@ -186,6 +206,7 @@ function SearchScreenInner() {
         <MessageList
           error={error}
           hasMore={Boolean(nextCursor)}
+          hasSearched={hasSearched}
           isInitialLoading={isInitialLoading}
           isLoadingMore={isLoadingMore}
           messages={messages}

@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
 import { useState } from "react";
 
 import { MessageContent } from "@/features/search/message-content";
@@ -15,6 +15,7 @@ type MessageListProps = {
   isInitialLoading: boolean;
   isLoadingMore: boolean;
   hasMore: boolean;
+  hasSearched: boolean;
   error: string | null;
   sentinelRef: React.RefObject<HTMLDivElement>;
   onRetry: () => void;
@@ -25,6 +26,7 @@ export function MessageList({
   isInitialLoading,
   isLoadingMore,
   hasMore,
+  hasSearched,
   error,
   sentinelRef,
   onRetry
@@ -38,29 +40,44 @@ export function MessageList({
             Sonuçlar
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            {messages.length} mesaj - en yeni kayıtlar önce - kaydırdıkça eski mesajlar yüklenir
+            {hasSearched
+              ? `${messages.length} mesaj - en yeni kayıtlar önce - kaydırdıkça eski mesajlar yüklenir`
+              : "Arama yaptıktan sonra sonuçlar burada listelenir"}
           </p>
         </div>
       </div>
 
       <div className="overflow-hidden rounded-md border border-border">
-        <div className="hidden grid-cols-[46px_142px_130px_minmax(0,1fr)_154px] bg-kick-background px-3 py-2 text-xs font-medium text-muted-foreground md:grid">
-          <div />
-          <div>Gönderen</div>
-          <div>Kanal</div>
-          <div>Mesaj</div>
-          <div>Tarih</div>
-        </div>
-
-        {messages.map((message, index) => (
-          <MessageRow isAlt={index % 2 === 1} key={message.id} message={message} />
-        ))}
-
-        {!isInitialLoading && !error && messages.length === 0 ? (
-          <div className="px-4 py-10 text-center text-sm text-muted-foreground">
-            Bu filtrelerle mesaj bulunamadı.
+        {!hasSearched && !isInitialLoading && !error ? (
+          <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 bg-kick-background px-4 py-12 text-center">
+            <div className="flex h-11 w-11 items-center justify-center rounded-md border border-border bg-black text-primary">
+              <Search className="h-5 w-5" />
+            </div>
+            <p className="text-sm font-medium text-foreground">
+              Arama yapmak için yukarıdaki formu kullanın.
+            </p>
           </div>
-        ) : null}
+        ) : (
+          <>
+            <div className="hidden grid-cols-[46px_142px_130px_minmax(0,1fr)_154px] bg-kick-background px-3 py-2 text-xs font-medium text-muted-foreground md:grid">
+              <div />
+              <div>Gönderen</div>
+              <div>Kanal</div>
+              <div>Mesaj</div>
+              <div>Tarih</div>
+            </div>
+
+            {messages.map((message, index) => (
+              <MessageRow isAlt={index % 2 === 1} key={message.id} message={message} />
+            ))}
+
+            {!isInitialLoading && !error && messages.length === 0 ? (
+              <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                Bu filtrelerle mesaj bulunamadı.
+              </div>
+            ) : null}
+          </>
+        )}
 
         {isInitialLoading ? (
           <div className="px-4 py-10 text-center text-sm text-muted-foreground">
