@@ -1,16 +1,17 @@
 import asyncio
-import copy
 import logging
+import time
 from collections.abc import Awaitable, Callable
-from typing import Any
 
-from kick_logs.application.exceptions import ApplicationError, SenderProfileResolutionError
 from kick_logs.application.ports.kick_channel_resolver import KickChannelResolver
 from kick_logs.application.ports.pusher_client import PusherClient
 from kick_logs.application.ports.sender_profile_resolver import SenderProfileResolver
 from kick_logs.application.ports.unit_of_work import UnitOfWork
-from kick_logs.application.use_cases.listener import LoadEnabledChannelsUseCase
-from kick_logs.application.use_cases.messages import IngestMessageUseCase
+from kick_logs.application.use_cases.listener import (
+    LoadEnabledChannelsUseCase,
+    ProcessRawKickEventsUseCase,
+    StoreRawKickEventUseCase,
+)
 from kick_logs.infrastructure.kick import KickEventParser, ReconnectPolicy
 
 SleepCallable = Callable[[float], Awaitable[None]]
@@ -28,6 +29,12 @@ class ListenerService:
         event_parser: KickEventParser,
         sender_profile_resolver: SenderProfileResolver,
         reconnect_policy: ReconnectPolicy,
+        raw_event_worker_count: int = 4,
+        raw_event_batch_size: int = 100,
+        raw_event_processing_timeout_seconds: int = 300,
+        raw_event_max_attempts: int = 5,
+        raw_event_worker_idle_delay_seconds: float = 0.25,
+        channel_resync_interval_seconds: float = 60.0,
         sleep: SleepCallable = asyncio.sleep,
     ) -> None:
         self._unit_of_work_factory = unit_of_work_factory
@@ -36,27 +43,44 @@ class ListenerService:
         self._event_parser = event_parser
         self._sender_profile_resolver = sender_profile_resolver
         self._reconnect_policy = reconnect_policy
+        self._raw_event_worker_count = max(0, raw_event_worker_count)
+        self._raw_event_batch_size = max(1, raw_event_batch_size)
+        self._raw_event_processing_timeout_seconds = max(1, raw_event_processing_timeout_seconds)
+        self._raw_event_max_attempts = max(1, raw_event_max_attempts)
+        self._raw_event_worker_idle_delay_seconds = max(0.01, raw_event_worker_idle_delay_seconds)
+        self._channel_resync_interval_seconds = max(0.01, channel_resync_interval_seconds)
         self._sleep = sleep
 
     async def run_forever(self) -> None:
+        worker_tasks = self._start_raw_event_workers()
         attempt = 1
-        while True:
-            try:
-                ingested_count = await self.run_once()
-                attempt = 1
-                delay = self._reconnect_policy.delay_for_attempt(attempt)
-                if ingested_count == 0:
-                    logger.info("Kick listener idle; checking channels again in %.2fs.", delay)
-                else:
-                    logger.warning("Kick listener stream ended; reconnecting in %.2fs.", delay)
-            except asyncio.CancelledError:
-                raise
-            except Exception:
-                delay = self._reconnect_policy.delay_for_attempt(attempt)
-                logger.exception("Kick listener failed; reconnecting in %.2fs.", delay)
-                attempt += 1
+        try:
+            while True:
+                try:
+                    stored_count = await self.run_once()
+                    attempt = 1
+                    delay = self._reconnect_policy.delay_for_attempt(attempt)
+                    if stored_count == 0:
+                        logger.info("Kick listener idle; checking channels again in %.2fs.", delay)
+                    else:
+                        logger.warning(
+                            "Kick listener stream ended after storing %d raw events; "
+                            "reconnecting in %.2fs.",
+                            stored_count,
+                            delay,
+                        )
+                except asyncio.CancelledError:
+                    raise
+                except Exception:
+                    delay = self._reconnect_policy.delay_for_attempt(attempt)
+                    logger.exception("Kick listener failed; reconnecting in %.2fs.", delay)
+                    attempt += 1
 
-            await self._sleep(delay)
+                await self._sleep(delay)
+        finally:
+            for task in worker_tasks:
+                task.cancel()
+            await asyncio.gather(*worker_tasks, return_exceptions=True)
 
     async def run_once(self) -> int:
         channel_result = await LoadEnabledChannelsUseCase(
@@ -76,64 +100,92 @@ class ListenerService:
             logger.info("No enabled Kick channels are ready for listener subscription.")
             return 0
 
-        logger.info("Subscribing to %d enabled Kick channels.", len(channel_result.channels))
-
-        ingested_count = 0
-        async for raw_event in self._pusher_client.listen(channel_result.channels):
-            event = self._event_parser.parse(raw_event)
-            if event is None:
-                logger.debug("Ignoring non-chat or malformed Kick event.")
-                continue
-
-            payload = await self._enrich_sender_profile(event.payload)
-            try:
-                message = await IngestMessageUseCase(self._unit_of_work_factory).execute(payload)
-            except ApplicationError:
-                logger.exception("Kick chat message could not be ingested.")
-                continue
-
-            ingested_count += 1
-            logger.info(
-                "Ingested Kick chat message id=%s chatroom_id=%s",
-                message.kick_message_id,
-                message.chatroom_id,
-            )
-
-        return ingested_count
-
-    async def _enrich_sender_profile(self, payload: dict[str, Any]) -> dict[str, Any]:
-        enriched_payload = copy.deepcopy(payload)
-        sender = enriched_payload.get("sender")
-        if not isinstance(sender, dict):
-            return enriched_payload
-
-        if self._sender_has_profile_image(sender):
-            return enriched_payload
-
-        slug = self._clean_text(sender.get("slug")) or self._clean_text(sender.get("username"))
-        if slug is None:
-            return enriched_payload
-
-        try:
-            profile = await self._sender_profile_resolver.resolve(slug)
-        except SenderProfileResolutionError:
-            logger.warning("Kick sender profile could not be resolved for slug=%s.", slug)
-            return enriched_payload
-
-        if profile.profile_image_url:
-            sender["profile_pic"] = profile.profile_image_url
-            sender["resolved_profile_payload"] = profile.raw_payload
-
-        return enriched_payload
-
-    def _sender_has_profile_image(self, sender: dict[str, Any]) -> bool:
-        return any(
-            self._clean_text(sender.get(key)) is not None
-            for key in ("profile_image_url", "profile_pic", "profilepic")
+        logger.info(
+            "Subscribing to %d enabled Kick channels; next resync in %.2fs.",
+            len(channel_result.channels),
+            self._channel_resync_interval_seconds,
         )
 
-    def _clean_text(self, value: Any) -> str | None:
-        if value is None:
-            return None
-        cleaned = str(value).strip()
-        return cleaned or None
+        stored_count = 0
+        raw_events = self._pusher_client.listen(channel_result.channels)
+        resync_at = time.monotonic() + self._channel_resync_interval_seconds
+        try:
+            while True:
+                timeout = resync_at - time.monotonic()
+                if timeout <= 0:
+                    logger.info("Kick listener channel resync interval elapsed.")
+                    break
+
+                try:
+                    raw_event = await asyncio.wait_for(anext(raw_events), timeout=timeout)
+                except TimeoutError:
+                    logger.info("Kick listener channel resync interval elapsed.")
+                    break
+                except StopAsyncIteration:
+                    break
+
+                event = self._event_parser.parse(raw_event)
+                if event is None:
+                    logger.debug("Ignoring non-chat or malformed Kick event.")
+                    continue
+
+                raw_event_entity = await StoreRawKickEventUseCase(
+                    self._unit_of_work_factory
+                ).execute(
+                    event_name=event.event,
+                    payload=event.payload,
+                    pusher_channel=event.channel,
+                )
+                stored_count += 1
+                logger.info(
+                    "Stored raw Kick chat event id=%s kick_message_id=%s chatroom_id=%s",
+                    raw_event_entity.id,
+                    raw_event_entity.kick_message_id,
+                    raw_event_entity.chatroom_id,
+                )
+        finally:
+            close = getattr(raw_events, "aclose", None)
+            if close is not None:
+                await close()
+
+        return stored_count
+
+    def _start_raw_event_workers(self) -> list[asyncio.Task[None]]:
+        return [
+            asyncio.create_task(
+                self._process_raw_events_forever(worker_id),
+                name=f"raw-kick-event-worker-{worker_id}",
+            )
+            for worker_id in range(1, self._raw_event_worker_count + 1)
+        ]
+
+    async def _process_raw_events_forever(self, worker_id: int) -> None:
+        processor = ProcessRawKickEventsUseCase(self._unit_of_work_factory)
+
+        while True:
+            try:
+                result = await processor.execute_once(
+                    limit=self._raw_event_batch_size,
+                    processing_timeout_seconds=self._raw_event_processing_timeout_seconds,
+                    max_attempts=self._raw_event_max_attempts,
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("Raw Kick event worker %d failed.", worker_id)
+                await self._sleep(self._raw_event_worker_idle_delay_seconds)
+                continue
+
+            if result.claimed == 0:
+                await self._sleep(self._raw_event_worker_idle_delay_seconds)
+                continue
+
+            logger.info(
+                "Raw Kick event worker %d processed batch claimed=%d processed=%d failed=%d "
+                "pending=%d.",
+                worker_id,
+                result.claimed,
+                result.processed,
+                result.failed,
+                result.pending_count,
+            )

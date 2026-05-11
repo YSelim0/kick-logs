@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from kick_logs.domain.entities import Channel, ChatMessage, Emote, Sender, User
+from kick_logs.domain.entities import Channel, ChatMessage, Emote, RawKickEvent, Sender, User
 from kick_logs.domain.exceptions import DomainError
 from kick_logs.domain.value_objects.roles import UserRole
 
@@ -61,3 +61,23 @@ def test_chat_message_accepts_valid_payload() -> None:
     )
 
     assert message.kick_message_id == "message-1"
+
+
+def test_raw_kick_event_requires_object_payload() -> None:
+    with pytest.raises(DomainError):
+        RawKickEvent(event_name=r"App\Events\ChatMessageEvent", payload=[])  # type: ignore[arg-type]
+
+
+def test_raw_kick_event_pending_factory_stores_identifiers() -> None:
+    event = RawKickEvent.pending(
+        event_name=r"App\Events\ChatMessageEvent",
+        kick_message_id="message-1",
+        chatroom_id=123,
+        kick_channel_id=456,
+        channel_id=1,
+        payload={"id": "message-1", "chatroom_id": 123},
+    )
+
+    assert event.kick_message_id == "message-1"
+    assert event.chatroom_id == 123
+    assert event.metadata == {}

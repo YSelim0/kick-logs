@@ -70,12 +70,14 @@ apps/api/src/kick_logs/
       user.py
       channel.py
       chat_message.py
+      raw_kick_event.py
       sender.py
       emote.py
     value_objects/
       roles.py
       search_filters.py
       pagination.py
+      raw_event_status.py
     exceptions.py
   application/
     ports/
@@ -83,6 +85,7 @@ apps/api/src/kick_logs/
       user_repository.py
       channel_repository.py
       message_repository.py
+      raw_event_repository.py
       sender_repository.py
       kick_channel_resolver.py
       sender_profile_resolver.py
@@ -104,6 +107,8 @@ apps/api/src/kick_logs/
         ingest_message.py
       listener/
         load_enabled_channels.py
+        store_raw_event.py
+        process_raw_events.py
     dto/
       auth.py
       channels.py
@@ -118,6 +123,7 @@ apps/api/src/kick_logs/
         sqlalchemy_user_repository.py
         sqlalchemy_channel_repository.py
         sqlalchemy_message_repository.py
+        sqlalchemy_raw_event_repository.py
         sqlalchemy_sender_repository.py
     kick/
       channel_resolver.py
@@ -192,6 +198,8 @@ Database policy:
 - Add `pg_trgm` extension for case-insensitive contains search.
 - Add indexes for message timestamp, Kick message id, channel slug, sender username, and content search.
 - Deduplicate chat messages by Kick message id.
+- Persist raw Kick chat events into `raw_kick_events` before normalization or enrichment so a received websocket event survives worker restarts.
+- Process raw events with at-least-once delivery and idempotent message writes.
 
 ## Core Tables
 
@@ -247,6 +255,24 @@ chat_messages
   raw_payload
   message_created_at
   ingested_at
+
+raw_kick_events
+  id
+  event_name
+  kick_message_id
+  chatroom_id
+  kick_channel_id
+  channel_id
+  payload
+  status
+  attempts
+  received_at
+  processing_started_at
+  processed_at
+  last_error
+  metadata
+  created_at
+  updated_at
 ```
 
 ## Search Contract
@@ -311,9 +337,13 @@ The listener service:
 - Connects to Kick Pusher websocket.
 - Subscribes to `chatrooms.{chatroom_id}.v2` and channel-level events when needed.
 - Parses `App\Events\ChatMessageEvent`.
-- Parses `[emote:id:name]` tokens into structured emote values.
-- Enriches sender profile image by sender slug when possible.
-- Saves messages through the `IngestMessage` use case.
+- Stores supported chat events in `raw_kick_events` immediately after minimal parsing.
+- Processes raw events from PostgreSQL in worker batches using `FOR UPDATE SKIP LOCKED`.
+- Parses `[emote:id:name]` tokens into structured emote values during raw event processing.
+- Saves messages through the `IngestMessage` use case outside the websocket read path.
+- Marks raw events `processed`, `pending`, or `failed` with attempts and last error.
+- Reclaims stale `processing` rows after the configured processing timeout.
+- Periodically reconnects to refresh enabled-channel subscriptions so admin channel changes take effect without manually restarting the listener.
 - Reconnects with backoff after websocket failures.
 
 ## Frontend Architecture

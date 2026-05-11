@@ -20,6 +20,12 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Phase 8 public search UI is complete.
 - Phase 9 admin UI is complete.
 - Phase 10 final MVP smoke and documentation cleanup are complete.
+- Issue #1 durable ingestion implementation is complete locally on branch `feature/issue-1-durable-inbox`.
+- Kick listener now uses a durable raw event inbox design:
+  - websocket reader persists supported chat events into PostgreSQL first
+  - raw event workers normalize and insert chat messages out of the websocket read path
+  - stale `processing` events can be reclaimed after a timeout
+  - listener periodically reconnects to refresh enabled channel subscriptions
 - Root `/` redirects to `/search` in the MVP; landing content remains a future post-MVP decision.
 - Phase 9 auth foundation is implemented:
   - `/login` has an email/password form wired to `POST /auth/login`
@@ -46,7 +52,7 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Phase task files exist under `docs/tasks/phase1_tasks.md` through `docs/tasks/phase10_tasks.md`.
 - Frontend `web` service exists and runs the Next.js development server.
 - Current backend verification:
-  - `python -m uv run pytest` passes from `apps/api` with 85 tests.
+  - `python -m uv run pytest` passes from `apps/api` with 94 tests.
   - `python -m uv run ruff check .` passes from `apps/api`.
   - `OPTIONS http://localhost:8000/auth/login` from origin `http://localhost:3000` returns the expected CORS headers.
   - `POST http://localhost:8000/auth/login` from origin `http://localhost:3000` returns 200 and sets `kick_logs_session`.
@@ -58,7 +64,7 @@ This file is the active project memory. Keep it updated whenever project behavio
   - Default super admin login and `GET /auth/me` pass.
   - Admin channel add/disable smoke passes with slug `hype`.
   - Listener logs useful idle status when no enabled channels are ready.
-  - `alembic current` reports `20260510_0001 (head)`.
+  - `alembic current` reports `20260511_0002 (head)` after the durable inbox migration is applied.
   - `pnpm --filter @kick-logs/web typecheck`, `lint`, and `build` pass.
   - `docker compose up --build -d web` builds and starts `web`.
   - `GET http://localhost:3000` returns HTTP 200.
@@ -124,6 +130,8 @@ Build an MVP monorepo with:
   - `channels`
   - `senders`
   - `chat_messages`
+- Alembic migration revision `20260511_0002` creates:
+  - `raw_kick_events`
 - PostgreSQL extension:
   - `pg_trgm`
 - JSONB fields:
@@ -133,6 +141,8 @@ Build an MVP monorepo with:
   - `chat_messages.emotes`
   - `chat_messages.reply_metadata`
   - `chat_messages.raw_payload`
+  - `raw_kick_events.payload`
+  - `raw_kick_events.metadata`
 - Dedupe/identity constraints:
   - `users.email`
   - `channels.kick_channel_id`
@@ -141,6 +151,7 @@ Build an MVP monorepo with:
   - `senders.kick_user_id`
   - `senders.slug`
   - `chat_messages.kick_message_id`
+  - partial unique index on `raw_kick_events.kick_message_id` when present
 - Search/index strategy:
   - btree indexes for message timestamp, cursor tuple support, channel id, sender id, chatroom id, sender username/slug, and channel slug
   - trigram GIN indexes for lowercased channel slug/display name, sender username/slug, and message content
@@ -149,6 +160,7 @@ Build an MVP monorepo with:
   - `SqlAlchemyChannelRepository`
   - `SqlAlchemySenderRepository`
   - `SqlAlchemyMessageRepository`
+  - `SqlAlchemyRawEventRepository`
   - `SqlAlchemyUnitOfWork`
 
 ## Auth Details
@@ -202,6 +214,14 @@ Build an MVP monorepo with:
 
 ## Message Ingestion Details
 
+- Issue #1 durable inbox flow:
+  - `StoreRawKickEventUseCase` writes supported raw Kick chat events to `raw_kick_events`.
+  - `ProcessRawKickEventsUseCase` claims pending/stale raw events in batches.
+  - SQLAlchemy claims use row locking with `FOR UPDATE SKIP LOCKED`.
+  - raw events move through `pending`, `processing`, `processed`, and `failed` statuses.
+  - failed raw events retain payload, attempts, and last error.
+  - `processing` rows older than the configured timeout are claimable again.
+  - `IngestMessageUseCase` remains idempotent by Kick message id, so duplicate raw processing does not duplicate `chat_messages`.
 - Emote parsing is implemented by `EmoteParser`.
 - Supported emote token format:
   - `[emote:id:name]`
@@ -278,9 +298,13 @@ Build an MVP monorepo with:
   - `{"event":"pusher:subscribe","data":{"auth":"","channel":"chatrooms.{id}.v2"}}`
 - Websocket runtime uses 30 second ping interval and 10 second ping timeout.
 - Kick web HTTP resolvers use `curl_cffi` browser impersonation `chrome124`.
-- `ListenerService` composes enabled-channel loading, Pusher event streaming, event parsing, sender profile enrichment, and `IngestMessageUseCase`.
+- `ListenerService` composes enabled-channel loading, Pusher event streaming, event parsing, raw event persistence, and raw event worker processing.
 - `ListenerService.run_forever()` reconnects with backoff and reloads enabled channels on each reconnect.
-- Sender profile enrichment uses Kick web channel metadata by sender slug and continues ingestion when enrichment fails.
+- `ListenerService.run_forever()` starts raw event worker tasks before connecting to Pusher.
+- `ListenerService.run_once()` persists parsed chat events into `raw_kick_events` before message normalization or sender upsert work begins.
+- Raw event workers call `ProcessRawKickEventsUseCase` in batches and log claimed/processed/failed/pending counts.
+- The websocket loop reconnects after `LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS` so followed-channel add/remove changes take effect without manual restart.
+- Sender profile enrichment is no longer on the websocket read path; profile images are stored when present in the raw message payload.
 - Worker entrypoint is `kick_logs.presentation.worker.main`.
 
 ## Phase 5 Verification
@@ -531,6 +555,25 @@ Build an MVP monorepo with:
 - Cleanup:
   - no tracked `.env`, generated cache, dependency folder, log, or build output was found.
   - removed the unused `RouteShell` scaffold and changed `/` to redirect to `/search`.
+
+## Issue #1 Durable Ingestion Verification
+
+- Added `raw_kick_events` persistence with JSONB payload storage, status tracking, attempts, last error, received/processing/processed timestamps, and metadata.
+- Added partial Kick message id dedupe index and processing/search indexes for raw events.
+- Added raw event repository methods for add, lookup, `FOR UPDATE SKIP LOCKED` batch claim, processed mark, failed mark, pending count, and stale processing reclaim.
+- Refactored listener websocket read path to store raw events before heavy normalization or sender/message writes.
+- Added raw event worker loop inside the listener service so websocket reads and DB message processing proceed independently.
+- Added periodic channel resync reconnect behavior through `LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS`.
+- Verification so far:
+  - `python -m uv run ruff check .`: passed.
+  - `python -m uv run alembic upgrade head`: applied `20260511_0002`.
+  - `python -m uv run alembic current`: reports `20260511_0002 (head)`.
+  - `python -m uv run pytest`: 94 passed.
+  - `python -m uv run pytest tests/listener tests/domain tests/database/test_models_metadata.py tests/database/test_alembic_migration.py`: 43 passed.
+  - `python -m uv run pytest tests/database/test_repositories.py tests/messages/test_ingest_message.py tests/listener/test_listener_service.py`: 19 passed against local PostgreSQL.
+  - `docker compose up --build -d postgres api listener`: passed.
+  - `GET http://localhost:8000/health`: `{"status":"ok"}`.
+  - listener logs show raw event storage and raw event worker processing with `pending=0`.
 
 ## Design Direction
 

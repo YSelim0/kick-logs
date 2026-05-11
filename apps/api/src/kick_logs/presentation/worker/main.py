@@ -29,6 +29,16 @@ async def run() -> None:
             max_delay_seconds=settings.listener_reconnect_max_delay_seconds,
             multiplier=settings.listener_reconnect_multiplier,
         ),
+        raw_event_worker_count=settings.listener_worker_count,
+        raw_event_batch_size=settings.listener_raw_event_batch_size,
+        raw_event_processing_timeout_seconds=(
+            settings.listener_raw_event_processing_timeout_seconds
+        ),
+        raw_event_max_attempts=settings.listener_raw_event_max_attempts,
+        raw_event_worker_idle_delay_seconds=(
+            settings.listener_raw_event_worker_idle_delay_seconds
+        ),
+        channel_resync_interval_seconds=settings.listener_channel_resync_interval_seconds,
     )
     await service.run_forever()
 

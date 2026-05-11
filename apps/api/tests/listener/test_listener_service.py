@@ -1,10 +1,12 @@
 import asyncio
 import json
+from datetime import UTC, datetime, timedelta
 
 from kick_logs.application.dto.channels import ResolvedKickChannelDTO
 from kick_logs.application.dto.senders import ResolvedSenderProfileDTO
-from kick_logs.application.exceptions import SenderProfileResolutionError
-from kick_logs.domain.entities import Channel, ChatMessage, Sender
+from kick_logs.application.use_cases.listener import ProcessRawKickEventsUseCase
+from kick_logs.domain.entities import Channel, ChatMessage, RawKickEvent, Sender
+from kick_logs.domain.value_objects.raw_event_status import RawEventStatus
 from kick_logs.infrastructure.kick import KickEventParser, ReconnectPolicy
 from kick_logs.presentation.worker.listener_service import ListenerService
 
@@ -59,6 +61,18 @@ class FailingPusherClient:
         raise RuntimeError("websocket failure")
 
 
+class HangingPusherClient:
+    def __init__(self) -> None:
+        self.listen_call_count = 0
+
+    async def listen(self, _channels):
+        self.listen_call_count += 1
+        while True:
+            await asyncio.sleep(1)
+            if False:
+                yield ""
+
+
 class FakeChannelResolver:
     async def resolve(self, slug: str) -> ResolvedKickChannelDTO:
         return ResolvedKickChannelDTO(
@@ -77,11 +91,6 @@ class FakeSenderProfileResolver:
             profile_image_url="https://example.com/avatar.png",
             raw_payload={"user": {"profile_pic": "https://example.com/avatar.png"}},
         )
-
-
-class FailingSenderProfileResolver:
-    async def resolve(self, _slug: str) -> ResolvedSenderProfileDTO:
-        raise SenderProfileResolutionError("failed")
 
 
 class FakeChannelRepository:
@@ -142,6 +151,87 @@ class FakeMessageRepository:
         return message
 
 
+class FakeRawEventRepository:
+    def __init__(self) -> None:
+        self.events: list[RawKickEvent] = []
+
+    async def add(self, event: RawKickEvent) -> RawKickEvent:
+        event.id = len(self.events) + 1
+        event.received_at = event.received_at or datetime.now(UTC)
+        self.events.append(event)
+        return event
+
+    async def get_by_id(self, event_id: int) -> RawKickEvent | None:
+        for event in self.events:
+            if event.id == event_id:
+                return event
+        return None
+
+    async def get_by_kick_message_id(self, kick_message_id: str) -> RawKickEvent | None:
+        for event in self.events:
+            if event.kick_message_id == kick_message_id:
+                return event
+        return None
+
+    async def claim_pending(
+        self,
+        *,
+        limit: int,
+        processing_timeout_seconds: int,
+    ) -> list[RawKickEvent]:
+        stale_before = datetime.now(UTC) - timedelta(seconds=processing_timeout_seconds)
+        claimed: list[RawKickEvent] = []
+        for event in sorted(self.events, key=lambda item: item.received_at or datetime.now(UTC)):
+            if len(claimed) >= limit:
+                break
+            is_pending = event.status == RawEventStatus.PENDING
+            is_stale = (
+                event.status == RawEventStatus.PROCESSING
+                and event.processing_started_at is not None
+                and event.processing_started_at < stale_before
+            )
+            if not is_pending and not is_stale:
+                continue
+
+            event.status = RawEventStatus.PROCESSING
+            event.processing_started_at = datetime.now(UTC)
+            claimed.append(event)
+        return claimed
+
+    async def mark_processed(self, event_id: int) -> RawKickEvent:
+        event = await self.get_by_id(event_id)
+        if event is None:
+            raise ValueError("Raw Kick event not found.")
+        event.status = RawEventStatus.PROCESSED
+        event.processed_at = datetime.now(UTC)
+        event.processing_started_at = None
+        event.last_error = None
+        return event
+
+    async def mark_failed(
+        self,
+        *,
+        event_id: int,
+        error: str,
+        max_attempts: int,
+    ) -> RawKickEvent:
+        event = await self.get_by_id(event_id)
+        if event is None:
+            raise ValueError("Raw Kick event not found.")
+        event.attempts += 1
+        event.status = (
+            RawEventStatus.FAILED
+            if event.attempts >= max_attempts
+            else RawEventStatus.PENDING
+        )
+        event.processing_started_at = None
+        event.last_error = error
+        return event
+
+    async def pending_count(self) -> int:
+        return len([event for event in self.events if event.status == RawEventStatus.PENDING])
+
+
 class FakeUnitOfWork:
     def __init__(self) -> None:
         self.channels = FakeChannelRepository(
@@ -157,6 +247,7 @@ class FakeUnitOfWork:
         )
         self.senders = FakeSenderRepository()
         self.messages = FakeMessageRepository()
+        self.raw_events = FakeRawEventRepository()
 
     async def __aenter__(self):
         return self
@@ -176,6 +267,8 @@ def build_service(
     pusher_client,
     sender_profile_resolver,
     sleep=None,
+    channel_resync_interval_seconds: float = 60.0,
+    raw_event_worker_count: int = 0,
 ) -> ListenerService:
     return ListenerService(
         unit_of_work_factory=lambda: unit_of_work,
@@ -184,25 +277,25 @@ def build_service(
         event_parser=KickEventParser(),
         sender_profile_resolver=sender_profile_resolver,
         reconnect_policy=ReconnectPolicy(initial_delay_seconds=0, max_delay_seconds=0),
+        raw_event_worker_count=raw_event_worker_count,
+        channel_resync_interval_seconds=channel_resync_interval_seconds,
         sleep=sleep or asyncio.sleep,
     )
 
 
-async def test_listener_service_ingests_fake_pusher_chat_event() -> None:
+async def test_listener_service_stores_fake_pusher_chat_event() -> None:
     unit_of_work = FakeUnitOfWork()
     pusher_client = FakePusherClient([build_chat_event()])
     service = build_service(unit_of_work, pusher_client, FakeSenderProfileResolver())
 
-    ingested_count = await service.run_once()
+    stored_count = await service.run_once()
 
-    assert ingested_count == 1
+    assert stored_count == 1
     assert pusher_client.listen_call_count == 1
-    assert unit_of_work.messages.messages[0].kick_message_id == "message-1"
-    assert unit_of_work.messages.messages[0].content == "hello [emote:37226:KEKW]"
-    assert unit_of_work.messages.messages[0].emotes[0].image_url == (
-        "https://files.kick.com/emotes/37226/fullsize"
-    )
-    assert unit_of_work.senders.senders[0].profile_image_url == "https://example.com/avatar.png"
+    assert unit_of_work.raw_events.events[0].kick_message_id == "message-1"
+    assert unit_of_work.raw_events.events[0].chatroom_id == 123
+    assert unit_of_work.raw_events.events[0].channel_id == 1
+    assert unit_of_work.messages.messages == []
 
 
 async def test_listener_service_ignores_malformed_events() -> None:
@@ -210,21 +303,116 @@ async def test_listener_service_ignores_malformed_events() -> None:
     pusher_client = FakePusherClient(["not-json", build_chat_event()])
     service = build_service(unit_of_work, pusher_client, FakeSenderProfileResolver())
 
-    ingested_count = await service.run_once()
+    stored_count = await service.run_once()
 
-    assert ingested_count == 1
-    assert len(unit_of_work.messages.messages) == 1
+    assert stored_count == 1
+    assert len(unit_of_work.raw_events.events) == 1
+    assert unit_of_work.messages.messages == []
 
 
-async def test_listener_service_continues_when_sender_enrichment_fails() -> None:
+async def test_raw_event_processor_ingests_stored_events() -> None:
     unit_of_work = FakeUnitOfWork()
     pusher_client = FakePusherClient([build_chat_event()])
-    service = build_service(unit_of_work, pusher_client, FailingSenderProfileResolver())
+    service = build_service(unit_of_work, pusher_client, FakeSenderProfileResolver())
 
-    ingested_count = await service.run_once()
+    await service.run_once()
+    result = await ProcessRawKickEventsUseCase(lambda: unit_of_work).execute_once(
+        limit=10,
+        processing_timeout_seconds=300,
+        max_attempts=2,
+    )
 
-    assert ingested_count == 1
-    assert unit_of_work.senders.senders[0].profile_image_url is None
+    assert result.claimed == 1
+    assert result.processed == 1
+    assert result.failed == 0
+    assert unit_of_work.raw_events.events[0].status == RawEventStatus.PROCESSED
+    assert unit_of_work.messages.messages[0].kick_message_id == "message-1"
+    assert unit_of_work.messages.messages[0].content == "hello [emote:37226:KEKW]"
+    assert unit_of_work.messages.messages[0].emotes[0].image_url == (
+        "https://files.kick.com/emotes/37226/fullsize"
+    )
+
+
+async def test_raw_event_processor_keeps_message_writes_idempotent() -> None:
+    unit_of_work = FakeUnitOfWork()
+    event = KickEventParser().parse(build_chat_event("message-duplicate"))
+    assert event is not None
+    await unit_of_work.raw_events.add(
+        RawKickEvent.pending(
+            event_name=event.event,
+            payload=event.payload,
+            kick_message_id="message-duplicate",
+            chatroom_id=123,
+            channel_id=1,
+        )
+    )
+    await unit_of_work.raw_events.add(
+        RawKickEvent.pending(
+            event_name=event.event,
+            payload=event.payload,
+            kick_message_id="message-duplicate",
+            chatroom_id=123,
+            channel_id=1,
+        )
+    )
+
+    result = await ProcessRawKickEventsUseCase(lambda: unit_of_work).execute_once(
+        limit=10,
+        processing_timeout_seconds=300,
+        max_attempts=2,
+    )
+
+    assert result.processed == 2
+    assert len(unit_of_work.messages.messages) == 1
+    assert all(
+        raw_event.status == RawEventStatus.PROCESSED
+        for raw_event in unit_of_work.raw_events.events
+    )
+
+
+async def test_raw_event_processor_retries_failed_events_with_payload_and_error() -> None:
+    unit_of_work = FakeUnitOfWork()
+    event = KickEventParser().parse(build_chat_event())
+    assert event is not None
+    event.payload["chatroom_id"] = 999
+    await unit_of_work.raw_events.add(
+        RawKickEvent.pending(
+            event_name=event.event,
+            payload=event.payload,
+            kick_message_id="message-failure",
+            chatroom_id=999,
+        )
+    )
+
+    result = await ProcessRawKickEventsUseCase(lambda: unit_of_work).execute_once(
+        limit=10,
+        processing_timeout_seconds=300,
+        max_attempts=1,
+    )
+
+    assert result.claimed == 1
+    assert result.processed == 0
+    assert result.failed == 1
+    assert unit_of_work.raw_events.events[0].status == RawEventStatus.FAILED
+    assert unit_of_work.raw_events.events[0].attempts == 1
+    assert unit_of_work.raw_events.events[0].payload["chatroom_id"] == 999
+    assert "ChannelNotFoundError" in (unit_of_work.raw_events.events[0].last_error or "")
+
+
+async def test_listener_service_resyncs_channel_subscriptions() -> None:
+    unit_of_work = FakeUnitOfWork()
+    pusher_client = HangingPusherClient()
+    service = build_service(
+        unit_of_work,
+        pusher_client,
+        FakeSenderProfileResolver(),
+        channel_resync_interval_seconds=0.01,
+    )
+
+    stored_count = await asyncio.wait_for(service.run_once(), timeout=1)
+
+    assert stored_count == 0
+    assert pusher_client.listen_call_count == 1
 
 
 async def test_listener_service_schedules_reconnect_after_pusher_failure() -> None:

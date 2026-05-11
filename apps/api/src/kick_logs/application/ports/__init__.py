@@ -3,6 +3,7 @@ from kick_logs.application.ports.kick_channel_resolver import KickChannelResolve
 from kick_logs.application.ports.message_repository import MessageRepository
 from kick_logs.application.ports.password_hasher import PasswordHasher
 from kick_logs.application.ports.pusher_client import PusherClient
+from kick_logs.application.ports.raw_event_repository import RawEventRepository
 from kick_logs.application.ports.sender_profile_resolver import SenderProfileResolver
 from kick_logs.application.ports.sender_repository import SenderRepository
 from kick_logs.application.ports.token_service import TokenService
@@ -15,6 +16,7 @@ __all__ = [
     "MessageRepository",
     "PasswordHasher",
     "PusherClient",
+    "RawEventRepository",
     "SenderRepository",
     "SenderProfileResolver",
     "TokenService",

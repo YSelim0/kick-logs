@@ -19,7 +19,7 @@ Implemented so far:
 - Kick channel metadata resolver.
 - Message ingestion use case and emote parser.
 - Public `GET /messages` search API with optional filters and cursor pagination.
-- Kick listener worker with Pusher websocket ingestion runtime.
+- Kick listener worker with durable raw event inbox and Pusher websocket ingestion runtime.
 - Listener Docker Compose service.
 - Backend test/tooling setup.
 - Backend Docker/API acceptance checks.
@@ -74,6 +74,7 @@ docker compose up --build postgres api listener
 
 The Docker API and listener services apply Alembic migrations before starting.
 When no channels are enabled, the listener stays alive and periodically checks again.
+When channels are enabled, the websocket reader persists supported raw chat events before message normalization, then background workers process the durable inbox into `chat_messages`.
 
 To apply migrations manually from the backend project directory:
 
@@ -292,14 +293,32 @@ Phase 10 final MVP smoke was verified with:
 - Public `GET /messages?q=phase10-smoke-20260510235338&limit=5` finds the sample message without authentication.
 - Restarting PostgreSQL preserves the sample message in the named volume.
 
+Issue #1 durable ingestion work was verified with:
+
+- `python -m uv run ruff check .` from `apps/api`: passed.
+- `python -m uv run alembic upgrade head` from `apps/api`: applied `20260511_0002`.
+- `python -m uv run alembic current` from `apps/api`: `20260511_0002 (head)`.
+- `python -m uv run pytest` from `apps/api`: 94 tests passed.
+- `python -m uv run pytest tests/listener tests/domain tests/database/test_models_metadata.py tests/database/test_alembic_migration.py`: 43 tests passed.
+- `python -m uv run pytest tests/database/test_repositories.py tests/messages/test_ingest_message.py tests/listener/test_listener_service.py`: 19 tests passed against local PostgreSQL.
+- `docker compose up --build -d postgres api listener`: passed.
+- `GET http://localhost:8000/health`: `{"status":"ok"}`.
+- Listener logs show raw event storage and raw event worker processing with `pending=0`.
+
 ## Kick Integration Notes
 
-The MVP uses Kick web endpoints, Kick Pusher chat events, and inferred emote image URLs. These are not a stable official API contract. If channel resolution, websocket subscription, sender enrichment, or emote images fail after a Kick-side change, inspect:
+The MVP uses Kick web endpoints, Kick Pusher chat events, and inferred emote image URLs. These are not a stable official API contract. If channel resolution, websocket subscription, raw inbox processing, sender profile data, or emote images fail after a Kick-side change, inspect:
 
 - `KICK_PUSHER_URL`
+- `LISTENER_WORKER_COUNT`
+- `LISTENER_RAW_EVENT_BATCH_SIZE`
+- `LISTENER_RAW_EVENT_PROCESSING_TIMEOUT_SECONDS`
+- `LISTENER_RAW_EVENT_MAX_ATTEMPTS`
+- `LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS`
 - `apps/api/src/kick_logs/infrastructure/kick/channel_resolver.py`
 - `apps/api/src/kick_logs/infrastructure/kick/pusher_client.py`
-- `apps/api/src/kick_logs/infrastructure/kick/sender_profile_resolver.py`
+- `apps/api/src/kick_logs/presentation/worker/listener_service.py`
+- `apps/api/src/kick_logs/infrastructure/database/repositories/sqlalchemy_raw_event_repository.py`
 
 ## Git Workflow
 

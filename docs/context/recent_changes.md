@@ -4,6 +4,26 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Implemented GitHub issue #1 durable Kick ingestion on branch `feature/issue-1-durable-inbox`:
+  - added `raw_kick_events` domain entity/status, SQLAlchemy model, Alembic migration, repository port, and repository implementation
+  - listener websocket path now stores raw chat events first instead of normalizing/inserting messages inline
+  - raw event workers claim pending/stale rows in batches with `FOR UPDATE SKIP LOCKED`
+  - failed raw events retain payload, attempts, and last error
+  - duplicate raw processing remains safe because `IngestMessageUseCase` deduplicates by Kick message id
+  - listener reconnects periodically to refresh followed-channel subscriptions
+- Verification:
+  - `python -m uv run ruff check .`: passed
+  - `python -m uv run alembic upgrade head`: applied `20260511_0002`
+  - `python -m uv run alembic current`: `20260511_0002 (head)`
+  - `python -m uv run pytest`: 94 passed
+  - `python -m uv run pytest tests/listener tests/domain tests/database/test_models_metadata.py tests/database/test_alembic_migration.py`: 43 passed
+  - `python -m uv run pytest tests/database/test_repositories.py tests/messages/test_ingest_message.py tests/listener/test_listener_service.py`: 19 passed
+  - `docker compose up --build -d postgres api listener`: passed
+  - `GET http://localhost:8000/health`: `{"status":"ok"}`
+  - listener logs show raw event storage and worker processing with `pending=0`
+
+## Previous
+
 - Fixed `/search` hydration mismatch caused by timezone-dependent default date values:
   - first render now uses static empty search state
   - default 7-day local date range is applied after client hydration
@@ -14,7 +34,7 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `pnpm --filter @kick-logs/web lint`: passed
   - `pnpm --filter @kick-logs/web build`: passed
 
-## Previous
+## Earlier
 
 - Fixed browser CORS for frontend-to-backend API calls:
   - FastAPI now installs `CORSMiddleware` from comma-separated `BACKEND_CORS_ORIGINS`
@@ -28,7 +48,7 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `python -m uv run ruff check .`: passed
   - live Docker preflight and login smoke passed against `http://localhost:8000`
 
-## Earlier
+## Older
 
 - Phase 10 final MVP smoke and cleanup are complete.
 - Latest smoke:
