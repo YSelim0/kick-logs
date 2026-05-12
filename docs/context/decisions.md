@@ -43,7 +43,7 @@
 - Super admin can create new admin users.
 - Use one listener worker for all enabled channels.
 - Add date range filters to search.
-- Use optional `AND` search filters with case-insensitive contains matching.
+- Use optional `AND` search filters; sender is exact case-insensitive, while channel and content are case-insensitive contains.
 - Store raw Kick payloads and all useful normalized fields.
 - Enrich sender profile images through Kick web endpoints when possible.
 - Parse `[emote:id:name]` tokens and render image fallback URLs.
@@ -69,3 +69,7 @@
 - The completed MVP implementation plan is archived under `docs/archive/`; active work uses the post-MVP feature plan in `docs/implementation_plan.md`.
 - Post-MVP development is split into feature-scoped task files under `docs/tasks/post_mvp_*.md`.
 - The selected post-MVP roadmap prioritizes admin operations, search improvements, analytics, landing analytics, user/channel profiles, and admin data management.
+
+## 2026-05-13
+
+- Public `/messages` sender filtering uses case-insensitive exact matching against sender username/slug snapshots; channel and content filters remain case-insensitive contains matching.

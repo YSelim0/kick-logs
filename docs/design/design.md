@@ -133,8 +133,8 @@ Bitiş -> end
 
 Examples:
 
-- Only `Kullanıcı Adı=yavuz`: search all channels and all content for sender nickname containing `yavuz`.
-- `Kullanıcı Adı=yavuz` and content `selam`: search all channels for sender nickname containing `yavuz` and message content containing `selam`.
+- Only `Kullanıcı Adı=yavuz`: search all channels and all content for sender username/slug exactly matching `yavuz`.
+- `Kullanıcı Adı=yavuz` and content `selam`: search all channels for sender username/slug exactly matching `yavuz` and message content containing `selam`.
 - `Kanal Adı=exampleChannel` and content `hello`: search that channel for messages containing `hello`.
 - Only content `hello`: search all channels and all users for messages containing `hello`.
 - Empty all filters: show latest messages across all channels.

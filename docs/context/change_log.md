@@ -2,6 +2,14 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-13
+
+- Changed public message search sender filtering:
+  - `sender` now uses case-insensitive exact matching against sender username/slug snapshots
+  - partial sender queries such as `yavuz` no longer match `notyavuz` or `yavuz123`
+  - `channel` and message content filters keep case-insensitive contains behavior
+  - added backend coverage for exact sender matches and rejected partial sender matches
+
 ## 2026-05-12
 
 - Archived the completed MVP implementation plan:

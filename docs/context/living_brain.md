@@ -271,7 +271,8 @@ Build an MVP monorepo with:
 - The route requires no authentication.
 - Empty filters return latest messages across all channels.
 - Non-empty filters combine with `AND`.
-- Sender, channel, and content filters use case-insensitive contains matching.
+- Sender filters use case-insensitive exact matching against sender username/slug snapshots.
+- Channel and content filters use case-insensitive contains matching.
 - Date filters apply to `message_created_at`.
 - Results are newest-first.
 - Cursor format is:
@@ -627,7 +628,8 @@ Build an MVP monorepo with:
   - message content
   - start datetime
   - end datetime
-- Use case-insensitive contains matching for sender, channel, and message content.
+- Use case-insensitive exact matching for sender username/slug search.
+- Use case-insensitive contains matching for channel and message content.
 - Use one listener worker/container to subscribe to all enabled channels.
 - Store all useful available data, including normalized fields, parsed emotes, sender badges, profile image when enriched, reply metadata, and raw payload JSONB.
 - Render emotes with `https://files.kick.com/emotes/{id}/fullsize` and fall back to the emote name/token if the image fails.

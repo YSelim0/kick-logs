@@ -176,10 +176,16 @@ async def test_message_repository_create_read_and_search(db_session: AsyncSessio
     assert loaded.id == newest_message.id
 
     results = await repository.search(
-        MessageSearchFilters(sender="yav", channel=channel.slug, q=search_term),
+        MessageSearchFilters(sender=sender.slug, channel=channel.slug, q=search_term),
         CursorPagination(limit=10),
     )
     assert [message.id for message in results] == [newest_message.id, old_message.id]
+
+    partial_sender_results = await repository.search(
+        MessageSearchFilters(sender="yav", channel=channel.slug, q=search_term),
+        CursorPagination(limit=10),
+    )
+    assert partial_sender_results == []
 
     paged = await repository.search(
         MessageSearchFilters(q=search_term),

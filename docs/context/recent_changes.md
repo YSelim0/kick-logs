@@ -4,14 +4,20 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Changed public message search sender filtering:
+  - `sender` now matches sender username/slug exactly, case-insensitively
+  - partial sender searches such as `yavuz` no longer return `notyavuz` or `yavuz123`
+  - channel and content filters still use contains matching
+  - backend tests cover exact sender matches and rejected partial matches
+
+## Previous
+
 - Archived the completed MVP plan and added the active post-MVP roadmap:
   - old `docs/implementation_plan.md` moved to `docs/archive/mvp_implementation_plan.md`
   - old `docs/tasks/phase*_tasks.md` files moved to `docs/archive/tasks/`
   - new `docs/implementation_plan.md` covers post-MVP feature work
   - new active task files live under `docs/tasks/post_mvp_*.md`
   - selected roadmap: admin operations, search improvements, analytics foundation, landing analytics, user profiles, channel profiles, data management, final smoke/docs
-
-## Previous
 
 - Added Buy Me a Coffee sponsorship metadata:
   - `.github/FUNDING.yml` now enables the GitHub Sponsor button for `yavuzselim`

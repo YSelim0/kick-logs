@@ -38,13 +38,13 @@ class SqlAlchemyMessageRepository:
         )
 
         if filters.sender:
-            sender_query = f"%{filters.sender.lower()}%"
+            sender_query = filters.sender.lower()
             statement = statement.where(
                 or_(
-                    func.lower(SenderModel.username).like(sender_query),
-                    func.lower(SenderModel.slug).like(sender_query),
-                    func.lower(ChatMessageModel.sender_username_snapshot).like(sender_query),
-                    func.lower(ChatMessageModel.sender_slug_snapshot).like(sender_query),
+                    func.lower(SenderModel.username) == sender_query,
+                    func.lower(SenderModel.slug) == sender_query,
+                    func.lower(ChatMessageModel.sender_username_snapshot) == sender_query,
+                    func.lower(ChatMessageModel.sender_slug_snapshot) == sender_query,
                 )
             )
 

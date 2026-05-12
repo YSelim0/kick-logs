@@ -203,8 +203,10 @@ Example public search:
 curl "http://localhost:8000/messages?sender=yavuz&q=selam&limit=50"
 ```
 
-Search filters combine with `AND`. Empty filters are omitted. Empty all filters
-returns latest messages across all followed channels.
+Search filters combine with `AND`. Empty filters are omitted. The `sender`
+filter matches username/slug exactly, case-insensitively. Channel and content
+filters use case-insensitive contains matching. Empty all filters returns latest
+messages across all followed channels.
 
 ## Local Development
 

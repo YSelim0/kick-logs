@@ -272,6 +272,10 @@ async def test_public_search_combines_optional_filters(client, session_factory) 
         "/messages",
         params={"q": f"hello combo-{suffix}"},
     )
+    partial_sender_response = await client.get(
+        "/messages",
+        params={"sender": "yavuz", "q": f"combo-{suffix}"},
+    )
     all_filters_response = await client.get(
         "/messages",
         params={
@@ -291,6 +295,7 @@ async def test_public_search_combines_optional_filters(client, session_factory) 
         messages[2].kick_message_id,
         messages[3].kick_message_id,
     ]
+    assert message_ids(partial_sender_response.json()) == []
     assert message_ids(all_filters_response.json()) == [messages[3].kick_message_id]
 
 

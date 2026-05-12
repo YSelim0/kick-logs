@@ -296,7 +296,8 @@ Rules:
 - Empty `channel` searches all channels.
 - Empty `q` searches all message contents.
 - Empty all filters returns latest messages across all channels.
-- `sender`, `channel`, and `q` use case-insensitive contains matching.
+- `sender` uses case-insensitive exact matching against sender username/slug snapshots.
+- `channel` and `q` use case-insensitive contains matching.
 - `start` and `end` filter by `message_created_at`.
 - Results are ordered newest-first.
 - Cursor pagination uses `(message_created_at, id)`.
