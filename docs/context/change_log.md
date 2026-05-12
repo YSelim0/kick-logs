@@ -4,6 +4,14 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-12
 
+- Rewrote root `README.md` as a professional public repository guide:
+  - added the app logo at the top of the document
+  - added repository, issues, and pull request links
+  - documented quick start with Docker Compose
+  - documented default local admin usage and required secret overrides
+  - documented services, API surface, local development commands, data captured, configuration, contribution workflow, and operational notes
+  - added fork/PR guidance for community contributors
+- Added root MIT `LICENSE` file with copyright holder `YSelim0` and updated the README license section.
 - Implemented GitHub issue #3 reply rendering:
   - added backend coverage for the observed Kick reply payload shape:
     - `type="reply"`

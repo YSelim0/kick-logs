@@ -4,6 +4,14 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Rewrote root `README.md` as a public-facing project page:
+  - added centered app logo and repository links
+  - documented product purpose, features, stack, quick start, usage, services, API surface, development commands, configuration, contribution flow, and operational notes
+  - added clear fork/contribution guidance for community development
+- Added MIT `LICENSE` file and linked it from the README.
+
+## Previous
+
 - Implemented GitHub issue #3 reply rendering on branch `feat/issue-3-kick-reply-rendering`:
   - backend tests now lock the observed Kick reply payload shape (`type="reply"`, `metadata.original_sender`, `metadata.original_message`, `thread_parent_id`)
   - public `/messages` test verifies reply fields are returned unchanged
@@ -16,8 +24,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `pnpm --filter @kick-logs/web build`: passed
   - `python -m uv run ruff check .`: passed
   - `python -m uv run pytest`: 96 passed
-
-## Previous
 
 - Updated public `/search` initial-load behavior:
   - bare `/search` does not call `/messages` automatically anymore

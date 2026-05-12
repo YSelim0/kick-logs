@@ -1,331 +1,381 @@
-# Kick Logs
+<p align="center">
+  <img src="./apps/web/public/app-logo.png" alt="Kick Logs logo" width="128" />
+</p>
 
-Kick Logs is an MVP monorepo for collecting public Kick chat messages from followed channels, storing them in PostgreSQL, and searching historical chat logs through a web UI.
+<h1 align="center">Kick Logs</h1>
 
-## Current Status
+<p align="center">
+  A self-hosted Kick chat logger with durable ingestion, PostgreSQL storage, and a searchable web UI.
+</p>
 
-The MVP implementation plan is complete through Phase 10.
+<p align="center">
+  <a href="https://github.com/YSelim0/kick-logs">Repository</a>
+  ·
+  <a href="https://github.com/YSelim0/kick-logs/issues">Issues</a>
+  ·
+  <a href="https://github.com/YSelim0/kick-logs/pulls">Pull Requests</a>
+</p>
 
-Implemented so far:
+> Kick Logs is an unofficial community project. It uses Kick web endpoints,
+> Kick Pusher chat events, and inferred emote image URLs. These are not a
+> stable official Kick API contract and can change without notice.
 
-- FastAPI backend skeleton.
-- `GET /health`.
-- PostgreSQL and API services in Docker Compose.
-- SQLAlchemy async persistence and Alembic initial migration.
-- Admin authentication with HttpOnly JWT cookies.
-- Default super admin seed.
-- Admin user list/create APIs.
-- Admin followed-channel management APIs.
-- Kick channel metadata resolver.
-- Message ingestion use case and emote parser.
-- Public `GET /messages` search API with optional filters and cursor pagination.
-- Kick listener worker with durable raw event inbox and Pusher websocket ingestion runtime.
-- Listener Docker Compose service.
-- Backend test/tooling setup.
-- Backend Docker/API acceptance checks.
-- pnpm workspace.
-- Next.js App Router frontend shell.
-- Tailwind/shadcn/ui base setup with the dark-only Kick Logs palette.
-- Shared typed frontend API client.
-- Frontend Docker Compose service.
-- Public `/search` UI with filters, default last-7-days date range, URL state, infinite scroll, dense rows, circular avatars, and inline emotes.
-- `/login` UI wired to backend auth.
-- Authenticated `/admin` dashboard with followed-channel management.
-- Super-admin-only admin user management UI.
-- Full Docker Compose smoke and sample ingestion-to-search smoke.
+## Overview
 
-The repository is ready for user-managed push.
+Kick Logs collects public chat messages from followed Kick channels, stores the
+useful payload in PostgreSQL, and lets users search historical messages from a
+Next.js web interface.
 
-## Prerequisites
+The project is built as a monorepo:
 
-- Docker Desktop
-- Python 3.12+
-- `uv`
-- Node.js 20+
-- pnpm 8.11+
+- `apps/api`: FastAPI backend, PostgreSQL persistence, auth, admin APIs, message search
+- `apps/web`: Next.js frontend, public search UI, admin dashboard
+- `listener`: Docker service that subscribes to Kick chat events and stores raw events first
+- `docs`: architecture, implementation notes, task plans, and design decisions
 
-If `uv` was installed through `python -m pip install --user uv` and is not on `PATH`, either add the Python user `Scripts` directory to `PATH` or run commands as `python -m uv ...`.
+## Features
 
-## Environment
+- Public `/search` page with optional filters:
+  - sender nickname
+  - channel nickname/slug
+  - message text
+  - start datetime
+  - end datetime
+- Infinite-scroll results ordered newest first.
+- Dense message rows with circular sender avatars.
+- Inline Kick emote rendering with text fallback.
+- Reply rendering: replied-to sender/content is shown above reply messages.
+- Admin login with HttpOnly JWT cookie sessions.
+- Default local super admin seed.
+- Admin dashboard for followed-channel management.
+- Super-admin-only admin user creation.
+- Durable raw event inbox:
+  - websocket reader stores raw chat events first
+  - workers process raw events into normalized messages
+  - stale processing rows can be reclaimed
+  - duplicate message writes are avoided by Kick message id
+- Docker Compose runtime for PostgreSQL, API, listener, and web.
 
-Create a local `.env` from the committed example:
+## Tech Stack
+
+- Backend: Python 3.12, FastAPI, SQLAlchemy 2.x async ORM, Alembic, asyncpg
+- Frontend: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui primitives, lucide-react
+- Database: PostgreSQL 16 with JSONB and `pg_trgm`
+- Tooling: `uv` for Python, `pnpm` for frontend packages
+- Runtime: Docker Compose
+
+## Quick Start
+
+Clone the repository:
+
+```powershell
+git clone https://github.com/YSelim0/kick-logs.git
+cd kick-logs
+```
+
+Create a local environment file:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-`.env` is ignored by Git and must not be committed.
+On macOS/Linux:
 
-Local secrets and credentials live in `.env`. Keep `JWT_SECRET_KEY` at least 32 bytes for HS256, and override the default super admin credentials before using the stack outside local development:
-
-```text
-JWT_SECRET_KEY
-DEFAULT_SUPER_ADMIN_EMAIL
-DEFAULT_SUPER_ADMIN_PASSWORD
+```bash
+cp .env.example .env
 ```
 
-## Start Backend Stack
-
-Start PostgreSQL, the API, and the listener:
+Start the full stack:
 
 ```powershell
-docker compose up --build postgres api listener
+docker compose up --build -d
 ```
 
-The Docker API and listener services apply Alembic migrations before starting.
-When no channels are enabled, the listener stays alive and periodically checks again.
-When channels are enabled, the websocket reader persists supported raw chat events before message normalization, then background workers process the durable inbox into `chat_messages`.
+Open:
 
-To apply migrations manually from the backend project directory:
+- Web app: http://localhost:3000
+- Public search: http://localhost:3000/search
+- Admin login: http://localhost:3000/login
+- API health: http://localhost:8000/health
 
-```powershell
-cd apps/api
-uv run alembic upgrade head
-```
-
-Health check:
-
-```powershell
-curl http://localhost:8000/health
-```
-
-Expected response:
-
-```json
-{"status":"ok"}
-```
-
-Default admin login:
+Default local admin:
 
 ```text
 email: admin@kicklogs.local
 password: admin123
 ```
 
-Backend API access model:
+Before using the project outside local development, change these values in
+`.env`:
 
 ```text
+JWT_SECRET_KEY
+DEFAULT_SUPER_ADMIN_EMAIL
+DEFAULT_SUPER_ADMIN_PASSWORD
+POSTGRES_PASSWORD
+```
+
+## Basic Usage
+
+1. Start the stack with Docker Compose.
+2. Open `http://localhost:3000/login`.
+3. Login with the local admin credentials.
+4. Go to `/admin`.
+5. Add a Kick channel by slug/nickname.
+6. Keep the `listener` service running.
+7. Search collected messages from `/search`.
+
+Useful listener logs:
+
+```powershell
+docker compose logs -f listener
+```
+
+Useful service status:
+
+```powershell
+docker compose ps
+```
+
+Stop the stack:
+
+```powershell
+docker compose down
+```
+
+Stop the stack and remove persisted PostgreSQL data:
+
+```powershell
+docker compose down -v
+```
+
+## Services
+
+| Service | Purpose | Local URL |
+| --- | --- | --- |
+| `postgres` | PostgreSQL database | `localhost:5432` |
+| `api` | FastAPI HTTP API | `http://localhost:8000` |
+| `listener` | Kick chat ingestion worker | background service |
+| `web` | Next.js web app | `http://localhost:3000` |
+
+The API and listener automatically run Alembic migrations before startup in
+Docker Compose.
+
+## API Surface
+
 Public:
-GET    /health
-GET    /messages
 
-Authentication:
-POST   /auth/login
-POST   /auth/logout
-GET    /auth/me
+```text
+GET /health
+GET /messages
+```
 
-Admin-only:
-GET    /admin/users
-POST   /admin/users
+Auth:
+
+```text
+POST /auth/login
+POST /auth/logout
+GET  /auth/me
+```
+
+Admin:
+
+```text
 GET    /admin/channels
 POST   /admin/channels
 DELETE /admin/channels/{id}
+GET    /admin/users
+POST   /admin/users
 ```
 
-Public message search example:
+Example public search:
 
 ```powershell
 curl "http://localhost:8000/messages?sender=yavuz&q=selam&limit=50"
 ```
 
-## Start Web App
+Search filters combine with `AND`. Empty filters are omitted. Empty all filters
+returns latest messages across all followed channels.
 
-Install frontend dependencies from the repository root:
+## Local Development
+
+Install frontend dependencies:
 
 ```powershell
 pnpm install
 ```
 
-Run the web app locally:
+Run the Next.js app:
 
 ```powershell
 pnpm --filter @kick-logs/web dev
 ```
 
-The web app reads the API URL from:
-
-```text
-NEXT_PUBLIC_API_BASE_URL
-```
-
-Default local value:
-
-```text
-http://localhost:8000
-```
-
-Current frontend routes:
-
-```text
-/       redirects to /search until future landing content exists
-/search  public message search
-/login   admin login
-/admin   authenticated backend management
-```
-
-## Start Full Dev Stack
-
-From the repository root:
-
-```powershell
-docker compose up --build
-```
-
-Services:
-
-```text
-postgres  http://localhost:5432
-api       http://localhost:8000
-listener  background worker
-web       http://localhost:3000
-```
-
-For detached local development:
-
-```powershell
-docker compose up --build -d
-docker compose ps
-```
-
-## Backend Tests
-
-From the backend project directory:
+Backend commands are run from `apps/api`:
 
 ```powershell
 cd apps/api
-uv run pytest
-```
-
-Equivalent fallback when `uv` is installed but not on `PATH`:
-
-```powershell
-cd apps/api
+python -m uv run alembic upgrade head
 python -m uv run pytest
+python -m uv run ruff check .
 ```
 
-Lint:
+Frontend checks are run from the repository root:
 
 ```powershell
-cd apps/api
-uv run ruff check .
-```
-
-## Frontend Checks
-
-From the repository root:
-
-```powershell
+pnpm --filter @kick-logs/web test
 pnpm --filter @kick-logs/web typecheck
 pnpm --filter @kick-logs/web lint
-pnpm --filter @kick-logs/web test
 pnpm --filter @kick-logs/web build
 ```
 
-Run `typecheck` and `build` sequentially. Running both at the same time can race on Next.js generated `.next/types` files.
+Run `typecheck` and `build` sequentially. Running both at the same time can
+race on Next.js generated `.next/types` files.
 
-## Backend Verification
+## Repository Structure
 
-Phase 6 backend acceptance was verified with:
-
-```powershell
-cd apps/api
-python -m uv run pytest
-python -m uv run ruff check .
-cd ..\..
-docker compose up --build -d postgres api listener
-docker compose ps
+```text
+kick-logs/
+  apps/
+    api/
+      alembic/
+      src/kick_logs/
+      tests/
+    web/
+      public/
+      src/
+  docs/
+    context/
+    design/
+    tasks/
+  compose.yaml
+  README.md
 ```
 
-Manual smoke checks:
+Backend dependency direction:
 
-- `GET /health` returns `{"status":"ok"}`.
-- `GET /admin/channels` returns `401` without login.
-- Default super admin can login and call `GET /auth/me`.
-- Admin can add and disable a followed Kick channel.
-- `GET /messages?limit=1` works without login.
-- Listener starts through Docker and stays alive when no enabled channels are ready.
+```text
+presentation -> application -> domain
+infrastructure -> application/domain
+```
 
-Phase 7 frontend foundation was verified with:
+Domain code stays independent from FastAPI, SQLAlchemy, Pydantic, and external
+Kick clients.
 
-- `pnpm --filter @kick-logs/web typecheck`
-- `pnpm --filter @kick-logs/web lint`
-- `pnpm --filter @kick-logs/web build`
-- `docker compose up --build -d web`
-- `GET http://localhost:3000` returns HTTP 200.
+## Data Captured
 
-Phase 8 public search UI was verified with:
+Kick Logs stores normalized fields and the raw payload so the project can adapt
+as Kick message shapes evolve.
 
-- `pnpm --filter @kick-logs/web test`
-- `pnpm --filter @kick-logs/web typecheck`
-- `pnpm --filter @kick-logs/web lint`
-- `pnpm --filter @kick-logs/web build`
-- `docker compose up --build -d web`
-- `GET http://localhost:3000/search` returns HTTP 200 without login.
-- `GET http://localhost:3000/search?sender=yavuz&q=selam` returns the search page and does not render admin placeholder content.
+Stored data includes:
 
-Phase 9 admin dashboard UI was verified with:
+- channel metadata
+- sender metadata and profile image URL when available
+- message content
+- message type
+- sender badges
+- parsed emotes
+- reply metadata
+- thread parent id
+- original raw Kick payload
 
-- `pnpm --filter @kick-logs/web test`
-- `pnpm --filter @kick-logs/web typecheck`
-- `pnpm --filter @kick-logs/web lint`
-- `pnpm --filter @kick-logs/web build`
-- `docker compose up --build -d web`
-- `GET http://localhost:3000/search` returns HTTP 200 without login.
-- `GET http://localhost:3000/login` returns HTTP 200.
-- `GET http://localhost:3000/admin` returns HTTP 200; the client guard redirects unauthenticated users.
-- `GET http://localhost:8000/health` returns `{"status":"ok"}`.
+Messages are persisted indefinitely unless the operator removes data manually.
 
-Phase 10 final MVP smoke was verified with:
+## Configuration
 
-- `python -m uv run pytest` from `apps/api`: 83 tests passed.
-- `python -m uv run ruff check .` from `apps/api`: passed.
-- `pnpm --filter @kick-logs/web test`: 6 files, 20 tests passed.
-- `pnpm --filter @kick-logs/web typecheck`: passed.
-- `pnpm --filter @kick-logs/web lint`: passed.
-- `pnpm --filter @kick-logs/web build`: passed.
-- `docker compose up --build -d`: starts `postgres`, `api`, `listener`, and `web`.
-- `GET http://localhost:8000/health`: `{"status":"ok"}`.
-- `GET http://localhost:3000/`: HTTP 307 to `/search`.
-- `GET http://localhost:3000/search`, `/login`, and `/admin`: HTTP 200.
-- Default super admin login succeeds with `admin@kicklogs.local` / `admin123`.
-- Authenticated channel add smoke stores Kick channel metadata for `hype`.
-- Sample message ingestion through the backend ingestion use case stores a searchable message.
-- Public `GET /messages?q=phase10-smoke-20260510235338&limit=5` finds the sample message without authentication.
-- Restarting PostgreSQL preserves the sample message in the named volume.
+Copy `.env.example` to `.env` and adjust values as needed.
 
-Issue #1 durable ingestion work was verified with:
+Important variables:
 
-- `python -m uv run ruff check .` from `apps/api`: passed.
-- `python -m uv run alembic upgrade head` from `apps/api`: applied `20260511_0002`.
-- `python -m uv run alembic current` from `apps/api`: `20260511_0002 (head)`.
-- `python -m uv run pytest` from `apps/api`: 94 tests passed.
-- `python -m uv run pytest tests/listener tests/domain tests/database/test_models_metadata.py tests/database/test_alembic_migration.py`: 43 tests passed.
-- `python -m uv run pytest tests/database/test_repositories.py tests/messages/test_ingest_message.py tests/listener/test_listener_service.py`: 19 tests passed against local PostgreSQL.
-- `docker compose up --build -d postgres api listener`: passed.
-- `GET http://localhost:8000/health`: `{"status":"ok"}`.
-- Listener logs show raw event storage and raw event worker processing with `pending=0`.
+```text
+BACKEND_CORS_ORIGINS=http://localhost:3000
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+DATABASE_URL=postgresql+asyncpg://kick_logs:kick_logs@postgres:5432/kick_logs
+JWT_SECRET_KEY=change-me-for-local-development-secret-key
+KICK_PUSHER_URL=...
+LISTENER_WORKER_COUNT=4
+LISTENER_RAW_EVENT_BATCH_SIZE=100
+LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS=60
+```
 
-## Kick Integration Notes
+Never commit `.env`, secrets, local database dumps, virtual environments, or
+generated dependency/build folders.
 
-The MVP uses Kick web endpoints, Kick Pusher chat events, and inferred emote image URLs. These are not a stable official API contract. If channel resolution, websocket subscription, raw inbox processing, sender profile data, or emote images fail after a Kick-side change, inspect:
+## Contributing
 
-- `KICK_PUSHER_URL`
-- `LISTENER_WORKER_COUNT`
-- `LISTENER_RAW_EVENT_BATCH_SIZE`
-- `LISTENER_RAW_EVENT_PROCESSING_TIMEOUT_SECONDS`
-- `LISTENER_RAW_EVENT_MAX_ATTEMPTS`
-- `LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS`
-- `apps/api/src/kick_logs/infrastructure/kick/channel_resolver.py`
-- `apps/api/src/kick_logs/infrastructure/kick/pusher_client.py`
-- `apps/api/src/kick_logs/presentation/worker/listener_service.py`
-- `apps/api/src/kick_logs/infrastructure/database/repositories/sqlalchemy_raw_event_repository.py`
+Contributions are welcome. The goal is for this repository to be easy to fork,
+run locally, and improve.
 
-## Git Workflow
+Recommended flow:
 
-Agents create local commits only. The user pushes manually.
+1. Fork https://github.com/YSelim0/kick-logs
+2. Create a feature branch from `main`.
+3. Open or pick an issue before larger changes.
+4. Keep changes scoped and reviewable.
+5. Add or update tests for behavior changes.
+6. Update docs when behavior, setup, or architecture changes.
+7. Run the relevant checks.
+8. Open a pull request with a clear summary.
 
-Commit messages use:
+Commit format:
 
 ```text
 feat(scope): title
+fix(scope): title
+docs(scope): title
+test(scope): title
+refactor(scope): title
 ```
+
+Examples:
+
+```text
+feat(search): render reply context
+fix(listener): reconnect after channel changes
+docs(readme): improve setup guide
+```
+
+For UI changes, read `docs/design/design.md` first. For backend architecture
+changes, read `docs/architecture.md` first.
+
+## Suggested First Issues
+
+Good contribution areas:
+
+- better Kick payload fixtures
+- more listener resilience tests
+- richer sender profile enrichment
+- search performance tuning
+- export tools for logs
+- UI polish for long messages and mobile rows
+- deployment examples for VPS environments
+- CI workflow setup
+
+## Security And Operations
+
+- Change default credentials before any non-local use.
+- Use a strong `JWT_SECRET_KEY`.
+- Treat Kick integration failures as expected operational events because the
+  ingestion path relies on unofficial web behavior.
+- Keep PostgreSQL backups if the logs matter.
+- Review data retention expectations before running against large channels.
+
+## Project Status
+
+Kick Logs is an MVP. It is usable locally through Docker Compose, but the Kick
+integration should be considered best-effort because it depends on undocumented
+Kick web behavior.
+
+Current quality gates used during development:
+
+- backend test suite with `pytest`
+- backend lint with `ruff`
+- frontend tests with Vitest and React Testing Library
+- frontend TypeScript typecheck
+- frontend lint
+- frontend production build
+- Docker Compose smoke checks
+
+## License
+
+Kick Logs is released under the MIT License. See [LICENSE](./LICENSE).
