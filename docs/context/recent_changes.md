@@ -4,6 +4,15 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Fixed `/search` date filtering and favicon:
+  - the site favicon now uses `/app-logo.png`
+  - search URL params keep local `datetime-local` values for the date inputs
+  - backend `/messages` requests receive UTC ISO `start`/`end` values
+  - `Bitiş` includes the whole selected minute, so selected ranges include messages up to `:59.999`
+  - ISO date URL values normalize back to local input values
+
+## Previous
+
 - Added repository formatting standards:
   - root Prettier config matches the existing frontend style: 2 spaces, semicolons, double quotes, no trailing commas, 100-column print width
   - root Prettier scripts: `pnpm format` and `pnpm format:check`
@@ -12,8 +21,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - added Code Style GitHub Actions workflow for `pnpm format:check`
   - backend Python CI now also checks `ruff format --check .`
   - normalized existing frontend/docs/Python files with Prettier and Ruff Format
-
-## Previous
 
 - Added backend GitHub Actions workflow:
   - `.github/workflows/python-tests.yml` runs on pull requests and pushes to `main`

@@ -58,6 +58,23 @@ describe("SearchScreen", () => {
     expect(await screen.findByText("Bu filtrelerle mesaj bulunamadı.")).toBeInTheDocument();
   });
 
+  it("sends date filters to the API as UTC ISO values", async () => {
+    navigationMocks.query = "start=2026-05-02T02%3A43&end=2026-05-09T02%3A43";
+    const endDate = new Date("2026-05-09T02:43");
+    endDate.setSeconds(59, 999);
+
+    render(<SearchScreen />);
+
+    await waitFor(() =>
+      expect(apiMocks.searchMessages).toHaveBeenCalledWith(
+        expect.objectContaining({
+          start: new Date("2026-05-02T02:43").toISOString(),
+          end: endDate.toISOString()
+        })
+      )
+    );
+  });
+
   it("allows an explicit empty search without navigating", async () => {
     render(<SearchScreen />);
 

@@ -4,6 +4,12 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-12
 
+- Fixed `/search` date filter submission:
+  - URL state keeps local `datetime-local` values for stable input rendering and sharing
+  - API query params convert `start` and `end` to UTC ISO strings
+  - `end` now includes the full selected minute so minute-precision inputs include messages through `:59.999`
+  - ISO date values in shared URLs normalize back to local input values
+  - the site favicon now uses the existing Kick Logs app logo
 - Added repository formatting standards:
   - added root `.prettierrc.json` using the current frontend style: 2 spaces, semicolons, double quotes, no trailing commas, 100-column print width, LF line endings
   - added `.prettierignore` for generated files, lockfiles, `.pen` artifacts, and local agent skills

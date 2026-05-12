@@ -4,7 +4,12 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Kick Logs",
-  description: "Kick Logs frontend shell"
+  description: "Self-hosted Kick chat log search",
+  icons: {
+    icon: "/app-logo.png",
+    shortcut: "/app-logo.png",
+    apple: "/app-logo.png"
+  }
 };
 
 export default function RootLayout({

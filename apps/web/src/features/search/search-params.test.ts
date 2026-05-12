@@ -19,13 +19,28 @@ describe("search params", () => {
         channel: "",
         q: " selam ",
         start: "2026-05-02T02:43",
-        end: ""
+        end: "2026-05-09T02:43"
       })
     ).toEqual({
       sender: "yavuz",
       q: "selam",
-      start: "2026-05-02T02:43"
+      start: new Date("2026-05-02T02:43").toISOString(),
+      end: localDateTimeEndOfMinuteIso("2026-05-09T02:43")
     });
+  });
+
+  it("keeps URL date params in datetime-local format", () => {
+    const params = searchStateToUrlSearchParams({
+      sender: " yavuz ",
+      channel: "",
+      q: "",
+      start: "2026-05-02T02:43",
+      end: "2026-05-09T02:43"
+    });
+
+    expect(params.get("sender")).toBe("yavuz");
+    expect(params.get("start")).toBe("2026-05-02T02:43");
+    expect(params.get("end")).toBe("2026-05-09T02:43");
   });
 
   it("keeps empty filters as latest-message search", () => {
@@ -66,6 +81,16 @@ describe("search params", () => {
       start: "2026-05-02T02:43",
       end: "2026-05-10T15:30"
     });
+  });
+
+  it("normalizes ISO URL date filters back to local input values", () => {
+    const isoStart = new Date("2026-05-02T02:43").toISOString();
+    const state = readSearchState(
+      new URLSearchParams({ start: isoStart }),
+      new Date("2026-05-10T15:30:45")
+    );
+
+    expect(state.start).toBe(toLocalMinuteValue(new Date(isoStart)));
   });
 
   it("creates active filter labels", () => {
@@ -122,4 +147,24 @@ function messageFixture(id: number): Message {
       banner_image_url: null
     }
   };
+}
+
+function localDateTimeEndOfMinuteIso(value: string) {
+  const date = new Date(value);
+  date.setSeconds(59, 999);
+  return date.toISOString();
+}
+
+function toLocalMinuteValue(date: Date) {
+  const year = date.getFullYear();
+  const month = padDatePart(date.getMonth() + 1);
+  const day = padDatePart(date.getDate());
+  const hours = padDatePart(date.getHours());
+  const minutes = padDatePart(date.getMinutes());
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function padDatePart(value: number) {
+  return String(value).padStart(2, "0");
 }

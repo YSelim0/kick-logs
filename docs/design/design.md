@@ -110,6 +110,9 @@ Field behavior:
 - Empty fields are not included in the API query.
 - Search semantics must match backend `/messages` behavior.
 - Date fields map to `start` and `end`.
+- Date inputs are local `datetime-local` values in the UI and URL.
+- Before calling the API, the frontend converts date filters to UTC ISO strings.
+- The `Bitiş` value includes the full selected minute, so `02:43` includes messages through `02:43:59.999`.
 - On first `/search` load and on reset, date fields default to the last 7 days:
   - `Başlangıç`: current local date/time minus 7 days.
   - `Bitiş`: current local date/time.

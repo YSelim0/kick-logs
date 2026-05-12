@@ -32,6 +32,9 @@ const filterLabels: Record<keyof SearchFormState, string> = {
   end: "Bitiş"
 };
 
+const DATE_TIME_LOCAL_MINUTE_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+const DATE_TIME_WITH_TIMEZONE_PATTERN = /(?:Z|[+-]\d{2}:?\d{2})$/i;
+
 export function getDefaultSearchState(now = new Date()): SearchFormState {
   const end = new Date(now);
   end.setSeconds(0, 0);
@@ -65,18 +68,18 @@ export function searchStateToMessageParams(state: SearchFormState): MessageSearc
     ...optionalParam("sender", state.sender),
     ...optionalParam("channel", state.channel),
     ...optionalParam("q", state.q),
-    ...optionalParam("start", state.start),
-    ...optionalParam("end", state.end)
+    ...optionalDateParam("start", state.start),
+    ...optionalDateParam("end", state.end)
   };
 }
 
 export function searchStateToUrlSearchParams(state: SearchFormState) {
   const params = new URLSearchParams();
-  const messageParams = searchStateToMessageParams(state);
 
-  for (const [key, value] of Object.entries(messageParams)) {
-    if (value !== undefined) {
-      params.set(key, String(value));
+  for (const key of Object.keys(filterLabels) as Array<keyof SearchFormState>) {
+    const value = state[key].trim();
+    if (value) {
+      params.set(key, value);
     }
   }
 
@@ -130,16 +133,46 @@ export function formatMessageDate(value: string) {
 }
 
 export function normalizeDateInputValue(value: string) {
-  if (!value) {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
     return "";
   }
 
-  return value.slice(0, 16);
+  if (DATE_TIME_WITH_TIMEZONE_PATTERN.test(trimmed)) {
+    const date = new Date(trimmed);
+
+    if (!Number.isNaN(date.getTime())) {
+      return toDateTimeLocalValue(date);
+    }
+  }
+
+  return trimmed.slice(0, 16);
 }
 
 function optionalParam(key: keyof MessageSearchParams, value: string) {
   const trimmed = value.trim();
   return trimmed ? { [key]: trimmed } : {};
+}
+
+function optionalDateParam(key: "start" | "end", value: string) {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return {};
+  }
+
+  const date = new Date(trimmed);
+
+  if (Number.isNaN(date.getTime())) {
+    return { [key]: trimmed };
+  }
+
+  if (key === "end" && DATE_TIME_LOCAL_MINUTE_PATTERN.test(trimmed)) {
+    date.setSeconds(59, 999);
+  }
+
+  return { [key]: date.toISOString() };
 }
 
 function toDateTimeLocalValue(date: Date) {
