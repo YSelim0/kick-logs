@@ -194,6 +194,63 @@ async def test_public_search_returns_latest_messages_without_auth(client, sessio
     assert first_item["emotes"][0]["image_url"] == "https://files.kick.com/emotes/37226/fullsize"
 
 
+async def test_public_search_returns_reply_context_fields(client, session_factory) -> None:
+    suffix = uuid4().hex[:8]
+    reply_metadata = {
+        "original_sender": {
+            "id": 97891494,
+            "username": "Cansu98xx",
+        },
+        "original_message": {
+            "id": "1be196b8-55c7-4980-8022-a1112723acea",
+            "content": "senin saat ne saati 5dk 1 saatmiş",
+        },
+        "message_ref": "1778535344619",
+    }
+
+    async with SqlAlchemyUnitOfWork(session_factory) as unit_of_work:
+        channel = await unit_of_work.channels.add(
+            Channel(
+                kick_channel_id=100000 + int(uuid4().hex[:6], 16),
+                kick_chatroom_id=200000 + int(uuid4().hex[:6], 16),
+                slug=f"reply-channel-{suffix}",
+                display_name=f"Reply Channel {suffix}",
+            )
+        )
+        sender = await unit_of_work.senders.add(
+            Sender(
+                kick_user_id=500000 + int(uuid4().hex[:6], 16),
+                username=f"ReplySender{suffix}",
+                slug=f"reply-sender-{suffix}",
+            )
+        )
+        message = await unit_of_work.messages.add(
+            ChatMessage(
+                kick_message_id=unique_value("message"),
+                channel_id=channel.id or 0,
+                sender_id=sender.id or 0,
+                chatroom_id=channel.kick_chatroom_id or 0,
+                content=f"current reply content combo-{suffix}",
+                message_type="reply",
+                sender_username_snapshot=sender.username,
+                sender_slug_snapshot=sender.slug,
+                reply_metadata=reply_metadata,
+                thread_parent_id="cad8a796-d688-4de1-9e13-2e0a4d0b5f1f",
+                message_created_at=datetime(2035, 1, 1, 13, 0, tzinfo=UTC),
+            )
+        )
+        await unit_of_work.commit()
+
+    response = await client.get("/messages", params={"q": f"combo-{suffix}"})
+
+    assert response.status_code == 200
+    item = response.json()["items"][0]
+    assert item["kick_message_id"] == message.kick_message_id
+    assert item["message_type"] == "reply"
+    assert item["reply_metadata"] == reply_metadata
+    assert item["thread_parent_id"] == "cad8a796-d688-4de1-9e13-2e0a4d0b5f1f"
+
+
 async def test_public_search_combines_optional_filters(client, session_factory) -> None:
     dataset = await seed_search_dataset(session_factory)
     suffix = dataset["suffix"]

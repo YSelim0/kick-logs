@@ -4,6 +4,21 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Implemented GitHub issue #3 reply rendering on branch `feat/issue-3-kick-reply-rendering`:
+  - backend tests now lock the observed Kick reply payload shape (`type="reply"`, `metadata.original_sender`, `metadata.original_message`, `thread_parent_id`)
+  - public `/messages` test verifies reply fields are returned unchanged
+  - `/search` result rows render replied-to sender/content above the current message in muted gray text
+  - long reply previews expose full original content through a `title` attribute
+- Verification:
+  - `pnpm --filter @kick-logs/web test`: 9 files, 28 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `python -m uv run ruff check .`: passed
+  - `python -m uv run pytest`: 96 passed
+
+## Previous
+
 - Updated public `/search` initial-load behavior:
   - bare `/search` does not call `/messages` automatically anymore
   - results area shows `Arama yapmak için yukarıdaki formu kullanın.`
@@ -13,8 +28,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `pnpm --filter @kick-logs/web test`: 7 files, 23 tests passed
   - `pnpm --filter @kick-logs/web typecheck`: passed
   - `pnpm --filter @kick-logs/web lint`: passed
-
-## Previous
 
 - Implemented GitHub issue #1 durable Kick ingestion on branch `feature/issue-1-durable-inbox`:
   - added `raw_kick_events` domain entity/status, SQLAlchemy model, Alembic migration, repository port, and repository implementation

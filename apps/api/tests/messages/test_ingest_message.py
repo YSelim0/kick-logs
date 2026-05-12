@@ -119,6 +119,37 @@ async def test_ingest_message_persists_normalized_message(session_factory) -> No
     assert sender.last_seen_color == "#fff600"
 
 
+async def test_ingest_message_persists_reply_payload_shape(session_factory) -> None:
+    chatroom_id = 700000 + int(uuid4().hex[:6], 16)
+    await seed_channel(session_factory, chatroom_id)
+    payload = build_payload(chatroom_id, content="current reply content")
+    payload["type"] = "reply"
+    payload["thread_parent_id"] = "cad8a796-d688-4de1-9e13-2e0a4d0b5f1f"
+    payload["metadata"] = {
+        "original_sender": {
+            "id": 97891494,
+            "username": "Cansu98xx",
+        },
+        "original_message": {
+            "id": "1be196b8-55c7-4980-8022-a1112723acea",
+            "content": "senin saat ne saati 5dk 1 saatmiş",
+        },
+        "message_ref": "1778535344619",
+    }
+
+    message = await IngestMessageUseCase(
+        lambda: SqlAlchemyUnitOfWork(session_factory)
+    ).execute(payload)
+
+    assert message.message_type == "reply"
+    assert message.thread_parent_id == "cad8a796-d688-4de1-9e13-2e0a4d0b5f1f"
+    assert message.reply_metadata["original_sender"]["username"] == "Cansu98xx"
+    assert (
+        message.reply_metadata["original_message"]["content"]
+        == "senin saat ne saati 5dk 1 saatmiş"
+    )
+
+
 async def test_ingest_message_is_idempotent_by_kick_message_id(session_factory) -> None:
     chatroom_id = 700000 + int(uuid4().hex[:6], 16)
     await seed_channel(session_factory, chatroom_id)

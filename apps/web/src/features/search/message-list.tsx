@@ -6,6 +6,7 @@ import { ChevronDown, Search } from "lucide-react";
 import { useState } from "react";
 
 import { MessageContent } from "@/features/search/message-content";
+import { getReplyContext } from "@/features/search/reply-metadata";
 import { formatMessageDate } from "@/features/search/search-params";
 import { cn } from "@/lib/utils";
 import type { Message } from "@/types/api";
@@ -118,6 +119,11 @@ export function MessageList({
 }
 
 function MessageRow({ message, isAlt }: { message: Message; isAlt: boolean }) {
+  const replyContext = getReplyContext(message);
+  const replyTitle = replyContext
+    ? `@${replyContext.senderUsername}: ${replyContext.content}`
+    : undefined;
+
   return (
     <div
       className={cn(
@@ -143,6 +149,17 @@ function MessageRow({ message, isAlt }: { message: Message; isAlt: boolean }) {
       </div>
 
       <div className="col-span-2 min-w-0 text-foreground md:col-span-1 md:pr-4">
+        {replyContext ? (
+          <div
+            className="mb-1 min-w-0 truncate text-xs leading-5 text-muted-foreground/70"
+            title={replyTitle}
+          >
+            <span className="font-medium text-muted-foreground/80">
+              @{replyContext.senderUsername}:
+            </span>{" "}
+            {replyContext.content}
+          </div>
+        ) : null}
         <MessageContent content={message.content} emotes={message.emotes} />
       </div>
 
