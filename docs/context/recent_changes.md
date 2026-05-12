@@ -4,12 +4,19 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Archived the completed MVP plan and added the active post-MVP roadmap:
+  - old `docs/implementation_plan.md` moved to `docs/archive/mvp_implementation_plan.md`
+  - old `docs/tasks/phase*_tasks.md` files moved to `docs/archive/tasks/`
+  - new `docs/implementation_plan.md` covers post-MVP feature work
+  - new active task files live under `docs/tasks/post_mvp_*.md`
+  - selected roadmap: admin operations, search improvements, analytics foundation, landing analytics, user profiles, channel profiles, data management, final smoke/docs
+
+## Previous
+
 - Added Buy Me a Coffee sponsorship metadata:
   - `.github/FUNDING.yml` now enables the GitHub Sponsor button for `yavuzselim`
   - README now shows a Buy Me a Coffee badge and a short `Support` section
   - support URL: `https://buymeacoffee.com/yavuzselim`
-
-## Previous
 
 - Fixed `/search` date filtering and favicon:
   - the site favicon now uses `/app-logo.png`

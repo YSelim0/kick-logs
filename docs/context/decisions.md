@@ -49,8 +49,8 @@
 - Parse `[emote:id:name]` tokens and render image fallback URLs.
 - Use `/search`, `/admin`, and reserve `/` for later landing content.
 - Allow multi-agent development for non-overlapping work scopes.
-- Use `docs/implementation_plan.md` as the sequential MVP implementation plan.
-- Use `docs/tasks/phaseN_tasks.md` files as phase-scoped task contracts; agents must not cross into later phase scope without explicit direction.
+- The original MVP used a sequential phase implementation plan; that completed plan now lives in `docs/archive/`.
+- Active implementation agents must use the current `docs/implementation_plan.md` and matching active task file.
 - Do not add placeholder `web` or `listener` services in Phase 1; add each service only in its owning phase.
 
 ## 2026-05-10
@@ -66,3 +66,6 @@
 - `/search` reply rows show the replied-to sender and replied-to message content above the current message in muted gray text.
 - Reply rendering uses `message_type === "reply"`, `reply_metadata.original_sender.username`, and `reply_metadata.original_message.content`; long reply previews expose the full original content through a `title` attribute.
 - Repository sponsorship uses Buy Me a Coffee account `yavuzselim` through GitHub `FUNDING.yml` and README links.
+- The completed MVP implementation plan is archived under `docs/archive/`; active work uses the post-MVP feature plan in `docs/implementation_plan.md`.
+- Post-MVP development is split into feature-scoped task files under `docs/tasks/post_mvp_*.md`.
+- The selected post-MVP roadmap prioritizes admin operations, search improvements, analytics, landing analytics, user/channel profiles, and admin data management.

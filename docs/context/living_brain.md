@@ -20,6 +20,18 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Phase 8 public search UI is complete.
 - Phase 9 admin UI is complete.
 - Phase 10 final MVP smoke and documentation cleanup are complete.
+- The original MVP implementation plan and phase task files are archived under `docs/archive/`.
+- `docs/implementation_plan.md` now tracks the active post-MVP feature roadmap.
+- Active post-MVP task files are under `docs/tasks/post_mvp_*.md`.
+- Selected post-MVP roadmap:
+  - admin operations dashboard
+  - search improvements
+  - analytics foundation
+  - landing page with analytics blocks
+  - user profile analytics
+  - channel/publisher profile analytics
+  - admin data management
+  - final smoke and docs
 - Issue #1 durable ingestion implementation is complete locally on branch `feature/issue-1-durable-inbox`.
 - Issue #3 Kick reply rendering is implemented locally on branch `feat/issue-3-kick-reply-rendering`.
 - Kick listener now uses a durable raw event inbox design:
@@ -49,8 +61,9 @@ This file is the active project memory. Keep it updated whenever project behavio
   - `api`
   - `listener`
   - `web`
-- Sequential implementation plan exists at `docs/implementation_plan.md`.
-- Phase task files exist under `docs/tasks/phase1_tasks.md` through `docs/tasks/phase10_tasks.md`.
+- Active implementation plan exists at `docs/implementation_plan.md`.
+- Active task files exist under `docs/tasks/post_mvp_01_admin_operations.md` through `docs/tasks/post_mvp_08_final_smoke.md`.
+- Archived MVP task files exist under `docs/archive/tasks/phase1_tasks.md` through `docs/archive/tasks/phase10_tasks.md`.
 - Frontend `web` service exists and runs the Next.js development server.
 - Current backend verification:
   - `python -m uv run pytest` passes from `apps/api` with 94 tests.
@@ -622,8 +635,9 @@ Build an MVP monorepo with:
 ## Operational Rules
 
 - Every agent must read `AGENTS.md` and context files before making changes.
-- Every implementation agent must read `docs/implementation_plan.md` and the matching phase task file before changing files.
-- Phase task files are scoped handoff contracts; do not implement work from a later phase unless the user explicitly changes the plan.
+- Every implementation agent must read `docs/implementation_plan.md` and the matching active task file before changing files.
+- Active post-MVP task files are scoped handoff contracts; do not implement work from another feature unless the user explicitly changes the plan.
+- Archived MVP task files are historical context only.
 - Keep documentation and context current with implementation changes.
 - Update `docs/context/recent_changes.md` with a short latest-change handoff after each meaningful change.
 - Multi-agent work is allowed for non-overlapping scopes; assign clear file/subsystem ownership and integrate outputs before committing.

@@ -4,6 +4,12 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-12
 
+- Archived the completed MVP implementation plan:
+  - moved the old active plan to `docs/archive/mvp_implementation_plan.md`
+  - moved old phase task files to `docs/archive/tasks/`
+  - replaced `docs/implementation_plan.md` with the active post-MVP feature roadmap
+  - added post-MVP task files for admin operations, search improvements, analytics foundation, landing analytics, user profiles, channel profiles, data management, and final smoke/docs
+  - updated agent/project/context docs so archived MVP task files are historical context only
 - Added Buy Me a Coffee sponsorship metadata:
   - created `.github/FUNDING.yml` with `buy_me_a_coffee: yavuzselim` so GitHub can show the Sponsor button
   - added a README support badge linked to `https://buymeacoffee.com/yavuzselim`
