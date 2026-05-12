@@ -158,6 +158,7 @@ Each message row should show:
 - timestamp
 - message content
 - emote rendering with fallback
+- reply context above the current message when the Kick payload is a reply
 
 Sender avatar:
 
@@ -178,6 +179,9 @@ Result row layout:
 - Fixed metadata columns can hold avatar, sender, channel, and timestamp.
 - The message content column should take the remaining horizontal space.
 - If the content is long, the message column should absorb the extra width/wrapping behavior instead of turning the row into a separate card.
+- Reply rows render the replied-to sender and replied-to message content above the current message in muted gray text.
+- Reply preview data comes from `reply_metadata.original_sender.username` and `reply_metadata.original_message.content` when `message_type` is `reply`.
+- Long reply preview text should expose the full replied-to content through a `title` attribute.
 
 ## Admin UI
 

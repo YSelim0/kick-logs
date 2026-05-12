@@ -4,6 +4,24 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-12
 
+- Implemented GitHub issue #3 reply rendering:
+  - added backend coverage for the observed Kick reply payload shape:
+    - `type="reply"`
+    - `thread_parent_id`
+    - `metadata.original_sender.username`
+    - `metadata.original_message.id`
+    - `metadata.original_message.content`
+  - added public `/messages` coverage to verify reply metadata and thread parent ids are returned unchanged
+  - added frontend reply metadata extraction guard for `message_type === "reply"`
+  - rendered replied-to sender/content above the current message in `/search` result rows
+  - added a `title` attribute to reply previews for long original content
+  - added frontend tests for reply metadata extraction and reply/non-reply row rendering
+  - verified `pnpm --filter @kick-logs/web test`: 9 files, 28 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`: passed
+  - verified `pnpm --filter @kick-logs/web lint`: passed
+  - verified `pnpm --filter @kick-logs/web build`: passed
+  - verified `python -m uv run ruff check .`: passed
+  - verified `python -m uv run pytest`: 96 passed
 - Updated public `/search` initial-load behavior:
   - bare `/search` no longer fetches latest messages automatically
   - result area shows an icon prompt: `Arama yapmak için yukarıdaki formu kullanın.`

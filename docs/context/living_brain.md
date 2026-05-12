@@ -21,6 +21,7 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Phase 9 admin UI is complete.
 - Phase 10 final MVP smoke and documentation cleanup are complete.
 - Issue #1 durable ingestion implementation is complete locally on branch `feature/issue-1-durable-inbox`.
+- Issue #3 Kick reply rendering is implemented locally on branch `feat/issue-3-kick-reply-rendering`.
 - Kick listener now uses a durable raw event inbox design:
   - websocket reader persists supported chat events into PostgreSQL first
   - raw event workers normalize and insert chat messages out of the websocket read path
@@ -433,6 +434,11 @@ Build an MVP monorepo with:
   - prefers backend parsed emote image URL
   - falls back to `https://files.kick.com/emotes/{id}/fullsize`
   - falls back to emote text if the image fails
+- Reply rendering:
+  - messages with `message_type === "reply"` render replied-to context above current content
+  - reply preview reads `reply_metadata.original_sender.username`
+  - reply preview reads `reply_metadata.original_message.content`
+  - long reply previews use a `title` attribute for full-content hover inspection
 - Search summary panel shows loading/error status, loaded count, scope, last match, and active filters.
 - The app logo has been copied into `apps/web/public/app-logo.png` for the search header.
 - Frontend tests added with Vitest and React Testing Library:
@@ -589,7 +595,7 @@ Build an MVP monorepo with:
 - The user-provided logo should be used where a product mark is needed.
 - The search screen is the first design target in `docs/design/design.pen`; admin panel screens should not be designed until the search screen is approved.
 - Search results should render as dense rows inside one shared outer container, not as separate modal/card components per message.
-- Sender avatars should be circular, and emotes should render inline at their message positions.
+- Sender avatars should be circular, emotes should render inline at their message positions, and reply rows should show replied-to sender/content without adding per-message cards or modals.
 
 ## Locked Product Decisions
 
