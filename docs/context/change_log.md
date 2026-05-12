@@ -4,6 +4,15 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-12
 
+- Added repository formatting standards:
+  - added root `.prettierrc.json` using the current frontend style: 2 spaces, semicolons, double quotes, no trailing commas, 100-column print width, LF line endings
+  - added `.prettierignore` for generated files, lockfiles, `.pen` artifacts, and local agent skills
+  - added root `pnpm format` and `pnpm format:check` scripts
+  - added `prettier` as a root dev dependency
+  - configured Ruff Format for Python with spaces, double quotes, LF line endings, and the existing 100-column line length
+  - added `.github/workflows/code-style.yml` to run `pnpm format:check`
+  - updated backend Python CI to run `ruff format --check .`
+  - normalized existing frontend, docs, and Python files with the configured formatters
 - Added backend GitHub Actions workflow:
   - `.github/workflows/python-tests.yml` runs on pull requests and pushes to `main`
   - starts PostgreSQL 16 as a workflow service

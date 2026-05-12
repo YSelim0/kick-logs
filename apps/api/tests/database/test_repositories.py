@@ -110,8 +110,7 @@ async def test_channel_repository_create_read_update(db_session: AsyncSession) -
     updated = await repository.update(loaded)
 
     enabled_channel_ids = [
-        enabled_channel.id
-        for enabled_channel in await repository.list_enabled()
+        enabled_channel.id for enabled_channel in await repository.list_enabled()
     ]
     assert updated.is_enabled is False
     assert updated.id not in enabled_channel_ids

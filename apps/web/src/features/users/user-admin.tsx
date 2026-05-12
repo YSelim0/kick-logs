@@ -81,9 +81,15 @@ export function UserAdmin() {
         </div>
       </div>
 
-      <form className="mb-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_150px]" onSubmit={submitUser}>
+      <form
+        className="mb-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_150px]"
+        onSubmit={submitUser}
+      >
         <div>
-          <label className="mb-2 flex h-5 items-center gap-2 text-sm font-medium" htmlFor="admin-email">
+          <label
+            className="mb-2 flex h-5 items-center gap-2 text-sm font-medium"
+            htmlFor="admin-email"
+          >
             <Mail className="h-4 w-4 text-accent" />
             Yeni admin e-postası
           </label>
@@ -99,7 +105,10 @@ export function UserAdmin() {
         </div>
 
         <div>
-          <label className="mb-2 flex h-5 items-center gap-2 text-sm font-medium" htmlFor="admin-password">
+          <label
+            className="mb-2 flex h-5 items-center gap-2 text-sm font-medium"
+            htmlFor="admin-password"
+          >
             <ShieldCheck className="h-4 w-4 text-accent" />
             Geçici parola
           </label>
@@ -120,7 +129,11 @@ export function UserAdmin() {
             className="h-11 w-full"
             disabled={isCreating || !email.trim() || password.length < 8}
           >
-            {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            {isCreating ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
             Oluştur
           </Button>
         </div>

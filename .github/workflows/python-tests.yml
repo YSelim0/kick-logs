@@ -79,6 +79,9 @@ jobs:
       - name: Apply database migrations
         run: python -m uv run alembic upgrade head
 
+      - name: Check Python formatting
+        run: python -m uv run ruff format --check .
+
       - name: Run ruff
         run: python -m uv run ruff check .
 

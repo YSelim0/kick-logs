@@ -16,11 +16,7 @@ def test_domain_layer_has_no_framework_imports() -> None:
 
     for source_file in domain_root.rglob("*.py"):
         tree = ast.parse(source_file.read_text(encoding="utf-8"))
-        imports = [
-            node
-            for node in ast.walk(tree)
-            if isinstance(node, ast.Import | ast.ImportFrom)
-        ]
+        imports = [node for node in ast.walk(tree) if isinstance(node, ast.Import | ast.ImportFrom)]
 
         imported_roots: set[str] = set()
         for import_node in imports:

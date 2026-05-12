@@ -39,6 +39,11 @@ line-length = 100
 src = ["src", "tests"]
 target-version = "py312"
 
+[tool.ruff.format]
+indent-style = "space"
+line-ending = "lf"
+quote-style = "double"
+
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 

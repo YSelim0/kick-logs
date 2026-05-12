@@ -4,13 +4,13 @@
 
 @layer base {
   :root {
-    --kick-background: #26001B;
+    --kick-background: #26001b;
     --kick-surface: #810034;
     --kick-border: #810034;
-    --kick-accent: #FF005C;
-    --kick-action: #FFF600;
+    --kick-accent: #ff005c;
+    --kick-action: #fff600;
     --kick-black: #000000;
-    --kick-white: #FFFFFF;
+    --kick-white: #ffffff;
 
     --background: 317 100% 7%;
     --foreground: 0 0% 100%;

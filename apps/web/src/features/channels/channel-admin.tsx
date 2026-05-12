@@ -95,7 +95,10 @@ export function ChannelAdmin() {
 
       <form className="mb-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_160px]" onSubmit={submitChannel}>
         <div>
-          <label className="mb-2 flex h-5 items-center gap-2 text-sm font-medium" htmlFor="channel-slug">
+          <label
+            className="mb-2 flex h-5 items-center gap-2 text-sm font-medium"
+            htmlFor="channel-slug"
+          >
             <Hash className="h-4 w-4 text-accent" />
             Kanal slug/nickname
           </label>
@@ -120,7 +123,13 @@ export function ChannelAdmin() {
         <div className="text-xs text-muted-foreground">
           Ekleme sırasında backend Kick metadata ve chatroom bilgisini çözer.
         </div>
-        <Button disabled={isLoading} onClick={() => void loadChannels()} size="sm" type="button" variant="outline">
+        <Button
+          disabled={isLoading}
+          onClick={() => void loadChannels()}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
           <RefreshCcw className="h-4 w-4 text-accent" />
           Yenile
         </Button>

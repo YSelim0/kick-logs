@@ -22,9 +22,7 @@ async def session_factory() -> AsyncIterator[async_sessionmaker]:
 
     try:
         async with engine.connect() as healthcheck:
-            table_exists = await healthcheck.scalar(
-                text("select to_regclass('public.users')")
-            )
+            table_exists = await healthcheck.scalar(text("select to_regclass('public.users')"))
             if table_exists is None:
                 pytest.skip("Database schema is not migrated.")
     except OSError:

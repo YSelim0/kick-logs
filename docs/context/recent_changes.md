@@ -4,6 +4,17 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Added repository formatting standards:
+  - root Prettier config matches the existing frontend style: 2 spaces, semicolons, double quotes, no trailing commas, 100-column print width
+  - root Prettier scripts: `pnpm format` and `pnpm format:check`
+  - `.prettierignore` excludes generated/runtime files, locks, `.pen`, and local agent skills
+  - Python formatting uses Ruff Format with 100-column line width, double quotes, spaces, and LF line endings
+  - added Code Style GitHub Actions workflow for `pnpm format:check`
+  - backend Python CI now also checks `ruff format --check .`
+  - normalized existing frontend/docs/Python files with Prettier and Ruff Format
+
+## Previous
+
 - Added backend GitHub Actions workflow:
   - `.github/workflows/python-tests.yml` runs on pull requests and pushes to `main`
   - starts PostgreSQL 16 service
@@ -11,8 +22,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - applies Alembic migrations
   - runs `ruff check .` and `pytest`
   - README now includes the Python CI badge and CI section
-
-## Previous
 
 - Rewrote root `README.md` as a public-facing project page:
   - added centered app logo and repository links

@@ -29,9 +29,7 @@ describe("MessageList", () => {
     expect(screen.getByText("@Cansu98xx:")).toBeInTheDocument();
     expect(screen.getByText(/senin saat ne saati/)).toBeInTheDocument();
     expect(screen.getByText("current reply content")).toBeInTheDocument();
-    expect(
-      screen.getByTitle("@Cansu98xx: senin saat ne saati 5dk 1 saatmiş")
-    ).toBeInTheDocument();
+    expect(screen.getByTitle("@Cansu98xx: senin saat ne saati 5dk 1 saatmiş")).toBeInTheDocument();
   });
 
   it("does not render reply context for normal messages", () => {

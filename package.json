@@ -7,10 +7,15 @@
     "build": "pnpm --filter @kick-logs/web build",
     "lint": "pnpm --filter @kick-logs/web lint",
     "typecheck": "pnpm --filter @kick-logs/web typecheck",
-    "test": "pnpm --filter @kick-logs/web test"
+    "test": "pnpm --filter @kick-logs/web test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=8.11.0"
+  },
+  "devDependencies": {
+    "prettier": "^3.8.3"
   }
 }

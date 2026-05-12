@@ -262,9 +262,7 @@ function HeaderMetric({
   return (
     <div className="border-b border-border px-4 py-2 last:border-b-0 sm:border-b-0 sm:border-r sm:last:border-r-0">
       <div className="text-muted-foreground">{label}</div>
-      <div className={isPrimary ? "font-semibold text-primary" : "text-foreground"}>
-        {value}
-      </div>
+      <div className={isPrimary ? "font-semibold text-primary" : "text-foreground"}>{value}</div>
     </div>
   );
 }

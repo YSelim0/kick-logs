@@ -15,13 +15,7 @@ type SearchFormProps = {
   onSubmit: () => void;
 };
 
-export function SearchForm({
-  value,
-  isLoading,
-  onChange,
-  onReset,
-  onSubmit
-}: SearchFormProps) {
+export function SearchForm({ value, isLoading, onChange, onReset, onSubmit }: SearchFormProps) {
   return (
     <form
       className="rounded-lg border border-border bg-black p-4"
@@ -48,11 +42,7 @@ export function SearchForm({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(280px,390px)_1fr]">
-        <Field
-          icon={<Search className="h-4 w-4" />}
-          id="q"
-          label="Aramak istediğiniz Kelime"
-        >
+        <Field icon={<Search className="h-4 w-4" />} id="q" label="Aramak istediğiniz Kelime">
           <Input
             id="q"
             maxLength={500}

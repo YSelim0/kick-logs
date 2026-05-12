@@ -69,10 +69,7 @@ export function MessageContent({ content, emotes }: MessageContentProps) {
   );
 }
 
-export function splitMessageContent(
-  content: string,
-  emotes: MessageEmote[]
-): MessageContentPart[] {
+export function splitMessageContent(content: string, emotes: MessageEmote[]): MessageContentPart[] {
   const parts: MessageContentPart[] = [];
   const emotesByToken = new Map(emotes.map((emote) => [emote.token, emote]));
   let lastIndex = 0;

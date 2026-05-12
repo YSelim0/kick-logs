@@ -35,9 +35,21 @@ export function SearchSummary({ state, messages, isLoading, error }: SearchSumma
       </div>
 
       <div className="space-y-3 text-sm">
-        <SummaryLine icon={<Radio className="h-4 w-4" />} label="Kapsam" value={getScopeText(state)} />
-        <SummaryLine icon={<Filter className="h-4 w-4" />} label="Yüklenen mesaj" value={String(messages.length)} />
-        <SummaryLine icon={<Timer className="h-4 w-4" />} label="Son eşleşme" value={getLastMatchTime(messages)} />
+        <SummaryLine
+          icon={<Radio className="h-4 w-4" />}
+          label="Kapsam"
+          value={getScopeText(state)}
+        />
+        <SummaryLine
+          icon={<Filter className="h-4 w-4" />}
+          label="Yüklenen mesaj"
+          value={String(messages.length)}
+        />
+        <SummaryLine
+          icon={<Timer className="h-4 w-4" />}
+          label="Son eşleşme"
+          value={getLastMatchTime(messages)}
+        />
       </div>
 
       <div className="mt-5 border-t border-border pt-4">
@@ -66,15 +78,7 @@ export function SearchSummary({ state, messages, isLoading, error }: SearchSumma
   );
 }
 
-function SummaryLine({
-  icon,
-  label,
-  value
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-}) {
+function SummaryLine({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4">
       <div className="flex items-center gap-2 text-muted-foreground">

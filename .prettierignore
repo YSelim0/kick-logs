@@ -1,0 +1,14 @@
+.agents
+.next
+.venv
+node_modules
+coverage
+dist
+build
+htmlcov
+__pycache__
+*.pyc
+*.log
+*.pen
+pnpm-lock.yaml
+uv.lock

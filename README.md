@@ -157,12 +157,12 @@ docker compose down -v
 
 ## Services
 
-| Service | Purpose | Local URL |
-| --- | --- | --- |
-| `postgres` | PostgreSQL database | `localhost:5432` |
-| `api` | FastAPI HTTP API | `http://localhost:8000` |
-| `listener` | Kick chat ingestion worker | background service |
-| `web` | Next.js web app | `http://localhost:3000` |
+| Service    | Purpose                    | Local URL               |
+| ---------- | -------------------------- | ----------------------- |
+| `postgres` | PostgreSQL database        | `localhost:5432`        |
+| `api`      | FastAPI HTTP API           | `http://localhost:8000` |
+| `listener` | Kick chat ingestion worker | background service      |
+| `web`      | Next.js web app            | `http://localhost:3000` |
 
 The API and listener automatically run Alembic migrations before startup in
 Docker Compose.
@@ -224,6 +224,7 @@ cd apps/api
 python -m uv run alembic upgrade head
 python -m uv run pytest
 python -m uv run ruff check .
+python -m uv run ruff format --check .
 ```
 
 Frontend checks are run from the repository root:
@@ -233,21 +234,42 @@ pnpm --filter @kick-logs/web test
 pnpm --filter @kick-logs/web typecheck
 pnpm --filter @kick-logs/web lint
 pnpm --filter @kick-logs/web build
+pnpm format:check
 ```
 
 Run `typecheck` and `build` sequentially. Running both at the same time can
 race on Next.js generated `.next/types` files.
 
+Formatting:
+
+```powershell
+pnpm format
+cd apps/api
+python -m uv run ruff format .
+```
+
+Use Prettier for frontend, JSON, YAML, and Markdown files. Use Ruff Format for
+Python files. Both formatters are configured to use 100-column line width and
+the repository's current double-quote style.
+
 ## Continuous Integration
 
-GitHub Actions runs backend checks on pull requests and pushes to `main`.
+GitHub Actions runs backend and formatting checks on pull requests and pushes
+to `main`.
 
 The Python workflow starts a PostgreSQL 16 service, installs backend
 dependencies with `uv`, applies Alembic migrations, then runs:
 
 ```powershell
+python -m uv run ruff format --check .
 python -m uv run ruff check .
 python -m uv run pytest
+```
+
+The code style workflow installs frontend dependencies and runs:
+
+```powershell
+pnpm format:check
 ```
 
 ## Repository Structure

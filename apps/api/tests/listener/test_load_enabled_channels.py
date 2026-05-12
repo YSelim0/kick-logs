@@ -86,9 +86,7 @@ async def test_load_enabled_channels_returns_ready_channels() -> None:
 
 
 async def test_load_enabled_channels_resolves_missing_kick_metadata() -> None:
-    unit_of_work = FakeUnitOfWork(
-        [Channel(id=1, slug="hype", display_name="Hype")]
-    )
+    unit_of_work = FakeUnitOfWork([Channel(id=1, slug="hype", display_name="Hype")])
 
     result = await LoadEnabledChannelsUseCase(
         lambda: unit_of_work,
@@ -102,9 +100,7 @@ async def test_load_enabled_channels_resolves_missing_kick_metadata() -> None:
 
 
 async def test_load_enabled_channels_skips_unresolvable_channels() -> None:
-    unit_of_work = FakeUnitOfWork(
-        [Channel(id=1, slug="hype", display_name="Hype")]
-    )
+    unit_of_work = FakeUnitOfWork([Channel(id=1, slug="hype", display_name="Hype")])
 
     result = await LoadEnabledChannelsUseCase(
         lambda: unit_of_work,

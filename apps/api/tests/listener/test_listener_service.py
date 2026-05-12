@@ -220,9 +220,7 @@ class FakeRawEventRepository:
             raise ValueError("Raw Kick event not found.")
         event.attempts += 1
         event.status = (
-            RawEventStatus.FAILED
-            if event.attempts >= max_attempts
-            else RawEventStatus.PENDING
+            RawEventStatus.FAILED if event.attempts >= max_attempts else RawEventStatus.PENDING
         )
         event.processing_started_at = None
         event.last_error = error
@@ -365,8 +363,7 @@ async def test_raw_event_processor_keeps_message_writes_idempotent() -> None:
     assert result.processed == 2
     assert len(unit_of_work.messages.messages) == 1
     assert all(
-        raw_event.status == RawEventStatus.PROCESSED
-        for raw_event in unit_of_work.raw_events.events
+        raw_event.status == RawEventStatus.PROCESSED for raw_event in unit_of_work.raw_events.events
     )
 
 

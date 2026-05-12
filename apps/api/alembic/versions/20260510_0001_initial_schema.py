@@ -173,16 +173,14 @@ def upgrade() -> None:
     op.create_index("ix_chat_messages_chatroom_id", "chat_messages", ["chatroom_id"])
 
     op.execute(
-        "CREATE INDEX ix_channels_slug_trgm "
-        "ON channels USING gin (lower(slug) gin_trgm_ops)"
+        "CREATE INDEX ix_channels_slug_trgm ON channels USING gin (lower(slug) gin_trgm_ops)"
     )
     op.execute(
         "CREATE INDEX ix_channels_display_name_trgm "
         "ON channels USING gin (lower(display_name) gin_trgm_ops)"
     )
     op.execute(
-        "CREATE INDEX ix_senders_username_trgm "
-        "ON senders USING gin (lower(username) gin_trgm_ops)"
+        "CREATE INDEX ix_senders_username_trgm ON senders USING gin (lower(username) gin_trgm_ops)"
     )
     op.execute("CREATE INDEX ix_senders_slug_trgm ON senders USING gin (lower(slug) gin_trgm_ops)")
     op.execute(

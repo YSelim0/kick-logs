@@ -64,9 +64,7 @@ describe("AdminDashboard", () => {
 
     render(<AdminDashboard />);
 
-    await waitFor(() =>
-      expect(navigationMocks.replace).toHaveBeenCalledWith("/login?next=/admin")
-    );
+    await waitFor(() => expect(navigationMocks.replace).toHaveBeenCalledWith("/login?next=/admin"));
   });
 
   it("shows the current admin session and logs out", async () => {

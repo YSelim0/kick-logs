@@ -5,9 +5,6 @@ export function listAdminUsers(client: ApiClient = apiClient) {
   return client.get<AdminUser[]>("/admin/users");
 }
 
-export function createAdminUser(
-  payload: CreateAdminUserRequest,
-  client: ApiClient = apiClient
-) {
+export function createAdminUser(payload: CreateAdminUserRequest, client: ApiClient = apiClient) {
   return client.post<AdminUser>("/admin/users", payload);
 }

@@ -89,9 +89,9 @@ async def test_ingest_message_persists_normalized_message(session_factory) -> No
     channel = await seed_channel(session_factory, chatroom_id)
     payload = build_payload(chatroom_id)
 
-    message = await IngestMessageUseCase(
-        lambda: SqlAlchemyUnitOfWork(session_factory)
-    ).execute(payload)
+    message = await IngestMessageUseCase(lambda: SqlAlchemyUnitOfWork(session_factory)).execute(
+        payload
+    )
 
     assert message.channel_id == channel.id
     assert message.chatroom_id == chatroom_id
@@ -137,16 +137,15 @@ async def test_ingest_message_persists_reply_payload_shape(session_factory) -> N
         "message_ref": "1778535344619",
     }
 
-    message = await IngestMessageUseCase(
-        lambda: SqlAlchemyUnitOfWork(session_factory)
-    ).execute(payload)
+    message = await IngestMessageUseCase(lambda: SqlAlchemyUnitOfWork(session_factory)).execute(
+        payload
+    )
 
     assert message.message_type == "reply"
     assert message.thread_parent_id == "cad8a796-d688-4de1-9e13-2e0a4d0b5f1f"
     assert message.reply_metadata["original_sender"]["username"] == "Cansu98xx"
     assert (
-        message.reply_metadata["original_message"]["content"]
-        == "senin saat ne saati 5dk 1 saatmiş"
+        message.reply_metadata["original_message"]["content"] == "senin saat ne saati 5dk 1 saatmiş"
     )
 
 

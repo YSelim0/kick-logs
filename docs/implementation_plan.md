@@ -12,18 +12,18 @@ This document is the implementation source of truth. Each phase is sequential an
 
 ## Phase Map
 
-| Phase | Task File | Goal | Depends On |
-| --- | --- | --- | --- |
-| 1 | `docs/tasks/phase1_tasks.md` | Backend/Docker foundation | Existing docs |
-| 2 | `docs/tasks/phase2_tasks.md` | Domain, DB schema, repositories | Phase 1 |
-| 3 | `docs/tasks/phase3_tasks.md` | Auth, admin users, super admin seed | Phase 2 |
-| 4 | `docs/tasks/phase4_tasks.md` | Channel management, public message search, ingestion use cases | Phase 3 |
-| 5 | `docs/tasks/phase5_tasks.md` | Kick listener worker and ingestion runtime | Phase 4 |
-| 6 | `docs/tasks/phase6_tasks.md` | Backend verification, Docker readiness, API acceptance | Phase 5 |
-| 7 | `docs/tasks/phase7_tasks.md` | Frontend project foundation and API client | Phase 6 |
-| 8 | `docs/tasks/phase8_tasks.md` | Public `/search` UI | Phase 7 |
-| 9 | `docs/tasks/phase9_tasks.md` | Authenticated `/admin` dashboard | Phase 8 |
-| 10 | `docs/tasks/phase10_tasks.md` | Full-stack polish, docs, final smoke checks | Phase 9 |
+| Phase | Task File                     | Goal                                                           | Depends On    |
+| ----- | ----------------------------- | -------------------------------------------------------------- | ------------- |
+| 1     | `docs/tasks/phase1_tasks.md`  | Backend/Docker foundation                                      | Existing docs |
+| 2     | `docs/tasks/phase2_tasks.md`  | Domain, DB schema, repositories                                | Phase 1       |
+| 3     | `docs/tasks/phase3_tasks.md`  | Auth, admin users, super admin seed                            | Phase 2       |
+| 4     | `docs/tasks/phase4_tasks.md`  | Channel management, public message search, ingestion use cases | Phase 3       |
+| 5     | `docs/tasks/phase5_tasks.md`  | Kick listener worker and ingestion runtime                     | Phase 4       |
+| 6     | `docs/tasks/phase6_tasks.md`  | Backend verification, Docker readiness, API acceptance         | Phase 5       |
+| 7     | `docs/tasks/phase7_tasks.md`  | Frontend project foundation and API client                     | Phase 6       |
+| 8     | `docs/tasks/phase8_tasks.md`  | Public `/search` UI                                            | Phase 7       |
+| 9     | `docs/tasks/phase9_tasks.md`  | Authenticated `/admin` dashboard                               | Phase 8       |
+| 10    | `docs/tasks/phase10_tasks.md` | Full-stack polish, docs, final smoke checks                    | Phase 9       |
 
 ## Phase 1: Backend/Docker Foundation
 

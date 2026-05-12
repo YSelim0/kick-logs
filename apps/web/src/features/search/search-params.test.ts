@@ -86,8 +86,7 @@ describe("search params", () => {
     const second = messageFixture(2);
 
     expect(appendUniqueMessages([first], [first, second]).map((message) => message.id)).toEqual([
-      1,
-      2
+      1, 2
     ]);
   });
 });
