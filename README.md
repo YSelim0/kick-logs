@@ -20,6 +20,9 @@
   <a href="https://github.com/YSelim0/kick-logs/actions/workflows/python-tests.yml">
     <img src="https://github.com/YSelim0/kick-logs/actions/workflows/python-tests.yml/badge.svg" alt="Python CI" />
   </a>
+  <a href="https://buymeacoffee.com/yavuzselim">
+    <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-yavuzselim-FFF600?style=for-the-badge&logo=buymeacoffee&logoColor=000000" alt="Buy Me a Coffee" />
+  </a>
 </p>
 
 > Kick Logs is an unofficial community project. It uses Kick web endpoints,
@@ -340,6 +343,12 @@ LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS=60
 
 Never commit `.env`, secrets, local database dumps, virtual environments, or
 generated dependency/build folders.
+
+## Support
+
+Kick Logs is an open source self-hosted project. If it helps your workflow or
+you want to support continued development, you can
+[buy me a coffee](https://buymeacoffee.com/yavuzselim).
 
 ## Contributing
 

@@ -4,6 +4,10 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-12
 
+- Added Buy Me a Coffee sponsorship metadata:
+  - created `.github/FUNDING.yml` with `buy_me_a_coffee: yavuzselim` so GitHub can show the Sponsor button
+  - added a README support badge linked to `https://buymeacoffee.com/yavuzselim`
+  - added a short README `Support` section for contributors/users who want to support continued development
 - Fixed `/search` date filter submission:
   - URL state keeps local `datetime-local` values for stable input rendering and sharing
   - API query params convert `start` and `end` to UTC ISO strings

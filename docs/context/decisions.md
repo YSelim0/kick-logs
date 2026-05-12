@@ -65,3 +65,4 @@
 - `/search` date inputs stay as local `datetime-local` values in the UI/URL, but API requests convert them to UTC ISO strings; `end` includes the full selected minute.
 - `/search` reply rows show the replied-to sender and replied-to message content above the current message in muted gray text.
 - Reply rendering uses `message_type === "reply"`, `reply_metadata.original_sender.username`, and `reply_metadata.original_message.content`; long reply previews expose the full original content through a `title` attribute.
+- Repository sponsorship uses Buy Me a Coffee account `yavuzselim` through GitHub `FUNDING.yml` and README links.
