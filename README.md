@@ -16,6 +16,12 @@
   <a href="https://github.com/YSelim0/kick-logs/pulls">Pull Requests</a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/YSelim0/kick-logs/actions/workflows/python-tests.yml">
+    <img src="https://github.com/YSelim0/kick-logs/actions/workflows/python-tests.yml/badge.svg" alt="Python CI" />
+  </a>
+</p>
+
 > Kick Logs is an unofficial community project. It uses Kick web endpoints,
 > Kick Pusher chat events, and inferred emote image URLs. These are not a
 > stable official Kick API contract and can change without notice.
@@ -231,6 +237,18 @@ pnpm --filter @kick-logs/web build
 
 Run `typecheck` and `build` sequentially. Running both at the same time can
 race on Next.js generated `.next/types` files.
+
+## Continuous Integration
+
+GitHub Actions runs backend checks on pull requests and pushes to `main`.
+
+The Python workflow starts a PostgreSQL 16 service, installs backend
+dependencies with `uv`, applies Alembic migrations, then runs:
+
+```powershell
+python -m uv run ruff check .
+python -m uv run pytest
+```
 
 ## Repository Structure
 

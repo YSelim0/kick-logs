@@ -4,6 +4,14 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-12
 
+- Added backend GitHub Actions workflow:
+  - `.github/workflows/python-tests.yml` runs on pull requests and pushes to `main`
+  - starts PostgreSQL 16 as a workflow service
+  - installs backend dependencies with `uv`
+  - applies Alembic migrations before tests
+  - runs `python -m uv run ruff check .`
+  - runs `python -m uv run pytest`
+  - added README Python CI badge and continuous integration section
 - Rewrote root `README.md` as a professional public repository guide:
   - added the app logo at the top of the document
   - added repository, issues, and pull request links
