@@ -175,6 +175,21 @@ If the image fails, fall back to emote name or original token.
 - `GET /admin/operations/summary`
   - admin only
   - returns listener freshness, storage size, raw event backlog/status, and ingest timestamps
+- `GET /analytics/overview`
+  - public read-only aggregate totals for messages, senders, channels, emote usage, and first/latest message timestamps
+- `GET /analytics/message-volume`
+  - public read-only message volume buckets with `bucket=hour|day`
+- `GET /analytics/top-senders`
+  - public read-only top senders by message count
+- `GET /analytics/top-channels`
+  - public read-only top channels by message count
+- `GET /analytics/top-emotes`
+  - public read-only top emotes by usage count
+
+Analytics endpoints accept optional `start`, `end`, `channel`, and `sender`
+scope where relevant. `sender` scope uses case-insensitive exact username/slug
+matching. `channel` scope uses case-insensitive exact slug/display-name
+matching. Top-list `limit` is capped at 100.
 
 ## Frontend Draft
 

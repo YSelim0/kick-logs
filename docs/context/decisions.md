@@ -88,3 +88,7 @@
 - `/search` export menu must close on outside click.
 - `/search` keeps date controls on their own row; result-type filters sit to the left of the
   `İşlem` action group so the date row does not feel cramped.
+- Analytics endpoints are public read-only contracts under `/analytics/*` for future landing,
+  user profile, and channel profile screens.
+- Analytics `sender` scope uses case-insensitive exact sender username/slug matching;
+  analytics `channel` scope uses case-insensitive exact channel slug/display-name matching.

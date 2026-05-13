@@ -4,6 +4,30 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-13
 
+- Implemented Post-MVP Feature 3 analytics foundation:
+  - added `AnalyticsFilters` with date range and exact channel/sender scope
+  - added analytics DTOs, use cases, repository port, and SQLAlchemy aggregate repository
+  - added public read-only `GET /analytics/overview`
+  - added public read-only `GET /analytics/message-volume`
+  - added public read-only `GET /analytics/top-senders`
+  - added public read-only `GET /analytics/top-channels`
+  - added public read-only `GET /analytics/top-emotes`
+  - message volume supports `bucket=hour|day`
+  - top-list endpoints support `limit` from 1 to 100
+  - top emotes aggregate parsed `chat_messages.emotes` JSONB values
+  - added backend tests for aggregate correctness, empty datasets, date range filtering, channel
+    scope, sender scope, and limit handling
+  - added typed frontend analytics API wrappers and parameter mapping tests
+  - documented the analytics API shape in README, architecture, project plan, and context docs
+  - verified `python -m uv run pytest`: 111 passed
+  - verified `python -m uv run ruff check .`
+  - verified `python -m uv run ruff format --check .`
+  - verified `pnpm --filter @kick-logs/web test -- analytics/api.test.ts`: 1 file, 3 tests passed
+  - verified `pnpm --filter @kick-logs/web test`: 11 files, 47 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+  - verified `pnpm format:check`
 - Polished the public `/search` filter form density:
   - moved quick date ranges from four visible buttons into one compact `Hızlı aralık` select
   - moved JSON/CSV export actions behind one square `Dışa aktar` icon button

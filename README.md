@@ -182,6 +182,11 @@ Public:
 GET /health
 GET /messages
 GET /messages/export
+GET /analytics/overview
+GET /analytics/message-volume
+GET /analytics/top-senders
+GET /analytics/top-channels
+GET /analytics/top-emotes
 ```
 
 Auth:
@@ -221,6 +226,23 @@ filters use case-insensitive contains matching. Empty all filters returns latest
 messages across all followed channels. `reply_only=true` limits results to reply
 messages, and `emote_only=true` limits results to messages with parsed emotes.
 Exports use the same filters and are capped by `MESSAGE_EXPORT_MAX_ROWS`.
+
+Analytics endpoints are public read-only endpoints for landing/profile features.
+They accept optional `start`, `end`, `channel`, and `sender` query params where
+relevant. Message volume also accepts `bucket=hour|day`; top lists accept
+`limit` up to 100. Analytics `sender` scope uses case-insensitive exact matching
+against sender username/slug snapshots; `channel` scope uses case-insensitive
+exact matching against channel slug/display name.
+
+Example analytics calls:
+
+```powershell
+curl "http://localhost:8000/analytics/overview"
+curl "http://localhost:8000/analytics/message-volume?bucket=day&channel=hype"
+curl "http://localhost:8000/analytics/top-senders?channel=hype&limit=10"
+curl "http://localhost:8000/analytics/top-channels?sender=yavuz&limit=10"
+curl "http://localhost:8000/analytics/top-emotes?channel=hype&sender=yavuz"
+```
 
 ## Local Development
 

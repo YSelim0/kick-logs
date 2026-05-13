@@ -394,6 +394,50 @@ Response includes:
   event timestamps
 - listener heartbeat freshness based on `LISTENER_HEARTBEAT_STALE_AFTER_SECONDS`
 
+## Analytics Contract
+
+Endpoints:
+
+```text
+GET /analytics/overview
+GET /analytics/message-volume
+GET /analytics/top-senders
+GET /analytics/top-channels
+GET /analytics/top-emotes
+```
+
+Access:
+
+- Public read-only endpoints for landing, user profile, and channel profile features.
+- No login is required.
+
+Common query parameters:
+
+- `start`
+- `end`
+- `channel`
+- `sender`
+
+Rules:
+
+- Date filters apply to `chat_messages.message_created_at`.
+- `sender` scope uses case-insensitive exact matching against sender username/slug and stored
+  sender snapshots.
+- `channel` scope uses case-insensitive exact matching against channel slug/display name.
+- `message-volume` accepts `bucket=hour|day`.
+- Top-list endpoints accept `limit` from 1 to 100.
+
+Responses:
+
+- `overview`: total messages, distinct senders, distinct channels, emote usage count, first
+  message timestamp, and latest message timestamp.
+- `message-volume`: compact bucket rows with bucket start and message count.
+- `top-senders`: sender identity/profile fields, message count, first seen in result scope, and
+  latest seen in result scope.
+- `top-channels`: channel identity/profile fields, message count, first activity in result scope,
+  and latest activity in result scope.
+- `top-emotes`: emote id/name/token/image URL, usage count, and distinct message count.
+
 ## Frontend Architecture
 
 Use Next.js App Router with feature-oriented folders.
@@ -436,6 +480,8 @@ apps/web/src/
     operations/
       api.ts
       operations-dashboard.tsx
+    analytics/
+      api.ts
   lib/
     api-client.ts
     utils.ts

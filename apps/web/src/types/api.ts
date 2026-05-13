@@ -89,6 +89,69 @@ export type OperationsSummary = {
   listener: ListenerHeartbeat;
 };
 
+export type AnalyticsOverview = {
+  total_messages: number;
+  total_senders: number;
+  total_channels: number;
+  total_emote_usages: number;
+  first_message_at: string | null;
+  latest_message_at: string | null;
+};
+
+export type AnalyticsBucket = "hour" | "day";
+
+export type MessageVolumePoint = {
+  bucket_start: string;
+  message_count: number;
+};
+
+export type MessageVolumeResponse = {
+  items: MessageVolumePoint[];
+};
+
+export type TopSenderAnalytics = {
+  sender_id: number;
+  kick_user_id: number;
+  username: string;
+  slug: string;
+  profile_image_url: string | null;
+  message_count: number;
+  first_message_at: string;
+  latest_message_at: string;
+};
+
+export type TopSendersResponse = {
+  items: TopSenderAnalytics[];
+};
+
+export type TopChannelAnalytics = {
+  channel_id: number;
+  slug: string;
+  display_name: string;
+  profile_image_url: string | null;
+  banner_image_url: string | null;
+  message_count: number;
+  first_message_at: string;
+  latest_message_at: string;
+};
+
+export type TopChannelsResponse = {
+  items: TopChannelAnalytics[];
+};
+
+export type TopEmoteAnalytics = {
+  id: string;
+  name: string;
+  token: string;
+  image_url: string;
+  usage_count: number;
+  message_count: number;
+};
+
+export type TopEmotesResponse = {
+  items: TopEmoteAnalytics[];
+};
+
 export type MessageEmote = {
   id: string;
   name: string;

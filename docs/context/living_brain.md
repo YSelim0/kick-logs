@@ -51,6 +51,15 @@ This file is the active project memory. Keep it updated whenever project behavio
   - `docs/tasks/post_mvp_01_admin_operations.md` has all checkboxes closed
   - final touched-area verification passed for backend tests/lint, frontend tests/typecheck/lint,
     and `pnpm format:check`
+- Post-MVP Feature 3 analytics backend foundation is implemented:
+  - public read-only `GET /analytics/overview`
+  - public read-only `GET /analytics/message-volume`
+  - public read-only `GET /analytics/top-senders`
+  - public read-only `GET /analytics/top-channels`
+  - public read-only `GET /analytics/top-emotes`
+  - analytics repository aggregate queries run over `chat_messages`
+  - supported filters include date range plus exact channel/sender scope
+  - frontend typed analytics API wrappers exist under `apps/web/src/features/analytics/api.ts`
 - Post-MVP Feature 2 planning now includes clickable message links:
   - URLs inside `/search` message content should render as safe clickable anchors
   - link rendering must preserve inline emote placement and matched-text highlighting
@@ -330,6 +339,42 @@ Build an MVP monorepo with:
   - the same filter semantics as `GET /messages`
   - no auth requirement
   - per-request `limit` clamped by `MESSAGE_EXPORT_MAX_ROWS`
+
+## Public Analytics API Details
+
+- Public routes implemented:
+  - `GET /analytics/overview`
+  - `GET /analytics/message-volume`
+  - `GET /analytics/top-senders`
+  - `GET /analytics/top-channels`
+  - `GET /analytics/top-emotes`
+- The routes require no authentication.
+- Common optional query parameters:
+  - `start`
+  - `end`
+  - `channel`
+  - `sender`
+- Date filters apply to `chat_messages.message_created_at`.
+- Analytics sender scope uses case-insensitive exact matching against sender username/slug and
+  stored message sender snapshots.
+- Analytics channel scope uses case-insensitive exact matching against channel slug/display name.
+- `message-volume` accepts `bucket=hour|day`.
+- Top-list endpoints accept `limit` from 1 to 100.
+- `overview` returns message, distinct sender, distinct channel, total emote usage, first message,
+  and latest message metrics.
+- `top-emotes` aggregates parsed `chat_messages.emotes` JSONB values by emote id/name/token/image.
+- Frontend typed wrappers live under `apps/web/src/features/analytics/api.ts`.
+
+## Post-MVP Feature 3 Verification
+
+- `python -m uv run pytest`: 111 passed.
+- `python -m uv run ruff check .`: passed.
+- `python -m uv run ruff format --check .`: passed.
+- `pnpm --filter @kick-logs/web test`: 11 files, 47 tests passed.
+- `pnpm --filter @kick-logs/web typecheck`: passed.
+- `pnpm --filter @kick-logs/web lint`: passed.
+- `pnpm --filter @kick-logs/web build`: passed.
+- `pnpm format:check`: passed.
 
 ## Phase 4 Verification
 

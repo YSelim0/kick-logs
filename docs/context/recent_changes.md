@@ -4,6 +4,27 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Implemented Post-MVP Feature 3 analytics foundation:
+  - added public read-only analytics endpoints for overview, message volume, top senders, top
+    channels, and top emotes
+  - added reusable analytics DTOs, use cases, repository port, and SQLAlchemy aggregate
+    repository
+  - analytics filters support date range plus exact sender/channel scope
+  - added typed frontend analytics API wrappers and parameter mapping tests
+  - documented the analytics API shape in README, architecture, project plan, and context docs
+- Verification:
+  - `python -m uv run pytest`: 111 passed
+  - `python -m uv run ruff check .`: passed
+  - `python -m uv run ruff format --check .`: passed
+  - `pnpm --filter @kick-logs/web test -- analytics/api.test.ts`: 1 file, 3 tests passed
+  - `pnpm --filter @kick-logs/web test`: 11 files, 47 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `pnpm format:check`: passed
+
+## Previous
+
 - Polished the `/search` filter form density:
   - date presets moved from four separate buttons to one compact `Hızlı aralık` select
   - export moved behind one square `Dışa aktar` icon button with `JSON indir` and `CSV indir`
@@ -18,8 +39,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `pnpm --filter @kick-logs/web lint`: passed
   - `pnpm --filter @kick-logs/web build`: passed
   - `pnpm format:check`: passed
-
-## Previous
 
 - Implemented Post-MVP Feature 2 public search UI improvements:
   - search form now has date presets, reply-only, and emote-only controls
