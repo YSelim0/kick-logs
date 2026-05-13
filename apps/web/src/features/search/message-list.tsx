@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { ChevronDown, Search } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import { MessageContent } from "@/features/search/message-content";
@@ -138,6 +139,10 @@ function MessageRow({
   const replyTitle = replyContext
     ? `@${replyContext.senderUsername}: ${replyContext.content}`
     : undefined;
+  const senderProfileHref = message.sender.slug
+    ? `/users/${encodeURIComponent(message.sender.slug)}`
+    : null;
+  const senderName = message.sender.username || message.sender_username_snapshot;
 
   return (
     <div
@@ -147,13 +152,26 @@ function MessageRow({
       )}
     >
       <div className="flex items-start md:items-center">
-        <SenderAvatar message={message} />
+        {senderProfileHref ? (
+          <Link href={senderProfileHref}>
+            <SenderAvatar message={message} />
+          </Link>
+        ) : (
+          <SenderAvatar message={message} />
+        )}
       </div>
 
       <div className="min-w-0 md:pr-3">
-        <div className="truncate font-medium text-foreground">
-          {message.sender.username || message.sender_username_snapshot}
-        </div>
+        {senderProfileHref ? (
+          <Link
+            className="block truncate font-medium text-foreground hover:text-primary"
+            href={senderProfileHref}
+          >
+            {senderName}
+          </Link>
+        ) : (
+          <div className="truncate font-medium text-foreground">{senderName}</div>
+        )}
         <div className="truncate text-xs text-muted-foreground md:hidden">
           #{message.channel.slug} - {formatMessageDate(message.message_created_at)}
         </div>

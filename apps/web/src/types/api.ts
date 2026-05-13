@@ -152,6 +152,23 @@ export type TopEmotesResponse = {
   items: TopEmoteAnalytics[];
 };
 
+export type UserProfileSender = {
+  id: number;
+  kick_user_id: number;
+  username: string;
+  slug: string;
+  profile_image_url: string | null;
+};
+
+export type UserProfile = {
+  sender: UserProfileSender;
+  overview: AnalyticsOverview;
+  message_volume: MessageVolumePoint[];
+  top_channels: TopChannelAnalytics[];
+  top_emotes: TopEmoteAnalytics[];
+  latest_messages: Message[];
+};
+
 export type MessageEmote = {
   id: string;
   name: string;

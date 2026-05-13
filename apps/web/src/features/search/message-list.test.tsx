@@ -38,6 +38,24 @@ describe("MessageList", () => {
     expect(screen.queryByText("@Cansu98xx:")).not.toBeInTheDocument();
     expect(screen.getByText("hello")).toBeInTheDocument();
   });
+
+  it("links sender name and avatar to the public user profile", () => {
+    renderMessageList([
+      {
+        ...messageFixture(),
+        sender: {
+          ...messageFixture().sender,
+          profile_image_url: "https://example.com/yavuz.png"
+        }
+      }
+    ]);
+
+    expect(screen.getByRole("link", { name: "yavuz" })).toHaveAttribute("href", "/users/yavuz");
+    expect(screen.getByRole("link", { name: "yavuz profil" })).toHaveAttribute(
+      "href",
+      "/users/yavuz"
+    );
+  });
 });
 
 function renderMessageList(messages: Message[]) {
