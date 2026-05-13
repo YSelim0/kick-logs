@@ -428,6 +428,9 @@ apps/web/src/
       api.ts
       types.ts
       user-admin.tsx
+    operations/
+      api.ts
+      operations-dashboard.tsx
   lib/
     api-client.ts
     utils.ts

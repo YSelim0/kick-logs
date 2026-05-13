@@ -4,6 +4,19 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Implemented Post-MVP Feature 1 admin operations UI:
+  - added typed `getOperationsSummary` frontend API wrapper
+  - `/admin` now shows `OperationsDashboard` above channel/user management
+  - compact cards show listener status, DB size, message count, raw event count, failed raw,
+    pending raw, and last ingest time
+  - manual refresh, stale listener warning, failed raw warning, and API error states are tested
+- Verification:
+  - `pnpm --filter @kick-logs/web test`: 10 files, 36 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+
+## Previous
+
 - Implemented Post-MVP Feature 1 backend operations foundation:
   - added `worker_heartbeats` persistence and migration `20260513_0003`
   - listener writes a periodic `listener` heartbeat
@@ -15,8 +28,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `python -m uv run alembic upgrade head`: applied `20260513_0003`
   - `python -m uv run ruff check .`: passed
   - `python -m uv run pytest`: 101 passed
-
-## Previous
 
 - Updated GitHub validation workflow triggers:
   - `Code Style` and `Python CI` now run for pull requests targeting `main` or `dev`

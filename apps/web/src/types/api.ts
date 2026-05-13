@@ -46,6 +46,49 @@ export type AddChannelRequest = {
   slug: string;
 };
 
+export type OperationsCounts = {
+  channels: number;
+  enabled_channels: number;
+  senders: number;
+  messages: number;
+  raw_events: number;
+};
+
+export type RawEventStatusCounts = Record<string, number>;
+
+export type OperationsStorageTable = {
+  table_name: string;
+  total_bytes: number;
+};
+
+export type OperationsStorage = {
+  database_bytes: number;
+  tables: OperationsStorageTable[];
+};
+
+export type OperationsTimestamps = {
+  latest_message_at: string | null;
+  latest_raw_event_received_at: string | null;
+  latest_raw_event_processed_at: string | null;
+  oldest_pending_raw_event_received_at: string | null;
+};
+
+export type ListenerHeartbeat = {
+  service_name: string;
+  last_seen_at: string | null;
+  is_fresh: boolean;
+  stale_after_seconds: number;
+  seconds_since_last_seen: number | null;
+};
+
+export type OperationsSummary = {
+  counts: OperationsCounts;
+  raw_event_status_counts: RawEventStatusCounts;
+  storage: OperationsStorage;
+  timestamps: OperationsTimestamps;
+  listener: ListenerHeartbeat;
+};
+
 export type MessageEmote = {
   id: string;
   name: string;

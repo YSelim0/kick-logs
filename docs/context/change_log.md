@@ -4,6 +4,17 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-13
 
+- Implemented the frontend dashboard for Post-MVP Feature 1 admin operations:
+  - added typed frontend operations API wrapper for `GET /admin/operations/summary`
+  - mounted `OperationsDashboard` at the top of `/admin`
+  - added compact cards for listener status, database size, message count, raw event count,
+    failed raw events, pending raw events, and last ingest time
+  - added manual refresh and warning/error states for stale listener heartbeat, failed raw
+    events, and API failures
+  - kept operations metrics visually separate from channel and user management
+  - verified `pnpm --filter @kick-logs/web test`: 10 files, 36 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
 - Implemented the backend foundation for Post-MVP Feature 1 admin operations:
   - added `worker_heartbeats` domain entity, SQLAlchemy model, repository, and Alembic
     migration `20260513_0003`

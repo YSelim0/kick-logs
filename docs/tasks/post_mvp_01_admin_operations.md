@@ -27,13 +27,13 @@ search filters, data deletion, retention settings, or landing page work here.
 
 ## Frontend Tasks
 
-- [ ] Add an operations dashboard section to `/admin`.
-- [ ] Show compact cards for listener status, database size, message count, raw event count,
+- [x] Add an operations dashboard section to `/admin`.
+- [x] Show compact cards for listener status, database size, message count, raw event count,
       failed raw events, pending raw events, and last ingest time.
-- [ ] Add a manual refresh action.
-- [ ] Use calm warning/error states for stale listener heartbeat and failed raw events.
-- [ ] Keep channel management and user management visually separate from operations metrics.
-- [ ] Add frontend tests for loading, success, stale listener, failed raw events, and API error
+- [x] Add a manual refresh action.
+- [x] Use calm warning/error states for stale listener heartbeat and failed raw events.
+- [x] Keep channel management and user management visually separate from operations metrics.
+- [x] Add frontend tests for loading, success, stale listener, failed raw events, and API error
       states.
 
 ## Docs And Acceptance

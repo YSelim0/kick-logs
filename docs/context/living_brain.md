@@ -39,6 +39,13 @@ This file is the active project memory. Keep it updated whenever project behavio
     raw event status counts, PostgreSQL database/table sizes, and key ingest timestamps
   - backend verification passed with `python -m uv run pytest` reporting 101 tests
   - `python -m uv run ruff check .` passed
+- Post-MVP Feature 1 admin operations UI is implemented:
+  - `/admin` mounts `OperationsDashboard` above channel/user management
+  - operations cards show listener status, database size, messages, raw events, failed raw,
+    pending raw, and last ingest time
+  - manual refresh and calm stale-listener/failed-raw/API-error states are covered by tests
+  - frontend verification passed with `pnpm --filter @kick-logs/web test`, `typecheck`, and
+    `lint`
 - Issue #1 durable ingestion implementation is complete locally on branch `feature/issue-1-durable-inbox`.
 - Issue #3 Kick reply rendering is implemented locally on branch `feat/issue-3-kick-reply-rendering`.
 - Kick listener now uses a durable raw event inbox design:
@@ -62,6 +69,10 @@ This file is the active project memory. Keep it updated whenever project behavio
   - user list calls `GET /admin/users`
   - create form calls `POST /admin/users`
   - password hashes or secrets are never rendered
+- Post-MVP admin operations UI is implemented:
+  - `OperationsDashboard` calls `GET /admin/operations/summary`
+  - stale listener heartbeat and failed raw event counts render compact warning states
+  - manual refresh re-fetches the operations summary without mixing with channel/user controls
 - `apps/api` contains the FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
 - Root `compose.yaml` currently has Phase 7 services:
   - `postgres`

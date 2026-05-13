@@ -214,11 +214,16 @@ Implemented admin layout:
 
 - `/login` uses a compact dark email/password form with the app logo and a restrained link back to public search.
 - `/admin` uses a guarded operations layout with:
+  - operations dashboard at the top of the main work column.
   - channel management in the main work column.
   - super-admin-only user management below channel management.
   - current session summary in a right-side panel.
 - Regular `admin` users do not see the user management panel.
 - Channel and user management are visually separate sections; neither uses hero/landing-page treatment.
+- Operations dashboard shows compact cards for listener freshness, database size, message count,
+  raw event count, failed raw events, pending raw events, and last ingest time.
+- Operations dashboard includes a manual refresh action and calm warning/error states for stale
+  listener heartbeat, failed raw events, and API failures.
 
 Default super admin credentials for local MVP:
 
