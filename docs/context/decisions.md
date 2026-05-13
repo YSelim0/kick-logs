@@ -83,3 +83,8 @@
   highlighting.
 - `/search` date presets update only the date fields and keep other filters intact.
 - `/search` CSV/JSON export actions use the last submitted filters, not unsent form edits.
+- `/search` keeps secondary controls compact: quick date ranges are a select, exports sit
+  behind one square download icon, and reply/emote filters use explicit `Sadece ...` labels.
+- `/search` export menu must close on outside click.
+- `/search` keeps date controls on their own row; result-type filters sit to the left of the
+  `İşlem` action group so the date row does not feel cramped.

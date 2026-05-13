@@ -470,8 +470,8 @@ Build an MVP monorepo with:
   - `Aramak istediğiniz Kelime` -> `q`
   - `Başlangıç` -> `start`
   - `Bitiş` -> `end`
-  - `Yanıtlar` -> `reply_only`
-  - `Emote içerenler` -> `emote_only`
+  - `Sadece yanıtlar` -> `reply_only`
+  - `Sadece emote` -> `emote_only`
 - Empty form fields are omitted from URL/backend query params.
 - Opening bare `/search` does not automatically call the backend.
 - Before the user submits a search, the result area shows `Arama yapmak için yukarıdaki formu kullanın.`
@@ -480,12 +480,15 @@ Build an MVP monorepo with:
   - `Başlangıç` is current local date/time minus 7 days.
   - `Bitiş` is current local date/time.
   - users can clear date fields to omit date filters.
-- Date preset buttons set the range to last 1 hour, 24 hours, 7 days, or 30 days without
-  clearing other filters.
+- A compact `Hızlı aralık` select sets the range to last 1 hour, 24 hours, 7 days, or 30
+  days without clearing other filters.
+- Date fields and `Hızlı aralık` occupy their own row; `Sadece yanıtlar` and `Sadece emote`
+  sit below them on the left side of the action row, before the `İşlem` buttons.
 - The `/search` initial SSR render uses an empty static search state; the default local date range is filled after hydration to avoid server/client timezone mismatches.
 - Submitted filter state is preserved in the URL query string.
-- CSV and JSON export buttons open public `/messages/export` URLs for the last submitted filter
-  state.
+- A square `Dışa aktar` icon button opens compact `JSON indir` and `CSV indir` actions for
+  the last submitted filter state.
+- The export menu closes when the user chooses a format or clicks outside the menu.
 - Result fetching uses public `GET /messages` through the shared frontend API client.
 - Cursor pagination is wired to an IntersectionObserver sentinel for infinite scroll.
 - Result rows render inside one shared list container with:
@@ -526,6 +529,12 @@ Build an MVP monorepo with:
 
 ## Post-MVP Feature 2 Verification
 
+- Latest search form density polish:
+  - `pnpm --filter @kick-logs/web test`: 10 files, 44 tests passed.
+  - `pnpm --filter @kick-logs/web typecheck`: passed.
+  - `pnpm --filter @kick-logs/web lint`: passed.
+  - `pnpm --filter @kick-logs/web build`: passed.
+  - `pnpm format:check`: passed.
 - `pnpm --filter @kick-logs/web test`: 10 files, 42 tests passed.
 - `pnpm --filter @kick-logs/web typecheck`: passed.
 - `pnpm --filter @kick-logs/web lint`: passed.

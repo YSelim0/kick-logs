@@ -4,6 +4,23 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Polished the `/search` filter form density:
+  - date presets moved from four separate buttons to one compact `Hızlı aralık` select
+  - export moved behind one square `Dışa aktar` icon button with `JSON indir` and `CSV indir`
+  - export menu closes on outside click
+  - result-type filters now read `Sadece yanıtlar` and `Sadece emote`
+  - result-type filters moved below date controls, to the left of the `İşlem` action group
+  - design/context docs describe the compact control behavior
+- Verification:
+  - `pnpm --filter @kick-logs/web test -- search-screen.test.tsx`: 1 file, 8 tests passed
+  - `pnpm --filter @kick-logs/web test`: 10 files, 44 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `pnpm format:check`: passed
+
+## Previous
+
 - Implemented Post-MVP Feature 2 public search UI improvements:
   - search form now has date presets, reply-only, and emote-only controls
   - `/search` URL state preserves the new filters
@@ -19,8 +36,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `python -m uv run ruff check .`: passed
   - `python -m uv run pytest tests/domain/test_value_objects.py tests/test_config.py tests/messages/test_http_search_messages.py`: 18 passed
 - Completed Post-MVP Feature 2 acceptance in `docs/tasks/post_mvp_02_search_improvements.md`.
-
-## Previous
 
 - Implemented Post-MVP Feature 2 backend search/export foundation:
   - public `GET /messages` now supports `reply_only` and `emote_only`

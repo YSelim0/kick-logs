@@ -95,8 +95,8 @@ describe("SearchScreen", () => {
         })
       )
     );
-    expect(screen.getByLabelText("Yanıtlar")).toBeChecked();
-    expect(screen.getByLabelText("Emote içerenler")).toBeChecked();
+    expect(screen.getByLabelText("Sadece yanıtlar")).toBeChecked();
+    expect(screen.getByLabelText("Sadece emote")).toBeChecked();
   });
 
   it("allows an explicit empty search without navigating", async () => {
@@ -118,6 +118,18 @@ describe("SearchScreen", () => {
     expect(navigationMocks.push).not.toHaveBeenCalled();
   });
 
+  it("applies date presets from the compact quick range control", async () => {
+    render(<SearchScreen />);
+
+    const startInput = screen.getByLabelText("Başlangıç") as HTMLInputElement;
+
+    await waitFor(() => expect(startInput.value).toContain("T"));
+    const previousStart = startInput.value;
+    fireEvent.change(screen.getByLabelText("Hızlı aralık"), { target: { value: "24h" } });
+
+    await waitFor(() => expect(startInput.value).not.toBe(previousStart));
+  });
+
   it("opens CSV export with the current submitted filters", async () => {
     const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
     navigationMocks.query = "q=hello&reply_only=true";
@@ -125,7 +137,8 @@ describe("SearchScreen", () => {
     render(<SearchScreen />);
 
     await waitFor(() => expect(apiMocks.searchMessages).toHaveBeenCalledTimes(1));
-    fireEvent.click(screen.getByRole("button", { name: "CSV" }));
+    fireEvent.click(screen.getByRole("button", { name: "Dışa aktar" }));
+    fireEvent.click(screen.getByRole("button", { name: "CSV indir" }));
 
     const [url, target, features] = openSpy.mock.calls[0];
     expect(target).toBe("_blank");
@@ -138,5 +151,21 @@ describe("SearchScreen", () => {
     expect(exportUrl.searchParams.get("reply_only")).toBe("true");
 
     openSpy.mockRestore();
+  });
+
+  it("closes the export menu when the user clicks outside", async () => {
+    navigationMocks.query = "q=hello";
+
+    render(<SearchScreen />);
+
+    await waitFor(() => expect(apiMocks.searchMessages).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button", { name: "Dışa aktar" }));
+    expect(screen.getByRole("button", { name: "CSV indir" })).toBeInTheDocument();
+
+    fireEvent.mouseDown(document.body);
+
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "CSV indir" })).not.toBeInTheDocument()
+    );
   });
 });

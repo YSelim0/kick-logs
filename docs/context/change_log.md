@@ -4,6 +4,19 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-13
 
+- Polished the public `/search` filter form density:
+  - moved quick date ranges from four visible buttons into one compact `Hızlı aralık` select
+  - moved JSON/CSV export actions behind one square `Dışa aktar` icon button
+  - added outside-click close behavior for the export menu
+  - relabeled result-type filters to `Sadece yanıtlar` and `Sadece emote` so their scope is clearer
+  - moved result-type filters below the date controls, to the left of the `İşlem` action group
+  - updated design and context docs for the compact control behavior
+  - verified `pnpm --filter @kick-logs/web test -- search-screen.test.tsx`: 1 file, 8 tests passed
+  - verified `pnpm --filter @kick-logs/web test`: 10 files, 44 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+  - verified `pnpm format:check`
 - Implemented the frontend for Post-MVP Feature 2 search improvements:
   - added date preset buttons for last 1 hour, 24 hours, 7 days, and 30 days
   - added `Yanıtlar` and `Emote içerenler` controls mapped to `reply_only` and `emote_only`

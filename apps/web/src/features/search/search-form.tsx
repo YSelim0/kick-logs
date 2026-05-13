@@ -3,6 +3,7 @@
 import {
   CalendarDays,
   Clock3,
+  Download,
   FileJson,
   FileText,
   Hash,
@@ -12,6 +13,7 @@ import {
   Smile,
   UserRound
 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -44,6 +46,36 @@ export function SearchForm({
   onReset,
   onSubmit
 }: SearchFormProps) {
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isExportMenuOpen) {
+      return;
+    }
+
+    function closeOnOutsideClick(event: MouseEvent | TouchEvent) {
+      const target = event.target;
+
+      if (target instanceof Node && !exportMenuRef.current?.contains(target)) {
+        setIsExportMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("touchstart", closeOnOutsideClick);
+
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("touchstart", closeOnOutsideClick);
+    };
+  }, [isExportMenuOpen]);
+
+  function handleExport(format: MessageExportFormat) {
+    setIsExportMenuOpen(false);
+    onExport(format);
+  }
+
   return (
     <form
       className="rounded-lg border border-border bg-black p-4"
@@ -103,71 +135,77 @@ export function SearchForm({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(280px,512px)_1fr]">
-        <div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field icon={<CalendarDays className="h-4 w-4" />} id="start" label="Başlangıç">
-              <Input
-                id="start"
-                onChange={(event) => onChange({ ...value, start: event.target.value })}
-                type="datetime-local"
-                value={value.start}
-              />
-            </Field>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_160px]">
+        <Field icon={<CalendarDays className="h-4 w-4" />} id="start" label="Başlangıç">
+          <Input
+            id="start"
+            onChange={(event) => onChange({ ...value, start: event.target.value })}
+            type="datetime-local"
+            value={value.start}
+          />
+        </Field>
 
-            <Field icon={<CalendarDays className="h-4 w-4" />} id="end" label="Bitiş">
-              <Input
-                id="end"
-                onChange={(event) => onChange({ ...value, end: event.target.value })}
-                type="datetime-local"
-                value={value.end}
-              />
-            </Field>
-          </div>
+        <Field icon={<CalendarDays className="h-4 w-4" />} id="end" label="Bitiş">
+          <Input
+            id="end"
+            onChange={(event) => onChange({ ...value, end: event.target.value })}
+            type="datetime-local"
+            value={value.end}
+          />
+        </Field>
 
-          <div className="mt-3 flex flex-wrap gap-2">
+        <Field icon={<Clock3 className="h-4 w-4" />} id="datePreset" label="Hızlı aralık">
+          <select
+            className="flex h-11 w-full rounded-md border border-border bg-kick-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+            defaultValue=""
+            id="datePreset"
+            onChange={(event) => {
+              if (!event.target.value) {
+                return;
+              }
+
+              onDatePreset(event.target.value as DatePresetKey);
+              event.target.value = "";
+            }}
+          >
+            <option value="">Seç</option>
             {DATE_PRESETS.map((preset) => (
-              <Button
-                className="h-8 px-3 text-xs"
-                key={preset.key}
-                onClick={() => onDatePreset(preset.key)}
-                type="button"
-                variant="outline"
-              >
-                <Clock3 className="h-3.5 w-3.5 text-accent" />
-                {preset.label}
-              </Button>
+              <option key={preset.key} value={preset.key}>
+                Son {preset.label}
+              </option>
             ))}
+          </select>
+        </Field>
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(280px,1fr)_minmax(280px,420px)]">
+        <div>
+          <div className="mb-2 flex h-5 items-center gap-2 text-sm font-medium">
+            <MessageSquareReply className="h-4 w-4 text-accent" />
+            Sonuç Türü
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ToggleCheck
+              checked={value.replyOnly}
+              icon={<MessageSquareReply className="h-4 w-4" />}
+              label="Sadece yanıtlar"
+              onChange={(checked) => onChange({ ...value, replyOnly: checked })}
+            />
+            <ToggleCheck
+              checked={value.emoteOnly}
+              icon={<Smile className="h-4 w-4" />}
+              label="Sadece emote"
+              onChange={(checked) => onChange({ ...value, emoteOnly: checked })}
+            />
           </div>
         </div>
 
-        <div className="grid gap-3">
-          <div>
-            <div className="mb-2 flex h-5 items-center gap-2 text-sm font-medium">
-              <MessageSquareReply className="h-4 w-4 text-accent" />
-              İçerik Tipi
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <ToggleCheck
-                checked={value.replyOnly}
-                icon={<MessageSquareReply className="h-4 w-4" />}
-                label="Yanıtlar"
-                onChange={(checked) => onChange({ ...value, replyOnly: checked })}
-              />
-              <ToggleCheck
-                checked={value.emoteOnly}
-                icon={<Smile className="h-4 w-4" />}
-                label="Emote içerenler"
-                onChange={(checked) => onChange({ ...value, emoteOnly: checked })}
-              />
-            </div>
-          </div>
-
+        <div>
           <div className="mb-2 flex h-5 items-center gap-2 text-sm font-medium">
             <Search className="h-4 w-4 text-accent" />
             İşlem
           </div>
-          <div className="grid gap-3 sm:grid-cols-[96px_1fr_92px_92px]">
+          <div className="grid gap-3 sm:grid-cols-[96px_1fr_44px]">
             <Button
               className="h-11"
               disabled={isLoading}
@@ -182,26 +220,43 @@ export function SearchForm({
               <Search className="h-4 w-4" />
               Ara
             </Button>
-            <Button
-              className="h-11"
-              disabled={isLoading || !canExport}
-              onClick={() => onExport("json")}
-              type="button"
-              variant="outline"
-            >
-              <FileJson className="h-4 w-4 text-accent" />
-              JSON
-            </Button>
-            <Button
-              className="h-11"
-              disabled={isLoading || !canExport}
-              onClick={() => onExport("csv")}
-              type="button"
-              variant="outline"
-            >
-              <FileText className="h-4 w-4 text-accent" />
-              CSV
-            </Button>
+            <div className="relative" ref={exportMenuRef}>
+              <Button
+                aria-expanded={isExportMenuOpen}
+                aria-label="Dışa aktar"
+                className="h-11 w-full px-0"
+                disabled={isLoading || !canExport}
+                onClick={() => setIsExportMenuOpen((current) => !current)}
+                title="Dışa aktar"
+                type="button"
+                variant="outline"
+              >
+                <Download className="h-4 w-4 text-accent" />
+              </Button>
+
+              {isExportMenuOpen ? (
+                <div className="absolute right-0 z-20 mt-2 grid min-w-[150px] gap-2 rounded-md border border-border bg-black p-2 shadow-xl">
+                  <Button
+                    className="h-9 justify-start px-3 text-xs"
+                    onClick={() => handleExport("json")}
+                    type="button"
+                    variant="ghost"
+                  >
+                    <FileJson className="h-4 w-4 text-accent" />
+                    JSON indir
+                  </Button>
+                  <Button
+                    className="h-9 justify-start px-3 text-xs"
+                    onClick={() => handleExport("csv")}
+                    type="button"
+                    variant="ghost"
+                  >
+                    <FileText className="h-4 w-4 text-accent" />
+                    CSV indir
+                  </Button>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

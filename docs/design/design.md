@@ -97,9 +97,9 @@ Search form fields:
 - `Aramak istediğiniz Kelime`
 - `Başlangıç`
 - `Bitiş`
-- `Yanıtlar` toggle for reply-only results
-- `Emote içerenler` toggle for emote-only results
-- Date preset buttons: `1 saat`, `24 saat`, `7 gün`, `30 gün`
+- `Sadece yanıtlar` toggle for reply-only results
+- `Sadece emote` toggle for emote-only results
+- Compact `Hızlı aralık` select for `1 saat`, `24 saat`, `7 gün`, `30 gün`
 
 Search button:
 
@@ -119,14 +119,21 @@ Field behavior:
 - On first `/search` load and on reset, date fields default to the last 7 days:
   - `Başlangıç`: current local date/time minus 7 days.
   - `Bitiş`: current local date/time.
-- Date preset buttons update only the date range and keep the other filters intact.
+- The `Hızlı aralık` select updates only the date range and keeps the other filters intact.
+- Date inputs and the quick range select sit on their own row so time filters do not compete
+  with secondary result filters.
 - Users can still clear or change the date fields; cleared date fields are omitted from the API query.
-- `Yanıtlar` maps to `reply_only=true`.
-- `Emote içerenler` maps to `emote_only=true`.
+- `Sadece yanıtlar` maps to `reply_only=true`.
+- `Sadece emote` maps to `emote_only=true`.
+- `Sadece yanıtlar` and `Sadece emote` sit in the row below the date controls, directly to
+  the left of the `İşlem` action group.
 - Opening `/search` without URL query parameters must not call the backend automatically.
 - Before the user submits a search, the results area shows an icon with `Arama yapmak için yukarıdaki formu kullanın.`
 - An explicit search submit can still fetch latest messages when all filters are empty.
-- CSV and JSON export buttons use the last submitted search filters, not unsent edits.
+- Export is a single square download icon button. Clicking it opens compact `JSON indir` and
+  `CSV indir` actions.
+- The export menu closes after choosing an export format or clicking outside the menu.
+- CSV and JSON export actions use the last submitted search filters, not unsent edits.
 
 Backend query mapping:
 
@@ -136,8 +143,8 @@ Kanal Adı -> channel
 Aramak istediğiniz Kelime -> q
 Başlangıç -> start
 Bitiş -> end
-Yanıtlar -> reply_only
-Emote içerenler -> emote_only
+Sadece yanıtlar -> reply_only
+Sadece emote -> emote_only
 ```
 
 Examples:
@@ -146,8 +153,8 @@ Examples:
 - `Kullanıcı Adı=yavuz` and content `selam`: search all channels for sender username/slug exactly matching `yavuz` and message content containing `selam`.
 - `Kanal Adı=exampleChannel` and content `hello`: search that channel for messages containing `hello`.
 - Only content `hello`: search all channels and all users for messages containing `hello`.
-- `Yanıtlar` enabled: only reply messages.
-- `Emote içerenler` enabled: only messages with parsed emotes.
+- `Sadece yanıtlar` enabled: only reply messages.
+- `Sadece emote` enabled: only messages with parsed emotes.
 - Empty all filters: show latest messages across all channels.
 
 Results:
