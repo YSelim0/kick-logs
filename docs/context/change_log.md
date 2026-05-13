@@ -23,6 +23,14 @@ This is a living implementation log. Add new entries for each meaningful project
   - verified `docker compose up --build -d web`
   - verified `GET http://localhost:3000/`: HTTP 200
   - verified `GET http://localhost:3000/search`: HTTP 200
+- Linked the `/search` and `/admin` header brand/logo areas back to `/`:
+  - `/search` header now wraps the Kick Logs logo/title block in a `/` link
+  - `/admin` header brand link now points to `/` instead of `/admin`
+  - added frontend assertions for both brand links
+  - verified `pnpm --filter @kick-logs/web test -- search-screen.test.tsx admin-dashboard.test.tsx`:
+    2 files, 11 tests passed
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm format:check`
 
 ## 2026-05-13
 

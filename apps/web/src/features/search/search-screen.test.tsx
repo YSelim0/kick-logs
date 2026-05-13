@@ -46,6 +46,7 @@ describe("SearchScreen", () => {
     expect(
       await screen.findByText("Arama yapmak için yukarıdaki formu kullanın.")
     ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /kick logs/i })).toHaveAttribute("href", "/");
     expect(apiMocks.searchMessages).not.toHaveBeenCalled();
   });
 

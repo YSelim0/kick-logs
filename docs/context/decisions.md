@@ -102,3 +102,4 @@
   current stored data.
 - Landing navigation links to `/search`, `/admin`, GitHub, and Buy Me a Coffee support.
 - Landing design must stay dark, compact, product-focused, and avoid oversized hero treatment.
+- Header brand/logo areas in `/search` and `/admin` navigate to `/`.

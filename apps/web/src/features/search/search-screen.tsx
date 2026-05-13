@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -231,7 +232,7 @@ function SearchScreenInner() {
 function SearchHeader() {
   return (
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-black px-4 py-4 md:px-6">
-      <div className="flex min-w-0 items-center gap-4">
+      <Link className="flex min-w-0 items-center gap-4" href="/">
         <Image
           alt="Kick Logs"
           className="h-11 w-11 shrink-0 rounded-md object-contain"
@@ -249,7 +250,7 @@ function SearchHeader() {
           </div>
           <p className="text-xs text-muted-foreground">Sohbet arşivinde hızlı sorgu</p>
         </div>
-      </div>
+      </Link>
 
       <div className="grid w-full gap-0 overflow-hidden rounded-md border border-border bg-kick-background text-xs sm:w-auto sm:grid-cols-3">
         <HeaderMetric label="Kapsam" value="Tüm kanallar" />

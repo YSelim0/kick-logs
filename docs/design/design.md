@@ -108,6 +108,7 @@ Header/navigation:
 
 - Keep the top region compact and functional.
 - Show the Kick Logs brand lockup and active `/search` route clearly.
+- Clicking the Kick Logs brand/logo area should navigate to `/`.
 - Use restrained navigation with the search route as the active state.
 - A small query-scope/status strip can summarize search behavior such as all-channel scope, newest-first ordering, and `AND` filter logic.
 - Admin-account controls should not appear on `/search`; backend management belongs in `/admin`.
@@ -267,6 +268,7 @@ Implemented admin layout:
   - channel management in the main work column.
   - super-admin-only user management below channel management.
   - current session summary in a right-side panel.
+- Clicking the Kick Logs brand/logo area in `/admin` should navigate to `/`.
 - Regular `admin` users do not see the user management panel.
 - Channel and user management are visually separate sections; neither uses hero/landing-page treatment.
 - Operations dashboard shows compact cards for listener freshness, database size, message count,

@@ -9,6 +9,7 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - landing uses Feature 3 analytics endpoints for overview, recent day-bucket volume, top
     channels, top emotes, and top senders
   - navigation links point to `/search`, `/admin`, GitHub, and Buy Me a Coffee support
+  - `/search` and `/admin` header brand/logo areas now navigate back to `/`
   - loading, API-error, and fresh-install empty states are covered
   - `docs/tasks/post_mvp_04_landing_analytics.md` is fully checked off
 - Verification:

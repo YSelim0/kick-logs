@@ -66,6 +66,7 @@ This file is the active project memory. Keep it updated whenever project behavio
     emotes, and top senders
   - landing includes loading, error, and fresh-install empty states
   - landing links to `/search`, `/admin`, GitHub, and Buy Me a Coffee support
+  - `/search` and `/admin` header brand/logo areas navigate back to `/`
   - frontend tests cover analytics rendering, empty data, and navigation links
   - verification passed with `pnpm --filter @kick-logs/web test`, `typecheck`, `lint`, `build`,
     `pnpm format:check`, Docker web rebuild/start, and route smoke for `/` plus `/search`
