@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from kick_logs.application.dto.channels import ResolvedKickChannelDTO
 from kick_logs.application.dto.senders import ResolvedSenderProfileDTO
 from kick_logs.application.use_cases.listener import ProcessRawKickEventsUseCase
-from kick_logs.domain.entities import Channel, ChatMessage, RawKickEvent, Sender
+from kick_logs.domain.entities import Channel, ChatMessage, RawKickEvent, Sender, WorkerHeartbeat
 from kick_logs.domain.value_objects.raw_event_status import RawEventStatus
 from kick_logs.infrastructure.kick import KickEventParser, ReconnectPolicy
 from kick_logs.presentation.worker.listener_service import ListenerService
@@ -230,6 +230,18 @@ class FakeRawEventRepository:
         return len([event for event in self.events if event.status == RawEventStatus.PENDING])
 
 
+class FakeWorkerHeartbeatRepository:
+    def __init__(self) -> None:
+        self.heartbeats: dict[str, WorkerHeartbeat] = {}
+
+    async def upsert(self, heartbeat: WorkerHeartbeat) -> WorkerHeartbeat:
+        self.heartbeats[heartbeat.service_name] = heartbeat
+        return heartbeat
+
+    async def get_by_service_name(self, service_name: str) -> WorkerHeartbeat | None:
+        return self.heartbeats.get(service_name)
+
+
 class FakeUnitOfWork:
     def __init__(self) -> None:
         self.channels = FakeChannelRepository(
@@ -246,6 +258,7 @@ class FakeUnitOfWork:
         self.senders = FakeSenderRepository()
         self.messages = FakeMessageRepository()
         self.raw_events = FakeRawEventRepository()
+        self.worker_heartbeats = FakeWorkerHeartbeatRepository()
 
     async def __aenter__(self):
         return self
@@ -435,3 +448,26 @@ async def test_listener_service_schedules_reconnect_after_pusher_failure() -> No
 
     assert pusher_client.listen_call_count == 1
     assert delays == [0]
+
+
+async def test_listener_service_records_heartbeat_while_running() -> None:
+    unit_of_work = FakeUnitOfWork()
+
+    async def stop_after_first_sleep(_delay: float) -> None:
+        raise asyncio.CancelledError
+
+    service = build_service(
+        unit_of_work,
+        FakePusherClient([]),
+        FakeSenderProfileResolver(),
+        sleep=stop_after_first_sleep,
+    )
+
+    try:
+        await service._record_heartbeat_forever()
+    except asyncio.CancelledError:
+        pass
+
+    heartbeat = await unit_of_work.worker_heartbeats.get_by_service_name("listener")
+    assert heartbeat is not None
+    assert heartbeat.metadata["raw_event_worker_count"] == 0

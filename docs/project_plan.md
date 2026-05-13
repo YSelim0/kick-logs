@@ -167,6 +167,9 @@ If the image fails, fall back to emote name or original token.
 - `POST /admin/users`
   - super admin only
   - creates admin users
+- `GET /admin/operations/summary`
+  - admin only
+  - returns listener freshness, storage size, raw event backlog/status, and ingest timestamps
 
 ## Frontend Draft
 
@@ -201,6 +204,7 @@ Admin UI should support:
 - add channel by slug/nickname
 - remove/disable channel
 - create admin user when current user is super admin
+- view operations health, storage growth, raw event backlog, and listener freshness
 
 ## Test Plan
 

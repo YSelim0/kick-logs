@@ -45,6 +45,8 @@ class Settings(BaseSettings):
     listener_raw_event_max_attempts: int = 5
     listener_raw_event_worker_idle_delay_seconds: float = 0.25
     listener_channel_resync_interval_seconds: float = 60.0
+    listener_heartbeat_interval_seconds: float = 15.0
+    listener_heartbeat_stale_after_seconds: int = 45
 
 
 @lru_cache

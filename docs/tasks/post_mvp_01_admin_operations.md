@@ -12,17 +12,17 @@ search filters, data deletion, retention settings, or landing page work here.
 
 ## Backend Tasks
 
-- [ ] Add persistence for listener heartbeat/freshness if no existing DB state can
+- [x] Add persistence for listener heartbeat/freshness if no existing DB state can
       reliably answer whether the listener is alive.
-- [ ] Make the listener update its heartbeat at a short fixed interval while running.
-- [ ] Add admin-only operations summary use case.
-- [ ] Include total counts for channels, enabled channels, senders, messages, and raw events.
-- [ ] Include raw event counts grouped by status.
-- [ ] Include database size and key table sizes for `chat_messages` and `raw_kick_events`.
-- [ ] Include latest message time, latest raw event receive time, latest processed raw event
+- [x] Make the listener update its heartbeat at a short fixed interval while running.
+- [x] Add admin-only operations summary use case.
+- [x] Include total counts for channels, enabled channels, senders, messages, and raw events.
+- [x] Include raw event counts grouped by status.
+- [x] Include database size and key table sizes for `chat_messages` and `raw_kick_events`.
+- [x] Include latest message time, latest raw event receive time, latest processed raw event
       time, and oldest pending raw event time when available.
-- [ ] Expose the summary through an authenticated admin route.
-- [ ] Add backend tests for permissions, counts, raw status aggregation, database size shape,
+- [x] Expose the summary through an authenticated admin route.
+- [x] Add backend tests for permissions, counts, raw status aggregation, database size shape,
       and listener freshness state.
 
 ## Frontend Tasks

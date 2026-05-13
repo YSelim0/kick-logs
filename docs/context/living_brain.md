@@ -32,6 +32,13 @@ This file is the active project memory. Keep it updated whenever project behavio
   - channel/publisher profile analytics
   - admin data management
   - final smoke and docs
+- Post-MVP Feature 1 backend operations foundation is implemented:
+  - `worker_heartbeats` persists listener freshness
+  - listener records a `listener` heartbeat every `LISTENER_HEARTBEAT_INTERVAL_SECONDS`
+  - admin-only `GET /admin/operations/summary` returns listener freshness, core row counts,
+    raw event status counts, PostgreSQL database/table sizes, and key ingest timestamps
+  - backend verification passed with `python -m uv run pytest` reporting 101 tests
+  - `python -m uv run ruff check .` passed
 - Issue #1 durable ingestion implementation is complete locally on branch `feature/issue-1-durable-inbox`.
 - Issue #3 Kick reply rendering is implemented locally on branch `feat/issue-3-kick-reply-rendering`.
 - Kick listener now uses a durable raw event inbox design:
@@ -146,6 +153,8 @@ Build an MVP monorepo with:
   - `chat_messages`
 - Alembic migration revision `20260511_0002` creates:
   - `raw_kick_events`
+- Alembic migration revision `20260513_0003` creates:
+  - `worker_heartbeats`
 - PostgreSQL extension:
   - `pg_trgm`
 - JSONB fields:
@@ -175,6 +184,8 @@ Build an MVP monorepo with:
   - `SqlAlchemySenderRepository`
   - `SqlAlchemyMessageRepository`
   - `SqlAlchemyRawEventRepository`
+  - `SqlAlchemyOperationsRepository`
+  - `SqlAlchemyWorkerHeartbeatRepository`
   - `SqlAlchemyUnitOfWork`
 
 ## Auth Details
@@ -316,8 +327,12 @@ Build an MVP monorepo with:
 - `ListenerService` composes enabled-channel loading, Pusher event streaming, event parsing, raw event persistence, and raw event worker processing.
 - `ListenerService.run_forever()` reconnects with backoff and reloads enabled channels on each reconnect.
 - `ListenerService.run_forever()` starts raw event worker tasks before connecting to Pusher.
+- `ListenerService.run_forever()` starts a heartbeat task that upserts `worker_heartbeats`
+  for service `listener`.
 - `ListenerService.run_once()` persists parsed chat events into `raw_kick_events` before message normalization or sender upsert work begins.
 - Raw event workers call `ProcessRawKickEventsUseCase` in batches and log claimed/processed/failed/pending counts.
+- Admin `GET /admin/operations/summary` exposes storage growth, raw backlog/status, latest
+  ingest timestamps, and listener heartbeat freshness without requiring Docker logs.
 - The websocket loop reconnects after `LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS` so followed-channel add/remove changes take effect without manual restart.
 - Sender profile enrichment is no longer on the websocket read path; profile images are stored when present in the raw message payload.
 - Worker entrypoint is `kick_logs.presentation.worker.main`.

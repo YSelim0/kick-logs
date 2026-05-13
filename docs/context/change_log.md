@@ -4,6 +4,20 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-13
 
+- Implemented the backend foundation for Post-MVP Feature 1 admin operations:
+  - added `worker_heartbeats` domain entity, SQLAlchemy model, repository, and Alembic
+    migration `20260513_0003`
+  - listener now records a periodic `listener` heartbeat controlled by
+    `LISTENER_HEARTBEAT_INTERVAL_SECONDS`
+  - added operations repository/use case and admin-only
+    `GET /admin/operations/summary`
+  - summary response includes core counts, raw event status counts, database/table sizes,
+    key ingest timestamps, and listener freshness based on
+    `LISTENER_HEARTBEAT_STALE_AFTER_SECONDS`
+  - updated Compose and `.env.example` with heartbeat settings
+  - verified `python -m uv run alembic upgrade head`
+  - verified `python -m uv run ruff check .`
+  - verified `python -m uv run pytest`: 101 passed
 - Updated validation workflow branch triggers:
   - `Code Style` now runs for pull requests targeting `main` or `dev`
   - `Code Style` now runs on pushes to `main` or `dev`

@@ -6,3 +6,5 @@ def test_settings_import_with_defaults() -> None:
 
     assert settings.app_name == "Kick Logs"
     assert settings.default_super_admin_email == "admin@kicklogs.local"
+    assert settings.listener_heartbeat_interval_seconds == 15.0
+    assert settings.listener_heartbeat_stale_after_seconds == 45

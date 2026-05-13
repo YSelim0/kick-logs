@@ -73,6 +73,7 @@ apps/api/src/kick_logs/
       raw_kick_event.py
       sender.py
       emote.py
+      worker_heartbeat.py
     value_objects/
       roles.py
       search_filters.py
@@ -87,6 +88,8 @@ apps/api/src/kick_logs/
       message_repository.py
       raw_event_repository.py
       sender_repository.py
+      operations_repository.py
+      worker_heartbeat_repository.py
       kick_channel_resolver.py
       sender_profile_resolver.py
       password_hasher.py
@@ -109,11 +112,15 @@ apps/api/src/kick_logs/
         load_enabled_channels.py
         store_raw_event.py
         process_raw_events.py
+        record_worker_heartbeat.py
+      operations/
+        get_operations_summary.py
     dto/
       auth.py
       channels.py
       messages.py
       users.py
+      operations.py
   infrastructure/
     database/
       session.py
@@ -125,6 +132,8 @@ apps/api/src/kick_logs/
         sqlalchemy_message_repository.py
         sqlalchemy_raw_event_repository.py
         sqlalchemy_sender_repository.py
+        sqlalchemy_operations_repository.py
+        sqlalchemy_worker_heartbeat_repository.py
     kick/
       channel_resolver.py
       sender_profile_resolver.py
@@ -146,11 +155,13 @@ apps/api/src/kick_logs/
         messages.py
         admin_channels.py
         admin_users.py
+        admin_operations.py
       schemas/
         auth.py
         channels.py
         messages.py
         users.py
+        operations.py
     worker/
       main.py
       listener_service.py
@@ -200,6 +211,8 @@ Database policy:
 - Deduplicate chat messages by Kick message id.
 - Persist raw Kick chat events into `raw_kick_events` before normalization or enrichment so a received websocket event survives worker restarts.
 - Process raw events with at-least-once delivery and idempotent message writes.
+- Persist listener freshness in `worker_heartbeats` so admin screens can tell whether ingestion
+  is alive even when followed channels are quiet.
 
 ## Core Tables
 
@@ -270,6 +283,13 @@ raw_kick_events
   processing_started_at
   processed_at
   last_error
+  metadata
+  created_at
+  updated_at
+
+worker_heartbeats
+  service_name
+  last_seen_at
   metadata
   created_at
   updated_at
@@ -345,7 +365,29 @@ The listener service:
 - Marks raw events `processed`, `pending`, or `failed` with attempts and last error.
 - Reclaims stale `processing` rows after the configured processing timeout.
 - Periodically reconnects to refresh enabled-channel subscriptions so admin channel changes take effect without manually restarting the listener.
+- Periodically writes a `listener` heartbeat row at `LISTENER_HEARTBEAT_INTERVAL_SECONDS`.
 - Reconnects with backoff after websocket failures.
+
+## Admin Operations Contract
+
+Endpoint:
+
+```text
+GET /admin/operations/summary
+```
+
+Access:
+
+- Requires an authenticated admin or super admin session.
+
+Response includes:
+
+- core row counts for channels, enabled channels, senders, messages, and raw events
+- raw event counts grouped by status
+- PostgreSQL database size and table sizes for `chat_messages` and `raw_kick_events`
+- latest message, latest raw event receive, latest processed raw event, and oldest pending raw
+  event timestamps
+- listener heartbeat freshness based on `LISTENER_HEARTBEAT_STALE_AFTER_SECONDS`
 
 ## Frontend Architecture
 

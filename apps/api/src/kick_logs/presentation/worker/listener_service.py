@@ -10,6 +10,7 @@ from kick_logs.application.ports.unit_of_work import UnitOfWork
 from kick_logs.application.use_cases.listener import (
     LoadEnabledChannelsUseCase,
     ProcessRawKickEventsUseCase,
+    RecordWorkerHeartbeatUseCase,
     StoreRawKickEventUseCase,
 )
 from kick_logs.infrastructure.kick import KickEventParser, ReconnectPolicy
@@ -35,6 +36,8 @@ class ListenerService:
         raw_event_max_attempts: int = 5,
         raw_event_worker_idle_delay_seconds: float = 0.25,
         channel_resync_interval_seconds: float = 60.0,
+        heartbeat_interval_seconds: float = 15.0,
+        heartbeat_service_name: str = "listener",
         sleep: SleepCallable = asyncio.sleep,
     ) -> None:
         self._unit_of_work_factory = unit_of_work_factory
@@ -49,10 +52,18 @@ class ListenerService:
         self._raw_event_max_attempts = max(1, raw_event_max_attempts)
         self._raw_event_worker_idle_delay_seconds = max(0.01, raw_event_worker_idle_delay_seconds)
         self._channel_resync_interval_seconds = max(0.01, channel_resync_interval_seconds)
+        self._heartbeat_interval_seconds = max(0.01, heartbeat_interval_seconds)
+        self._heartbeat_service_name = heartbeat_service_name
         self._sleep = sleep
 
     async def run_forever(self) -> None:
         worker_tasks = self._start_raw_event_workers()
+        worker_tasks.append(
+            asyncio.create_task(
+                self._record_heartbeat_forever(),
+                name=f"{self._heartbeat_service_name}-heartbeat",
+            )
+        )
         attempt = 1
         try:
             while True:
@@ -189,3 +200,23 @@ class ListenerService:
                 result.failed,
                 result.pending_count,
             )
+
+    async def _record_heartbeat_forever(self) -> None:
+        recorder = RecordWorkerHeartbeatUseCase(self._unit_of_work_factory)
+
+        while True:
+            try:
+                await recorder.execute(
+                    service_name=self._heartbeat_service_name,
+                    metadata={
+                        "raw_event_worker_count": self._raw_event_worker_count,
+                        "raw_event_batch_size": self._raw_event_batch_size,
+                        "channel_resync_interval_seconds": self._channel_resync_interval_seconds,
+                    },
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("Failed to record Kick listener heartbeat.")
+
+            await self._sleep(self._heartbeat_interval_seconds)

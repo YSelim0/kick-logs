@@ -73,3 +73,8 @@
 ## 2026-05-13
 
 - Public `/messages` sender filtering uses case-insensitive exact matching against sender username/slug snapshots; channel and content filters remain case-insensitive contains matching.
+- Post-MVP Feature 1 stores listener heartbeat state in PostgreSQL instead of inferring
+  liveness from message timestamps, because quiet channels can be healthy but produce no
+  messages.
+- Admin operations metrics are exposed through `GET /admin/operations/summary` and remain
+  authenticated admin-only.

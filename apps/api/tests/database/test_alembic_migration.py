@@ -19,3 +19,14 @@ def test_raw_event_migration_contains_durable_inbox_indexes() -> None:
     assert "postgresql.JSONB" in migration
     assert "uq_raw_kick_events_kick_message_id_present" in migration
     assert "ix_raw_kick_events_status_received_at" in migration
+
+
+def test_worker_heartbeat_migration_contains_listener_state_table() -> None:
+    migration = Path("alembic/versions/20260513_0003_worker_heartbeats.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "worker_heartbeats" in migration
+    assert "service_name" in migration
+    assert "last_seen_at" in migration
+    assert "ix_worker_heartbeats_last_seen_at" in migration

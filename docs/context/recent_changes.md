@@ -4,12 +4,24 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Implemented Post-MVP Feature 1 backend operations foundation:
+  - added `worker_heartbeats` persistence and migration `20260513_0003`
+  - listener writes a periodic `listener` heartbeat
+  - added admin-only `GET /admin/operations/summary`
+  - summary includes listener freshness, row counts, raw event status counts, DB/table sizes,
+    latest ingest timestamps, and oldest pending raw event timestamp
+  - `.env.example` and Compose expose listener heartbeat interval/staleness settings
+- Verification:
+  - `python -m uv run alembic upgrade head`: applied `20260513_0003`
+  - `python -m uv run ruff check .`: passed
+  - `python -m uv run pytest`: 101 passed
+
+## Previous
+
 - Updated GitHub validation workflow triggers:
   - `Code Style` and `Python CI` now run for pull requests targeting `main` or `dev`
   - both workflows now run on pushes to `main` or `dev`
   - README CI wording now reflects `main` and `dev`
-
-## Previous
 
 - Changed public message search sender filtering:
   - `sender` now matches sender username/slug exactly, case-insensitively

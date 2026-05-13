@@ -6,9 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from kick_logs.infrastructure.database.repositories import (
     SqlAlchemyChannelRepository,
     SqlAlchemyMessageRepository,
+    SqlAlchemyOperationsRepository,
     SqlAlchemyRawEventRepository,
     SqlAlchemySenderRepository,
     SqlAlchemyUserRepository,
+    SqlAlchemyWorkerHeartbeatRepository,
 )
 from kick_logs.infrastructure.database.session import create_session_factory
 
@@ -27,6 +29,8 @@ class SqlAlchemyUnitOfWork:
         self.senders: SqlAlchemySenderRepository
         self.messages: SqlAlchemyMessageRepository
         self.raw_events: SqlAlchemyRawEventRepository
+        self.worker_heartbeats: SqlAlchemyWorkerHeartbeatRepository
+        self.operations: SqlAlchemyOperationsRepository
 
     async def __aenter__(self) -> "SqlAlchemyUnitOfWork":
         self.session = self._session_factory()
@@ -35,6 +39,8 @@ class SqlAlchemyUnitOfWork:
         self.senders = SqlAlchemySenderRepository(self.session)
         self.messages = SqlAlchemyMessageRepository(self.session)
         self.raw_events = SqlAlchemyRawEventRepository(self.session)
+        self.worker_heartbeats = SqlAlchemyWorkerHeartbeatRepository(self.session)
+        self.operations = SqlAlchemyOperationsRepository(self.session)
         return self
 
     async def __aexit__(
