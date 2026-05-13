@@ -15,6 +15,11 @@ This is a living implementation log. Add new entries for each meaningful project
   - verified `pnpm --filter @kick-logs/web test`: 10 files, 42 tests passed
   - verified `pnpm --filter @kick-logs/web typecheck`
   - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+  - verified `pnpm format:check`
+  - re-verified backend `python -m uv run ruff check .`
+  - re-verified backend `python -m uv run pytest tests/domain/test_value_objects.py tests/test_config.py tests/messages/test_http_search_messages.py`: 18 passed
+  - closed all acceptance checkboxes in `docs/tasks/post_mvp_02_search_improvements.md`
 - Implemented the backend foundation for Post-MVP Feature 2 search improvements:
   - `MessageSearchFilters` now carries `reply_only` and `emote_only`
   - public `GET /messages` applies both filters with existing optional `AND` semantics

@@ -518,6 +518,21 @@ Build an MVP monorepo with:
   - active filter labels
   - infinite-scroll append dedupe helper
   - inline emote split/fallback rendering
+  - date preset helpers
+  - reply-only and emote-only URL/query mapping
+  - clickable link rendering
+  - matched-text highlighting with emote compatibility
+  - export button URL behavior
+
+## Post-MVP Feature 2 Verification
+
+- `pnpm --filter @kick-logs/web test`: 10 files, 42 tests passed.
+- `pnpm --filter @kick-logs/web typecheck`: passed.
+- `pnpm --filter @kick-logs/web lint`: passed.
+- `pnpm --filter @kick-logs/web build`: passed.
+- `pnpm format:check`: passed.
+- `python -m uv run ruff check .`: passed.
+- `python -m uv run pytest tests/domain/test_value_objects.py tests/test_config.py tests/messages/test_http_search_messages.py`: 18 passed.
 
 ## Phase 8 Verification
 

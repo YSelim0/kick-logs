@@ -37,6 +37,6 @@ profiles, channel profiles, or admin data cleanup here.
 - [x] Update `docs/design/design.md` for the new search controls.
 - [x] Update README search usage.
 - [x] Update context docs.
-- [ ] Verify frontend tests/typecheck/lint/build and relevant backend tests.
-- [ ] Acceptance: users can refine searches faster, visually identify matched text, open links
+- [x] Verify frontend tests/typecheck/lint/build and relevant backend tests.
+- [x] Acceptance: users can refine searches faster, visually identify matched text, open links
       from messages safely, and export the currently filtered result set.
