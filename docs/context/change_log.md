@@ -4,6 +4,11 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-13
 
+- Updated validation workflow branch triggers:
+  - `Code Style` now runs for pull requests targeting `main` or `dev`
+  - `Code Style` now runs on pushes to `main` or `dev`
+  - `Python CI` now runs for pull requests targeting `main` or `dev`
+  - `Python CI` now runs on pushes to `main` or `dev`
 - Changed public message search sender filtering:
   - `sender` now uses case-insensitive exact matching against sender username/slug snapshots
   - partial sender queries such as `yavuz` no longer match `notyavuz` or `yavuz123`

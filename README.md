@@ -259,8 +259,8 @@ the repository's current double-quote style.
 
 ## Continuous Integration
 
-GitHub Actions runs backend and formatting checks on pull requests and pushes
-to `main`.
+GitHub Actions runs backend and formatting checks on pull requests targeting
+`main` or `dev`, and on pushes to `main` or `dev`.
 
 The Python workflow starts a PostgreSQL 16 service, installs backend
 dependencies with `uv`, applies Alembic migrations, then runs:

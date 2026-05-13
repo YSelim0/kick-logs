@@ -4,13 +4,18 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Updated GitHub validation workflow triggers:
+  - `Code Style` and `Python CI` now run for pull requests targeting `main` or `dev`
+  - both workflows now run on pushes to `main` or `dev`
+  - README CI wording now reflects `main` and `dev`
+
+## Previous
+
 - Changed public message search sender filtering:
   - `sender` now matches sender username/slug exactly, case-insensitively
   - partial sender searches such as `yavuz` no longer return `notyavuz` or `yavuz123`
   - channel and content filters still use contains matching
   - backend tests cover exact sender matches and rejected partial matches
-
-## Previous
 
 - Archived the completed MVP plan and added the active post-MVP roadmap:
   - old `docs/implementation_plan.md` moved to `docs/archive/mvp_implementation_plan.md`
