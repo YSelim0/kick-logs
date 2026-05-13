@@ -75,7 +75,7 @@ Expected output:
 - `/` becomes a public landing page instead of redirecting to `/search`.
 - Landing page includes project identity, concise self-hosted positioning, and analytics
   blocks from Feature 3.
-- The page links clearly to `/search`, user analytics, channel analytics, docs, and GitHub.
+- The page links clearly to `/search`, `/admin`, GitHub, and the support page.
 - Design stays dark, compact, and product-focused rather than oversized marketing treatment.
 
 ## Feature 5: User Profile Analytics

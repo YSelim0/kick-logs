@@ -60,6 +60,15 @@ This file is the active project memory. Keep it updated whenever project behavio
   - analytics repository aggregate queries run over `chat_messages`
   - supported filters include date range plus exact channel/sender scope
   - frontend typed analytics API wrappers exist under `apps/web/src/features/analytics/api.ts`
+- Post-MVP Feature 4 landing page is implemented:
+  - root `/` now renders a public compact landing page instead of redirecting
+  - landing fetches analytics overview, recent day-bucket message volume, top channels, top
+    emotes, and top senders
+  - landing includes loading, error, and fresh-install empty states
+  - landing links to `/search`, `/admin`, GitHub, and Buy Me a Coffee support
+  - frontend tests cover analytics rendering, empty data, and navigation links
+  - verification passed with `pnpm --filter @kick-logs/web test`, `typecheck`, `lint`, `build`,
+    `pnpm format:check`, Docker web rebuild/start, and route smoke for `/` plus `/search`
 - Post-MVP Feature 2 planning now includes clickable message links:
   - URLs inside `/search` message content should render as safe clickable anchors
   - link rendering must preserve inline emote placement and matched-text highlighting
@@ -71,7 +80,7 @@ This file is the active project memory. Keep it updated whenever project behavio
   - raw event workers normalize and insert chat messages out of the websocket read path
   - stale `processing` events can be reclaimed after a timeout
   - listener periodically reconnects to refresh enabled channel subscriptions
-- Root `/` redirects to `/search` in the MVP; landing content remains a future post-MVP decision.
+- Root `/` is the public landing page; `/search` remains the primary search workflow.
 - Phase 9 auth foundation is implemented:
   - `/login` has an email/password form wired to `POST /auth/login`
   - `/admin` uses `GET /auth/me` for client-side route guarding
@@ -115,6 +124,7 @@ This file is the active project memory. Keep it updated whenever project behavio
   - Admin channel add/disable smoke passes with slug `hype`.
   - Listener logs useful idle status when no enabled channels are ready.
   - `alembic current` reports `20260511_0002 (head)` after the durable inbox migration is applied.
+  - `pnpm --filter @kick-logs/web test` passes with 12 files and 50 tests.
   - `pnpm --filter @kick-logs/web typecheck`, `lint`, and `build` pass.
   - `docker compose up --build -d web` builds and starts `web`.
   - `GET http://localhost:3000` returns HTTP 200.
@@ -702,7 +712,8 @@ Build an MVP monorepo with:
   - restarting the `postgres` service preserves the sample message in the named volume.
 - Cleanup:
   - no tracked `.env`, generated cache, dependency folder, log, or build output was found.
-  - removed the unused `RouteShell` scaffold and changed `/` to redirect to `/search`.
+  - removed the unused `RouteShell` scaffold and kept the MVP root behavior search-first at that
+    time.
 
 ## Issue #1 Durable Ingestion Verification
 
@@ -725,7 +736,7 @@ Build an MVP monorepo with:
 
 ## Design Direction
 
-- UI implementation is deferred until the backend API and listener are working end-to-end.
+- UI implementation is active and must stay aligned with the working backend API contracts.
 - `docs/design/design.md` is the source of truth for future UI and UX decisions.
 - Any future UI/frontend agent must read `docs/design/design.md` before changing frontend code.
 - The UI is dark-only with palette `#26001B`, `#810034`, `#FF005C`, `#FFF600`, black, and white.
@@ -733,7 +744,8 @@ Build an MVP monorepo with:
 - Do not use blur, glow, colored lighting, or atmospheric background effects.
 - The provided search screenshot is a layout/workflow reference only; do not copy its green visual style exactly.
 - The user-provided logo should be used where a product mark is needed.
-- The search screen is the first design target in `docs/design/design.pen`; admin panel screens should not be designed until the search screen is approved.
+- The approved `/search` screen remains represented in `docs/design/design.pen`; later UI work
+  should follow the same dark, compact product style.
 - Search results should render as dense rows inside one shared outer container, not as separate modal/card components per message.
 - Sender avatars should be circular, emotes should render inline at their message positions, and reply rows should show replied-to sender/content without adding per-message cards or modals.
 
@@ -745,7 +757,8 @@ Build an MVP monorepo with:
   - email: `admin@kicklogs.local`
   - password: `admin123`
 - Allow env override for default super admin credentials.
-- Use `/search` for the public app search screen, `/admin` for authenticated backend management, and redirect `/` to `/search` until a future landing page is intentionally designed.
+- Use `/` for the public landing page, `/search` for the public app search screen, and
+  `/admin` for authenticated backend management.
 - `/search` does not require login.
 - `/admin` manages backend operational state such as followed channels and admin users.
 - Search filters are optional and combined with `AND`:

@@ -44,6 +44,7 @@ The project is built as a monorepo:
 
 ## Features
 
+- Public `/` landing page with self-hosted positioning and live analytics summary.
 - Public `/search` page with optional filters:
   - sender nickname
   - channel nickname/slug
@@ -104,7 +105,7 @@ docker compose up --build -d
 
 Open:
 
-- Web app: http://localhost:3000
+- Landing page: http://localhost:3000
 - Public search: http://localhost:3000/search
 - Admin login: http://localhost:3000/login
 - API health: http://localhost:8000/health

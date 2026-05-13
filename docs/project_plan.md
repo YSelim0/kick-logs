@@ -195,7 +195,8 @@ matching. Top-list `limit` is capped at 100.
 
 - `/search`: primary app search screen.
 - `/admin`: authenticated admin dashboard for backend operations.
-- `/`: redirects to `/search` until a future landing page is intentionally designed.
+- `/`: public compact landing page with self-hosted project positioning, live analytics blocks,
+  and clear navigation into search/admin/community links.
 
 Search UI follows the dark professional palette documented in `docs/design/design.md`:
 

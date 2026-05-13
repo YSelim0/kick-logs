@@ -47,7 +47,8 @@
 - Store raw Kick payloads and all useful normalized fields.
 - Enrich sender profile images through Kick web endpoints when possible.
 - Parse `[emote:id:name]` tokens and render image fallback URLs.
-- Use `/search`, `/admin`, and reserve `/` for later landing content.
+- Use `/` for the public landing page, `/search` for public message search, and `/admin` for
+  authenticated backend management.
 - Allow multi-agent development for non-overlapping work scopes.
 - The original MVP used a sequential phase implementation plan; that completed plan now lives in `docs/archive/`.
 - Active implementation agents must use the current `docs/implementation_plan.md` and matching active task file.
@@ -56,7 +57,7 @@
 ## 2026-05-10
 
 - Public `/search` date inputs default to the last 7 days: `Başlangıç` is current local date/time minus 7 days and `Bitiş` is current local date/time. Users can clear date fields to omit date filters.
-- MVP root route `/` redirects to `/search`; future landing content can replace this deliberately after the application screens are stable.
+- MVP started search-first at `/search`; post-MVP work can use `/` for compact landing content.
 
 ## 2026-05-12
 
@@ -92,3 +93,12 @@
   user profile, and channel profile screens.
 - Analytics `sender` scope uses case-insensitive exact sender username/slug matching;
   analytics `channel` scope uses case-insensitive exact channel slug/display-name matching.
+
+## 2026-05-14
+
+- Public `/` is a compact landing page, not a redirect. It explains the self-hosted project and
+  loads public analytics from Feature 3 endpoints.
+- Landing message volume uses a recent day-bucket range, while overview/top-list cards summarize
+  current stored data.
+- Landing navigation links to `/search`, `/admin`, GitHub, and Buy Me a Coffee support.
+- Landing design must stay dark, compact, product-focused, and avoid oversized hero treatment.

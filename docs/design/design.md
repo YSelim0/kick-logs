@@ -18,7 +18,8 @@ Frontend planning can continue, but no UI code should be scaffolded before the b
 ## Design Sources
 
 - `docs/design/design.md`: human-readable UI rules and decisions.
-- `docs/design/design.pen`: editable design artifact. It currently contains the first `/search` screen draft only.
+- `docs/design/design.pen`: editable design artifact. It currently contains the approved `/search`
+  screen draft.
 
 The search reference image from planning is structural guidance only. Keep the compact form order and dense search workflow, but do not copy the exact look, green palette, or spacing one-to-one.
 
@@ -31,9 +32,10 @@ Do not commit screenshots or exported images unless explicitly requested.
 - `/search`: public primary application search screen. No login is required.
 - `/admin`: authenticated admin dashboard for backend operations.
 - `/login`: login screen.
-- `/`: redirects to `/search` until a future landing page is intentionally designed.
+- `/`: public compact landing page with project positioning, live analytics, and navigation into
+  search/admin/community links.
 
-Do not build a landing page before the application screens exist.
+Landing content must stay product-focused and should not turn the app into a marketing site.
 
 ## Visual Direction
 
@@ -68,9 +70,30 @@ Style rules:
 
 Current design scope:
 
-- Design `/search` first.
-- Do not design `/admin` screens until the `/search` screen is approved.
-- Do not design landing-page-like screens yet.
+- `/search` remains the primary high-volume workflow.
+- `/admin` remains an authenticated operational workflow.
+- `/` can summarize the product and public analytics, but should stay compact.
+
+## Landing Page
+
+The `/` page is public and does not require login. It should quickly explain what Kick Logs is and
+then show live public analytics from the existing analytics API.
+
+Landing behavior:
+
+- Show the Kick Logs logo and self-hosted positioning in the first viewport.
+- Keep the top section compact; avoid oversized hero typography and decorative marketing layout.
+- Link clearly to `/search`, `/admin`, GitHub, and the support page.
+- Load analytics from:
+  - `GET /analytics/overview`
+  - `GET /analytics/message-volume?bucket=day`
+  - `GET /analytics/top-channels`
+  - `GET /analytics/top-emotes`
+  - `GET /analytics/top-senders`
+- Use a recent range for message volume so the activity summary reflects current usage.
+- Include useful loading, error, and empty-data states for fresh installs.
+- Keep the dark palette, yellow primary actions, pink/accent icons, modest radii, and compact
+  metrics.
 
 ## Search Screen
 

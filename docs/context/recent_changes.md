@@ -4,11 +4,29 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Implemented Post-MVP Feature 4 landing page with analytics:
+  - root `/` now renders a compact public landing page instead of redirecting to `/search`
+  - landing uses Feature 3 analytics endpoints for overview, recent day-bucket volume, top
+    channels, top emotes, and top senders
+  - navigation links point to `/search`, `/admin`, GitHub, and Buy Me a Coffee support
+  - loading, API-error, and fresh-install empty states are covered
+  - `docs/tasks/post_mvp_04_landing_analytics.md` is fully checked off
+- Verification:
+  - `pnpm --filter @kick-logs/web test`: 12 files, 50 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `pnpm format:check`: passed
+  - `docker compose up --build -d web`: passed
+  - `GET http://localhost:3000/`: HTTP 200
+  - `GET http://localhost:3000/search`: HTTP 200
+
+## Previous
+
 - Implemented Post-MVP Feature 3 analytics foundation:
   - added public read-only analytics endpoints for overview, message volume, top senders, top
     channels, and top emotes
-  - added reusable analytics DTOs, use cases, repository port, and SQLAlchemy aggregate
-    repository
+  - added reusable analytics DTOs, use cases, repository port, and SQLAlchemy aggregate repository
   - analytics filters support date range plus exact sender/channel scope
   - added typed frontend analytics API wrappers and parameter mapping tests
   - documented the analytics API shape in README, architecture, project plan, and context docs
@@ -22,8 +40,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `pnpm --filter @kick-logs/web lint`: passed
   - `pnpm --filter @kick-logs/web build`: passed
   - `pnpm format:check`: passed
-
-## Previous
 
 - Polished the `/search` filter form density:
   - date presets moved from four separate buttons to one compact `Hızlı aralık` select
@@ -246,7 +262,7 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `pnpm --filter @kick-logs/web lint`: passed
   - `pnpm --filter @kick-logs/web build`: passed
   - `docker compose up --build -d`: passed
-  - `GET http://localhost:3000/`: HTTP 307 to `/search`
+  - historical MVP `GET http://localhost:3000/`: HTTP 307 to `/search`
   - `GET http://localhost:3000/search`: HTTP 200 without login
   - `GET http://localhost:3000/login`: HTTP 200
   - `GET http://localhost:3000/admin`: HTTP 200
@@ -254,7 +270,7 @@ This file is the short handoff summary of the latest project changes. Keep it co
 - Cleanup:
   - no tracked generated cache, dependency folder, `.env`, secret, log, or build output found
   - unused `RouteShell` scaffold removed
-  - `/` now redirects to `/search`
+  - MVP root behavior was search-first before the post-MVP landing page
   - README and context files updated for final MVP state
 
 ## Commit Context

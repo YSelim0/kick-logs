@@ -2,6 +2,28 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-14
+
+- Implemented Post-MVP Feature 4 landing page with analytics:
+  - replaced root `/` search redirect with `LandingPage`
+  - landing explains the self-hosted Kick Logs project with compact product-focused copy
+  - landing fetches public analytics overview, recent day-bucket message volume, top channels,
+    top emotes, and top senders
+  - landing includes loading, API-error, and fresh-install empty states
+  - landing links to `/search`, `/admin`, GitHub, and Buy Me a Coffee support
+  - added frontend tests for analytics rendering, empty state, and navigation links
+  - updated README, design guide, project plan, architecture notes, implementation plan, and
+    context docs so `/` is documented as the landing page
+  - closed all checkboxes in `docs/tasks/post_mvp_04_landing_analytics.md`
+  - verified `pnpm --filter @kick-logs/web test`: 12 files, 50 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+  - verified `pnpm format:check`
+  - verified `docker compose up --build -d web`
+  - verified `GET http://localhost:3000/`: HTTP 200
+  - verified `GET http://localhost:3000/search`: HTTP 200
+
 ## 2026-05-13
 
 - Implemented Post-MVP Feature 3 analytics foundation:
@@ -519,7 +541,7 @@ This is a living implementation log. Add new entries for each meaningful project
   - frontend tests, typecheck, lint, and build passed
   - `docker compose up --build -d` starts all services
   - API health and web `/search`, `/login`, `/admin` routes return from host
-  - `/` returns HTTP 307 to `/search`
+  - historical MVP root returned HTTP 307 to `/search`
   - listener logs idle status and then channel subscription status after `hype` is enabled
   - default super admin login succeeds
   - authenticated channel add stores Kick metadata for `hype`
@@ -528,4 +550,5 @@ This is a living implementation log. Add new entries for each meaningful project
   - PostgreSQL restart preserves the sample message in the named volume
   - README and context files now reflect final MVP startup and smoke behavior
   - no tracked generated cache, dependency folder, `.env`, secret, log, or build output was found
-- Removed the unused frontend `RouteShell` scaffold and changed `/` to redirect to `/search` until a future landing page is intentionally designed.
+- Removed the unused frontend `RouteShell` scaffold and kept the MVP root behavior search-first
+  until post-MVP landing work.
