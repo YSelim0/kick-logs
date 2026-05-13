@@ -404,6 +404,7 @@ GET /analytics/message-volume
 GET /analytics/top-senders
 GET /analytics/top-channels
 GET /analytics/top-emotes
+GET /users/{slug}/analytics
 ```
 
 Access:
@@ -437,6 +438,8 @@ Responses:
 - `top-channels`: channel identity/profile fields, message count, first activity in result scope,
   and latest activity in result scope.
 - `top-emotes`: emote id/name/token/image URL, usage count, and distinct message count.
+- `users/{slug}/analytics`: sender identity/profile image, overview totals, day-bucket message
+  volume, top channels, top emotes, and latest messages. Unknown sender slugs return 404.
 
 ## Frontend Architecture
 
@@ -452,6 +455,8 @@ apps/web/src/
     search/
       page.tsx
     admin/
+      page.tsx
+    users/[slug]/
       page.tsx
   components/
     ui/
@@ -484,6 +489,9 @@ apps/web/src/
       api.ts
     landing/
       landing-page.tsx
+    user-profile/
+      api.ts
+      user-profile-page.tsx
   lib/
     api-client.ts
     utils.ts
@@ -502,6 +510,7 @@ Frontend rules:
 - Use Tailwind for layout and visual styling.
 - `/` is the public landing page backed by read-only analytics endpoints.
 - `/search` is the primary public app screen.
+- `/users/[slug]` is a public sender profile page backed by `/users/{slug}/analytics`.
 - `/admin` requires login and manages backend operational state such as followed channels.
 
 ## Frontend UI Direction

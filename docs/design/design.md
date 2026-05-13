@@ -34,6 +34,7 @@ Do not commit screenshots or exported images unless explicitly requested.
 - `/login`: login screen.
 - `/`: public compact landing page with project positioning, live analytics, and navigation into
   search/admin/community links.
+- `/users/[slug]`: public sender profile page with identity, analytics, and latest messages.
 
 Landing content must stay product-focused and should not turn the app into a marketing site.
 
@@ -73,6 +74,7 @@ Current design scope:
 - `/search` remains the primary high-volume workflow.
 - `/admin` remains an authenticated operational workflow.
 - `/` can summarize the product and public analytics, but should stay compact.
+- `/users/[slug]` should reuse the compact analytics style, not a marketing/profile hero.
 
 ## Landing Page
 
@@ -212,6 +214,7 @@ Sender avatar:
 - Use enriched sender profile image when available.
 - Render sender avatars as fully circular images.
 - Use a stable circular fallback avatar when no profile image exists.
+- Sender avatar and sender name link to `/users/[slug]` when a sender slug is present.
 
 Emotes:
 
@@ -235,6 +238,24 @@ Result row layout:
   styling that fits the dark results row.
 - Matched `q` text should render as a restrained inline highlight in both plain text and link
   text, without replacing or moving emote images.
+
+## User Profile Page
+
+The `/users/[slug]` page is public and does not require login. It should help a visitor understand
+a sender's logged activity across channels.
+
+User profile behavior:
+
+- Load `GET /users/{slug}/analytics`.
+- Show sender avatar, username, slug, total messages, active channels, emote usage, and last seen
+  timestamp.
+- Show day-bucket message volume as a compact list/bar view.
+- Show top channels and top emotes.
+- Show latest messages without infinite scroll.
+- Provide a primary link to `/search?sender={slug}`.
+- Unknown senders show a calm not-found state with a link back to `/search`.
+- Keep the same dark palette, yellow primary action, modest radii, and compact typography used by
+  search and landing.
 
 ## Admin UI
 

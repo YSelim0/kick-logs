@@ -55,6 +55,9 @@ The project is built as a monorepo:
 - Dense message rows with circular sender avatars.
 - Inline Kick emote rendering with text fallback.
 - Reply rendering: replied-to sender/content is shown above reply messages.
+- Public `/users/[slug]` pages with sender identity, analytics, top channels, top emotes, and
+  latest messages.
+- Sender names and avatars in search results link to public user profiles.
 - Admin login with HttpOnly JWT cookie sessions.
 - Default local super admin seed.
 - Admin dashboard for followed-channel management.
@@ -107,6 +110,7 @@ Open:
 
 - Landing page: http://localhost:3000
 - Public search: http://localhost:3000/search
+- Public user profile: http://localhost:3000/users/{sender-slug}
 - Admin login: http://localhost:3000/login
 - API health: http://localhost:8000/health
 
@@ -188,6 +192,7 @@ GET /analytics/message-volume
 GET /analytics/top-senders
 GET /analytics/top-channels
 GET /analytics/top-emotes
+GET /users/{slug}/analytics
 ```
 
 Auth:
@@ -243,6 +248,7 @@ curl "http://localhost:8000/analytics/message-volume?bucket=day&channel=hype"
 curl "http://localhost:8000/analytics/top-senders?channel=hype&limit=10"
 curl "http://localhost:8000/analytics/top-channels?sender=yavuz&limit=10"
 curl "http://localhost:8000/analytics/top-emotes?channel=hype&sender=yavuz"
+curl "http://localhost:8000/users/yavuz/analytics"
 ```
 
 ## Local Development

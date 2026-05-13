@@ -70,6 +70,16 @@ This file is the active project memory. Keep it updated whenever project behavio
   - frontend tests cover analytics rendering, empty data, and navigation links
   - verification passed with `pnpm --filter @kick-logs/web test`, `typecheck`, `lint`, `build`,
     `pnpm format:check`, Docker web rebuild/start, and route smoke for `/` plus `/search`
+- Post-MVP Feature 5 user profile analytics is implemented:
+  - public `GET /users/{slug}/analytics` returns sender identity/profile image, overview totals,
+    day-bucket message volume, top channels, top emotes, and latest messages
+  - unknown sender slugs return 404
+  - public `/users/[slug]` renders the user profile, loading/error/not-found states, top
+    channels, top emotes, volume bars, and latest messages
+  - `/search` sender names and avatars link to `/users/[slug]`
+  - profile pages link back to `/search?sender={slug}`
+  - verification passed with `python -m uv run pytest`, backend ruff checks, web
+    test/typecheck/lint/build, and `pnpm format:check`
 - Post-MVP Feature 2 planning now includes clickable message links:
   - URLs inside `/search` message content should render as safe clickable anchors
   - link rendering must preserve inline emote placement and matched-text highlighting
@@ -125,7 +135,8 @@ This file is the active project memory. Keep it updated whenever project behavio
   - Admin channel add/disable smoke passes with slug `hype`.
   - Listener logs useful idle status when no enabled channels are ready.
   - `alembic current` reports `20260511_0002 (head)` after the durable inbox migration is applied.
-  - `pnpm --filter @kick-logs/web test` passes with 12 files and 50 tests.
+  - `python -m uv run pytest` passes from `apps/api` with 113 tests.
+  - `pnpm --filter @kick-logs/web test` passes with 13 files and 53 tests.
   - `pnpm --filter @kick-logs/web typecheck`, `lint`, and `build` pass.
   - `docker compose up --build -d web` builds and starts `web`.
   - `GET http://localhost:3000` returns HTTP 200.

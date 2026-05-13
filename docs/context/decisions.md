@@ -103,3 +103,5 @@
 - Landing navigation links to `/search`, `/admin`, GitHub, and Buy Me a Coffee support.
 - Landing design must stay dark, compact, product-focused, and avoid oversized hero treatment.
 - Header brand/logo areas in `/search` and `/admin` navigate to `/`.
+- Public user profiles live at `/users/[slug]` and use `GET /users/{slug}/analytics`.
+- Search result sender names and avatars link to public user profiles when sender slug exists.

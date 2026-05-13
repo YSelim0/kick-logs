@@ -4,6 +4,27 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Implemented Post-MVP Feature 5 user profile analytics:
+  - added public `GET /users/{slug}/analytics`
+  - endpoint returns sender identity/profile image, overview totals, day-bucket message volume,
+    top channels, top emotes, and latest messages
+  - unknown sender slugs return 404
+  - added public `/users/[slug]` profile pages
+  - search result sender names and avatars now link to user profiles
+  - profile pages link to `/search?sender={slug}`
+  - `docs/tasks/post_mvp_05_user_profiles.md` is fully checked off
+- Verification:
+  - `python -m uv run pytest`: 113 passed
+  - `python -m uv run ruff check .`: passed
+  - `python -m uv run ruff format --check .`: passed
+  - `pnpm --filter @kick-logs/web test`: 13 files, 53 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `pnpm format:check`: passed
+
+## Previous
+
 - Implemented Post-MVP Feature 4 landing page with analytics:
   - root `/` now renders a compact public landing page instead of redirecting to `/search`
   - landing uses Feature 3 analytics endpoints for overview, recent day-bucket volume, top
@@ -21,8 +42,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `docker compose up --build -d web`: passed
   - `GET http://localhost:3000/`: HTTP 200
   - `GET http://localhost:3000/search`: HTTP 200
-
-## Previous
 
 - Implemented Post-MVP Feature 3 analytics foundation:
   - added public read-only analytics endpoints for overview, message volume, top senders, top

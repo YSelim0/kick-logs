@@ -31,6 +31,26 @@ This is a living implementation log. Add new entries for each meaningful project
     2 files, 11 tests passed
   - verified `pnpm --filter @kick-logs/web lint`
   - verified `pnpm format:check`
+- Implemented Post-MVP Feature 5 user profile analytics:
+  - added public `GET /users/{slug}/analytics`
+  - response includes sender identity/profile image, overview totals, day-bucket message volume,
+    top channels, top emotes, and latest messages
+  - unknown sender slugs return 404
+  - added backend tests for existing profile analytics, unknown sender, volume, top channels, top
+    emotes, and latest messages
+  - added public `/users/[slug]` frontend route and profile UI
+  - search result sender names and avatars link to `/users/[slug]`
+  - profile UI links to `/search?sender={slug}`
+  - added frontend tests for profile rendering, not-found behavior, and search-row sender links
+  - updated README, project plan, architecture, design guide, task checklist, and context docs
+  - verified `python -m uv run pytest`: 113 passed
+  - verified `python -m uv run ruff check .`
+  - verified `python -m uv run ruff format --check .`
+  - verified `pnpm --filter @kick-logs/web test`: 13 files, 53 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+  - verified `pnpm format:check`
 
 ## 2026-05-13
 

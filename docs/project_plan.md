@@ -185,6 +185,10 @@ If the image fails, fall back to emote name or original token.
   - public read-only top channels by message count
 - `GET /analytics/top-emotes`
   - public read-only top emotes by usage count
+- `GET /users/{slug}/analytics`
+  - public read-only sender profile analytics keyed by sender slug
+  - returns sender identity, profile image URL, totals, first/latest seen, message volume, top
+    channels, top emotes, and latest messages
 
 Analytics endpoints accept optional `start`, `end`, `channel`, and `sender`
 scope where relevant. `sender` scope uses case-insensitive exact username/slug
@@ -197,6 +201,7 @@ matching. Top-list `limit` is capped at 100.
 - `/admin`: authenticated admin dashboard for backend operations.
 - `/`: public compact landing page with self-hosted project positioning, live analytics blocks,
   and clear navigation into search/admin/community links.
+- `/users/[slug]`: public sender profile screen with analytics and latest messages.
 
 Search UI follows the dark professional palette documented in `docs/design/design.md`:
 
@@ -214,6 +219,8 @@ Result rows should render inside one shared outer list container and show:
 - channel nickname/slug
 - timestamp
 - message content with emote image rendering/fallback
+
+Sender names and avatars in result rows link to `/users/[slug]` when a sender slug is present.
 
 Do not render each message as its own modal-like card. The list should stay dense and efficient for many messages.
 
