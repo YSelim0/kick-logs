@@ -32,3 +32,7 @@ class MessageIngestionError(ApplicationError):
 
 class SenderProfileResolutionError(ApplicationError):
     """Raised when Kick sender profile metadata cannot be resolved."""
+
+
+class SenderNotFoundError(ApplicationError):
+    """Raised when a public sender profile cannot be found."""
