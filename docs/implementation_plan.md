@@ -48,6 +48,7 @@ Improve the public search workflow without changing the core search contract.
 Expected output:
 
 - Highlight matched search text in result rows.
+- Render URLs inside message content as safe clickable links.
 - Date presets: last 1 hour, 24 hours, 7 days, and 30 days.
 - Additional filters for reply-only and emote-only messages.
 - CSV and JSON export for filtered results with a safe maximum export size.

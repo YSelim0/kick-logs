@@ -78,3 +78,6 @@
   messages.
 - Admin operations metrics are exposed through `GET /admin/operations/summary` and remain
   authenticated admin-only.
+- Post-MVP Feature 2 will render URLs found inside message content as safe clickable links in
+  `/search` result rows. Link rendering must not break inline emotes or matched-text
+  highlighting.

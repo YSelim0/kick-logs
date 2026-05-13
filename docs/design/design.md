@@ -161,6 +161,7 @@ Each message row should show:
 - timestamp
 - message content
 - emote rendering with fallback
+- clickable links when message content contains URLs
 - reply context above the current message when the Kick payload is a reply
 
 Sender avatar:
@@ -185,6 +186,10 @@ Result row layout:
 - Reply rows render the replied-to sender and replied-to message content above the current message in muted gray text.
 - Reply preview data comes from `reply_metadata.original_sender.username` and `reply_metadata.original_message.content` when `message_type` is `reply`.
 - Long reply preview text should expose the full replied-to content through a `title` attribute.
+- URLs inside message content should render as clickable anchors without breaking inline emote
+  placement or future matched-text highlighting.
+- Message links should open in a new tab with `rel="noopener noreferrer"` and use restrained
+  styling that fits the dark results row.
 
 ## Admin UI
 

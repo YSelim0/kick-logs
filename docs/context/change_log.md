@@ -4,6 +4,10 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-13
 
+- Added a Feature 2 planning task for clickable message links:
+  - `/search` result rows should render URLs inside message content as safe clickable links
+  - link rendering must preserve inline emote placement and matched-text highlighting
+  - link rendering tests were added to the Feature 2 task checklist
 - Completed Post-MVP Feature 1 admin operations acceptance:
   - README now documents `/admin` operations dashboard usage and
     `GET /admin/operations/summary`

@@ -4,6 +4,13 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Added a Post-MVP Feature 2 task for clickable message links:
+  - URLs inside `/search` message content should render as safe clickable anchors
+  - link rendering must not break inline emotes or future matched-text highlighting
+  - Feature 2 tests now explicitly include clickable link rendering
+
+## Previous
+
 - Completed Post-MVP Feature 1 admin operations dashboard:
   - README documents the operations dashboard and `GET /admin/operations/summary`
   - all checkboxes in `docs/tasks/post_mvp_01_admin_operations.md` are closed
@@ -16,8 +23,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `pnpm --filter @kick-logs/web typecheck`: passed
   - `pnpm --filter @kick-logs/web lint`: passed
   - `pnpm format:check`: passed
-
-## Previous
 
 - Implemented Post-MVP Feature 1 admin operations UI:
   - added typed `getOperationsSummary` frontend API wrapper

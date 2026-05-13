@@ -25,10 +25,12 @@ profiles, channel profiles, or admin data cleanup here.
 - [ ] Add reply-only and emote-only controls to the search form.
 - [ ] Highlight matched `q` text inside message content without breaking inline emote
       rendering.
+- [ ] Render URLs inside message content as clickable links without breaking inline emote or
+      highlighted text rendering.
 - [ ] Add CSV and JSON export actions that use the current submitted filters.
 - [ ] Keep URL query state shareable for the new filters.
 - [ ] Add tests for date presets, query state, filter mapping, highlight rendering, emote
-      compatibility, and export button behavior.
+      compatibility, clickable link rendering, and export button behavior.
 
 ## Docs And Acceptance
 
@@ -36,5 +38,5 @@ profiles, channel profiles, or admin data cleanup here.
 - [ ] Update README search usage.
 - [ ] Update context docs.
 - [ ] Verify frontend tests/typecheck/lint/build and relevant backend tests.
-- [ ] Acceptance: users can refine searches faster, visually identify matched text, and export
-      the currently filtered result set.
+- [ ] Acceptance: users can refine searches faster, visually identify matched text, open links
+      from messages safely, and export the currently filtered result set.

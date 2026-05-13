@@ -51,6 +51,10 @@ This file is the active project memory. Keep it updated whenever project behavio
   - `docs/tasks/post_mvp_01_admin_operations.md` has all checkboxes closed
   - final touched-area verification passed for backend tests/lint, frontend tests/typecheck/lint,
     and `pnpm format:check`
+- Post-MVP Feature 2 planning now includes clickable message links:
+  - URLs inside `/search` message content should render as safe clickable anchors
+  - link rendering must preserve inline emote placement and matched-text highlighting
+  - `docs/tasks/post_mvp_02_search_improvements.md` includes explicit link rendering tests
 - Issue #1 durable ingestion implementation is complete locally on branch `feature/issue-1-durable-inbox`.
 - Issue #3 Kick reply rendering is implemented locally on branch `feat/issue-3-kick-reply-rendering`.
 - Kick listener now uses a durable raw event inbox design:
