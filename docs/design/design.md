@@ -97,6 +97,9 @@ Search form fields:
 - `Aramak istediğiniz Kelime`
 - `Başlangıç`
 - `Bitiş`
+- `Yanıtlar` toggle for reply-only results
+- `Emote içerenler` toggle for emote-only results
+- Date preset buttons: `1 saat`, `24 saat`, `7 gün`, `30 gün`
 
 Search button:
 
@@ -116,10 +119,14 @@ Field behavior:
 - On first `/search` load and on reset, date fields default to the last 7 days:
   - `Başlangıç`: current local date/time minus 7 days.
   - `Bitiş`: current local date/time.
+- Date preset buttons update only the date range and keep the other filters intact.
 - Users can still clear or change the date fields; cleared date fields are omitted from the API query.
+- `Yanıtlar` maps to `reply_only=true`.
+- `Emote içerenler` maps to `emote_only=true`.
 - Opening `/search` without URL query parameters must not call the backend automatically.
 - Before the user submits a search, the results area shows an icon with `Arama yapmak için yukarıdaki formu kullanın.`
 - An explicit search submit can still fetch latest messages when all filters are empty.
+- CSV and JSON export buttons use the last submitted search filters, not unsent edits.
 
 Backend query mapping:
 
@@ -129,6 +136,8 @@ Kanal Adı -> channel
 Aramak istediğiniz Kelime -> q
 Başlangıç -> start
 Bitiş -> end
+Yanıtlar -> reply_only
+Emote içerenler -> emote_only
 ```
 
 Examples:
@@ -137,6 +146,8 @@ Examples:
 - `Kullanıcı Adı=yavuz` and content `selam`: search all channels for sender username/slug exactly matching `yavuz` and message content containing `selam`.
 - `Kanal Adı=exampleChannel` and content `hello`: search that channel for messages containing `hello`.
 - Only content `hello`: search all channels and all users for messages containing `hello`.
+- `Yanıtlar` enabled: only reply messages.
+- `Emote içerenler` enabled: only messages with parsed emotes.
 - Empty all filters: show latest messages across all channels.
 
 Results:
@@ -162,6 +173,7 @@ Each message row should show:
 - message content
 - emote rendering with fallback
 - clickable links when message content contains URLs
+- highlighted matched `q` text
 - reply context above the current message when the Kick payload is a reply
 
 Sender avatar:
@@ -187,9 +199,11 @@ Result row layout:
 - Reply preview data comes from `reply_metadata.original_sender.username` and `reply_metadata.original_message.content` when `message_type` is `reply`.
 - Long reply preview text should expose the full replied-to content through a `title` attribute.
 - URLs inside message content should render as clickable anchors without breaking inline emote
-  placement or future matched-text highlighting.
+  placement or matched-text highlighting.
 - Message links should open in a new tab with `rel="noopener noreferrer"` and use restrained
   styling that fits the dark results row.
+- Matched `q` text should render as a restrained inline highlight in both plain text and link
+  text, without replacing or moving emote images.
 
 ## Admin UI
 

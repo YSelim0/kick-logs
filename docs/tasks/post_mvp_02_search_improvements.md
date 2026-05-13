@@ -21,20 +21,20 @@ profiles, channel profiles, or admin data cleanup here.
 
 ## Frontend Tasks
 
-- [ ] Add date presets: last 1 hour, last 24 hours, last 7 days, and last 30 days.
-- [ ] Add reply-only and emote-only controls to the search form.
-- [ ] Highlight matched `q` text inside message content without breaking inline emote
+- [x] Add date presets: last 1 hour, last 24 hours, last 7 days, and last 30 days.
+- [x] Add reply-only and emote-only controls to the search form.
+- [x] Highlight matched `q` text inside message content without breaking inline emote
       rendering.
-- [ ] Render URLs inside message content as clickable links without breaking inline emote or
+- [x] Render URLs inside message content as clickable links without breaking inline emote or
       highlighted text rendering.
-- [ ] Add CSV and JSON export actions that use the current submitted filters.
-- [ ] Keep URL query state shareable for the new filters.
-- [ ] Add tests for date presets, query state, filter mapping, highlight rendering, emote
+- [x] Add CSV and JSON export actions that use the current submitted filters.
+- [x] Keep URL query state shareable for the new filters.
+- [x] Add tests for date presets, query state, filter mapping, highlight rendering, emote
       compatibility, clickable link rendering, and export button behavior.
 
 ## Docs And Acceptance
 
-- [ ] Update `docs/design/design.md` for the new search controls.
+- [x] Update `docs/design/design.md` for the new search controls.
 - [x] Update README search usage.
 - [x] Update context docs.
 - [ ] Verify frontend tests/typecheck/lint/build and relevant backend tests.

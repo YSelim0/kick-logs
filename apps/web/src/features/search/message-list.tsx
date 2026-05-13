@@ -17,6 +17,7 @@ type MessageListProps = {
   isLoadingMore: boolean;
   hasMore: boolean;
   hasSearched: boolean;
+  highlightQuery?: string;
   error: string | null;
   sentinelRef: React.RefObject<HTMLDivElement>;
   onRetry: () => void;
@@ -28,6 +29,7 @@ export function MessageList({
   isLoadingMore,
   hasMore,
   hasSearched,
+  highlightQuery = "",
   error,
   sentinelRef,
   onRetry
@@ -69,7 +71,12 @@ export function MessageList({
             </div>
 
             {messages.map((message, index) => (
-              <MessageRow isAlt={index % 2 === 1} key={message.id} message={message} />
+              <MessageRow
+                highlightQuery={highlightQuery}
+                isAlt={index % 2 === 1}
+                key={message.id}
+                message={message}
+              />
             ))}
 
             {!isInitialLoading && !error && messages.length === 0 ? (
@@ -118,7 +125,15 @@ export function MessageList({
   );
 }
 
-function MessageRow({ message, isAlt }: { message: Message; isAlt: boolean }) {
+function MessageRow({
+  message,
+  isAlt,
+  highlightQuery
+}: {
+  message: Message;
+  isAlt: boolean;
+  highlightQuery: string;
+}) {
   const replyContext = getReplyContext(message);
   const replyTitle = replyContext
     ? `@${replyContext.senderUsername}: ${replyContext.content}`
@@ -160,7 +175,11 @@ function MessageRow({ message, isAlt }: { message: Message; isAlt: boolean }) {
             {replyContext.content}
           </div>
         ) : null}
-        <MessageContent content={message.content} emotes={message.emotes} />
+        <MessageContent
+          content={message.content}
+          emotes={message.emotes}
+          highlight={highlightQuery}
+        />
       </div>
 
       <div className="hidden text-xs text-muted-foreground md:block">

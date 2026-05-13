@@ -22,9 +22,15 @@ vi.mock("next/image", () => ({
   default: ({ alt }: { alt: string }) => <span aria-label={alt} role="img" />
 }));
 
-vi.mock("@/features/search/api", () => ({
-  searchMessages: apiMocks.searchMessages
-}));
+vi.mock("@/features/search/api", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/features/search/api")>("@/features/search/api");
+
+  return {
+    ...actual,
+    searchMessages: apiMocks.searchMessages
+  };
+});
 
 describe("SearchScreen", () => {
   beforeEach(() => {
@@ -75,6 +81,24 @@ describe("SearchScreen", () => {
     );
   });
 
+  it("keeps reply-only and emote-only URL state shareable", async () => {
+    navigationMocks.query = "q=hello&reply_only=true&emote_only=true";
+
+    render(<SearchScreen />);
+
+    await waitFor(() =>
+      expect(apiMocks.searchMessages).toHaveBeenCalledWith(
+        expect.objectContaining({
+          q: "hello",
+          reply_only: true,
+          emote_only: true
+        })
+      )
+    );
+    expect(screen.getByLabelText("Yanıtlar")).toBeChecked();
+    expect(screen.getByLabelText("Emote içerenler")).toBeChecked();
+  });
+
   it("allows an explicit empty search without navigating", async () => {
     render(<SearchScreen />);
 
@@ -92,5 +116,27 @@ describe("SearchScreen", () => {
       })
     );
     expect(navigationMocks.push).not.toHaveBeenCalled();
+  });
+
+  it("opens CSV export with the current submitted filters", async () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    navigationMocks.query = "q=hello&reply_only=true";
+
+    render(<SearchScreen />);
+
+    await waitFor(() => expect(apiMocks.searchMessages).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button", { name: "CSV" }));
+
+    const [url, target, features] = openSpy.mock.calls[0];
+    expect(target).toBe("_blank");
+    expect(features).toBe("noopener,noreferrer");
+
+    const exportUrl = new URL(url as string);
+    expect(exportUrl.pathname).toBe("/messages/export");
+    expect(exportUrl.searchParams.get("format")).toBe("csv");
+    expect(exportUrl.searchParams.get("q")).toBe("hello");
+    expect(exportUrl.searchParams.get("reply_only")).toBe("true");
+
+    openSpy.mockRestore();
   });
 });

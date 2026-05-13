@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   EMPTY_SEARCH_STATE,
   appendUniqueMessages,
+  applyDatePreset,
   getActiveFilters,
+  getDatePresetRange,
   getDefaultSearchState,
   readSearchState,
   searchStateToMessageParams,
@@ -15,32 +17,42 @@ describe("search params", () => {
   it("maps filled form fields to backend query params and omits empty values", () => {
     expect(
       searchStateToMessageParams({
+        ...EMPTY_SEARCH_STATE,
         sender: " yavuz ",
         channel: "",
         q: " selam ",
         start: "2026-05-02T02:43",
-        end: "2026-05-09T02:43"
+        end: "2026-05-09T02:43",
+        replyOnly: true,
+        emoteOnly: true
       })
     ).toEqual({
       sender: "yavuz",
       q: "selam",
       start: new Date("2026-05-02T02:43").toISOString(),
-      end: localDateTimeEndOfMinuteIso("2026-05-09T02:43")
+      end: localDateTimeEndOfMinuteIso("2026-05-09T02:43"),
+      reply_only: true,
+      emote_only: true
     });
   });
 
   it("keeps URL date params in datetime-local format", () => {
     const params = searchStateToUrlSearchParams({
+      ...EMPTY_SEARCH_STATE,
       sender: " yavuz ",
       channel: "",
       q: "",
       start: "2026-05-02T02:43",
-      end: "2026-05-09T02:43"
+      end: "2026-05-09T02:43",
+      replyOnly: true,
+      emoteOnly: true
     });
 
     expect(params.get("sender")).toBe("yavuz");
     expect(params.get("start")).toBe("2026-05-02T02:43");
     expect(params.get("end")).toBe("2026-05-09T02:43");
+    expect(params.get("reply_only")).toBe("true");
+    expect(params.get("emote_only")).toBe("true");
   });
 
   it("keeps empty filters as latest-message search", () => {
@@ -51,6 +63,44 @@ describe("search params", () => {
   it("defaults the date range to the previous seven days", () => {
     expect(getDefaultSearchState(new Date("2026-05-10T15:30:45"))).toMatchObject({
       start: "2026-05-03T15:30",
+      end: "2026-05-10T15:30",
+      replyOnly: false,
+      emoteOnly: false
+    });
+  });
+
+  it("creates date preset ranges", () => {
+    const now = new Date("2026-05-10T15:30:45");
+
+    expect(getDatePresetRange("1h", now)).toEqual({
+      start: "2026-05-10T14:30",
+      end: "2026-05-10T15:30"
+    });
+    expect(getDatePresetRange("24h", now)).toEqual({
+      start: "2026-05-09T15:30",
+      end: "2026-05-10T15:30"
+    });
+    expect(getDatePresetRange("30d", now)).toEqual({
+      start: "2026-04-10T15:30",
+      end: "2026-05-10T15:30"
+    });
+  });
+
+  it("applies a date preset without clearing other filters", () => {
+    expect(
+      applyDatePreset(
+        {
+          ...EMPTY_SEARCH_STATE,
+          sender: "yavuz",
+          replyOnly: true
+        },
+        "24h",
+        new Date("2026-05-10T15:30:45")
+      )
+    ).toMatchObject({
+      sender: "yavuz",
+      replyOnly: true,
+      start: "2026-05-09T15:30",
       end: "2026-05-10T15:30"
     });
   });
@@ -70,7 +120,9 @@ describe("search params", () => {
 
   it("reads supported filters from URL state", () => {
     const state = readSearchState(
-      new URLSearchParams("sender=yavuz&channel=hype&q=hello&start=2026-05-02T02:43"),
+      new URLSearchParams(
+        "sender=yavuz&channel=hype&q=hello&start=2026-05-02T02:43&reply_only=true&emote_only=true"
+      ),
       new Date("2026-05-10T15:30:45")
     );
 
@@ -79,7 +131,9 @@ describe("search params", () => {
       channel: "hype",
       q: "hello",
       start: "2026-05-02T02:43",
-      end: "2026-05-10T15:30"
+      end: "2026-05-10T15:30",
+      replyOnly: true,
+      emoteOnly: true
     });
   });
 
@@ -98,11 +152,13 @@ describe("search params", () => {
       getActiveFilters({
         ...EMPTY_SEARCH_STATE,
         sender: "yavuz",
-        channel: "hype"
+        channel: "hype",
+        replyOnly: true
       })
     ).toEqual([
       { key: "sender", label: "Kullanıcı", value: "yavuz" },
-      { key: "channel", label: "Kanal", value: "hype" }
+      { key: "channel", label: "Kanal", value: "hype" },
+      { key: "replyOnly", label: "Yanıt", value: "Açık" }
     ]);
   });
 

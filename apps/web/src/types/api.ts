@@ -137,6 +137,8 @@ export type MessageSearchParams = {
   q?: string;
   start?: string;
   end?: string;
+  reply_only?: boolean;
+  emote_only?: boolean;
   cursor?: string;
   limit?: number;
 };
@@ -144,6 +146,15 @@ export type MessageSearchParams = {
 export type MessageSearchResponse = {
   items: Message[];
   next_cursor: string | null;
+};
+
+export type MessageExportFormat = "csv" | "json";
+
+export type MessageExportResponse = {
+  items: Message[];
+  count: number;
+  max_rows: number;
+  truncated: boolean;
 };
 
 export type ApiErrorBody = {

@@ -5,11 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { MessageList } from "@/features/search/message-list";
-import { searchMessages } from "@/features/search/api";
+import { buildMessageExportUrl, searchMessages } from "@/features/search/api";
 import { SearchForm } from "@/features/search/search-form";
 import {
   EMPTY_SEARCH_STATE,
   appendUniqueMessages,
+  applyDatePreset,
   getDefaultSearchState,
   readSearchState,
   searchStateToMessageParams,
@@ -18,7 +19,7 @@ import {
 } from "@/features/search/search-params";
 import { SearchSummary } from "@/features/search/search-summary";
 import { DEFAULT_MESSAGE_LIMIT } from "@/lib/constants";
-import type { Message } from "@/types/api";
+import type { Message, MessageExportFormat } from "@/types/api";
 
 export function SearchScreen() {
   return (
@@ -182,6 +183,11 @@ function SearchScreenInner() {
     }
   }
 
+  function exportCurrentSearch(format: MessageExportFormat) {
+    const url = buildMessageExportUrl(searchStateToMessageParams(submittedState), format);
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
   return (
     <main className="min-h-screen bg-background px-4 py-4 text-foreground md:px-8 md:py-6">
       <div className="mx-auto flex max-w-[1440px] flex-col gap-6">
@@ -189,8 +195,11 @@ function SearchScreenInner() {
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,900px)_428px]">
           <SearchForm
+            canExport={hasSearched}
             isLoading={isInitialLoading}
             onChange={setFormState}
+            onDatePreset={(preset) => setFormState((current) => applyDatePreset(current, preset))}
+            onExport={exportCurrentSearch}
             onReset={resetSearch}
             onSubmit={submitSearch}
             value={formState}
@@ -207,6 +216,7 @@ function SearchScreenInner() {
           error={error}
           hasMore={Boolean(nextCursor)}
           hasSearched={hasSearched}
+          highlightQuery={submittedState.q}
           isInitialLoading={isInitialLoading}
           isLoadingMore={isLoadingMore}
           messages={messages}

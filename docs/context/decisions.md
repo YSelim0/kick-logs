@@ -81,3 +81,5 @@
 - Post-MVP Feature 2 will render URLs found inside message content as safe clickable links in
   `/search` result rows. Link rendering must not break inline emotes or matched-text
   highlighting.
+- `/search` date presets update only the date fields and keep other filters intact.
+- `/search` CSV/JSON export actions use the last submitted filters, not unsent form edits.

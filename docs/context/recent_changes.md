@@ -4,6 +4,19 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Implemented Post-MVP Feature 2 public search UI improvements:
+  - search form now has date presets, reply-only, and emote-only controls
+  - `/search` URL state preserves the new filters
+  - message content renders clickable links and highlights matched `q` text without moving inline emotes
+  - CSV and JSON export buttons open filtered exports for the last submitted search
+  - `docs/design/design.md` and the Feature 2 task file document the UI behavior
+- Verification:
+  - `pnpm --filter @kick-logs/web test`: 10 files, 42 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+
+## Previous
+
 - Implemented Post-MVP Feature 2 backend search/export foundation:
   - public `GET /messages` now supports `reply_only` and `emote_only`
   - public `GET /messages/export` returns filtered JSON or CSV without auth
@@ -13,8 +26,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
 - Verification:
   - `python -m uv run ruff check .`: passed
   - `python -m uv run pytest tests/domain/test_value_objects.py tests/test_config.py tests/messages/test_http_search_messages.py`: 18 passed
-
-## Previous
 
 - Added a Post-MVP Feature 2 task for clickable message links:
   - URLs inside `/search` message content should render as safe clickable anchors

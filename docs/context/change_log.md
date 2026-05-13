@@ -4,6 +4,17 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-13
 
+- Implemented the frontend for Post-MVP Feature 2 search improvements:
+  - added date preset buttons for last 1 hour, 24 hours, 7 days, and 30 days
+  - added `Yanıtlar` and `Emote içerenler` controls mapped to `reply_only` and `emote_only`
+  - kept the new filters shareable in `/search` URL query state
+  - rendered URLs inside message content as safe new-tab anchors
+  - highlighted matched `q` text in message content without moving inline emotes
+  - added CSV and JSON export buttons that use the last submitted filters
+  - updated `docs/design/design.md` and the Feature 2 task file
+  - verified `pnpm --filter @kick-logs/web test`: 10 files, 42 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
 - Implemented the backend foundation for Post-MVP Feature 2 search improvements:
   - `MessageSearchFilters` now carries `reply_only` and `emote_only`
   - public `GET /messages` applies both filters with existing optional `AND` semantics

@@ -470,6 +470,8 @@ Build an MVP monorepo with:
   - `Aramak istediğiniz Kelime` -> `q`
   - `Başlangıç` -> `start`
   - `Bitiş` -> `end`
+  - `Yanıtlar` -> `reply_only`
+  - `Emote içerenler` -> `emote_only`
 - Empty form fields are omitted from URL/backend query params.
 - Opening bare `/search` does not automatically call the backend.
 - Before the user submits a search, the result area shows `Arama yapmak için yukarıdaki formu kullanın.`
@@ -478,8 +480,12 @@ Build an MVP monorepo with:
   - `Başlangıç` is current local date/time minus 7 days.
   - `Bitiş` is current local date/time.
   - users can clear date fields to omit date filters.
+- Date preset buttons set the range to last 1 hour, 24 hours, 7 days, or 30 days without
+  clearing other filters.
 - The `/search` initial SSR render uses an empty static search state; the default local date range is filled after hydration to avoid server/client timezone mismatches.
 - Submitted filter state is preserved in the URL query string.
+- CSV and JSON export buttons open public `/messages/export` URLs for the last submitted filter
+  state.
 - Result fetching uses public `GET /messages` through the shared frontend API client.
 - Cursor pagination is wired to an IntersectionObserver sentinel for infinite scroll.
 - Result rows render inside one shared list container with:
@@ -494,6 +500,11 @@ Build an MVP monorepo with:
   - prefers backend parsed emote image URL
   - falls back to `https://files.kick.com/emotes/{id}/fullsize`
   - falls back to emote text if the image fails
+- Message content rendering:
+  - URLs render as safe new-tab links with `rel="noopener noreferrer"`
+  - matched `q` text renders as a compact inline highlight
+  - link rendering and highlighting are applied only to text parts, so inline emote placement is
+    preserved
 - Reply rendering:
   - messages with `message_type === "reply"` render replied-to context above current content
   - reply preview reads `reply_metadata.original_sender.username`
