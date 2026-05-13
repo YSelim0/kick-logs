@@ -75,6 +75,7 @@ Search API:
 
 ```text
 GET /messages?sender=&channel=&q=&start=&end=&cursor=&limit=
+GET /messages/export?format=json|csv&sender=&channel=&q=&start=&end=&reply_only=&emote_only=&limit=
 ```
 
 Filter semantics:
@@ -88,8 +89,12 @@ Filter semantics:
 - `sender` uses case-insensitive exact matching against sender username/slug snapshots.
 - `channel` and `q` use case-insensitive contains matching.
 - `start` and `end` filter by message timestamp.
+- `reply_only=true` narrows results to reply messages.
+- `emote_only=true` narrows results to messages with at least one parsed emote.
 - Results are ordered newest-first.
 - Infinite scroll uses cursor pagination based on `(created_at, id)`.
+- Export uses the same filter semantics as on-screen search, returns JSON or CSV, and clamps
+  rows to `MESSAGE_EXPORT_MAX_ROWS`.
 - The public `/search` UI defaults `start` to 7 days before the current local date/time and `end` to the current local date/time. Users can clear those fields to omit date filters.
 - Bare `/search` does not automatically fetch latest messages; the user must submit the form or open a URL with query parameters.
 

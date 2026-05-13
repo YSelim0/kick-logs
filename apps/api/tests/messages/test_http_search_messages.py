@@ -1,5 +1,7 @@
+import csv
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
+from io import StringIO
 from uuid import uuid4
 
 import pytest
@@ -175,6 +177,103 @@ async def seed_search_dataset(session_factory) -> dict:
     }
 
 
+async def seed_search_improvement_dataset(session_factory) -> dict:
+    suffix = uuid4().hex[:8]
+    base_time = datetime(2036, 1, 1, 12, 0, tzinfo=UTC)
+    reply_metadata = {
+        "original_sender": {"id": 101, "username": f"Original{suffix}"},
+        "original_message": {
+            "id": unique_value("reply-source"),
+            "content": f"original reply text combo-{suffix}",
+        },
+    }
+
+    async with SqlAlchemyUnitOfWork(session_factory) as unit_of_work:
+        channel = await unit_of_work.channels.add(
+            Channel(
+                kick_channel_id=700000 + int(uuid4().hex[:6], 16),
+                kick_chatroom_id=800000 + int(uuid4().hex[:6], 16),
+                slug=f"improve-{suffix}",
+                display_name=f"Improve {suffix}",
+            )
+        )
+        sender = await unit_of_work.senders.add(
+            Sender(
+                kick_user_id=900000 + int(uuid4().hex[:6], 16),
+                username=f"ImproveSender{suffix}",
+                slug=f"improve-sender-{suffix}",
+            )
+        )
+
+        messages = [
+            await unit_of_work.messages.add(
+                ChatMessage(
+                    kick_message_id=unique_value("message"),
+                    channel_id=channel.id or 0,
+                    sender_id=sender.id or 0,
+                    chatroom_id=channel.kick_chatroom_id or 0,
+                    content=f"reply emote combo-{suffix} https://example.com/reply",
+                    message_type="reply",
+                    sender_username_snapshot=sender.username,
+                    sender_slug_snapshot=sender.slug,
+                    emotes=[
+                        Emote(
+                            kick_emote_id="111",
+                            name="ReplyEmote",
+                            token="[emote:111:ReplyEmote]",
+                        )
+                    ],
+                    reply_metadata=reply_metadata,
+                    thread_parent_id="parent-message-id",
+                    message_created_at=base_time + timedelta(minutes=2),
+                )
+            ),
+            await unit_of_work.messages.add(
+                ChatMessage(
+                    kick_message_id=unique_value("message"),
+                    channel_id=channel.id or 0,
+                    sender_id=sender.id or 0,
+                    chatroom_id=channel.kick_chatroom_id or 0,
+                    content=f"plain emote combo-{suffix} [emote:222:PlainEmote]",
+                    message_type="message",
+                    sender_username_snapshot=sender.username,
+                    sender_slug_snapshot=sender.slug,
+                    emotes=[
+                        Emote(
+                            kick_emote_id="222",
+                            name="PlainEmote",
+                            token="[emote:222:PlainEmote]",
+                        )
+                    ],
+                    message_created_at=base_time + timedelta(minutes=1),
+                )
+            ),
+            await unit_of_work.messages.add(
+                ChatMessage(
+                    kick_message_id=unique_value("message"),
+                    channel_id=channel.id or 0,
+                    sender_id=sender.id or 0,
+                    chatroom_id=channel.kick_chatroom_id or 0,
+                    content=f"plain text combo-{suffix}",
+                    message_type="message",
+                    sender_username_snapshot=sender.username,
+                    sender_slug_snapshot=sender.slug,
+                    message_created_at=base_time,
+                )
+            ),
+        ]
+        await unit_of_work.commit()
+
+    return {
+        "suffix": suffix,
+        "base_time": base_time,
+        "channel": channel,
+        "sender": sender,
+        "messages": messages,
+        "reply_metadata": reply_metadata,
+    }
+
+
 def message_ids(response_json: dict) -> list[str]:
     return [item["kick_message_id"] for item in response_json["items"]]
 
@@ -316,6 +415,113 @@ async def test_public_search_filters_by_date_range(client, session_factory) -> N
         dataset["messages"][1].kick_message_id,
         dataset["messages"][2].kick_message_id,
     ]
+
+
+async def test_public_search_filters_reply_only_emote_only_and_combined(
+    client,
+    session_factory,
+) -> None:
+    dataset = await seed_search_improvement_dataset(session_factory)
+    suffix = dataset["suffix"]
+    messages = dataset["messages"]
+
+    reply_response = await client.get(
+        "/messages",
+        params={"q": f"combo-{suffix}", "reply_only": "true"},
+    )
+    emote_response = await client.get(
+        "/messages",
+        params={"q": f"combo-{suffix}", "emote_only": "true"},
+    )
+    combined_response = await client.get(
+        "/messages",
+        params={"q": f"combo-{suffix}", "reply_only": "true", "emote_only": "true"},
+    )
+
+    assert message_ids(reply_response.json()) == [messages[0].kick_message_id]
+    assert message_ids(emote_response.json()) == [
+        messages[0].kick_message_id,
+        messages[1].kick_message_id,
+    ]
+    assert message_ids(combined_response.json()) == [messages[0].kick_message_id]
+
+
+async def test_public_export_returns_filtered_json_without_auth(client, session_factory) -> None:
+    dataset = await seed_search_improvement_dataset(session_factory)
+    suffix = dataset["suffix"]
+
+    response = await client.get(
+        "/messages/export",
+        params={
+            "format": "json",
+            "q": f"combo-{suffix}",
+            "reply_only": "true",
+            "emote_only": "true",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["count"] == 1
+    assert body["max_rows"] == 1000
+    assert body["truncated"] is False
+    assert message_ids(body) == [dataset["messages"][0].kick_message_id]
+    assert body["items"][0]["reply_metadata"] == dataset["reply_metadata"]
+
+
+async def test_public_export_applies_row_limit(client, session_factory) -> None:
+    dataset = await seed_search_improvement_dataset(session_factory)
+
+    response = await client.get(
+        "/messages/export",
+        params={"format": "json", "q": f"combo-{dataset['suffix']}", "limit": 2},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["count"] == 2
+    assert body["max_rows"] == 2
+    assert body["truncated"] is True
+    assert message_ids(body) == [
+        dataset["messages"][0].kick_message_id,
+        dataset["messages"][1].kick_message_id,
+    ]
+
+
+async def test_public_export_returns_csv_shape(client, session_factory) -> None:
+    dataset = await seed_search_improvement_dataset(session_factory)
+
+    response = await client.get(
+        "/messages/export",
+        params={
+            "format": "csv",
+            "q": f"combo-{dataset['suffix']}",
+            "reply_only": "true",
+            "limit": 1,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    rows = list(csv.DictReader(StringIO(response.text)))
+    assert list(rows[0].keys()) == [
+        "message_created_at",
+        "kick_message_id",
+        "channel_slug",
+        "channel_display_name",
+        "sender_username",
+        "sender_slug",
+        "message_type",
+        "content",
+        "emotes",
+        "reply_to_sender",
+        "reply_to_content",
+        "thread_parent_id",
+    ]
+    assert rows[0]["kick_message_id"] == dataset["messages"][0].kick_message_id
+    assert rows[0]["message_type"] == "reply"
+    assert rows[0]["reply_to_sender"] == dataset["reply_metadata"]["original_sender"]["username"]
+    assert rows[0]["reply_to_content"] == dataset["reply_metadata"]["original_message"]["content"]
 
 
 async def test_public_search_uses_cursor_pagination(client, session_factory) -> None:

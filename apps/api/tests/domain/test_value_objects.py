@@ -17,6 +17,11 @@ def test_search_filters_strip_empty_text() -> None:
     assert filters.has_any_filter is True
 
 
+def test_search_filters_treat_boolean_flags_as_active_filters() -> None:
+    assert MessageSearchFilters(reply_only=True).has_any_filter is True
+    assert MessageSearchFilters(emote_only=True).has_any_filter is True
+
+
 def test_search_filters_reject_invalid_date_range() -> None:
     with pytest.raises(DomainError):
         MessageSearchFilters(

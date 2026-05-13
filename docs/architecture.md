@@ -301,6 +301,7 @@ Endpoint:
 
 ```text
 GET /messages?sender=&channel=&q=&start=&end=&cursor=&limit=
+GET /messages/export?format=json|csv&sender=&channel=&q=&start=&end=&reply_only=&emote_only=&limit=
 ```
 
 Access:
@@ -319,8 +320,12 @@ Rules:
 - `sender` uses case-insensitive exact matching against sender username/slug snapshots.
 - `channel` and `q` use case-insensitive contains matching.
 - `start` and `end` filter by `message_created_at`.
+- `reply_only=true` restricts results to rows where `message_type = reply`.
+- `emote_only=true` restricts results to rows with at least one parsed emote in `emotes`.
 - Results are ordered newest-first.
 - Cursor pagination uses `(message_created_at, id)`.
+- Export is public, reuses `MessageSearchFilters`, supports JSON and CSV, and clamps requested
+  rows to `MESSAGE_EXPORT_MAX_ROWS`.
 - Frontend `/search` initializes missing date inputs to the last 7 days by default, but the API keeps date filters optional.
 
 ## Auth Contract

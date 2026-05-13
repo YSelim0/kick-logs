@@ -181,6 +181,7 @@ Public:
 ```text
 GET /health
 GET /messages
+GET /messages/export
 ```
 
 Auth:
@@ -208,10 +209,18 @@ Example public search:
 curl "http://localhost:8000/messages?sender=yavuz&q=selam&limit=50"
 ```
 
+Example filtered export:
+
+```powershell
+curl "http://localhost:8000/messages/export?format=csv&q=selam&reply_only=true&limit=500"
+```
+
 Search filters combine with `AND`. Empty filters are omitted. The `sender`
 filter matches username/slug exactly, case-insensitively. Channel and content
 filters use case-insensitive contains matching. Empty all filters returns latest
-messages across all followed channels.
+messages across all followed channels. `reply_only=true` limits results to reply
+messages, and `emote_only=true` limits results to messages with parsed emotes.
+Exports use the same filters and are capped by `MESSAGE_EXPORT_MAX_ROWS`.
 
 ## Local Development
 

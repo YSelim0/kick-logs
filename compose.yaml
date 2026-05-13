@@ -30,6 +30,7 @@ services:
       JWT_COOKIE_NAME: ${JWT_COOKIE_NAME:-kick_logs_session}
       DEFAULT_SUPER_ADMIN_EMAIL: ${DEFAULT_SUPER_ADMIN_EMAIL:-admin@kicklogs.local}
       DEFAULT_SUPER_ADMIN_PASSWORD: ${DEFAULT_SUPER_ADMIN_PASSWORD:-admin123}
+      MESSAGE_EXPORT_MAX_ROWS: ${MESSAGE_EXPORT_MAX_ROWS:-1000}
     depends_on:
       postgres:
         condition: service_healthy

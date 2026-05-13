@@ -291,12 +291,15 @@ Build an MVP monorepo with:
 
 - Public route implemented:
   - `GET /messages`
+  - `GET /messages/export`
 - Query parameters:
   - `sender`
   - `channel`
   - `q`
   - `start`
   - `end`
+  - `reply_only`
+  - `emote_only`
   - `cursor`
   - `limit`
 - The route requires no authentication.
@@ -305,6 +308,8 @@ Build an MVP monorepo with:
 - Sender filters use case-insensitive exact matching against sender username/slug snapshots.
 - Channel and content filters use case-insensitive contains matching.
 - Date filters apply to `message_created_at`.
+- `reply_only=true` filters to messages where `message_type` is `reply`.
+- `emote_only=true` filters to messages with one or more parsed emotes.
 - Results are newest-first.
 - Cursor format is:
   - `{message_created_at.isoformat()}|{message_id}`
@@ -319,6 +324,12 @@ Build an MVP monorepo with:
   - sender profile fields including avatar URL
   - channel metadata including profile/banner URLs
 - Search use case batches sender/channel lookup by id after message search to avoid one metadata query per row.
+- Export response supports:
+  - `format=json`
+  - `format=csv`
+  - the same filter semantics as `GET /messages`
+  - no auth requirement
+  - per-request `limit` clamped by `MESSAGE_EXPORT_MAX_ROWS`
 
 ## Phase 4 Verification
 

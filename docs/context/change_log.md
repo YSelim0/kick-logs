@@ -4,6 +4,16 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-13
 
+- Implemented the backend foundation for Post-MVP Feature 2 search improvements:
+  - `MessageSearchFilters` now carries `reply_only` and `emote_only`
+  - public `GET /messages` applies both filters with existing optional `AND` semantics
+  - added public `GET /messages/export` for filtered JSON and CSV exports
+  - export reuses the same search use case/filter contract and caps output with
+    `MESSAGE_EXPORT_MAX_ROWS`
+  - Compose and `.env.example` expose the export row cap
+  - README, architecture, project plan, task file, and context docs describe the new API
+  - verified `python -m uv run ruff check .`
+  - verified `python -m uv run pytest tests/domain/test_value_objects.py tests/test_config.py tests/messages/test_http_search_messages.py`: 18 passed
 - Added a Feature 2 planning task for clickable message links:
   - `/search` result rows should render URLs inside message content as safe clickable links
   - link rendering must preserve inline emote placement and matched-text highlighting

@@ -4,12 +4,22 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Implemented Post-MVP Feature 2 backend search/export foundation:
+  - public `GET /messages` now supports `reply_only` and `emote_only`
+  - public `GET /messages/export` returns filtered JSON or CSV without auth
+  - export reuses the same `MessageSearchFilters` semantics and clamps rows with
+    `MESSAGE_EXPORT_MAX_ROWS`
+  - README, project plan, architecture, and task docs describe the new backend contract
+- Verification:
+  - `python -m uv run ruff check .`: passed
+  - `python -m uv run pytest tests/domain/test_value_objects.py tests/test_config.py tests/messages/test_http_search_messages.py`: 18 passed
+
+## Previous
+
 - Added a Post-MVP Feature 2 task for clickable message links:
   - URLs inside `/search` message content should render as safe clickable anchors
   - link rendering must not break inline emotes or future matched-text highlighting
   - Feature 2 tests now explicitly include clickable link rendering
-
-## Previous
 
 - Completed Post-MVP Feature 1 admin operations dashboard:
   - README documents the operations dashboard and `GET /admin/operations/summary`

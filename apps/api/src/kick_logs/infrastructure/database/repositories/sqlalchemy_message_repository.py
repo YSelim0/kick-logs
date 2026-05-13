@@ -68,6 +68,12 @@ class SqlAlchemyMessageRepository:
         if filters.end:
             statement = statement.where(ChatMessageModel.message_created_at <= filters.end)
 
+        if filters.reply_only:
+            statement = statement.where(ChatMessageModel.message_type == "reply")
+
+        if filters.emote_only:
+            statement = statement.where(func.jsonb_array_length(ChatMessageModel.emotes) > 0)
+
         if pagination.cursor:
             statement = statement.where(
                 or_(

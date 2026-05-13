@@ -12,11 +12,11 @@ profiles, channel profiles, or admin data cleanup here.
 
 ## Backend Tasks
 
-- [ ] Extend public message search filters with `reply_only` and `emote_only`.
-- [ ] Keep existing optional `AND` semantics for all filters.
-- [ ] Add filtered export support for CSV and JSON with a safe maximum row limit.
-- [ ] Reuse the same search filter semantics for export and on-screen search.
-- [ ] Add backend tests for reply-only search, emote-only search, combined filters, export
+- [x] Extend public message search filters with `reply_only` and `emote_only`.
+- [x] Keep existing optional `AND` semantics for all filters.
+- [x] Add filtered export support for CSV and JSON with a safe maximum row limit.
+- [x] Reuse the same search filter semantics for export and on-screen search.
+- [x] Add backend tests for reply-only search, emote-only search, combined filters, export
       authorization-free access, export row limit, CSV shape, and JSON shape.
 
 ## Frontend Tasks
@@ -35,8 +35,8 @@ profiles, channel profiles, or admin data cleanup here.
 ## Docs And Acceptance
 
 - [ ] Update `docs/design/design.md` for the new search controls.
-- [ ] Update README search usage.
-- [ ] Update context docs.
+- [x] Update README search usage.
+- [x] Update context docs.
 - [ ] Verify frontend tests/typecheck/lint/build and relevant backend tests.
 - [ ] Acceptance: users can refine searches faster, visually identify matched text, open links
       from messages safely, and export the currently filtered result set.

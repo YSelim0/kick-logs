@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     listener_heartbeat_interval_seconds: float = 15.0
     listener_heartbeat_stale_after_seconds: int = 45
 
+    message_export_max_rows: int = 1000
+
 
 @lru_cache
 def get_settings() -> Settings:
