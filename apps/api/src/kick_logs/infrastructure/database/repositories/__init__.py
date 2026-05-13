@@ -1,3 +1,6 @@
+from kick_logs.infrastructure.database.repositories.sqlalchemy_analytics_repository import (
+    SqlAlchemyAnalyticsRepository,
+)
 from kick_logs.infrastructure.database.repositories.sqlalchemy_channel_repository import (
     SqlAlchemyChannelRepository,
 )
@@ -21,6 +24,7 @@ from kick_logs.infrastructure.database.repositories.sqlalchemy_worker_heartbeat_
 )
 
 __all__ = [
+    "SqlAlchemyAnalyticsRepository",
     "SqlAlchemyChannelRepository",
     "SqlAlchemyMessageRepository",
     "SqlAlchemyOperationsRepository",

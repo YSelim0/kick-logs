@@ -13,6 +13,7 @@ from kick_logs.infrastructure.seed import seed_super_admin
 from kick_logs.presentation.http.routes.admin_channels import router as admin_channels_router
 from kick_logs.presentation.http.routes.admin_operations import router as admin_operations_router
 from kick_logs.presentation.http.routes.admin_users import router as admin_users_router
+from kick_logs.presentation.http.routes.analytics import router as analytics_router
 from kick_logs.presentation.http.routes.auth import router as auth_router
 from kick_logs.presentation.http.routes.health import router as health_router
 from kick_logs.presentation.http.routes.messages import router as messages_router
@@ -67,6 +68,7 @@ def create_app(
 
     app.include_router(health_router)
     app.include_router(auth_router)
+    app.include_router(analytics_router)
     app.include_router(messages_router)
     app.include_router(admin_channels_router)
     app.include_router(admin_operations_router)

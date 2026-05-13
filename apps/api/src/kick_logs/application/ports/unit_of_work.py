@@ -1,5 +1,6 @@
 from typing import Protocol, Self
 
+from kick_logs.application.ports.analytics_repository import AnalyticsRepository
 from kick_logs.application.ports.channel_repository import ChannelRepository
 from kick_logs.application.ports.message_repository import MessageRepository
 from kick_logs.application.ports.operations_repository import OperationsRepository
@@ -11,6 +12,7 @@ from kick_logs.application.ports.worker_heartbeat_repository import WorkerHeartb
 
 class UnitOfWork(Protocol):
     users: UserRepository
+    analytics: AnalyticsRepository
     channels: ChannelRepository
     senders: SenderRepository
     messages: MessageRepository

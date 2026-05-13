@@ -4,6 +4,7 @@ from types import TracebackType
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from kick_logs.infrastructure.database.repositories import (
+    SqlAlchemyAnalyticsRepository,
     SqlAlchemyChannelRepository,
     SqlAlchemyMessageRepository,
     SqlAlchemyOperationsRepository,
@@ -25,6 +26,7 @@ class SqlAlchemyUnitOfWork:
         self._session_factory = session_factory or create_session_factory()
         self.session: AsyncSession | None = None
         self.users: SqlAlchemyUserRepository
+        self.analytics: SqlAlchemyAnalyticsRepository
         self.channels: SqlAlchemyChannelRepository
         self.senders: SqlAlchemySenderRepository
         self.messages: SqlAlchemyMessageRepository
@@ -35,6 +37,7 @@ class SqlAlchemyUnitOfWork:
     async def __aenter__(self) -> "SqlAlchemyUnitOfWork":
         self.session = self._session_factory()
         self.users = SqlAlchemyUserRepository(self.session)
+        self.analytics = SqlAlchemyAnalyticsRepository(self.session)
         self.channels = SqlAlchemyChannelRepository(self.session)
         self.senders = SqlAlchemySenderRepository(self.session)
         self.messages = SqlAlchemyMessageRepository(self.session)
