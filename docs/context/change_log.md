@@ -4,6 +4,18 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-14
 
+- Polished public profile navigation and profile panel styling:
+  - `/search` reply previews now link the muted replied-to sender name to `/users/[slug]`
+  - reply metadata extraction reads `original_sender.slug` when present and falls back to a
+    lowercase username-derived slug
+  - `/users/[slug]` top identity section now uses the same rounded bordered padded panel treatment
+    as the rest of the profile UI
+  - added frontend coverage for reply sender profile links and reply slug fallback
+  - verified `pnpm --filter @kick-logs/web test`: 13 files, 54 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+  - verified `pnpm format:check`
 - Implemented Post-MVP Feature 4 landing page with analytics:
   - replaced root `/` search redirect with `LandingPage`
   - landing explains the self-hosted Kick Logs project with compact product-focused copy

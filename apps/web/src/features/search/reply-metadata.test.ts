@@ -12,7 +12,8 @@ describe("reply metadata", () => {
         reply_metadata: {
           original_sender: {
             id: 97891494,
-            username: "Cansu98xx"
+            username: "Cansu98xx",
+            slug: "cansu98xx"
           },
           original_message: {
             id: "1be196b8-55c7-4980-8022-a1112723acea",
@@ -23,8 +24,31 @@ describe("reply metadata", () => {
       })
     ).toEqual({
       senderUsername: "Cansu98xx",
+      senderSlug: "cansu98xx",
       messageId: "1be196b8-55c7-4980-8022-a1112723acea",
       content: "senin saat ne saati 5dk 1 saatmiş"
+    });
+  });
+
+  it("falls back to a username-derived slug when Kick reply metadata has no sender slug", () => {
+    expect(
+      getReplyContext({
+        ...messageFixture(),
+        message_type: "reply",
+        reply_metadata: {
+          original_sender: {
+            id: 97891494,
+            username: "Cansu98xx"
+          },
+          original_message: {
+            id: "1be196b8-55c7-4980-8022-a1112723acea",
+            content: "previous content"
+          }
+        }
+      })
+    ).toMatchObject({
+      senderUsername: "Cansu98xx",
+      senderSlug: "cansu98xx"
     });
   });
 

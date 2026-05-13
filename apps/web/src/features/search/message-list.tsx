@@ -139,6 +139,9 @@ function MessageRow({
   const replyTitle = replyContext
     ? `@${replyContext.senderUsername}: ${replyContext.content}`
     : undefined;
+  const replySenderProfileHref = replyContext?.senderSlug
+    ? `/users/${encodeURIComponent(replyContext.senderSlug)}`
+    : null;
   const senderProfileHref = message.sender.slug
     ? `/users/${encodeURIComponent(message.sender.slug)}`
     : null;
@@ -187,9 +190,18 @@ function MessageRow({
             className="mb-1 min-w-0 truncate text-xs leading-5 text-muted-foreground/70"
             title={replyTitle}
           >
-            <span className="font-medium text-muted-foreground/80">
-              @{replyContext.senderUsername}:
-            </span>{" "}
+            {replySenderProfileHref ? (
+              <Link
+                className="font-medium text-muted-foreground/80 hover:text-primary"
+                href={replySenderProfileHref}
+              >
+                @{replyContext.senderUsername}:
+              </Link>
+            ) : (
+              <span className="font-medium text-muted-foreground/80">
+                @{replyContext.senderUsername}:
+              </span>
+            )}{" "}
             {replyContext.content}
           </div>
         ) : null}

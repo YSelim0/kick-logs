@@ -77,7 +77,11 @@ This file is the active project memory. Keep it updated whenever project behavio
   - public `/users/[slug]` renders the user profile, loading/error/not-found states, top
     channels, top emotes, volume bars, and latest messages
   - `/search` sender names and avatars link to `/users/[slug]`
+  - `/search` reply preview sender names also link to `/users/[slug]` using the reply metadata
+    slug or a lowercase username fallback
   - profile pages link back to `/search?sender={slug}`
+  - the profile top identity block uses the same rounded bordered padded panel treatment as the
+    rest of the profile UI
   - verification passed with `python -m uv run pytest`, backend ruff checks, web
     test/typecheck/lint/build, and `pnpm format:check`
 - Post-MVP Feature 2 planning now includes clickable message links:
@@ -578,6 +582,8 @@ Build an MVP monorepo with:
 - Reply rendering:
   - messages with `message_type === "reply"` render replied-to context above current content
   - reply preview reads `reply_metadata.original_sender.username`
+  - reply preview sender links use `reply_metadata.original_sender.slug` when present, otherwise a
+    lowercase username-derived profile slug
   - reply preview reads `reply_metadata.original_message.content`
   - long reply previews use a `title` attribute for full-content hover inspection
 - Search summary panel shows loading/error status, loaded count, scope, last match, and active filters.

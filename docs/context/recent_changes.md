@@ -4,6 +4,20 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Polished reply-profile navigation and user profile panel styling:
+  - muted replied-to sender names in `/search` reply previews link to `/users/[slug]`
+  - reply metadata now uses `original_sender.slug` when available and falls back to a lowercase
+    username-derived profile slug
+  - the `/users/[slug]` top identity panel now matches other bordered/padded profile sections
+- Verification:
+  - `pnpm --filter @kick-logs/web test`: 13 files, 54 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `pnpm format:check`: passed
+
+## Previous
+
 - Implemented Post-MVP Feature 5 user profile analytics:
   - added public `GET /users/{slug}/analytics`
   - endpoint returns sender identity/profile image, overview totals, day-bucket message volume,
@@ -22,8 +36,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `pnpm --filter @kick-logs/web lint`: passed
   - `pnpm --filter @kick-logs/web build`: passed
   - `pnpm format:check`: passed
-
-## Previous
 
 - Implemented Post-MVP Feature 4 landing page with analytics:
   - root `/` now renders a compact public landing page instead of redirecting to `/search`

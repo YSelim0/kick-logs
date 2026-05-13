@@ -15,7 +15,8 @@ describe("MessageList", () => {
         reply_metadata: {
           original_sender: {
             id: 97891494,
-            username: "Cansu98xx"
+            username: "Cansu98xx",
+            slug: "cansu98xx"
           },
           original_message: {
             id: "1be196b8-55c7-4980-8022-a1112723acea",
@@ -27,6 +28,10 @@ describe("MessageList", () => {
     ]);
 
     expect(screen.getByText("@Cansu98xx:")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "@Cansu98xx:" })).toHaveAttribute(
+      "href",
+      "/users/cansu98xx"
+    );
     expect(screen.getByText(/senin saat ne saati/)).toBeInTheDocument();
     expect(screen.getByText("current reply content")).toBeInTheDocument();
     expect(screen.getByTitle("@Cansu98xx: senin saat ne saati 5dk 1 saatmiş")).toBeInTheDocument();

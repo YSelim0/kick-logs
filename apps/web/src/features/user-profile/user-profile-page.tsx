@@ -128,7 +128,7 @@ function ProfileContent({ profile }: { profile: UserProfile }) {
 
   return (
     <div className="space-y-6">
-      <section className="border-b border-border bg-black pb-6">
+      <section className="rounded-lg border border-border bg-black p-5 md:p-6">
         <div className="flex flex-wrap items-start justify-between gap-5">
           <div className="flex min-w-0 items-center gap-4">
             <ProfileAvatar profile={profile} />

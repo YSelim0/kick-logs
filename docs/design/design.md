@@ -231,6 +231,8 @@ Result row layout:
 - If the content is long, the message column should absorb the extra width/wrapping behavior instead of turning the row into a separate card.
 - Reply rows render the replied-to sender and replied-to message content above the current message in muted gray text.
 - Reply preview data comes from `reply_metadata.original_sender.username` and `reply_metadata.original_message.content` when `message_type` is `reply`.
+- Reply preview sender names link to `/users/[slug]` when possible; if Kick reply metadata does
+  not include a slug, the frontend derives a lowercase username fallback for the profile URL.
 - Long reply preview text should expose the full replied-to content through a `title` attribute.
 - URLs inside message content should render as clickable anchors without breaking inline emote
   placement or matched-text highlighting.
@@ -254,6 +256,8 @@ User profile behavior:
 - Show latest messages without infinite scroll.
 - Provide a primary link to `/search?sender={slug}`.
 - Unknown senders show a calm not-found state with a link back to `/search`.
+- The top identity/profile block should use the same bordered, rounded, padded panel treatment as
+  the analytics sections so it does not sit flush against page edges.
 - Keep the same dark palette, yellow primary action, modest radii, and compact typography used by
   search and landing.
 

@@ -105,3 +105,7 @@
 - Header brand/logo areas in `/search` and `/admin` navigate to `/`.
 - Public user profiles live at `/users/[slug]` and use `GET /users/{slug}/analytics`.
 - Search result sender names and avatars link to public user profiles when sender slug exists.
+- `/search` reply preview sender names also link to `/users/[slug]`; when Kick reply metadata has
+  no slug, the frontend derives a lowercase username fallback.
+- `/users/[slug]` top identity blocks use the same rounded bordered panel treatment as the rest of
+  the profile sections.
