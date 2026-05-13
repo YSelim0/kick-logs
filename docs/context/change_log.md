@@ -4,6 +4,11 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-13
 
+- Completed Post-MVP Feature 1 admin operations acceptance:
+  - README now documents `/admin` operations dashboard usage and
+    `GET /admin/operations/summary`
+  - `docs/tasks/post_mvp_01_admin_operations.md` has all checkboxes closed
+  - verified backend, frontend, and formatting checks for the touched areas
 - Implemented the frontend dashboard for Post-MVP Feature 1 admin operations:
   - added typed frontend operations API wrapper for `GET /admin/operations/summary`
   - mounted `OperationsDashboard` at the top of `/admin`

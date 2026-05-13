@@ -38,8 +38,8 @@ search filters, data deletion, retention settings, or landing page work here.
 
 ## Docs And Acceptance
 
-- [ ] Update README/admin usage notes with the operations dashboard.
-- [ ] Update context docs.
-- [ ] Verify backend tests and frontend tests/typecheck/lint for the touched areas.
-- [ ] Acceptance: an authenticated admin can open `/admin` and understand storage growth,
+- [x] Update README/admin usage notes with the operations dashboard.
+- [x] Update context docs.
+- [x] Verify backend tests and frontend tests/typecheck/lint for the touched areas.
+- [x] Acceptance: an authenticated admin can open `/admin` and understand storage growth,
       raw event backlog, and listener freshness without reading Docker logs.

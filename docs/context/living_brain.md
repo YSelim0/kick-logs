@@ -46,6 +46,11 @@ This file is the active project memory. Keep it updated whenever project behavio
   - manual refresh and calm stale-listener/failed-raw/API-error states are covered by tests
   - frontend verification passed with `pnpm --filter @kick-logs/web test`, `typecheck`, and
     `lint`
+- Post-MVP Feature 1 admin operations dashboard is complete:
+  - README/admin usage notes are updated
+  - `docs/tasks/post_mvp_01_admin_operations.md` has all checkboxes closed
+  - final touched-area verification passed for backend tests/lint, frontend tests/typecheck/lint,
+    and `pnpm format:check`
 - Issue #1 durable ingestion implementation is complete locally on branch `feature/issue-1-durable-inbox`.
 - Issue #3 Kick reply rendering is implemented locally on branch `feat/issue-3-kick-reply-rendering`.
 - Kick listener now uses a durable raw event inbox design:

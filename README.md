@@ -58,6 +58,8 @@ The project is built as a monorepo:
 - Default local super admin seed.
 - Admin dashboard for followed-channel management.
 - Super-admin-only admin user creation.
+- Admin operations dashboard for listener freshness, storage growth, raw event backlog, and
+  ingest timestamps.
 - Durable raw event inbox:
   - websocket reader stores raw chat events first
   - workers process raw events into normalized messages
@@ -130,9 +132,11 @@ POSTGRES_PASSWORD
 2. Open `http://localhost:3000/login`.
 3. Login with the local admin credentials.
 4. Go to `/admin`.
-5. Add a Kick channel by slug/nickname.
-6. Keep the `listener` service running.
-7. Search collected messages from `/search`.
+5. Check the operations dashboard for listener freshness, storage size, raw event status, and
+   latest ingest timestamps.
+6. Add a Kick channel by slug/nickname.
+7. Keep the `listener` service running.
+8. Search collected messages from `/search`.
 
 Useful listener logs:
 
@@ -195,6 +199,7 @@ POST   /admin/channels
 DELETE /admin/channels/{id}
 GET    /admin/users
 POST   /admin/users
+GET    /admin/operations/summary
 ```
 
 Example public search:
@@ -408,6 +413,8 @@ Good contribution areas:
 - Use a strong `JWT_SECRET_KEY`.
 - Treat Kick integration failures as expected operational events because the
   ingestion path relies on unofficial web behavior.
+- Use `/admin` to check listener freshness, database/table size, failed raw events, pending raw
+  events, and the latest ingest timestamps before digging into Docker logs.
 - Keep PostgreSQL backups if the logs matter.
 - Review data retention expectations before running against large channels.
 

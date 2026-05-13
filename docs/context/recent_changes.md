@@ -4,6 +4,21 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Completed Post-MVP Feature 1 admin operations dashboard:
+  - README documents the operations dashboard and `GET /admin/operations/summary`
+  - all checkboxes in `docs/tasks/post_mvp_01_admin_operations.md` are closed
+  - `/admin` lets an authenticated admin understand storage growth, raw backlog/status, and
+    listener freshness without reading Docker logs
+- Final verification for the feature:
+  - `python -m uv run pytest`: 101 passed
+  - `python -m uv run ruff check .`: passed
+  - `pnpm --filter @kick-logs/web test`: 10 files, 36 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm format:check`: passed
+
+## Previous
+
 - Implemented Post-MVP Feature 1 admin operations UI:
   - added typed `getOperationsSummary` frontend API wrapper
   - `/admin` now shows `OperationsDashboard` above channel/user management
@@ -14,8 +29,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `pnpm --filter @kick-logs/web test`: 10 files, 36 tests passed
   - `pnpm --filter @kick-logs/web typecheck`: passed
   - `pnpm --filter @kick-logs/web lint`: passed
-
-## Previous
 
 - Implemented Post-MVP Feature 1 backend operations foundation:
   - added `worker_heartbeats` persistence and migration `20260513_0003`
