@@ -32,8 +32,8 @@ or data management tools here.
 
 ## Docs And Acceptance
 
-- [ ] Update README features/routes.
-- [ ] Update context docs.
-- [ ] Verify backend tests and frontend tests/typecheck/lint/build.
-- [ ] Acceptance: a visitor can inspect a logged channel's activity and jump into filtered
+- [x] Update README features/routes.
+- [x] Update context docs.
+- [x] Verify backend tests and frontend tests/typecheck/lint/build.
+- [x] Acceptance: a visitor can inspect a logged channel's activity and jump into filtered
       message search.

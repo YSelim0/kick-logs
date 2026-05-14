@@ -58,6 +58,9 @@ The project is built as a monorepo:
 - Public `/users/[slug]` pages with sender identity, analytics, top channels, top emotes, and
   latest messages.
 - Sender names and avatars in search results link to public user profiles.
+- Public `/channels/[slug]` pages with stored Kick channel metadata, activity analytics, top
+  senders, top emotes, and latest messages.
+- Channel labels in search results and admin channel rows link to public channel profiles.
 - Admin login with HttpOnly JWT cookie sessions.
 - Default local super admin seed.
 - Admin dashboard for followed-channel management.
@@ -111,6 +114,7 @@ Open:
 - Landing page: http://localhost:3000
 - Public search: http://localhost:3000/search
 - Public user profile: http://localhost:3000/users/{sender-slug}
+- Public channel profile: http://localhost:3000/channels/{channel-slug}
 - Admin login: http://localhost:3000/login
 - API health: http://localhost:8000/health
 
@@ -140,8 +144,9 @@ POSTGRES_PASSWORD
 5. Check the operations dashboard for listener freshness, storage size, raw event status, and
    latest ingest timestamps.
 6. Add a Kick channel by slug/nickname.
-7. Keep the `listener` service running.
-8. Search collected messages from `/search`.
+7. Open `/channels/{channel-slug}` to inspect stored channel activity.
+8. Keep the `listener` service running.
+9. Search collected messages from `/search`.
 
 Useful listener logs:
 
@@ -193,6 +198,7 @@ GET /analytics/top-senders
 GET /analytics/top-channels
 GET /analytics/top-emotes
 GET /users/{slug}/analytics
+GET /channels/{slug}/analytics
 ```
 
 Auth:
@@ -249,6 +255,7 @@ curl "http://localhost:8000/analytics/top-senders?channel=hype&limit=10"
 curl "http://localhost:8000/analytics/top-channels?sender=yavuz&limit=10"
 curl "http://localhost:8000/analytics/top-emotes?channel=hype&sender=yavuz"
 curl "http://localhost:8000/users/yavuz/analytics"
+curl "http://localhost:8000/channels/hype/analytics"
 ```
 
 ## Local Development

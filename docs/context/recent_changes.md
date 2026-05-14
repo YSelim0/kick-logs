@@ -4,6 +4,23 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Completed Post-MVP Feature 6 channel/publisher profiles:
+  - README now documents `/channels/[slug]` and `GET /channels/{slug}/analytics`
+  - `docs/tasks/post_mvp_06_channel_profiles.md` is fully checked off
+  - visitors can inspect a logged channel's metadata/activity and jump to
+    `/search?channel={slug}`
+- Verification:
+  - `python -m uv run pytest`: 119 passed
+  - `python -m uv run ruff check .`: passed
+  - `python -m uv run ruff format --check .`: passed
+  - `pnpm --filter @kick-logs/web test`: 15 files, 61 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `pnpm format:check`: passed
+
+## Previous
+
 - Implemented the frontend for Post-MVP Feature 6 channel profiles:
   - public `/channels/[slug]`
   - typed channel profile API wrapper and response types
@@ -16,8 +33,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `pnpm --filter @kick-logs/web typecheck`: passed
   - `pnpm --filter @kick-logs/web lint`: passed
   - `pnpm --filter @kick-logs/web build`: passed
-
-## Previous
 
 - Implemented the backend API for Post-MVP Feature 6 channel profiles:
   - public `GET /channels/{slug}/analytics`

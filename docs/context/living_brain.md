@@ -100,6 +100,11 @@ This file is the active project memory. Keep it updated whenever project behavio
   - channel profile pages link to `/search?channel={slug}`
   - `/search` channel labels and `/admin` channel rows link to channel profile pages
   - frontend verification passed with web tests, typecheck, lint, and build
+- Post-MVP Feature 6 channel/publisher profiles are complete:
+  - README documents the public channel profile route and API
+  - `docs/tasks/post_mvp_06_channel_profiles.md` has all checkboxes closed
+  - final verification passed with backend pytest/Ruff, web test/typecheck/lint/build, and
+    `pnpm format:check`
 - Post-MVP Feature 2 planning now includes clickable message links:
   - URLs inside `/search` message content should render as safe clickable anchors
   - link rendering must preserve inline emote placement and matched-text highlighting

@@ -4,6 +4,17 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-14
 
+- Completed Post-MVP Feature 6 channel/publisher profiles:
+  - README documents `/channels/[slug]` and `GET /channels/{slug}/analytics`
+  - `docs/tasks/post_mvp_06_channel_profiles.md` has all checkboxes closed
+  - verified `python -m uv run pytest`: 119 passed
+  - verified `python -m uv run ruff check .`
+  - verified `python -m uv run ruff format --check .`
+  - verified `pnpm --filter @kick-logs/web test`: 15 files, 61 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+  - verified `pnpm format:check`
 - Implemented the frontend for Post-MVP Feature 6 channel profiles:
   - added public `/channels/[slug]`
   - added typed channel profile API wrapper and response types
