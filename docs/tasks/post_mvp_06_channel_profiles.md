@@ -12,11 +12,11 @@ or data management tools here.
 
 ## Backend Tasks
 
-- [ ] Add public channel analytics endpoint keyed by channel slug.
-- [ ] Return channel metadata, total messages, first logged message, latest logged message, top
+- [x] Add public channel analytics endpoint keyed by channel slug.
+- [x] Return channel metadata, total messages, first logged message, latest logged message, top
       senders, top emotes, message volume, and latest messages.
-- [ ] Return 404 for unknown channel slugs.
-- [ ] Add backend tests for existing channel, unknown channel, message volume, top senders,
+- [x] Return 404 for unknown channel slugs.
+- [x] Add backend tests for existing channel, unknown channel, message volume, top senders,
       top emotes, and latest messages.
 
 ## Frontend Tasks

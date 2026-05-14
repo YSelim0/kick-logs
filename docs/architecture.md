@@ -405,6 +405,7 @@ GET /analytics/top-senders
 GET /analytics/top-channels
 GET /analytics/top-emotes
 GET /users/{slug}/analytics
+GET /channels/{slug}/analytics
 ```
 
 Access:
@@ -440,6 +441,8 @@ Responses:
 - `top-emotes`: emote id/name/token/image URL, usage count, and distinct message count.
 - `users/{slug}/analytics`: sender identity/profile image, overview totals, day-bucket message
   volume, top channels, top emotes, and latest messages. Unknown sender slugs return 404.
+- `channels/{slug}/analytics`: channel metadata/profile image/banner, overview totals, day-bucket
+  message volume, top senders, top emotes, and latest messages. Unknown channel slugs return 404.
 
 ## Frontend Architecture
 

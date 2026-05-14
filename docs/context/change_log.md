@@ -4,6 +4,19 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-14
 
+- Implemented the backend API for Post-MVP Feature 6 channel profiles:
+  - added public `GET /channels/{slug}/analytics`
+  - endpoint returns stored Kick channel metadata, overview totals, day-bucket message volume,
+    top senders, top emotes, and latest messages
+  - unknown channel slugs return 404
+  - latest profile messages are queried by exact channel id
+  - added backend coverage for existing channel profiles, unknown channels, volume, top senders,
+    top emotes, and latest messages
+  - verified
+    `python -m uv run pytest tests/profiles/test_http_channel_profiles.py tests/analytics/test_http_analytics.py tests/messages/test_http_search_messages.py`:
+    18 passed
+  - verified `python -m uv run ruff check .`
+  - verified `python -m uv run ruff format --check .`
 - Fixed Kick profile slug handling for usernames with underscores:
   - frontend sender profile links now convert `_` to `-`, so `example_user` routes to
     `/users/example-user`

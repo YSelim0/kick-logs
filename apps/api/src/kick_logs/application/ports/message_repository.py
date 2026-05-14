@@ -15,3 +15,9 @@ class MessageRepository(Protocol):
         filters: MessageSearchFilters,
         pagination: CursorPagination,
     ) -> list[ChatMessage]: ...
+
+    async def list_latest_by_channel_id(
+        self,
+        channel_id: int,
+        pagination: CursorPagination,
+    ) -> list[ChatMessage]: ...

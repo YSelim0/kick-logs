@@ -15,6 +15,7 @@ from kick_logs.presentation.http.routes.admin_operations import router as admin_
 from kick_logs.presentation.http.routes.admin_users import router as admin_users_router
 from kick_logs.presentation.http.routes.analytics import router as analytics_router
 from kick_logs.presentation.http.routes.auth import router as auth_router
+from kick_logs.presentation.http.routes.channel_profiles import router as channel_profiles_router
 from kick_logs.presentation.http.routes.health import router as health_router
 from kick_logs.presentation.http.routes.messages import router as messages_router
 from kick_logs.presentation.http.routes.user_profiles import router as user_profiles_router
@@ -72,6 +73,7 @@ def create_app(
     app.include_router(analytics_router)
     app.include_router(messages_router)
     app.include_router(user_profiles_router)
+    app.include_router(channel_profiles_router)
     app.include_router(admin_channels_router)
     app.include_router(admin_operations_router)
     app.include_router(admin_users_router)

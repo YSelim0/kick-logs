@@ -86,6 +86,14 @@ This file is the active project memory. Keep it updated whenever project behavio
     rest of the profile UI
   - verification passed with `python -m uv run pytest`, backend ruff checks, web
     test/typecheck/lint/build, and `pnpm format:check`
+- Post-MVP Feature 6 backend channel profile analytics is implemented:
+  - public `GET /channels/{slug}/analytics` returns channel metadata, overview totals,
+    day-bucket message volume, top senders, top emotes, and latest messages
+  - unknown channel slugs return 404
+  - latest messages are loaded by exact channel id, so profile history does not depend on
+    contains-style public search matching
+  - verification passed with targeted profile/analytics/search backend tests and backend Ruff
+    checks
 - Post-MVP Feature 2 planning now includes clickable message links:
   - URLs inside `/search` message content should render as safe clickable anchors
   - link rendering must preserve inline emote placement and matched-text highlighting
@@ -376,6 +384,7 @@ Build an MVP monorepo with:
   - `GET /analytics/top-senders`
   - `GET /analytics/top-channels`
   - `GET /analytics/top-emotes`
+  - `GET /channels/{slug}/analytics`
 - The routes require no authentication.
 - Common optional query parameters:
   - `start`
@@ -392,6 +401,8 @@ Build an MVP monorepo with:
   and latest message metrics.
 - `top-emotes` aggregates parsed `chat_messages.emotes` JSONB values by emote id/name/token/image.
 - Frontend typed wrappers live under `apps/web/src/features/analytics/api.ts`.
+- Channel profile analytics returns stored Kick channel metadata, scoped overview totals,
+  day-bucket message volume, top senders, top emotes, and latest messages.
 
 ## Post-MVP Feature 3 Verification
 

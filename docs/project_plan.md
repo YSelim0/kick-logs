@@ -189,6 +189,10 @@ If the image fails, fall back to emote name or original token.
   - public read-only sender profile analytics keyed by sender slug
   - returns sender identity, profile image URL, totals, first/latest seen, message volume, top
     channels, top emotes, and latest messages
+- `GET /channels/{slug}/analytics`
+  - public read-only channel profile analytics keyed by channel slug
+  - returns channel metadata, totals, first/latest activity, message volume, top senders, top
+    emotes, and latest messages
 
 Analytics endpoints accept optional `start`, `end`, `channel`, and `sender`
 scope where relevant. `sender` scope uses case-insensitive exact username/slug

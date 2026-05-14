@@ -93,3 +93,29 @@ class SqlAlchemyMessageRepository:
 
         result = await self._session.execute(statement)
         return [chat_message_to_domain(model) for model in result.scalars().all()]
+
+    async def list_latest_by_channel_id(
+        self,
+        channel_id: int,
+        pagination: CursorPagination,
+    ) -> list[ChatMessage]:
+        statement = select(ChatMessageModel).where(ChatMessageModel.channel_id == channel_id)
+
+        if pagination.cursor:
+            statement = statement.where(
+                or_(
+                    ChatMessageModel.message_created_at < pagination.cursor.message_created_at,
+                    and_(
+                        ChatMessageModel.message_created_at == pagination.cursor.message_created_at,
+                        ChatMessageModel.id < pagination.cursor.message_id,
+                    ),
+                )
+            )
+
+        statement = statement.order_by(
+            ChatMessageModel.message_created_at.desc(),
+            ChatMessageModel.id.desc(),
+        ).limit(pagination.limit)
+
+        result = await self._session.execute(statement)
+        return [chat_message_to_domain(model) for model in result.scalars().all()]

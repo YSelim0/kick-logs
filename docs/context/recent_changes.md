@@ -4,6 +4,19 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Implemented the backend API for Post-MVP Feature 6 channel profiles:
+  - public `GET /channels/{slug}/analytics`
+  - response includes stored channel metadata, overview totals, day-bucket message volume, top
+    senders, top emotes, and latest messages
+  - unknown channel slugs return 404
+  - latest profile messages use exact channel-id lookup
+- Verification:
+  - targeted backend channel profile/analytics/search tests: 18 passed
+  - `python -m uv run ruff check .`: passed
+  - `python -m uv run ruff format --check .`: passed
+
+## Previous
+
 - Fixed Kick profile slug handling for underscore usernames:
   - visible chat usernames stay unchanged, such as `example_user`
   - sender/profile links now route to Kick-style profile slugs, such as `/users/example-user`
@@ -19,8 +32,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `pnpm --filter @kick-logs/web lint`: passed
   - `pnpm --filter @kick-logs/web build`: passed
   - `pnpm format:check`: passed
-
-## Previous
 
 - Polished reply-profile navigation and user profile panel styling:
   - muted replied-to sender names in `/search` reply previews link to `/users/[slug]`
