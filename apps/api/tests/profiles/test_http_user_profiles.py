@@ -213,6 +213,54 @@ async def test_public_user_profile_returns_404_for_unknown_sender(client) -> Non
     assert response.json()["detail"] == "Sender profile not found."
 
 
+async def test_public_user_profile_accepts_kick_url_slug_for_underscore_sender(
+    client,
+    session_factory,
+) -> None:
+    suffix = uuid4().hex[:8]
+    legacy_slug = f"profile_user_{suffix}"
+    profile_slug = legacy_slug.replace("_", "-")
+
+    async with SqlAlchemyUnitOfWork(session_factory) as unit_of_work:
+        channel = await unit_of_work.channels.add(
+            Channel(
+                kick_channel_id=700000 + int(uuid4().hex[:6], 16),
+                kick_chatroom_id=800000 + int(uuid4().hex[:6], 16),
+                slug=f"profile-underscore-{suffix}",
+                display_name=f"Profile Underscore {suffix}",
+            )
+        )
+        sender = await unit_of_work.senders.add(
+            Sender(
+                kick_user_id=900000 + int(uuid4().hex[:6], 16),
+                username=legacy_slug,
+                slug=legacy_slug,
+            )
+        )
+        await unit_of_work.messages.add(
+            ChatMessage(
+                kick_message_id=unique_value("profile-underscore-message"),
+                channel_id=channel.id or 0,
+                sender_id=sender.id or 0,
+                chatroom_id=channel.kick_chatroom_id or 0,
+                content=f"profile underscore {suffix}",
+                message_type="message",
+                sender_username_snapshot=legacy_slug,
+                sender_slug_snapshot=legacy_slug,
+                message_created_at=datetime(2041, 6, 1, 10, 0, tzinfo=UTC),
+            )
+        )
+        await unit_of_work.commit()
+
+    response = await client.get(f"/users/{profile_slug}/analytics")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["sender"]["username"] == legacy_slug
+    assert payload["overview"]["total_messages"] == 1
+    assert payload["latest_messages"][0]["sender_username_snapshot"] == legacy_slug
+
+
 def unique_value(prefix: str) -> str:
     return f"{prefix}-{uuid4().hex[:10]}"
 

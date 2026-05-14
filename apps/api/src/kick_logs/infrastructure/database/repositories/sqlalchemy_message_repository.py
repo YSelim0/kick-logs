@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from kick_logs.domain.entities.chat_message import ChatMessage
 from kick_logs.domain.value_objects.pagination import CursorPagination
 from kick_logs.domain.value_objects.search_filters import MessageSearchFilters
+from kick_logs.domain.value_objects.sender_slug import build_sender_lookup_terms
 from kick_logs.infrastructure.database.mappers import chat_message_to_domain, chat_message_to_model
 from kick_logs.infrastructure.database.models import ChannelModel, ChatMessageModel, SenderModel
 
@@ -38,13 +39,13 @@ class SqlAlchemyMessageRepository:
         )
 
         if filters.sender:
-            sender_query = filters.sender.lower()
+            sender_terms = build_sender_lookup_terms(filters.sender)
             statement = statement.where(
                 or_(
-                    func.lower(SenderModel.username) == sender_query,
-                    func.lower(SenderModel.slug) == sender_query,
-                    func.lower(ChatMessageModel.sender_username_snapshot) == sender_query,
-                    func.lower(ChatMessageModel.sender_slug_snapshot) == sender_query,
+                    func.lower(SenderModel.username).in_(sender_terms),
+                    func.lower(SenderModel.slug).in_(sender_terms),
+                    func.lower(ChatMessageModel.sender_username_snapshot).in_(sender_terms),
+                    func.lower(ChatMessageModel.sender_slug_snapshot).in_(sender_terms),
                 )
             )
 

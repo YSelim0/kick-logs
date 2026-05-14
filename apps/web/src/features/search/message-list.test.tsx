@@ -16,7 +16,7 @@ describe("MessageList", () => {
           original_sender: {
             id: 97891494,
             username: "Cansu98xx",
-            slug: "cansu98xx"
+            slug: "cansu_98xx"
           },
           original_message: {
             id: "1be196b8-55c7-4980-8022-a1112723acea",
@@ -30,7 +30,7 @@ describe("MessageList", () => {
     expect(screen.getByText("@Cansu98xx:")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "@Cansu98xx:" })).toHaveAttribute(
       "href",
-      "/users/cansu98xx"
+      "/users/cansu-98xx"
     );
     expect(screen.getByText(/senin saat ne saati/)).toBeInTheDocument();
     expect(screen.getByText("current reply content")).toBeInTheDocument();
@@ -55,10 +55,13 @@ describe("MessageList", () => {
       }
     ]);
 
-    expect(screen.getByRole("link", { name: "yavuz" })).toHaveAttribute("href", "/users/yavuz");
+    expect(screen.getByRole("link", { name: "yavuz" })).toHaveAttribute(
+      "href",
+      "/users/yavuz-user"
+    );
     expect(screen.getByRole("link", { name: "yavuz profil" })).toHaveAttribute(
       "href",
-      "/users/yavuz"
+      "/users/yavuz-user"
     );
   });
 });
@@ -98,7 +101,7 @@ function messageFixture(): Message {
       id: 1,
       kick_user_id: 1,
       username: "yavuz",
-      slug: "yavuz",
+      slug: "yavuz_user",
       profile_image_url: null
     },
     channel: {

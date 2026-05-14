@@ -8,6 +8,7 @@ from kick_logs.application.exceptions import ChannelNotFoundError, MessageIngest
 from kick_logs.application.ports.unit_of_work import UnitOfWork
 from kick_logs.application.services.emote_parser import EmoteParser
 from kick_logs.domain.entities import ChatMessage, Sender
+from kick_logs.domain.value_objects.sender_slug import normalize_kick_profile_slug
 
 
 @dataclass(frozen=True, slots=True)
@@ -114,7 +115,9 @@ class IngestMessageUseCase:
         metadata = self._read_optional_mapping(payload.get("metadata"))
 
         sender_username = self._read_required_text(sender_payload, "username")
-        sender_slug = self._normalize_slug(sender_payload.get("slug")) or sender_username.lower()
+        sender_slug = self._normalize_slug(sender_payload.get("slug")) or (
+            normalize_kick_profile_slug(sender_username) or sender_username.lower()
+        )
 
         return _NormalizedKickMessage(
             kick_message_id=self._read_required_text(payload, "id"),
@@ -191,7 +194,7 @@ class IngestMessageUseCase:
 
     def _normalize_slug(self, value: Any) -> str | None:
         cleaned = self._clean_text(value)
-        return cleaned.lower() if cleaned else None
+        return normalize_kick_profile_slug(cleaned)
 
     def _clean_text(self, value: Any) -> str | None:
         if value is None:

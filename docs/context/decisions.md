@@ -109,3 +109,6 @@
   no slug, the frontend derives a lowercase username fallback.
 - `/users/[slug]` top identity blocks use the same rounded bordered panel treatment as the rest of
   the profile sections.
+- Public sender profile URLs follow Kick's profile slug behavior: chat usernames can display with
+  underscores, but profile routes convert `_` to `-`; backend profile/search lookups accept both
+  forms so existing underscore-stored data keeps working.

@@ -511,6 +511,8 @@ Frontend rules:
 - `/` is the public landing page backed by read-only analytics endpoints.
 - `/search` is the primary public app screen.
 - `/users/[slug]` is a public sender profile page backed by `/users/{slug}/analytics`.
+- Public sender profile links use Kick-style profile slugs: display usernames may contain `_`,
+  but profile routes convert `_` to `-`, so `example_user` links to `/users/example-user`.
 - `/admin` requires login and manages backend operational state such as followed channels.
 
 ## Frontend UI Direction

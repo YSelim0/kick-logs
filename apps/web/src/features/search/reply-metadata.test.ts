@@ -13,7 +13,7 @@ describe("reply metadata", () => {
           original_sender: {
             id: 97891494,
             username: "Cansu98xx",
-            slug: "cansu98xx"
+            slug: "cansu_98xx"
           },
           original_message: {
             id: "1be196b8-55c7-4980-8022-a1112723acea",
@@ -24,7 +24,7 @@ describe("reply metadata", () => {
       })
     ).toEqual({
       senderUsername: "Cansu98xx",
-      senderSlug: "cansu98xx",
+      senderSlug: "cansu-98xx",
       messageId: "1be196b8-55c7-4980-8022-a1112723acea",
       content: "senin saat ne saati 5dk 1 saatmiş"
     });
@@ -38,7 +38,7 @@ describe("reply metadata", () => {
         reply_metadata: {
           original_sender: {
             id: 97891494,
-            username: "Cansu98xx"
+            username: "Cansu_98xx"
           },
           original_message: {
             id: "1be196b8-55c7-4980-8022-a1112723acea",
@@ -47,8 +47,8 @@ describe("reply metadata", () => {
         }
       })
     ).toMatchObject({
-      senderUsername: "Cansu98xx",
-      senderSlug: "cansu98xx"
+      senderUsername: "Cansu_98xx",
+      senderSlug: "cansu-98xx"
     });
   });
 

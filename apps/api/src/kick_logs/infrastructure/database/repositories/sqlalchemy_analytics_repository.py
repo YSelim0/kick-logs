@@ -9,6 +9,7 @@ from kick_logs.application.dto.analytics import (
     TopSenderDTO,
 )
 from kick_logs.domain.value_objects.analytics_filters import AnalyticsBucket, AnalyticsFilters
+from kick_logs.domain.value_objects.sender_slug import build_sender_lookup_terms
 from kick_logs.infrastructure.database.models import ChannelModel, ChatMessageModel, SenderModel
 
 
@@ -236,13 +237,13 @@ class SqlAlchemyAnalyticsRepository:
             )
 
         if filters.sender:
-            sender_query = filters.sender.lower()
+            sender_terms = build_sender_lookup_terms(filters.sender)
             statement = statement.where(
                 or_(
-                    func.lower(SenderModel.username) == sender_query,
-                    func.lower(SenderModel.slug) == sender_query,
-                    func.lower(ChatMessageModel.sender_username_snapshot) == sender_query,
-                    func.lower(ChatMessageModel.sender_slug_snapshot) == sender_query,
+                    func.lower(SenderModel.username).in_(sender_terms),
+                    func.lower(SenderModel.slug).in_(sender_terms),
+                    func.lower(ChatMessageModel.sender_username_snapshot).in_(sender_terms),
+                    func.lower(ChatMessageModel.sender_slug_snapshot).in_(sender_terms),
                 )
             )
 

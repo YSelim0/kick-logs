@@ -1,3 +1,4 @@
+import { toKickProfileSlug } from "@/lib/kick-profile-slugs";
 import type { JsonRecord, Message } from "@/types/api";
 
 export type ReplyContext = {
@@ -30,7 +31,7 @@ export function getReplyContext(message: Message): ReplyContext | null {
 
   return {
     senderUsername,
-    senderSlug: readOptionalString(originalSender.slug) ?? normalizeSenderSlug(senderUsername),
+    senderSlug: normalizeSenderSlug(readOptionalString(originalSender.slug) ?? senderUsername),
     messageId,
     content
   };
@@ -54,5 +55,5 @@ function readOptionalString(value: unknown): string | null {
 }
 
 function normalizeSenderSlug(username: string): string {
-  return username.trim().toLowerCase();
+  return toKickProfileSlug(username);
 }

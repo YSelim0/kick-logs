@@ -4,6 +4,24 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Fixed Kick profile slug handling for underscore usernames:
+  - visible chat usernames stay unchanged, such as `example_user`
+  - sender/profile links now route to Kick-style profile slugs, such as `/users/example-user`
+  - reply preview sender links use the same profile slug behavior
+  - backend sender/profile/search/analytics lookups accept both underscore and hyphen forms for
+    compatibility with existing stored data
+- Verification:
+  - targeted backend slug/search/profile tests: 28 passed
+  - `python -m uv run ruff check .`: passed
+  - `python -m uv run ruff format --check .`: passed
+  - `pnpm --filter @kick-logs/web test`: 14 files, 56 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `pnpm format:check`: passed
+
+## Previous
+
 - Polished reply-profile navigation and user profile panel styling:
   - muted replied-to sender names in `/search` reply previews link to `/users/[slug]`
   - reply metadata now uses `original_sender.slug` when available and falls back to a lowercase
@@ -15,8 +33,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `pnpm --filter @kick-logs/web lint`: passed
   - `pnpm --filter @kick-logs/web build`: passed
   - `pnpm format:check`: passed
-
-## Previous
 
 - Implemented Post-MVP Feature 5 user profile analytics:
   - added public `GET /users/{slug}/analytics`

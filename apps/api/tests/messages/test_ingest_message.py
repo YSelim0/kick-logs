@@ -69,7 +69,7 @@ def build_payload(chatroom_id: int, content: str | None = None) -> dict:
         "sender": {
             "id": 990002,
             "username": "Yavuz",
-            "slug": "Yavuz",
+            "slug": "Yavuz_User",
             "profile_pic": "https://example.com/avatar.png",
             "identity": {
                 "color": "#fff600",
@@ -97,7 +97,7 @@ async def test_ingest_message_persists_normalized_message(session_factory) -> No
     assert message.chatroom_id == chatroom_id
     assert message.content == payload["content"]
     assert message.sender_username_snapshot == "Yavuz"
-    assert message.sender_slug_snapshot == "yavuz"
+    assert message.sender_slug_snapshot == "yavuz-user"
     assert message.sender_color_snapshot == "#fff600"
     assert message.sender_badges == [{"type": "moderator", "text": "Mod"}]
     assert message.reply_metadata["message_ref"] == "ref-1"
@@ -115,8 +115,24 @@ async def test_ingest_message_persists_normalized_message(session_factory) -> No
         sender = await unit_of_work.senders.get_by_kick_user_id(990002)
 
     assert sender is not None
+    assert sender.slug == "yavuz-user"
     assert sender.profile_image_url == "https://example.com/avatar.png"
     assert sender.last_seen_color == "#fff600"
+
+
+async def test_ingest_message_derives_kick_profile_slug_from_username(session_factory) -> None:
+    chatroom_id = 700000 + int(uuid4().hex[:6], 16)
+    await seed_channel(session_factory, chatroom_id)
+    payload = build_payload(chatroom_id)
+    payload["sender"]["username"] = "Yavuz_User"
+    payload["sender"].pop("slug")
+
+    message = await IngestMessageUseCase(lambda: SqlAlchemyUnitOfWork(session_factory)).execute(
+        payload
+    )
+
+    assert message.sender_username_snapshot == "Yavuz_User"
+    assert message.sender_slug_snapshot == "yavuz-user"
 
 
 async def test_ingest_message_persists_reply_payload_shape(session_factory) -> None:

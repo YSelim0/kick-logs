@@ -9,6 +9,7 @@ import { useState } from "react";
 import { MessageContent } from "@/features/search/message-content";
 import { getReplyContext } from "@/features/search/reply-metadata";
 import { formatMessageDate } from "@/features/search/search-params";
+import { buildUserProfileHref } from "@/lib/kick-profile-slugs";
 import { cn } from "@/lib/utils";
 import type { Message } from "@/types/api";
 
@@ -139,12 +140,8 @@ function MessageRow({
   const replyTitle = replyContext
     ? `@${replyContext.senderUsername}: ${replyContext.content}`
     : undefined;
-  const replySenderProfileHref = replyContext?.senderSlug
-    ? `/users/${encodeURIComponent(replyContext.senderSlug)}`
-    : null;
-  const senderProfileHref = message.sender.slug
-    ? `/users/${encodeURIComponent(message.sender.slug)}`
-    : null;
+  const replySenderProfileHref = buildUserProfileHref(replyContext?.senderSlug);
+  const senderProfileHref = buildUserProfileHref(message.sender.slug);
   const senderName = message.sender.username || message.sender_username_snapshot;
 
   return (

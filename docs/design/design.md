@@ -215,6 +215,8 @@ Sender avatar:
 - Render sender avatars as fully circular images.
 - Use a stable circular fallback avatar when no profile image exists.
 - Sender avatar and sender name link to `/users/[slug]` when a sender slug is present.
+- Sender profile links must use Kick URL slug behavior: keep visible usernames such as
+  `example_user`, but route to `/users/example-user` by converting underscores to hyphens.
 
 Emotes:
 
@@ -232,7 +234,8 @@ Result row layout:
 - Reply rows render the replied-to sender and replied-to message content above the current message in muted gray text.
 - Reply preview data comes from `reply_metadata.original_sender.username` and `reply_metadata.original_message.content` when `message_type` is `reply`.
 - Reply preview sender names link to `/users/[slug]` when possible; if Kick reply metadata does
-  not include a slug, the frontend derives a lowercase username fallback for the profile URL.
+  not include a slug, the frontend derives a lowercase Kick profile slug fallback from the
+  username, including `_` to `-` conversion.
 - Long reply preview text should expose the full replied-to content through a `title` attribute.
 - URLs inside message content should render as clickable anchors without breaking inline emote
   placement or matched-text highlighting.

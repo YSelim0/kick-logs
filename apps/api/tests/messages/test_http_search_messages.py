@@ -398,6 +398,54 @@ async def test_public_search_combines_optional_filters(client, session_factory) 
     assert message_ids(all_filters_response.json()) == [messages[3].kick_message_id]
 
 
+async def test_public_search_sender_filter_accepts_kick_profile_slug_for_underscores(
+    client,
+    session_factory,
+) -> None:
+    suffix = uuid4().hex[:8]
+    legacy_slug = f"search_user_{suffix}"
+    profile_slug = legacy_slug.replace("_", "-")
+
+    async with SqlAlchemyUnitOfWork(session_factory) as unit_of_work:
+        channel = await unit_of_work.channels.add(
+            Channel(
+                kick_channel_id=700000 + int(uuid4().hex[:6], 16),
+                kick_chatroom_id=800000 + int(uuid4().hex[:6], 16),
+                slug=f"search-underscore-{suffix}",
+                display_name=f"Search Underscore {suffix}",
+            )
+        )
+        sender = await unit_of_work.senders.add(
+            Sender(
+                kick_user_id=900000 + int(uuid4().hex[:6], 16),
+                username=legacy_slug,
+                slug=legacy_slug,
+            )
+        )
+        message = await unit_of_work.messages.add(
+            ChatMessage(
+                kick_message_id=unique_value("search-underscore-message"),
+                channel_id=channel.id or 0,
+                sender_id=sender.id or 0,
+                chatroom_id=channel.kick_chatroom_id or 0,
+                content=f"search underscore combo-{suffix}",
+                message_type="message",
+                sender_username_snapshot=legacy_slug,
+                sender_slug_snapshot=legacy_slug,
+                message_created_at=datetime(2035, 1, 1, 12, 0, tzinfo=UTC),
+            )
+        )
+        await unit_of_work.commit()
+
+    response = await client.get(
+        "/messages",
+        params={"sender": profile_slug, "q": f"combo-{suffix}"},
+    )
+
+    assert response.status_code == 200
+    assert message_ids(response.json()) == [message.kick_message_id]
+
+
 async def test_public_search_filters_by_date_range(client, session_factory) -> None:
     dataset = await seed_search_dataset(session_factory)
     base_time = dataset["base_time"]

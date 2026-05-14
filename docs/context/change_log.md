@@ -4,6 +4,24 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-14
 
+- Fixed Kick profile slug handling for usernames with underscores:
+  - frontend sender profile links now convert `_` to `-`, so `example_user` routes to
+    `/users/example-user`
+  - reply preview sender profile slugs use the same canonical Kick URL behavior
+  - backend ingestion normalizes new sender slugs to Kick profile URL form
+  - backend sender/profile/search/analytics lookups accept both underscore and hyphen forms so
+    existing stored data remains reachable
+  - added backend and frontend coverage for underscore-to-hyphen profile slug behavior
+  - verified targeted backend tests:
+    `python -m uv run pytest tests/domain/test_value_objects.py tests/messages/test_ingest_message.py tests/messages/test_http_search_messages.py tests/profiles/test_http_user_profiles.py`
+    returned 28 passed
+  - verified `python -m uv run ruff check .`
+  - verified `python -m uv run ruff format --check .`
+  - verified `pnpm --filter @kick-logs/web test`: 14 files, 56 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+  - verified `pnpm format:check`
 - Polished public profile navigation and profile panel styling:
   - `/search` reply previews now link the muted replied-to sender name to `/users/[slug]`
   - reply metadata extraction reads `original_sender.slug` when present and falls back to a

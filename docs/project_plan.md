@@ -221,6 +221,8 @@ Result rows should render inside one shared outer list container and show:
 - message content with emote image rendering/fallback
 
 Sender names and avatars in result rows link to `/users/[slug]` when a sender slug is present.
+Kick profile URLs convert underscores in chat usernames/slugs to hyphens, so `example_user`
+links to `/users/example-user` while the visible username remains `example_user`.
 
 Do not render each message as its own modal-like card. The list should stay dense and efficient for many messages.
 
