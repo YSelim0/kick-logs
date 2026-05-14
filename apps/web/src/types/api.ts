@@ -169,6 +169,26 @@ export type UserProfile = {
   latest_messages: Message[];
 };
 
+export type ChannelProfileChannel = {
+  id: number;
+  kick_channel_id: number | null;
+  kick_chatroom_id: number | null;
+  slug: string;
+  display_name: string;
+  profile_image_url: string | null;
+  banner_image_url: string | null;
+  is_enabled: boolean;
+};
+
+export type ChannelProfile = {
+  channel: ChannelProfileChannel;
+  overview: AnalyticsOverview;
+  message_volume: MessageVolumePoint[];
+  top_senders: TopSenderAnalytics[];
+  top_emotes: TopEmoteAnalytics[];
+  latest_messages: Message[];
+};
+
 export type MessageEmote = {
   id: string;
   name: string;

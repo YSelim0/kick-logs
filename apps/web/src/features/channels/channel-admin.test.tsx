@@ -30,6 +30,10 @@ describe("ChannelAdmin", () => {
 
     expect(await screen.findByText("hype")).toBeInTheDocument();
     expect(screen.getByText("#hype")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "hype #hype" })).toHaveAttribute(
+      "href",
+      "/channels/hype"
+    );
     expect(screen.getByText("100")).toBeInTheDocument();
     expect(screen.getByText("200")).toBeInTheDocument();
     expect(screen.getByText("Aktif")).toBeInTheDocument();

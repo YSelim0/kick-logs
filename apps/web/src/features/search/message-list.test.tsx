@@ -64,6 +64,15 @@ describe("MessageList", () => {
       "/users/yavuz-user"
     );
   });
+
+  it("links channel labels to the public channel profile", () => {
+    renderMessageList([messageFixture()]);
+
+    const channelLinks = screen.getAllByRole("link", { name: "#hype" });
+    expect(channelLinks).toHaveLength(2);
+    expect(channelLinks[0]).toHaveAttribute("href", "/channels/hype");
+    expect(channelLinks[1]).toHaveAttribute("href", "/channels/hype");
+  });
 });
 
 function renderMessageList(messages: Message[]) {

@@ -2,10 +2,12 @@
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Hash, Loader2, Plus, RefreshCcw, Signal, Trash2 } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { addChannel, listChannels, removeChannel } from "@/features/channels/api";
+import { buildChannelProfileHref } from "@/lib/channel-profile-slugs";
 import type { Channel } from "@/types/api";
 
 export function ChannelAdmin() {
@@ -185,6 +187,8 @@ function ChannelRow({
   isRemoving: boolean;
   onDisable: () => void;
 }) {
+  const profileHref = buildChannelProfileHref(channel.slug);
+
   return (
     <div
       className={
@@ -194,8 +198,17 @@ function ChannelRow({
       }
     >
       <div className="min-w-0">
-        <div className="truncate font-medium text-foreground">{channel.display_name}</div>
-        <div className="truncate text-xs text-accent">#{channel.slug}</div>
+        {profileHref ? (
+          <Link className="block min-w-0 hover:text-primary" href={profileHref}>
+            <div className="truncate font-medium text-foreground">{channel.display_name}</div>
+            <div className="truncate text-xs text-accent">#{channel.slug}</div>
+          </Link>
+        ) : (
+          <>
+            <div className="truncate font-medium text-foreground">{channel.display_name}</div>
+            <div className="truncate text-xs text-accent">#{channel.slug}</div>
+          </>
+        )}
       </div>
       <MetaValue label="Kick ID" value={channel.kick_channel_id?.toString() ?? "-"} />
       <MetaValue label="Chatroom" value={channel.kick_chatroom_id?.toString() ?? "-"} />

@@ -206,6 +206,8 @@ matching. Top-list `limit` is capped at 100.
 - `/`: public compact landing page with self-hosted project positioning, live analytics blocks,
   and clear navigation into search/admin/community links.
 - `/users/[slug]`: public sender profile screen with analytics and latest messages.
+- `/channels/[slug]`: public channel profile screen with stored Kick metadata, analytics, and
+  latest messages.
 
 Search UI follows the dark professional palette documented in `docs/design/design.md`:
 
@@ -227,6 +229,7 @@ Result rows should render inside one shared outer list container and show:
 Sender names and avatars in result rows link to `/users/[slug]` when a sender slug is present.
 Kick profile URLs convert underscores in chat usernames/slugs to hyphens, so `example_user`
 links to `/users/example-user` while the visible username remains `example_user`.
+Channel labels in result rows link to `/channels/[slug]` when channel slug data is present.
 
 Do not render each message as its own modal-like card. The list should stay dense and efficient for many messages.
 

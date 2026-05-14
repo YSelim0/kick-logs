@@ -461,6 +461,8 @@ apps/web/src/
       page.tsx
     users/[slug]/
       page.tsx
+    channels/[slug]/
+      page.tsx
   components/
     ui/
     layout/
@@ -495,6 +497,9 @@ apps/web/src/
     user-profile/
       api.ts
       user-profile-page.tsx
+    channel-profile/
+      api.ts
+      channel-profile-page.tsx
   lib/
     api-client.ts
     utils.ts
@@ -514,8 +519,11 @@ Frontend rules:
 - `/` is the public landing page backed by read-only analytics endpoints.
 - `/search` is the primary public app screen.
 - `/users/[slug]` is a public sender profile page backed by `/users/{slug}/analytics`.
+- `/channels/[slug]` is a public channel profile page backed by `/channels/{slug}/analytics`.
 - Public sender profile links use Kick-style profile slugs: display usernames may contain `_`,
   but profile routes convert `_` to `-`, so `example_user` links to `/users/example-user`.
+- Search result channel labels and admin channel rows link to `/channels/[slug]` when channel slug
+  data is present.
 - `/admin` requires login and manages backend operational state such as followed channels.
 
 ## Frontend UI Direction

@@ -35,6 +35,8 @@ Do not commit screenshots or exported images unless explicitly requested.
 - `/`: public compact landing page with project positioning, live analytics, and navigation into
   search/admin/community links.
 - `/users/[slug]`: public sender profile page with identity, analytics, and latest messages.
+- `/channels/[slug]`: public channel profile page with stored Kick metadata, analytics, and latest
+  messages.
 
 Landing content must stay product-focused and should not turn the app into a marketing site.
 
@@ -75,6 +77,8 @@ Current design scope:
 - `/admin` remains an authenticated operational workflow.
 - `/` can summarize the product and public analytics, but should stay compact.
 - `/users/[slug]` should reuse the compact analytics style, not a marketing/profile hero.
+- `/channels/[slug]` should reuse the compact analytics style with channel identity and activity
+  sections, not a streamer landing page treatment.
 
 ## Landing Page
 
@@ -263,6 +267,26 @@ User profile behavior:
   the analytics sections so it does not sit flush against page edges.
 - Keep the same dark palette, yellow primary action, modest radii, and compact typography used by
   search and landing.
+
+## Channel Profile Page
+
+The `/channels/[slug]` page is public and does not require login. It should help a visitor inspect
+a followed/logged Kick channel's stored activity.
+
+Channel profile behavior:
+
+- Load `GET /channels/{slug}/analytics`.
+- Show channel avatar/image, display name, slug, Kick channel id, Kick chatroom id, first logged
+  message, total messages, active senders, emote usage, and latest activity timestamp.
+- Show day-bucket message volume as a compact list/bar view.
+- Show top senders and top emotes.
+- Show latest messages without infinite scroll.
+- Provide a primary link to `/search?channel={slug}`.
+- Unknown channels show a calm not-found state with a link back to `/search`.
+- Search result channel labels link to `/channels/[slug]`.
+- Admin channel rows link to `/channels/[slug]` when slug data is present.
+- Keep the same dark palette, yellow primary action, modest radii, and compact typography used by
+  search, landing, and user profiles.
 
 ## Admin UI
 

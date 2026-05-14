@@ -21,14 +21,14 @@ or data management tools here.
 
 ## Frontend Tasks
 
-- [ ] Add `/channels/[slug]` page.
-- [ ] Link channel labels in search results to channel profiles.
-- [ ] Link admin channel rows to channel profiles when slug data is present.
-- [ ] Render channel summary, activity stats, volume chart/list, top senders, top emotes, and
+- [x] Add `/channels/[slug]` page.
+- [x] Link channel labels in search results to channel profiles.
+- [x] Link admin channel rows to channel profiles when slug data is present.
+- [x] Render channel summary, activity stats, volume chart/list, top senders, top emotes, and
       latest messages.
-- [ ] Add a link from the profile to `/search` with channel filter prefilled.
-- [ ] Add loading, empty, and not-found states.
-- [ ] Add frontend tests for page rendering, search/admin links, and not-found behavior.
+- [x] Add a link from the profile to `/search` with channel filter prefilled.
+- [x] Add loading, empty, and not-found states.
+- [x] Add frontend tests for page rendering, search/admin links, and not-found behavior.
 
 ## Docs And Acceptance
 

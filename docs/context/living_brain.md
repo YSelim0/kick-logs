@@ -94,6 +94,12 @@ This file is the active project memory. Keep it updated whenever project behavio
     contains-style public search matching
   - verification passed with targeted profile/analytics/search backend tests and backend Ruff
     checks
+- Post-MVP Feature 6 channel profile frontend is implemented:
+  - public `/channels/[slug]` renders channel summary, activity metrics, day-bucket message
+    volume, top senders, top emotes, latest messages, loading, empty, error, and not-found states
+  - channel profile pages link to `/search?channel={slug}`
+  - `/search` channel labels and `/admin` channel rows link to channel profile pages
+  - frontend verification passed with web tests, typecheck, lint, and build
 - Post-MVP Feature 2 planning now includes clickable message links:
   - URLs inside `/search` message content should render as safe clickable anchors
   - link rendering must preserve inline emote placement and matched-text highlighting

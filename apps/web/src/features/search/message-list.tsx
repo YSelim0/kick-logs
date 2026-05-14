@@ -10,6 +10,7 @@ import { MessageContent } from "@/features/search/message-content";
 import { getReplyContext } from "@/features/search/reply-metadata";
 import { formatMessageDate } from "@/features/search/search-params";
 import { buildUserProfileHref } from "@/lib/kick-profile-slugs";
+import { buildChannelProfileHref } from "@/lib/channel-profile-slugs";
 import { cn } from "@/lib/utils";
 import type { Message } from "@/types/api";
 
@@ -142,6 +143,7 @@ function MessageRow({
     : undefined;
   const replySenderProfileHref = buildUserProfileHref(replyContext?.senderSlug);
   const senderProfileHref = buildUserProfileHref(message.sender.slug);
+  const channelProfileHref = buildChannelProfileHref(message.channel.slug);
   const senderName = message.sender.username || message.sender_username_snapshot;
 
   return (
@@ -173,12 +175,25 @@ function MessageRow({
           <div className="truncate font-medium text-foreground">{senderName}</div>
         )}
         <div className="truncate text-xs text-muted-foreground md:hidden">
-          #{message.channel.slug} - {formatMessageDate(message.message_created_at)}
+          {channelProfileHref ? (
+            <Link className="text-accent hover:text-primary" href={channelProfileHref}>
+              #{message.channel.slug}
+            </Link>
+          ) : (
+            <span className="text-accent">#{message.channel.slug}</span>
+          )}{" "}
+          - {formatMessageDate(message.message_created_at)}
         </div>
       </div>
 
       <div className="hidden min-w-0 pr-3 text-accent md:block">
-        <span className="truncate">#{message.channel.slug}</span>
+        {channelProfileHref ? (
+          <Link className="block truncate hover:text-primary" href={channelProfileHref}>
+            #{message.channel.slug}
+          </Link>
+        ) : (
+          <span className="truncate">#{message.channel.slug}</span>
+        )}
       </div>
 
       <div className="col-span-2 min-w-0 text-foreground md:col-span-1 md:pr-4">

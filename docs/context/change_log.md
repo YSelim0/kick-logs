@@ -4,6 +4,18 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-14
 
+- Implemented the frontend for Post-MVP Feature 6 channel profiles:
+  - added public `/channels/[slug]`
+  - added typed channel profile API wrapper and response types
+  - channel profile UI renders summary metadata, activity metrics, day-bucket message volume, top
+    senders, top emotes, latest messages, loading, empty, error, and not-found states
+  - channel profile pages link to `/search?channel={slug}`
+  - `/search` channel labels now link to public channel profiles
+  - `/admin` channel rows now link to public channel profiles when slug data is present
+  - verified `pnpm --filter @kick-logs/web test`: 15 files, 61 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
 - Implemented the backend API for Post-MVP Feature 6 channel profiles:
   - added public `GET /channels/{slug}/analytics`
   - endpoint returns stored Kick channel metadata, overview totals, day-bucket message volume,
