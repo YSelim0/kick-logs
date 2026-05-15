@@ -114,27 +114,34 @@ func (repo *Repository) fillClickHouseSummary(ctx context.Context, summary *doma
 	}
 	summary.Counts.RawEvents = int64(rawEvents)
 
-	statusRows, err := repo.clickHouse.Query(
+	processed, err := countClickHouseRows(
 		ctx,
-		`SELECT status, count()
-		 FROM raw_kick_events
-		 GROUP BY status`,
+		repo.clickHouse,
+		`SELECT uniqExact(raw_event_id) FROM raw_event_attempts WHERE status = 'processed'`,
 	)
 	if err != nil {
-		return fmt.Errorf("query clickhouse raw event statuses: %w", err)
+		return err
 	}
-	defer statusRows.Close()
-	for statusRows.Next() {
-		var status string
-		var count uint64
-		if err := statusRows.Scan(&status, &count); err != nil {
-			return fmt.Errorf("scan clickhouse raw event status: %w", err)
-		}
-		summary.RawEventStatusCounts[status] = int64(count)
+	failed, err := countClickHouseRows(
+		ctx,
+		repo.clickHouse,
+		`SELECT uniqExact(raw_event_id)
+		 FROM raw_event_attempts
+		 WHERE status = 'failed'
+		   AND raw_event_id NOT IN (
+			SELECT raw_event_id FROM raw_event_attempts WHERE status = 'processed'
+		   )`,
+	)
+	if err != nil {
+		return err
 	}
-	if err := statusRows.Err(); err != nil {
-		return fmt.Errorf("iterate clickhouse raw event statuses: %w", err)
+	pending := int64(rawEvents) - processed - failed
+	if pending < 0 {
+		pending = 0
 	}
+	summary.RawEventStatusCounts["pending"] = pending
+	summary.RawEventStatusCounts["processed"] = processed
+	summary.RawEventStatusCounts["failed"] = failed
 
 	sizeRows, err := repo.clickHouse.Query(
 		ctx,
@@ -172,10 +179,22 @@ func (repo *Repository) fillClickHouseSummary(ctx context.Context, summary *doma
 	if err := scanNullableTime(ctx, repo.clickHouse, "SELECT max(received_at) FROM raw_kick_events", &summary.Timestamps.LatestRawEventReceivedAt); err != nil {
 		return err
 	}
-	if err := scanNullableTime(ctx, repo.clickHouse, "SELECT max(processed_at) FROM raw_kick_events WHERE processed_at IS NOT NULL", &summary.Timestamps.LatestRawEventProcessedAt); err != nil {
+	if err := scanNullableTime(ctx, repo.clickHouse, "SELECT max(finished_at) FROM raw_event_attempts WHERE status = 'processed' AND finished_at IS NOT NULL", &summary.Timestamps.LatestRawEventProcessedAt); err != nil {
 		return err
 	}
-	if err := scanNullableTime(ctx, repo.clickHouse, "SELECT min(received_at) FROM raw_kick_events WHERE status = 'pending'", &summary.Timestamps.OldestPendingRawEventReceivedAt); err != nil {
+	if err := scanNullableTime(
+		ctx,
+		repo.clickHouse,
+		`SELECT min(received_at)
+		 FROM raw_kick_events
+		 WHERE id NOT IN (
+			SELECT raw_event_id FROM raw_event_attempts WHERE status = 'processed'
+		 )
+		   AND id NOT IN (
+			SELECT raw_event_id FROM raw_event_attempts WHERE status = 'failed'
+		 )`,
+		&summary.Timestamps.OldestPendingRawEventReceivedAt,
+	); err != nil {
 		return err
 	}
 	return nil
@@ -189,12 +208,20 @@ func countSQLiteRows(ctx context.Context, db *sql.DB, table string, suffix strin
 	return count, nil
 }
 
+func countClickHouseRows(ctx context.Context, conn driver.Conn, query string) (int64, error) {
+	var count uint64
+	if err := conn.QueryRow(ctx, query).Scan(&count); err != nil {
+		return 0, fmt.Errorf("count clickhouse rows: %w", err)
+	}
+	return int64(count), nil
+}
+
 func scanNullableTime(ctx context.Context, conn driver.Conn, query string, target *time.Time) error {
 	var value *time.Time
 	if err := conn.QueryRow(ctx, query).Scan(&value); err != nil {
 		return fmt.Errorf("scan clickhouse timestamp: %w", err)
 	}
-	if value != nil {
+	if value != nil && value.Unix() > 0 {
 		*target = value.UTC()
 	}
 	return nil

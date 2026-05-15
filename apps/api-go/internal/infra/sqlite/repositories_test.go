@@ -105,6 +105,60 @@ func TestFollowedChannelRepository(t *testing.T) {
 	if len(enabled) != 1 {
 		t.Fatalf("enabled channels len = %d", len(enabled))
 	}
+
+	byChatroom, err := repo.GetByChatroomID(ctx, 202)
+	if err != nil {
+		t.Fatalf("GetByChatroomID() error = %v", err)
+	}
+	if byChatroom.Slug != "hype" {
+		t.Fatalf("byChatroom = %#v", byChatroom)
+	}
+}
+
+func TestSenderProfileAndHeartbeatRepositories(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openMigratedSQLite(t, ctx)
+	defer db.Close()
+
+	senders := sqlite.NewSenderProfileRepository(db)
+	sender, err := senders.Upsert(ctx, domain.SenderProfile{
+		KickUserID:            456,
+		Username:              "Yavuz_User",
+		Slug:                  "yavuz-user",
+		ProfileImageURL:       "https://example.com/avatar.png",
+		LastSeenColor:         "#fff600",
+		RawProfilePayloadJSON: `{"id":456}`,
+		LastSeenAt:            time.Date(2026, 5, 16, 12, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("sender Upsert() error = %v", err)
+	}
+	if sender.ID == 0 {
+		t.Fatal("sender ID = 0")
+	}
+	fetched, err := senders.GetByKickUserID(ctx, 456)
+	if err != nil {
+		t.Fatalf("GetByKickUserID() error = %v", err)
+	}
+	if fetched.ProfileImageURL == "" || fetched.LastSeenColor != "#fff600" {
+		t.Fatalf("fetched sender = %#v", fetched)
+	}
+
+	heartbeats := sqlite.NewWorkerHeartbeatRepository(db)
+	if err := heartbeats.Upsert(ctx, domain.ListenerHeartbeat{
+		ServiceName:  "listener",
+		LastSeenAt:   time.Date(2026, 5, 16, 13, 0, 0, 0, time.UTC),
+		MetadataJSON: `{"worker_count":4}`,
+	}); err != nil {
+		t.Fatalf("heartbeat Upsert() error = %v", err)
+	}
+	var metadata string
+	if err := db.QueryRowContext(ctx, "SELECT metadata_json FROM worker_heartbeats WHERE service_name = 'listener'").Scan(&metadata); err != nil {
+		t.Fatalf("read heartbeat: %v", err)
+	}
+	if metadata != `{"worker_count":4}` {
+		t.Fatalf("metadata = %q", metadata)
+	}
 }
 
 func openMigratedSQLite(t *testing.T, ctx context.Context) (*sql.DB, string) {

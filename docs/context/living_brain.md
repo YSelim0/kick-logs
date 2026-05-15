@@ -4,6 +4,22 @@ This file is the active project memory. Keep it updated whenever project behavio
 
 ## Current State
 
+- Go rewrite Phase 6 listener ingestion parity is implemented:
+  - `cmd/listener` now opens SQLite and ClickHouse, applies migrations, wires Kick clients, and
+    runs raw-event workers plus listener heartbeat recording
+  - `listener-go` is available behind the `go-rewrite` Compose profile
+  - the Go Pusher client subscribes to `chatrooms.{chatroom_id}.v2` and channel-level streams for
+    enabled followed channels
+  - `App\Events\ChatMessageEvent` payloads are persisted to ClickHouse `raw_kick_events` before
+    normalization
+  - raw-event processing retries unprocessed rows, dedupes visible messages by `kick_message_id`,
+    upserts sender profiles into SQLite, writes normalized `chat_messages`, and appends
+    `raw_event_attempts`
+  - normalization preserves reply metadata, emote arrays/image URLs, badges, sender color,
+    timestamps, and raw payload JSON for frontend-compatible search/export responses
+  - operations summary now reports Go listener heartbeat freshness and consistent raw-event health
+  - verification passed with Go tests/vet, live ClickHouse repository test, Docker Go API/listener
+    smoke, authenticated operations summary smoke, and listener log smoke
 - Go rewrite Phase 5 message search/export parity is implemented:
   - `GET /messages` reads ClickHouse `chat_messages` and preserves the current public search
     response shape
@@ -28,7 +44,8 @@ This file is the active project memory. Keep it updated whenever project behavio
   - concrete repositories exist for SQLite admin users/followed channels/stats and ClickHouse
     messages/raw events/stats
   - `cmd/migrate` applies both stores and seeds the default super admin into SQLite with bcrypt
-  - Compose profile `go-rewrite` includes `clickhouse`, `migrate-go`, and `api-go`
+  - Compose profile `go-rewrite` includes `clickhouse`, `migrate-go`, `api-go`, and
+    `listener-go`
   - verification passed with `go test ./...`, live ClickHouse integration test, migration
     container run, and Go Docker image builds
 - Go rewrite Phase 4 auth/admin API parity is implemented:

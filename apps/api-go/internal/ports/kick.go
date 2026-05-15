@@ -9,3 +9,11 @@ import (
 type KickChannelResolver interface {
 	ResolveChannel(ctx context.Context, slug string) (domain.FollowedChannel, error)
 }
+
+type KickSenderProfileResolver interface {
+	ResolveSender(ctx context.Context, slug string) (domain.SenderProfile, error)
+}
+
+type PusherClient interface {
+	Listen(ctx context.Context, channels []domain.ListenerChannel, handle func(string) error) error
+}

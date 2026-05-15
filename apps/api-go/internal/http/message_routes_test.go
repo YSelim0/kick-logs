@@ -304,6 +304,15 @@ func (repository *fakeMessageRepository) Insert(_ context.Context, message domai
 	return nil
 }
 
+func (repository *fakeMessageRepository) ExistsByKickMessageID(_ context.Context, kickMessageID string) (bool, error) {
+	for _, message := range repository.messages {
+		if message.KickMessageID == kickMessageID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (repository *fakeMessageRepository) Search(
 	_ context.Context,
 	filter domain.MessageSearchFilter,

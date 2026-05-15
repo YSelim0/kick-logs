@@ -4,6 +4,20 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Completed Go rewrite Phase 6 listener ingestion parity:
+  - wired `cmd/listener` to SQLite, ClickHouse, Kick resolvers, Pusher websocket, raw workers, and
+    heartbeat recording
+  - added Go Pusher subscriptions for `chatrooms.{chatroom_id}.v2` plus channel-level streams
+  - stored `App\Events\ChatMessageEvent` raw payloads in ClickHouse before normalization
+  - added raw-event retry processing, `kick_message_id` dedupe, sender-profile upsert, and
+    normalized ClickHouse message inserts
+  - preserved reply metadata, emote arrays/image URLs, badges, sender color, timestamps, and raw
+    payload JSON for frontend-compatible search results
+  - added `listener-go` to the `go-rewrite` Compose profile and closed
+    `docs/tasks/go_rewrite_06_listener_ingestion.md`
+  - verification: `go test ./...`, `go vet ./...`, live ClickHouse repository test, Docker Go API
+    and listener build/smoke, authenticated operations summary smoke, and listener log smoke
+
 - Completed Go rewrite Phase 5 message search/export parity:
   - added ClickHouse-backed public `GET /messages`
   - added public `GET /messages/export` with JSON and CSV output

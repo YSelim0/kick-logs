@@ -90,6 +90,18 @@ func (repo *MessageRepository) SearchBasic(ctx context.Context, filter domain.Me
 	return repo.Search(ctx, filter)
 }
 
+func (repo *MessageRepository) ExistsByKickMessageID(ctx context.Context, kickMessageID string) (bool, error) {
+	var count uint64
+	if err := repo.conn.QueryRow(
+		ctx,
+		"SELECT count() FROM chat_messages WHERE kick_message_id = ? AND is_deleted = 0",
+		kickMessageID,
+	).Scan(&count); err != nil {
+		return false, fmt.Errorf("check chat message exists: %w", err)
+	}
+	return count > 0, nil
+}
+
 func (repo *MessageRepository) Search(ctx context.Context, filter domain.MessageSearchFilter) ([]domain.ChatMessage, error) {
 	limit := filter.Limit
 	if limit == 0 {

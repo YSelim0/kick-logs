@@ -99,5 +99,14 @@ func ClickHouseMigrations() []ClickHouseMigration {
 				`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS channel_banner_image_url Nullable(String);`,
 			},
 		},
+		{
+			Version: 3,
+			Name:    "add_raw_event_message_metadata",
+			Statements: []string{
+				`ALTER TABLE raw_kick_events ADD COLUMN IF NOT EXISTS kick_message_id Nullable(String);`,
+				`ALTER TABLE raw_kick_events ADD COLUMN IF NOT EXISTS chatroom_id Nullable(Int64);`,
+				`ALTER TABLE raw_kick_events ADD COLUMN IF NOT EXISTS channel_id Nullable(Int64);`,
+			},
+		},
 	}
 }

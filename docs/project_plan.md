@@ -6,6 +6,11 @@ Kick Logs is an MVP monorepo for collecting public Kick chat messages from follo
 
 The ingestion method resolves Kick channel/chatroom metadata through Kick web endpoints, subscribes to Kick chat Pusher channels, parses `App\Events\ChatMessageEvent` payloads, enriches senders when possible, and persists messages.
 
+The active rewrite branch is rebuilding the backend and listener in Go with ClickHouse for message
+and raw-event storage while preserving the existing HTTP contracts. Phase 6 has completed Go
+listener ingestion parity: `listener-go` stores raw Kick events first, retries normalization,
+dedupes by `kick_message_id`, and keeps listener heartbeat state visible in admin operations.
+
 Default local startup:
 
 ```powershell

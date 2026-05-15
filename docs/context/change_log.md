@@ -4,6 +4,27 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-16
 
+- Completed Go rewrite Phase 6 listener ingestion parity:
+  - implemented the Go listener runtime wiring in `cmd/listener`
+  - added Kick sender profile resolver and Pusher websocket client
+  - subscribed to `chatrooms.{chatroom_id}.v2` and channel-level streams for enabled followed
+    channels
+  - persisted raw Kick chat events into ClickHouse before normalization
+  - added raw-event retry processing, processing attempts, max-attempt filtering, and idempotent
+    message inserts by `kick_message_id`
+  - normalized sender/channel snapshots, reply metadata, emotes, badges, message type, timestamps,
+    raw payload JSON, and sender profile cache updates
+  - added listener heartbeat writes and operations-summary raw-event health fixes
+  - added `listener-go` to the `go-rewrite` Compose profile
+  - closed all checklist items in `docs/tasks/go_rewrite_06_listener_ingestion.md`
+  - verified `go test ./...`
+  - verified `go vet ./...`
+  - verified live ClickHouse integration test with
+    `KICK_LOGS_RUN_CLICKHOUSE_TESTS=1 go test ./internal/infra/clickhouse -run TestClickHouseMigrationsAndRepositories -count=1 -v`
+  - verified `docker compose --profile go-rewrite up --build -d api-go listener-go`
+  - verified authenticated `GET /admin/operations/summary` reports fresh listener heartbeat and
+    consistent raw-event counts
+
 - Completed Go rewrite Phase 5 message search/export parity:
   - added ClickHouse-backed message search use case and public `GET /messages`
   - added public `GET /messages/export` with JSON and CSV output

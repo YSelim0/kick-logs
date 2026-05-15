@@ -139,3 +139,12 @@
 - Go rewrite admin channel deletion remains disable-only to preserve historical chat data.
 - Go rewrite public message search/export reads denormalized ClickHouse `chat_messages` directly;
   the hot search path must not join back to SQLite.
+- The Go listener Compose service is named `listener-go` and is gated behind profile
+  `go-rewrite` until cutover.
+- Go listener ingestion keeps the durable-inbox rule: once a Kick websocket chat event reaches the
+  process, persist the raw event to ClickHouse before normalization, sender enrichment, or visible
+  message insertion.
+- Go raw-event processing is at-least-once and idempotent: retries append attempt rows, while
+  visible message writes dedupe by `kick_message_id`.
+- Go listener heartbeat state remains in SQLite `worker_heartbeats` so operations health can be
+  read without Docker logs.

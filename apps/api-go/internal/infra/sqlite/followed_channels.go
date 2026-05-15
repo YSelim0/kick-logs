@@ -117,6 +117,19 @@ func (repo *FollowedChannelRepository) GetByID(ctx context.Context, id int64) (d
 	return scanFollowedChannel(row)
 }
 
+func (repo *FollowedChannelRepository) GetByChatroomID(ctx context.Context, kickChatroomID int64) (domain.FollowedChannel, error) {
+	row := repo.db.QueryRowContext(
+		ctx,
+		`SELECT id, kick_channel_id, kick_chatroom_id, slug, display_name, profile_image_url,
+		        banner_image_url, is_enabled, raw_payload_json, created_at, updated_at,
+		        last_resolved_at, last_message_at, last_listener_error
+		 FROM followed_channels
+		 WHERE kick_chatroom_id = ?`,
+		kickChatroomID,
+	)
+	return scanFollowedChannel(row)
+}
+
 func (repo *FollowedChannelRepository) List(ctx context.Context) ([]domain.FollowedChannel, error) {
 	rows, err := repo.db.QueryContext(
 		ctx,

@@ -66,7 +66,8 @@ There is no separate Python package for the listener in MVP. The `listener` Dock
 `apps/api-go` currently provides the Go rewrite foundation:
 
 - `cmd/api`: Go HTTP API entrypoint with `GET /health`.
-- `cmd/listener`: listener entrypoint placeholder for the later ingestion phase.
+- `cmd/listener`: Go Kick listener entrypoint that wires SQLite, ClickHouse, Kick clients, raw
+  event workers, and heartbeat recording.
 - `cmd/migrate`: storage migration entrypoint for SQLite and ClickHouse.
 - `internal/config`: environment-based configuration with local defaults.
 - `internal/app`: structured logging and API server bootstrap.
@@ -80,15 +81,17 @@ There is no separate Python package for the listener in MVP. The `listener` Dock
   table-size stats.
 - `internal/infra/migrations`: versioned SQLite and ClickHouse migration runners.
 - `internal/infra/auth`: bcrypt password hashing and JWT session token signing.
-- `internal/infra/kick`: Kick web channel resolver used by admin channel add.
+- `internal/infra/kick`: Kick web channel/sender resolvers and Pusher websocket client.
 - `internal/infra/operations`: basic admin operations summary backed by SQLite and ClickHouse.
 - `internal/usecase/auth`: login, current-user lookup, admin-user list/create, and role checks.
 - `internal/usecase/channels`: followed-channel list/add/disable workflow.
 - `internal/usecase/messages`: ClickHouse-backed public search and export workflow.
+- `internal/usecase/listener`: Kick event parsing, raw-event durability, retry processing, message
+  normalization, sender cache updates, idempotent message inserts, and listener heartbeat writes.
 
-Compose exposes the optional Go API through profile `go-rewrite` as service `api-go`, mapped to
-`GO_API_PORT` or `8001` by default. The same profile exposes `clickhouse` and `migrate-go` for
-rewrite storage development. The Python `api` service remains the default API service.
+Compose exposes the optional Go runtime through profile `go-rewrite` as `api-go`, `listener-go`,
+`clickhouse`, and `migrate-go`. The Go API is mapped to `GO_API_PORT` or `8001` by default. The
+Python `api` and `listener` services remain the default runtime until cutover.
 
 Go rewrite storage split:
 
@@ -121,6 +124,19 @@ Go rewrite message search/export parity:
   case-insensitive contains.
 - Cursor pagination keeps the `message_created_at|message_id` format so the existing frontend
   infinite scroll can switch to the Go API without a contract change.
+
+Go rewrite listener ingestion parity:
+
+- The Go listener loads enabled followed channels from SQLite and resolves missing Kick channel
+  metadata before subscription.
+- The Pusher client subscribes to `chatrooms.{chatroom_id}.v2` and channel-level streams.
+- `App\Events\ChatMessageEvent` payloads are written to ClickHouse `raw_kick_events` before
+  normalization or sender enrichment.
+- Worker batches retry unprocessed raw events, append attempt history, dedupe visible messages by
+  `kick_message_id`, and write normalized ClickHouse `chat_messages`.
+- Normalization preserves frontend-compatible reply metadata, emote arrays/image URLs, badges,
+  sender color, sender/channel snapshots, and raw payload JSON.
+- `worker_heartbeats` tracks listener freshness for `GET /admin/operations/summary`.
 
 ## Backend Principles
 

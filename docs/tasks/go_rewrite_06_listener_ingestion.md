@@ -16,46 +16,46 @@ sender enrichment, dedupe, retry, and listener heartbeat behavior.
 
 ## Checklist
 
-- [ ] Implement Kick channel resolver equivalent to the current `https://kick.com/api/v2/channels`
+- [x] Implement Kick channel resolver equivalent to the current `https://kick.com/api/v2/channels`
       behavior.
-- [ ] Implement Kick sender profile resolver when sender slug metadata is available.
-- [ ] Implement Pusher websocket client.
-- [ ] Subscribe to `chatrooms.{chatroom_id}.v2`.
-- [ ] Subscribe to required channel-level streams when needed.
-- [ ] Load enabled followed channels from SQLite.
-- [ ] Resolve missing channel metadata before subscription.
-- [ ] Periodically resync followed channels and reconnect when subscription set changes.
-- [ ] Parse `App\Events\ChatMessageEvent`.
-- [ ] Insert raw events into ClickHouse before normalization.
-- [ ] Parse content, sender fields, badges, identity color, message type, timestamps, reply
+- [x] Implement Kick sender profile resolver when sender slug metadata is available.
+- [x] Implement Pusher websocket client.
+- [x] Subscribe to `chatrooms.{chatroom_id}.v2`.
+- [x] Subscribe to required channel-level streams when needed.
+- [x] Load enabled followed channels from SQLite.
+- [x] Resolve missing channel metadata before subscription.
+- [x] Periodically resync followed channels and reconnect when subscription set changes.
+- [x] Parse `App\Events\ChatMessageEvent`.
+- [x] Insert raw events into ClickHouse before normalization.
+- [x] Parse content, sender fields, badges, identity color, message type, timestamps, reply
       metadata, thread parent id, and raw payload.
-- [ ] Parse emotes into response-compatible fields and ClickHouse helper arrays.
-- [ ] Upsert sender profile cache in SQLite.
-- [ ] Insert normalized messages into ClickHouse idempotently.
-- [ ] Append raw-event processing attempt rows.
-- [ ] Retry raw events that were stored but not normalized.
-- [ ] Record listener heartbeat in SQLite.
-- [ ] Reconnect with backoff after websocket failures.
+- [x] Parse emotes into response-compatible fields and ClickHouse helper arrays.
+- [x] Upsert sender profile cache in SQLite.
+- [x] Insert normalized messages into ClickHouse idempotently.
+- [x] Append raw-event processing attempt rows.
+- [x] Retry raw events that were stored but not normalized.
+- [x] Record listener heartbeat in SQLite.
+- [x] Reconnect with backoff after websocket failures.
 
 ## Tests And Checks
 
-- [ ] Parser tests cover normal chat messages.
-- [ ] Parser tests cover reply messages and reply metadata.
-- [ ] Parser tests cover messages with emotes.
-- [ ] Parser tests cover missing optional sender/channel fields.
-- [ ] Ingestion tests prove raw event is written before message normalization.
-- [ ] Ingestion tests prove duplicate `kick_message_id` does not create duplicate visible
+- [x] Parser tests cover normal chat messages.
+- [x] Parser tests cover reply messages and reply metadata.
+- [x] Parser tests cover messages with emotes.
+- [x] Parser tests cover missing optional sender/channel fields.
+- [x] Ingestion tests prove raw event is written before message normalization.
+- [x] Ingestion tests prove duplicate `kick_message_id` does not create duplicate visible
       messages.
-- [ ] Recovery tests process raw events that lack normalized messages.
-- [ ] Listener tests prove enabled-channel resync changes subscriptions.
-- [ ] Heartbeat tests update freshness state.
+- [x] Recovery tests process raw events that lack normalized messages.
+- [x] Listener tests prove enabled-channel resync changes subscriptions.
+- [x] Heartbeat tests update freshness state.
 
 ## Acceptance Criteria
 
-- [ ] A followed live channel can be subscribed through the Go listener.
-- [ ] Live messages become searchable through the Go API.
-- [ ] Reply and emote rendering data remains compatible with the frontend.
-- [ ] Admin operations can show listener freshness and raw-event processing health.
+- [x] A followed live channel can be subscribed through the Go listener.
+- [x] Live messages become searchable through the Go API.
+- [x] Reply and emote rendering data remains compatible with the frontend.
+- [x] Admin operations can show listener freshness and raw-event processing health.
 
 ## Commit Boundary
 

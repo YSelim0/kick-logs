@@ -7,8 +7,8 @@ The completed Python/FastAPI/PostgreSQL plans are archived under `docs/archive/`
 as product and contract history, but they are no longer active implementation scope for this branch.
 
 Status: Phase 1 contract inventory, Phase 2 Go workspace/tooling, Phase 3 storage schema,
-Phase 4 auth/admin API parity, and Phase 5 message search/export parity are complete on branch
-`feat/go-clickhouse-rewrite`.
+Phase 4 auth/admin API parity, Phase 5 message search/export parity, and Phase 6 listener
+ingestion parity are complete on branch `feat/go-clickhouse-rewrite`.
 
 ## Primary Goal
 
@@ -223,6 +223,24 @@ Current Go message search/export implementation:
   format.
 - Export rows are clamped to `MESSAGE_EXPORT_MAX_ROWS`, and CSV columns match the contract
   inventory.
+
+Current Go listener implementation:
+
+- `cmd/listener` opens SQLite and ClickHouse, applies migrations, wires Kick clients, and runs the
+  listener service as a dedicated Compose service named `listener-go` behind profile
+  `go-rewrite`.
+- The listener loads enabled channels from SQLite, resolves missing Kick channel metadata, and
+  subscribes to `chatrooms.{chatroom_id}.v2` plus channel-level streams through the Pusher
+  websocket client.
+- Received `App\Events\ChatMessageEvent` payloads are minimally parsed and stored in
+  ClickHouse `raw_kick_events` before message normalization.
+- Raw-event workers retry unprocessed events, dedupe by `kick_message_id`, normalize sender,
+  channel, reply, badge, emote, and timestamp fields, upsert SQLite sender profiles, insert
+  ClickHouse `chat_messages`, and append `raw_event_attempts`.
+- Listener heartbeat state is written to SQLite `worker_heartbeats`; admin operations summary shows
+  listener freshness and ClickHouse raw-event health.
+- No-channel and websocket-failure paths reconnect with controlled backoff/resync timing instead of
+  requiring a manual restart.
 
 ## Search Contract
 

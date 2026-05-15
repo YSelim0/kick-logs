@@ -9,30 +9,40 @@ import (
 )
 
 type Config struct {
-	AppName              string
-	AppEnv               string
-	LogLevel             string
-	APIHost              string
-	APIPort              int
-	BackendCORSOrigins   []string
-	KickPusherURL        string
-	MessageExportMaxRows int
-	JWTSecretKey         string
-	JWTAlgorithm         string
-	JWTExpiresMinutes    int
-	JWTCookieName        string
-	JWTCookieSecure      bool
-	JWTCookieSameSite    string
-	SeedSuperAdmin       bool
-	ListenerStaleAfter   int
-	SQLitePath           string
-	ClickHouseAddr       string
-	ClickHouseDatabase   string
-	ClickHouseUsername   string
-	ClickHousePassword   string
-	ClickHouseDebug      bool
-	DefaultAdminEmail    string
-	DefaultAdminPassword string
+	AppName                              string
+	AppEnv                               string
+	LogLevel                             string
+	APIHost                              string
+	APIPort                              int
+	BackendCORSOrigins                   []string
+	KickPusherURL                        string
+	MessageExportMaxRows                 int
+	JWTSecretKey                         string
+	JWTAlgorithm                         string
+	JWTExpiresMinutes                    int
+	JWTCookieName                        string
+	JWTCookieSecure                      bool
+	JWTCookieSameSite                    string
+	SeedSuperAdmin                       bool
+	ListenerReconnectInitialDelaySeconds float64
+	ListenerReconnectMaxDelaySeconds     float64
+	ListenerReconnectMultiplier          float64
+	ListenerWorkerCount                  int
+	ListenerRawEventBatchSize            int
+	ListenerRawEventProcessingTimeout    int
+	ListenerRawEventMaxAttempts          int
+	ListenerRawEventWorkerIdleDelay      float64
+	ListenerChannelResyncInterval        float64
+	ListenerHeartbeatInterval            float64
+	ListenerStaleAfter                   int
+	SQLitePath                           string
+	ClickHouseAddr                       string
+	ClickHouseDatabase                   string
+	ClickHouseUsername                   string
+	ClickHousePassword                   string
+	ClickHouseDebug                      bool
+	DefaultAdminEmail                    string
+	DefaultAdminPassword                 string
 }
 
 func Load() (Config, error) {
@@ -61,6 +71,56 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	reconnectInitialDelay, err := envFloat("LISTENER_RECONNECT_INITIAL_DELAY_SECONDS", 1.0)
+	if err != nil {
+		return Config{}, err
+	}
+
+	reconnectMaxDelay, err := envFloat("LISTENER_RECONNECT_MAX_DELAY_SECONDS", 30.0)
+	if err != nil {
+		return Config{}, err
+	}
+
+	reconnectMultiplier, err := envFloat("LISTENER_RECONNECT_MULTIPLIER", 2.0)
+	if err != nil {
+		return Config{}, err
+	}
+
+	listenerWorkerCount, err := envInt("LISTENER_WORKER_COUNT", 4)
+	if err != nil {
+		return Config{}, err
+	}
+
+	rawEventBatchSize, err := envInt("LISTENER_RAW_EVENT_BATCH_SIZE", 100)
+	if err != nil {
+		return Config{}, err
+	}
+
+	rawEventProcessingTimeout, err := envInt("LISTENER_RAW_EVENT_PROCESSING_TIMEOUT_SECONDS", 300)
+	if err != nil {
+		return Config{}, err
+	}
+
+	rawEventMaxAttempts, err := envInt("LISTENER_RAW_EVENT_MAX_ATTEMPTS", 5)
+	if err != nil {
+		return Config{}, err
+	}
+
+	rawEventWorkerIdleDelay, err := envFloat("LISTENER_RAW_EVENT_WORKER_IDLE_DELAY_SECONDS", 0.25)
+	if err != nil {
+		return Config{}, err
+	}
+
+	channelResyncInterval, err := envFloat("LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS", 60.0)
+	if err != nil {
+		return Config{}, err
+	}
+
+	heartbeatInterval, err := envFloat("LISTENER_HEARTBEAT_INTERVAL_SECONDS", 15.0)
+	if err != nil {
+		return Config{}, err
+	}
+
 	listenerStaleAfter, err := envInt("LISTENER_HEARTBEAT_STALE_AFTER_SECONDS", 45)
 	if err != nil {
 		return Config{}, err
@@ -72,30 +132,40 @@ func Load() (Config, error) {
 	}
 
 	return Config{
-		AppName:              envString("APP_NAME", "Kick Logs"),
-		AppEnv:               envString("APP_ENV", "local"),
-		LogLevel:             envString("LOG_LEVEL", "INFO"),
-		APIHost:              envString("API_HOST", "0.0.0.0"),
-		APIPort:              apiPort,
-		BackendCORSOrigins:   envCSV("BACKEND_CORS_ORIGINS", "http://localhost:3000"),
-		KickPusherURL:        envString("KICK_PUSHER_URL", "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0-rc2&flash=false"),
-		MessageExportMaxRows: maxRows,
-		JWTSecretKey:         envString("JWT_SECRET_KEY", "change-me-for-local-development-secret-key"),
-		JWTAlgorithm:         envString("JWT_ALGORITHM", "HS256"),
-		JWTExpiresMinutes:    jwtExpiresMinutes,
-		JWTCookieName:        envString("JWT_COOKIE_NAME", "kick_logs_session"),
-		JWTCookieSecure:      jwtCookieSecure,
-		JWTCookieSameSite:    envString("JWT_COOKIE_SAMESITE", "lax"),
-		SeedSuperAdmin:       seedSuperAdmin,
-		ListenerStaleAfter:   listenerStaleAfter,
-		SQLitePath:           envString("SQLITE_PATH", "var/kick-logs-go.sqlite3"),
-		ClickHouseAddr:       envString("CLICKHOUSE_ADDR", "127.0.0.1:9000"),
-		ClickHouseDatabase:   envString("CLICKHOUSE_DATABASE", "kick_logs"),
-		ClickHouseUsername:   envString("CLICKHOUSE_USERNAME", "kick_logs"),
-		ClickHousePassword:   envString("CLICKHOUSE_PASSWORD", "kick_logs"),
-		ClickHouseDebug:      clickHouseDebug,
-		DefaultAdminEmail:    envString("DEFAULT_SUPER_ADMIN_EMAIL", "admin@kicklogs.local"),
-		DefaultAdminPassword: envString("DEFAULT_SUPER_ADMIN_PASSWORD", "admin123"),
+		AppName:                              envString("APP_NAME", "Kick Logs"),
+		AppEnv:                               envString("APP_ENV", "local"),
+		LogLevel:                             envString("LOG_LEVEL", "INFO"),
+		APIHost:                              envString("API_HOST", "0.0.0.0"),
+		APIPort:                              apiPort,
+		BackendCORSOrigins:                   envCSV("BACKEND_CORS_ORIGINS", "http://localhost:3000"),
+		KickPusherURL:                        envString("KICK_PUSHER_URL", "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0-rc2&flash=false"),
+		MessageExportMaxRows:                 maxRows,
+		JWTSecretKey:                         envString("JWT_SECRET_KEY", "change-me-for-local-development-secret-key"),
+		JWTAlgorithm:                         envString("JWT_ALGORITHM", "HS256"),
+		JWTExpiresMinutes:                    jwtExpiresMinutes,
+		JWTCookieName:                        envString("JWT_COOKIE_NAME", "kick_logs_session"),
+		JWTCookieSecure:                      jwtCookieSecure,
+		JWTCookieSameSite:                    envString("JWT_COOKIE_SAMESITE", "lax"),
+		SeedSuperAdmin:                       seedSuperAdmin,
+		ListenerReconnectInitialDelaySeconds: reconnectInitialDelay,
+		ListenerReconnectMaxDelaySeconds:     reconnectMaxDelay,
+		ListenerReconnectMultiplier:          reconnectMultiplier,
+		ListenerWorkerCount:                  listenerWorkerCount,
+		ListenerRawEventBatchSize:            rawEventBatchSize,
+		ListenerRawEventProcessingTimeout:    rawEventProcessingTimeout,
+		ListenerRawEventMaxAttempts:          rawEventMaxAttempts,
+		ListenerRawEventWorkerIdleDelay:      rawEventWorkerIdleDelay,
+		ListenerChannelResyncInterval:        channelResyncInterval,
+		ListenerHeartbeatInterval:            heartbeatInterval,
+		ListenerStaleAfter:                   listenerStaleAfter,
+		SQLitePath:                           envString("SQLITE_PATH", "var/kick-logs-go.sqlite3"),
+		ClickHouseAddr:                       envString("CLICKHOUSE_ADDR", "127.0.0.1:9000"),
+		ClickHouseDatabase:                   envString("CLICKHOUSE_DATABASE", "kick_logs"),
+		ClickHouseUsername:                   envString("CLICKHOUSE_USERNAME", "kick_logs"),
+		ClickHousePassword:                   envString("CLICKHOUSE_PASSWORD", "kick_logs"),
+		ClickHouseDebug:                      clickHouseDebug,
+		DefaultAdminEmail:                    envString("DEFAULT_SUPER_ADMIN_EMAIL", "admin@kicklogs.local"),
+		DefaultAdminPassword:                 envString("DEFAULT_SUPER_ADMIN_PASSWORD", "admin123"),
 	}, nil
 }
 
@@ -133,6 +203,19 @@ func envBool(name string, fallback bool) (bool, error) {
 	parsed, err := strconv.ParseBool(value)
 	if err != nil {
 		return false, fmt.Errorf("%s must be a boolean: %w", name, err)
+	}
+	return parsed, nil
+}
+
+func envFloat(name string, fallback float64) (float64, error) {
+	value := strings.TrimSpace(os.Getenv(name))
+	if value == "" {
+		return fallback, nil
+	}
+
+	parsed, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		return 0, fmt.Errorf("%s must be a number: %w", name, err)
 	}
 	return parsed, nil
 }

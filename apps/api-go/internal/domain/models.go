@@ -49,6 +49,14 @@ type SenderProfile struct {
 	LastSeenAt            time.Time
 }
 
+type ListenerChannel struct {
+	ID             int64
+	KickChannelID  int64
+	KickChatroomID int64
+	Slug           string
+	DisplayName    string
+}
+
 type ChatEmote struct {
 	ID       string
 	Name     string
@@ -106,15 +114,20 @@ type MessageSearchFilter struct {
 }
 
 type RawKickEvent struct {
-	ID           string
-	ChannelSlug  string
-	EventType    string
-	EventName    string
-	PayloadJSON  string
-	Status       string
-	ReceivedAt   time.Time
-	ProcessedAt  time.Time
-	ErrorMessage string
+	ID                  string
+	ChannelSlug         string
+	EventType           string
+	EventName           string
+	KickMessageID       string
+	ChatroomID          int64
+	ChannelID           int64
+	PayloadJSON         string
+	Status              string
+	Attempts            uint16
+	ReceivedAt          time.Time
+	ProcessedAt         time.Time
+	ProcessingStartedAt time.Time
+	ErrorMessage        string
 }
 
 type RawEventAttempt struct {
@@ -151,6 +164,7 @@ type OperationsTimestamps struct {
 type ListenerHeartbeat struct {
 	ServiceName          string
 	LastSeenAt           time.Time
+	MetadataJSON         string
 	IsFresh              bool
 	StaleAfterSeconds    int
 	SecondsSinceLastSeen int64

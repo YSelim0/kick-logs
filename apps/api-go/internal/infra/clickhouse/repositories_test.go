@@ -179,16 +179,35 @@ func TestClickHouseMigrationsAndRepositories(t *testing.T) {
 
 	rawRepo := clickhouseinfra.NewRawEventRepository(conn)
 	rawEvent := domain.RawKickEvent{
-		ID:          "raw-" + suffix,
-		ChannelSlug: "hype",
-		EventType:   "pusher",
-		EventName:   "App\\Events\\ChatMessageEvent",
-		PayloadJSON: `{"event":"App\\Events\\ChatMessageEvent"}`,
-		Status:      "processed",
-		ReceivedAt:  time.Now().UTC(),
+		ID:            "raw-" + suffix,
+		ChannelSlug:   "hype",
+		EventType:     "pusher",
+		EventName:     "App\\Events\\ChatMessageEvent",
+		KickMessageID: "raw-message-" + suffix,
+		ChatroomID:    456,
+		ChannelID:     123,
+		PayloadJSON:   `{"event":"App\\Events\\ChatMessageEvent"}`,
+		Status:        "pending",
+		ReceivedAt:    time.Now().UTC(),
 	}
 	if err := rawRepo.InsertEvent(ctx, rawEvent); err != nil {
 		t.Fatalf("rawRepo.InsertEvent() error = %v", err)
+	}
+	unprocessed, err := rawRepo.ListUnprocessed(ctx, 10, 5)
+	if err != nil {
+		t.Fatalf("rawRepo.ListUnprocessed() error = %v", err)
+	}
+	foundRaw := false
+	for _, event := range unprocessed {
+		if event.ID == rawEvent.ID {
+			foundRaw = true
+			if event.KickMessageID != rawEvent.KickMessageID || event.ChatroomID != 456 || event.ChannelID != 123 {
+				t.Fatalf("raw event metadata = %#v", event)
+			}
+		}
+	}
+	if !foundRaw {
+		t.Fatalf("raw event %s not found in unprocessed = %#v", rawEvent.ID, unprocessed)
 	}
 	if err := rawRepo.InsertAttempt(ctx, domain.RawEventAttempt{
 		ID:         "attempt-" + suffix,
@@ -199,6 +218,20 @@ func TestClickHouseMigrationsAndRepositories(t *testing.T) {
 		FinishedAt: time.Now().UTC(),
 	}); err != nil {
 		t.Fatalf("rawRepo.InsertAttempt() error = %v", err)
+	}
+	attemptCount, err := rawRepo.AttemptCount(ctx, rawEvent.ID)
+	if err != nil {
+		t.Fatalf("rawRepo.AttemptCount() error = %v", err)
+	}
+	if attemptCount != 1 {
+		t.Fatalf("attemptCount = %d", attemptCount)
+	}
+	pendingCount, err := rawRepo.CountUnprocessed(ctx, 5)
+	if err != nil {
+		t.Fatalf("rawRepo.CountUnprocessed() error = %v", err)
+	}
+	if pendingCount < 0 {
+		t.Fatalf("pendingCount = %d", pendingCount)
 	}
 
 	var rawCount uint64
