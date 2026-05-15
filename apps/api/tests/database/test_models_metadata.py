@@ -5,6 +5,7 @@ from kick_logs.infrastructure.database import Base
 from kick_logs.infrastructure.database.models import (
     ChannelModel,
     ChatMessageModel,
+    DataRetentionSettingsModel,
     RawKickEventModel,
     SenderModel,
     UserModel,
@@ -20,6 +21,7 @@ def test_metadata_contains_core_tables() -> None:
         "chat_messages",
         "raw_kick_events",
         "worker_heartbeats",
+        "data_retention_settings",
     }.issubset(Base.metadata.tables)
 
 
@@ -36,7 +38,14 @@ def test_jsonb_payload_columns_are_present() -> None:
 
 
 def test_timestamp_columns_are_timezone_aware() -> None:
-    for model in (UserModel, ChannelModel, SenderModel, RawKickEventModel, WorkerHeartbeatModel):
+    for model in (
+        UserModel,
+        ChannelModel,
+        SenderModel,
+        RawKickEventModel,
+        WorkerHeartbeatModel,
+        DataRetentionSettingsModel,
+    ):
         assert isinstance(model.__table__.c.created_at.type, DateTime)
         assert model.__table__.c.created_at.type.timezone is True
         assert isinstance(model.__table__.c.updated_at.type, DateTime)

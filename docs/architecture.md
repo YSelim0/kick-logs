@@ -87,6 +87,7 @@ apps/api/src/kick_logs/
       channel_repository.py
       message_repository.py
       raw_event_repository.py
+      data_management_repository.py
       sender_repository.py
       operations_repository.py
       worker_heartbeat_repository.py
@@ -115,12 +116,18 @@ apps/api/src/kick_logs/
         record_worker_heartbeat.py
       operations/
         get_operations_summary.py
+      data_management/
+        get_data_management_summary.py
+        update_retention_settings.py
+        preview_data_cleanup.py
+        confirm_data_cleanup.py
     dto/
       auth.py
       channels.py
       messages.py
       users.py
       operations.py
+      data_management.py
   infrastructure/
     database/
       session.py
@@ -133,6 +140,7 @@ apps/api/src/kick_logs/
         sqlalchemy_raw_event_repository.py
         sqlalchemy_sender_repository.py
         sqlalchemy_operations_repository.py
+        sqlalchemy_data_management_repository.py
         sqlalchemy_worker_heartbeat_repository.py
     kick/
       channel_resolver.py
@@ -156,12 +164,14 @@ apps/api/src/kick_logs/
         admin_channels.py
         admin_users.py
         admin_operations.py
+        admin_data_management.py
       schemas/
         auth.py
         channels.py
         messages.py
         users.py
         operations.py
+        data_management.py
     worker/
       main.py
       listener_service.py
@@ -293,6 +303,13 @@ worker_heartbeats
   metadata
   created_at
   updated_at
+
+data_retention_settings
+  id
+  message_retention_days
+  raw_event_retention_days
+  created_at
+  updated_at
 ```
 
 ## Search Contract
@@ -393,6 +410,35 @@ Response includes:
 - latest message, latest raw event receive, latest processed raw event, and oldest pending raw
   event timestamps
 - listener heartbeat freshness based on `LISTENER_HEARTBEAT_STALE_AFTER_SECONDS`
+
+## Admin Data Management Contract
+
+Endpoints:
+
+```text
+GET /admin/data-management/summary
+PUT /admin/data-management/retention-settings
+POST /admin/data-management/cleanup/preview
+POST /admin/data-management/cleanup/confirm
+```
+
+Access:
+
+- Requires an authenticated admin or super admin session.
+
+Rules:
+
+- Retention settings are stored in `data_retention_settings`.
+- `message_retention_days = null` means keep messages forever.
+- `raw_event_retention_days = null` means keep raw events forever.
+- Allowed retained windows are `null`, `30`, and `90` days.
+- Cleanup preview returns affected `chat_messages` and `raw_kick_events` counts plus the exact
+  confirmation text required for execution.
+- Confirmed cleanup rejects requests when the supplied confirmation text does not match the
+  preview value.
+- Cleanup targets are old messages, old raw events, a specific channel, or a specific sender.
+- Channel/sender cleanup removes stored messages and matching raw events, but does not delete the
+  channel/sender metadata rows themselves.
 
 ## Analytics Contract
 

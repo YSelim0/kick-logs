@@ -30,3 +30,14 @@ def test_worker_heartbeat_migration_contains_listener_state_table() -> None:
     assert "service_name" in migration
     assert "last_seen_at" in migration
     assert "ix_worker_heartbeats_last_seen_at" in migration
+
+
+def test_data_retention_migration_contains_singleton_settings_table() -> None:
+    migration = Path("alembic/versions/20260515_0004_data_retention_settings.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert "data_retention_settings" in migration
+    assert "message_retention_days" in migration
+    assert "raw_event_retention_days" in migration
+    assert "ck_data_retention_settings_singleton" in migration

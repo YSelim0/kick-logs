@@ -2,6 +2,24 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-15
+
+- Implemented the backend foundation for Post-MVP Feature 7 data management:
+  - added `data_retention_settings` with singleton retention settings
+  - default message/raw-event retention is `null`, meaning keep forever
+  - added admin-only `GET /admin/data-management/summary`
+  - added admin-only `PUT /admin/data-management/retention-settings`
+  - added admin-only `POST /admin/data-management/cleanup/preview`
+  - added admin-only `POST /admin/data-management/cleanup/confirm`
+  - cleanup targets cover old messages, old raw events, a specific channel, or a specific sender
+  - confirmed cleanup requires the exact confirmation text returned by preview
+  - added backend tests for permissions, retention defaults/updates, dry-run counts, rejected
+    confirmation, and confirmed deletion
+  - verified
+    `python -m uv run pytest tests/data_management/test_http_admin_data_management.py tests/database/test_alembic_migration.py tests/database/test_models_metadata.py`:
+    13 passed
+  - verified `python -m uv run ruff check .`
+
 ## 2026-05-14
 
 - Completed Post-MVP Feature 6 channel/publisher profiles:

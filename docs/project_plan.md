@@ -175,6 +175,18 @@ If the image fails, fall back to emote name or original token.
 - `GET /admin/operations/summary`
   - admin only
   - returns listener freshness, storage size, raw event backlog/status, and ingest timestamps
+- `GET /admin/data-management/summary`
+  - admin only
+  - returns database/table sizes, row counts, and retention settings
+- `PUT /admin/data-management/retention-settings`
+  - admin only
+  - stores message/raw-event retention windows; `null` means keep forever
+- `POST /admin/data-management/cleanup/preview`
+  - admin only
+  - dry-runs cleanup for old messages, old raw events, a channel, or a sender
+- `POST /admin/data-management/cleanup/confirm`
+  - admin only
+  - executes cleanup only when confirmation text matches the preview
 - `GET /analytics/overview`
   - public read-only aggregate totals for messages, senders, channels, emote usage, and first/latest message timestamps
 - `GET /analytics/message-volume`
@@ -242,6 +254,7 @@ Admin UI should support:
 - remove/disable channel
 - create admin user when current user is super admin
 - view operations health, storage growth, raw event backlog, and listener freshness
+- view data-management summary, retention settings, and guarded cleanup previews/actions
 
 ## Test Plan
 

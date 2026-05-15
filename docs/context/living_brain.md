@@ -105,6 +105,17 @@ This file is the active project memory. Keep it updated whenever project behavio
   - `docs/tasks/post_mvp_06_channel_profiles.md` has all checkboxes closed
   - final verification passed with backend pytest/Ruff, web test/typecheck/lint/build, and
     `pnpm format:check`
+- Post-MVP Feature 7 backend data management foundation is implemented:
+  - `data_retention_settings` stores message and raw-event retention windows
+  - default retention is `null` for both messages and raw events, meaning keep forever
+  - admin-only `GET /admin/data-management/summary` returns row counts, table sizes, database
+    size, and retention settings
+  - admin-only `PUT /admin/data-management/retention-settings` accepts `null`, `30`, or `90`
+    days for message/raw-event retention
+  - admin-only cleanup preview/confirm endpoints support old messages, old raw events, a
+    specific channel, or a specific sender
+  - destructive cleanup requires exact confirmation text from the preview response
+  - backend target tests and Ruff checks pass
 - Post-MVP Feature 2 planning now includes clickable message links:
   - URLs inside `/search` message content should render as safe clickable anchors
   - link rendering must preserve inline emote placement and matched-text highlighting
@@ -231,6 +242,8 @@ Build an MVP monorepo with:
   - `raw_kick_events`
 - Alembic migration revision `20260513_0003` creates:
   - `worker_heartbeats`
+- Alembic migration revision `20260515_0004` creates:
+  - `data_retention_settings`
 - PostgreSQL extension:
   - `pg_trgm`
 - JSONB fields:
@@ -261,6 +274,7 @@ Build an MVP monorepo with:
   - `SqlAlchemyMessageRepository`
   - `SqlAlchemyRawEventRepository`
   - `SqlAlchemyOperationsRepository`
+  - `SqlAlchemyDataManagementRepository`
   - `SqlAlchemyWorkerHeartbeatRepository`
   - `SqlAlchemyUnitOfWork`
 

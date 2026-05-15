@@ -4,6 +4,9 @@ from kick_logs.infrastructure.database.repositories.sqlalchemy_analytics_reposit
 from kick_logs.infrastructure.database.repositories.sqlalchemy_channel_repository import (
     SqlAlchemyChannelRepository,
 )
+from kick_logs.infrastructure.database.repositories.sqlalchemy_data_management_repository import (
+    SqlAlchemyDataManagementRepository,
+)
 from kick_logs.infrastructure.database.repositories.sqlalchemy_message_repository import (
     SqlAlchemyMessageRepository,
 )
@@ -26,6 +29,7 @@ from kick_logs.infrastructure.database.repositories.sqlalchemy_worker_heartbeat_
 __all__ = [
     "SqlAlchemyAnalyticsRepository",
     "SqlAlchemyChannelRepository",
+    "SqlAlchemyDataManagementRepository",
     "SqlAlchemyMessageRepository",
     "SqlAlchemyOperationsRepository",
     "SqlAlchemyRawEventRepository",

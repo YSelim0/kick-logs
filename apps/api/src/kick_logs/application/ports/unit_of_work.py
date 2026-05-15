@@ -2,6 +2,7 @@ from typing import Protocol, Self
 
 from kick_logs.application.ports.analytics_repository import AnalyticsRepository
 from kick_logs.application.ports.channel_repository import ChannelRepository
+from kick_logs.application.ports.data_management_repository import DataManagementRepository
 from kick_logs.application.ports.message_repository import MessageRepository
 from kick_logs.application.ports.operations_repository import OperationsRepository
 from kick_logs.application.ports.raw_event_repository import RawEventRepository
@@ -14,6 +15,7 @@ class UnitOfWork(Protocol):
     users: UserRepository
     analytics: AnalyticsRepository
     channels: ChannelRepository
+    data_management: DataManagementRepository
     senders: SenderRepository
     messages: MessageRepository
     raw_events: RawEventRepository

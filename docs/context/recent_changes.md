@@ -4,6 +4,19 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Implemented the backend foundation for Post-MVP Feature 7 data management:
+  - `data_retention_settings` persists message/raw-event retention windows
+  - retention defaults to keep forever with `null` values
+  - admin-only summary endpoint returns counts, table sizes, DB size, and retention settings
+  - admin-only retention update endpoint accepts `null`, `30`, or `90`
+  - cleanup preview/confirm endpoints cover old messages, old raw events, channel, and sender
+  - destructive cleanup requires exact preview confirmation text
+- Verification:
+  - targeted backend data-management/migration/metadata tests: 13 passed
+  - `python -m uv run ruff check .`: passed
+
+## Previous
+
 - Completed Post-MVP Feature 6 channel/publisher profiles:
   - README now documents `/channels/[slug]` and `GET /channels/{slug}/analytics`
   - `docs/tasks/post_mvp_06_channel_profiles.md` is fully checked off
@@ -18,8 +31,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `pnpm --filter @kick-logs/web lint`: passed
   - `pnpm --filter @kick-logs/web build`: passed
   - `pnpm format:check`: passed
-
-## Previous
 
 - Implemented the frontend for Post-MVP Feature 6 channel profiles:
   - public `/channels/[slug]`

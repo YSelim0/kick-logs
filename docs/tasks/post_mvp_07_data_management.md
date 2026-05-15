@@ -12,16 +12,16 @@ analytics/profile pages here.
 
 ## Backend Tasks
 
-- [ ] Add retention settings persistence for messages and raw events, defaulting to keep
+- [x] Add retention settings persistence for messages and raw events, defaulting to keep
       forever until an admin changes it.
-- [ ] Add admin data summary endpoint with database size, key table sizes, row counts, and
+- [x] Add admin data summary endpoint with database size, key table sizes, row counts, and
       current retention settings.
-- [ ] Add dry-run cleanup endpoint that previews affected rows for old raw events, old
+- [x] Add dry-run cleanup endpoint that previews affected rows for old raw events, old
       messages, a specific channel, or a specific sender.
-- [ ] Add confirmed cleanup endpoint that requires explicit confirmation input before deleting
+- [x] Add confirmed cleanup endpoint that requires explicit confirmation input before deleting
       data.
-- [ ] Keep destructive cleanup admin-only.
-- [ ] Add backend tests for permissions, settings defaults, settings updates, dry-run counts,
+- [x] Keep destructive cleanup admin-only.
+- [x] Add backend tests for permissions, settings defaults, settings updates, dry-run counts,
       confirmed cleanup, and refusal without confirmation.
 
 ## Frontend Tasks

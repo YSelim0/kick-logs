@@ -185,3 +185,11 @@ class WorkerHeartbeatModel(TimestampMixin, Base):
         server_default=text("'{}'::jsonb"),
         nullable=False,
     )
+
+
+class DataRetentionSettingsModel(TimestampMixin, Base):
+    __tablename__ = "data_retention_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    message_retention_days: Mapped[int | None] = mapped_column(Integer)
+    raw_event_retention_days: Mapped[int | None] = mapped_column(Integer)
