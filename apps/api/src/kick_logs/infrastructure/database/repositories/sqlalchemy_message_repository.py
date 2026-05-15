@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from kick_logs.domain.entities.chat_message import ChatMessage
 from kick_logs.domain.value_objects.pagination import CursorPagination
 from kick_logs.domain.value_objects.search_filters import MessageSearchFilters
+from kick_logs.domain.value_objects.sender_slug import build_sender_lookup_terms
 from kick_logs.infrastructure.database.mappers import chat_message_to_domain, chat_message_to_model
 from kick_logs.infrastructure.database.models import ChannelModel, ChatMessageModel, SenderModel
 
@@ -38,13 +39,13 @@ class SqlAlchemyMessageRepository:
         )
 
         if filters.sender:
-            sender_query = f"%{filters.sender.lower()}%"
+            sender_terms = build_sender_lookup_terms(filters.sender)
             statement = statement.where(
                 or_(
-                    func.lower(SenderModel.username).like(sender_query),
-                    func.lower(SenderModel.slug).like(sender_query),
-                    func.lower(ChatMessageModel.sender_username_snapshot).like(sender_query),
-                    func.lower(ChatMessageModel.sender_slug_snapshot).like(sender_query),
+                    func.lower(SenderModel.username).in_(sender_terms),
+                    func.lower(SenderModel.slug).in_(sender_terms),
+                    func.lower(ChatMessageModel.sender_username_snapshot).in_(sender_terms),
+                    func.lower(ChatMessageModel.sender_slug_snapshot).in_(sender_terms),
                 )
             )
 
@@ -67,6 +68,38 @@ class SqlAlchemyMessageRepository:
 
         if filters.end:
             statement = statement.where(ChatMessageModel.message_created_at <= filters.end)
+
+        if filters.reply_only:
+            statement = statement.where(ChatMessageModel.message_type == "reply")
+
+        if filters.emote_only:
+            statement = statement.where(func.jsonb_array_length(ChatMessageModel.emotes) > 0)
+
+        if pagination.cursor:
+            statement = statement.where(
+                or_(
+                    ChatMessageModel.message_created_at < pagination.cursor.message_created_at,
+                    and_(
+                        ChatMessageModel.message_created_at == pagination.cursor.message_created_at,
+                        ChatMessageModel.id < pagination.cursor.message_id,
+                    ),
+                )
+            )
+
+        statement = statement.order_by(
+            ChatMessageModel.message_created_at.desc(),
+            ChatMessageModel.id.desc(),
+        ).limit(pagination.limit)
+
+        result = await self._session.execute(statement)
+        return [chat_message_to_domain(model) for model in result.scalars().all()]
+
+    async def list_latest_by_channel_id(
+        self,
+        channel_id: int,
+        pagination: CursorPagination,
+    ) -> list[ChatMessage]:
+        statement = select(ChatMessageModel).where(ChatMessageModel.channel_id == channel_id)
 
         if pagination.cursor:
             statement = statement.where(

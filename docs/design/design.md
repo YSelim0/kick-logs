@@ -18,7 +18,8 @@ Frontend planning can continue, but no UI code should be scaffolded before the b
 ## Design Sources
 
 - `docs/design/design.md`: human-readable UI rules and decisions.
-- `docs/design/design.pen`: editable design artifact. It currently contains the first `/search` screen draft only.
+- `docs/design/design.pen`: editable design artifact. It currently contains the approved `/search`
+  screen draft.
 
 The search reference image from planning is structural guidance only. Keep the compact form order and dense search workflow, but do not copy the exact look, green palette, or spacing one-to-one.
 
@@ -31,9 +32,13 @@ Do not commit screenshots or exported images unless explicitly requested.
 - `/search`: public primary application search screen. No login is required.
 - `/admin`: authenticated admin dashboard for backend operations.
 - `/login`: login screen.
-- `/`: redirects to `/search` until a future landing page is intentionally designed.
+- `/`: public compact landing page with project positioning, live analytics, and navigation into
+  search/admin/community links.
+- `/users/[slug]`: public sender profile page with identity, analytics, and latest messages.
+- `/channels/[slug]`: public channel profile page with stored Kick metadata, analytics, and latest
+  messages.
 
-Do not build a landing page before the application screens exist.
+Landing content must stay product-focused and should not turn the app into a marketing site.
 
 ## Visual Direction
 
@@ -68,9 +73,33 @@ Style rules:
 
 Current design scope:
 
-- Design `/search` first.
-- Do not design `/admin` screens until the `/search` screen is approved.
-- Do not design landing-page-like screens yet.
+- `/search` remains the primary high-volume workflow.
+- `/admin` remains an authenticated operational workflow.
+- `/` can summarize the product and public analytics, but should stay compact.
+- `/users/[slug]` should reuse the compact analytics style, not a marketing/profile hero.
+- `/channels/[slug]` should reuse the compact analytics style with channel identity and activity
+  sections, not a streamer landing page treatment.
+
+## Landing Page
+
+The `/` page is public and does not require login. It should quickly explain what Kick Logs is and
+then show live public analytics from the existing analytics API.
+
+Landing behavior:
+
+- Show the Kick Logs logo and self-hosted positioning in the first viewport.
+- Keep the top section compact; avoid oversized hero typography and decorative marketing layout.
+- Link clearly to `/search`, `/admin`, GitHub, and the support page.
+- Load analytics from:
+  - `GET /analytics/overview`
+  - `GET /analytics/message-volume?bucket=day`
+  - `GET /analytics/top-channels`
+  - `GET /analytics/top-emotes`
+  - `GET /analytics/top-senders`
+- Use a recent range for message volume so the activity summary reflects current usage.
+- Include useful loading, error, and empty-data states for fresh installs.
+- Keep the dark palette, yellow primary actions, pink/accent icons, modest radii, and compact
+  metrics.
 
 ## Search Screen
 
@@ -85,6 +114,7 @@ Header/navigation:
 
 - Keep the top region compact and functional.
 - Show the Kick Logs brand lockup and active `/search` route clearly.
+- Clicking the Kick Logs brand/logo area should navigate to `/`.
 - Use restrained navigation with the search route as the active state.
 - A small query-scope/status strip can summarize search behavior such as all-channel scope, newest-first ordering, and `AND` filter logic.
 - Admin-account controls should not appear on `/search`; backend management belongs in `/admin`.
@@ -97,6 +127,9 @@ Search form fields:
 - `Aramak istediğiniz Kelime`
 - `Başlangıç`
 - `Bitiş`
+- `Sadece yanıtlar` toggle for reply-only results
+- `Sadece emote` toggle for emote-only results
+- Compact `Hızlı aralık` select for `1 saat`, `24 saat`, `7 gün`, `30 gün`
 
 Search button:
 
@@ -116,10 +149,21 @@ Field behavior:
 - On first `/search` load and on reset, date fields default to the last 7 days:
   - `Başlangıç`: current local date/time minus 7 days.
   - `Bitiş`: current local date/time.
+- The `Hızlı aralık` select updates only the date range and keeps the other filters intact.
+- Date inputs and the quick range select sit on their own row so time filters do not compete
+  with secondary result filters.
 - Users can still clear or change the date fields; cleared date fields are omitted from the API query.
+- `Sadece yanıtlar` maps to `reply_only=true`.
+- `Sadece emote` maps to `emote_only=true`.
+- `Sadece yanıtlar` and `Sadece emote` sit in the row below the date controls, directly to
+  the left of the `İşlem` action group.
 - Opening `/search` without URL query parameters must not call the backend automatically.
 - Before the user submits a search, the results area shows an icon with `Arama yapmak için yukarıdaki formu kullanın.`
 - An explicit search submit can still fetch latest messages when all filters are empty.
+- Export is a single square download icon button. Clicking it opens compact `JSON indir` and
+  `CSV indir` actions.
+- The export menu closes after choosing an export format or clicking outside the menu.
+- CSV and JSON export actions use the last submitted search filters, not unsent edits.
 
 Backend query mapping:
 
@@ -129,14 +173,18 @@ Kanal Adı -> channel
 Aramak istediğiniz Kelime -> q
 Başlangıç -> start
 Bitiş -> end
+Sadece yanıtlar -> reply_only
+Sadece emote -> emote_only
 ```
 
 Examples:
 
-- Only `Kullanıcı Adı=yavuz`: search all channels and all content for sender nickname containing `yavuz`.
-- `Kullanıcı Adı=yavuz` and content `selam`: search all channels for sender nickname containing `yavuz` and message content containing `selam`.
+- Only `Kullanıcı Adı=yavuz`: search all channels and all content for sender username/slug exactly matching `yavuz`.
+- `Kullanıcı Adı=yavuz` and content `selam`: search all channels for sender username/slug exactly matching `yavuz` and message content containing `selam`.
 - `Kanal Adı=exampleChannel` and content `hello`: search that channel for messages containing `hello`.
 - Only content `hello`: search all channels and all users for messages containing `hello`.
+- `Sadece yanıtlar` enabled: only reply messages.
+- `Sadece emote` enabled: only messages with parsed emotes.
 - Empty all filters: show latest messages across all channels.
 
 Results:
@@ -161,6 +209,8 @@ Each message row should show:
 - timestamp
 - message content
 - emote rendering with fallback
+- clickable links when message content contains URLs
+- highlighted matched `q` text
 - reply context above the current message when the Kick payload is a reply
 
 Sender avatar:
@@ -168,6 +218,9 @@ Sender avatar:
 - Use enriched sender profile image when available.
 - Render sender avatars as fully circular images.
 - Use a stable circular fallback avatar when no profile image exists.
+- Sender avatar and sender name link to `/users/[slug]` when a sender slug is present.
+- Sender profile links must use Kick URL slug behavior: keep visible usernames such as
+  `example_user`, but route to `/users/example-user` by converting underscores to hyphens.
 
 Emotes:
 
@@ -184,7 +237,56 @@ Result row layout:
 - If the content is long, the message column should absorb the extra width/wrapping behavior instead of turning the row into a separate card.
 - Reply rows render the replied-to sender and replied-to message content above the current message in muted gray text.
 - Reply preview data comes from `reply_metadata.original_sender.username` and `reply_metadata.original_message.content` when `message_type` is `reply`.
+- Reply preview sender names link to `/users/[slug]` when possible; if Kick reply metadata does
+  not include a slug, the frontend derives a lowercase Kick profile slug fallback from the
+  username, including `_` to `-` conversion.
 - Long reply preview text should expose the full replied-to content through a `title` attribute.
+- URLs inside message content should render as clickable anchors without breaking inline emote
+  placement or matched-text highlighting.
+- Message links should open in a new tab with `rel="noopener noreferrer"` and use restrained
+  styling that fits the dark results row.
+- Matched `q` text should render as a restrained inline highlight in both plain text and link
+  text, without replacing or moving emote images.
+
+## User Profile Page
+
+The `/users/[slug]` page is public and does not require login. It should help a visitor understand
+a sender's logged activity across channels.
+
+User profile behavior:
+
+- Load `GET /users/{slug}/analytics`.
+- Show sender avatar, username, slug, total messages, active channels, emote usage, and last seen
+  timestamp.
+- Show day-bucket message volume as a compact list/bar view.
+- Show top channels and top emotes.
+- Show latest messages without infinite scroll.
+- Provide a primary link to `/search?sender={slug}`.
+- Unknown senders show a calm not-found state with a link back to `/search`.
+- The top identity/profile block should use the same bordered, rounded, padded panel treatment as
+  the analytics sections so it does not sit flush against page edges.
+- Keep the same dark palette, yellow primary action, modest radii, and compact typography used by
+  search and landing.
+
+## Channel Profile Page
+
+The `/channels/[slug]` page is public and does not require login. It should help a visitor inspect
+a followed/logged Kick channel's stored activity.
+
+Channel profile behavior:
+
+- Load `GET /channels/{slug}/analytics`.
+- Show channel avatar/image, display name, slug, Kick channel id, Kick chatroom id, first logged
+  message, total messages, active senders, emote usage, and latest activity timestamp.
+- Show day-bucket message volume as a compact list/bar view.
+- Show top senders and top emotes.
+- Show latest messages without infinite scroll.
+- Provide a primary link to `/search?channel={slug}`.
+- Unknown channels show a calm not-found state with a link back to `/search`.
+- Search result channel labels link to `/channels/[slug]`.
+- Admin channel rows link to `/channels/[slug]` when slug data is present.
+- Keep the same dark palette, yellow primary action, modest radii, and compact typography used by
+  search, landing, and user profiles.
 
 ## Admin UI
 
@@ -214,11 +316,23 @@ Implemented admin layout:
 
 - `/login` uses a compact dark email/password form with the app logo and a restrained link back to public search.
 - `/admin` uses a guarded operations layout with:
+  - operations dashboard at the top of the main work column.
   - channel management in the main work column.
   - super-admin-only user management below channel management.
   - current session summary in a right-side panel.
+- Clicking the Kick Logs brand/logo area in `/admin` should navigate to `/`.
 - Regular `admin` users do not see the user management panel.
 - Channel and user management are visually separate sections; neither uses hero/landing-page treatment.
+- Operations dashboard shows compact cards for listener freshness, database size, message count,
+  raw event count, failed raw events, pending raw events, and last ingest time.
+- Operations dashboard includes a manual refresh action and calm warning/error states for stale
+  listener heartbeat, failed raw events, and API failures.
+- Data management appears as its own admin section below operations status, separate from channel
+  and user management.
+- Data management shows database/table sizes, retention settings, dry-run cleanup preview,
+  explicit confirmation input, and success/error states.
+- Destructive cleanup must never run from a single click. The UI must first show a dry-run preview
+  and require the admin to type the exact confirmation text returned by the backend.
 
 Default super admin credentials for local MVP:
 

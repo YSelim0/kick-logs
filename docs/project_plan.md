@@ -37,7 +37,8 @@ docker compose up --build
 - Python dependency/project tooling uses `uv`.
 - Frontend package management uses `pnpm`.
 - Detailed backend/frontend structure lives in `docs/architecture.md`.
-- Sequential implementation phases and handoff task files live in `docs/implementation_plan.md` and `docs/tasks/`.
+- Active post-MVP feature planning and handoff task files live in `docs/implementation_plan.md` and `docs/tasks/`.
+- The completed MVP implementation plan is archived under `docs/archive/`.
 
 ## Docker Services
 
@@ -74,6 +75,7 @@ Search API:
 
 ```text
 GET /messages?sender=&channel=&q=&start=&end=&cursor=&limit=
+GET /messages/export?format=json|csv&sender=&channel=&q=&start=&end=&reply_only=&emote_only=&limit=
 ```
 
 Filter semantics:
@@ -84,17 +86,22 @@ Filter semantics:
 - Empty `channel` means all channels.
 - Empty `q` means all message contents.
 - Empty all filters returns latest messages across all channels.
-- `sender`, `channel`, and `q` use case-insensitive contains matching.
+- `sender` uses case-insensitive exact matching against sender username/slug snapshots.
+- `channel` and `q` use case-insensitive contains matching.
 - `start` and `end` filter by message timestamp.
+- `reply_only=true` narrows results to reply messages.
+- `emote_only=true` narrows results to messages with at least one parsed emote.
 - Results are ordered newest-first.
 - Infinite scroll uses cursor pagination based on `(created_at, id)`.
+- Export uses the same filter semantics as on-screen search, returns JSON or CSV, and clamps
+  rows to `MESSAGE_EXPORT_MAX_ROWS`.
 - The public `/search` UI defaults `start` to 7 days before the current local date/time and `end` to the current local date/time. Users can clear those fields to omit date filters.
 - Bare `/search` does not automatically fetch latest messages; the user must submit the form or open a URL with query parameters.
 
 Example queries:
 
-- `sender=yavuz`: all messages from users matching `yavuz` across all channels.
-- `sender=yavuz&q=selam`: messages from users matching `yavuz` containing `selam`.
+- `sender=yavuz`: all messages from sender username/slug exactly matching `yavuz` across all channels.
+- `sender=yavuz&q=selam`: messages from sender username/slug exactly matching `yavuz` containing `selam`.
 - `channel=exampleChannel&q=hello`: messages in channels matching `exampleChannel` containing `hello`.
 - `q=hello`: all messages containing `hello` across all channels.
 
@@ -165,12 +172,54 @@ If the image fails, fall back to emote name or original token.
 - `POST /admin/users`
   - super admin only
   - creates admin users
+- `GET /admin/operations/summary`
+  - admin only
+  - returns listener freshness, storage size, raw event backlog/status, and ingest timestamps
+- `GET /admin/data-management/summary`
+  - admin only
+  - returns database/table sizes, row counts, and retention settings
+- `PUT /admin/data-management/retention-settings`
+  - admin only
+  - stores message/raw-event retention windows; `null` means keep forever
+- `POST /admin/data-management/cleanup/preview`
+  - admin only
+  - dry-runs cleanup for old messages, old raw events, a channel, or a sender
+- `POST /admin/data-management/cleanup/confirm`
+  - admin only
+  - executes cleanup only when confirmation text matches the preview
+- `GET /analytics/overview`
+  - public read-only aggregate totals for messages, senders, channels, emote usage, and first/latest message timestamps
+- `GET /analytics/message-volume`
+  - public read-only message volume buckets with `bucket=hour|day`
+- `GET /analytics/top-senders`
+  - public read-only top senders by message count
+- `GET /analytics/top-channels`
+  - public read-only top channels by message count
+- `GET /analytics/top-emotes`
+  - public read-only top emotes by usage count
+- `GET /users/{slug}/analytics`
+  - public read-only sender profile analytics keyed by sender slug
+  - returns sender identity, profile image URL, totals, first/latest seen, message volume, top
+    channels, top emotes, and latest messages
+- `GET /channels/{slug}/analytics`
+  - public read-only channel profile analytics keyed by channel slug
+  - returns channel metadata, totals, first/latest activity, message volume, top senders, top
+    emotes, and latest messages
+
+Analytics endpoints accept optional `start`, `end`, `channel`, and `sender`
+scope where relevant. `sender` scope uses case-insensitive exact username/slug
+matching. `channel` scope uses case-insensitive exact slug/display-name
+matching. Top-list `limit` is capped at 100.
 
 ## Frontend Draft
 
 - `/search`: primary app search screen.
 - `/admin`: authenticated admin dashboard for backend operations.
-- `/`: redirects to `/search` until a future landing page is intentionally designed.
+- `/`: public compact landing page with self-hosted project positioning, live analytics blocks,
+  and clear navigation into search/admin/community links.
+- `/users/[slug]`: public sender profile screen with analytics and latest messages.
+- `/channels/[slug]`: public channel profile screen with stored Kick metadata, analytics, and
+  latest messages.
 
 Search UI follows the dark professional palette documented in `docs/design/design.md`:
 
@@ -189,6 +238,11 @@ Result rows should render inside one shared outer list container and show:
 - timestamp
 - message content with emote image rendering/fallback
 
+Sender names and avatars in result rows link to `/users/[slug]` when a sender slug is present.
+Kick profile URLs convert underscores in chat usernames/slugs to hyphens, so `example_user`
+links to `/users/example-user` while the visible username remains `example_user`.
+Channel labels in result rows link to `/channels/[slug]` when channel slug data is present.
+
 Do not render each message as its own modal-like card. The list should stay dense and efficient for many messages.
 
 Admin UI should support:
@@ -199,6 +253,8 @@ Admin UI should support:
 - add channel by slug/nickname
 - remove/disable channel
 - create admin user when current user is super admin
+- view operations health, storage growth, raw event backlog, and listener freshness
+- view data-management summary, retention settings, and guarded cleanup previews/actions
 
 ## Test Plan
 

@@ -73,6 +73,7 @@ apps/api/src/kick_logs/
       raw_kick_event.py
       sender.py
       emote.py
+      worker_heartbeat.py
     value_objects/
       roles.py
       search_filters.py
@@ -86,7 +87,10 @@ apps/api/src/kick_logs/
       channel_repository.py
       message_repository.py
       raw_event_repository.py
+      data_management_repository.py
       sender_repository.py
+      operations_repository.py
+      worker_heartbeat_repository.py
       kick_channel_resolver.py
       sender_profile_resolver.py
       password_hasher.py
@@ -109,11 +113,21 @@ apps/api/src/kick_logs/
         load_enabled_channels.py
         store_raw_event.py
         process_raw_events.py
+        record_worker_heartbeat.py
+      operations/
+        get_operations_summary.py
+      data_management/
+        get_data_management_summary.py
+        update_retention_settings.py
+        preview_data_cleanup.py
+        confirm_data_cleanup.py
     dto/
       auth.py
       channels.py
       messages.py
       users.py
+      operations.py
+      data_management.py
   infrastructure/
     database/
       session.py
@@ -125,6 +139,9 @@ apps/api/src/kick_logs/
         sqlalchemy_message_repository.py
         sqlalchemy_raw_event_repository.py
         sqlalchemy_sender_repository.py
+        sqlalchemy_operations_repository.py
+        sqlalchemy_data_management_repository.py
+        sqlalchemy_worker_heartbeat_repository.py
     kick/
       channel_resolver.py
       sender_profile_resolver.py
@@ -146,11 +163,15 @@ apps/api/src/kick_logs/
         messages.py
         admin_channels.py
         admin_users.py
+        admin_operations.py
+        admin_data_management.py
       schemas/
         auth.py
         channels.py
         messages.py
         users.py
+        operations.py
+        data_management.py
     worker/
       main.py
       listener_service.py
@@ -200,6 +221,8 @@ Database policy:
 - Deduplicate chat messages by Kick message id.
 - Persist raw Kick chat events into `raw_kick_events` before normalization or enrichment so a received websocket event survives worker restarts.
 - Process raw events with at-least-once delivery and idempotent message writes.
+- Persist listener freshness in `worker_heartbeats` so admin screens can tell whether ingestion
+  is alive even when followed channels are quiet.
 
 ## Core Tables
 
@@ -273,6 +296,20 @@ raw_kick_events
   metadata
   created_at
   updated_at
+
+worker_heartbeats
+  service_name
+  last_seen_at
+  metadata
+  created_at
+  updated_at
+
+data_retention_settings
+  id
+  message_retention_days
+  raw_event_retention_days
+  created_at
+  updated_at
 ```
 
 ## Search Contract
@@ -281,6 +318,7 @@ Endpoint:
 
 ```text
 GET /messages?sender=&channel=&q=&start=&end=&cursor=&limit=
+GET /messages/export?format=json|csv&sender=&channel=&q=&start=&end=&reply_only=&emote_only=&limit=
 ```
 
 Access:
@@ -296,10 +334,15 @@ Rules:
 - Empty `channel` searches all channels.
 - Empty `q` searches all message contents.
 - Empty all filters returns latest messages across all channels.
-- `sender`, `channel`, and `q` use case-insensitive contains matching.
+- `sender` uses case-insensitive exact matching against sender username/slug snapshots.
+- `channel` and `q` use case-insensitive contains matching.
 - `start` and `end` filter by `message_created_at`.
+- `reply_only=true` restricts results to rows where `message_type = reply`.
+- `emote_only=true` restricts results to rows with at least one parsed emote in `emotes`.
 - Results are ordered newest-first.
 - Cursor pagination uses `(message_created_at, id)`.
+- Export is public, reuses `MessageSearchFilters`, supports JSON and CSV, and clamps requested
+  rows to `MESSAGE_EXPORT_MAX_ROWS`.
 - Frontend `/search` initializes missing date inputs to the last 7 days by default, but the API keeps date filters optional.
 
 ## Auth Contract
@@ -344,7 +387,108 @@ The listener service:
 - Marks raw events `processed`, `pending`, or `failed` with attempts and last error.
 - Reclaims stale `processing` rows after the configured processing timeout.
 - Periodically reconnects to refresh enabled-channel subscriptions so admin channel changes take effect without manually restarting the listener.
+- Periodically writes a `listener` heartbeat row at `LISTENER_HEARTBEAT_INTERVAL_SECONDS`.
 - Reconnects with backoff after websocket failures.
+
+## Admin Operations Contract
+
+Endpoint:
+
+```text
+GET /admin/operations/summary
+```
+
+Access:
+
+- Requires an authenticated admin or super admin session.
+
+Response includes:
+
+- core row counts for channels, enabled channels, senders, messages, and raw events
+- raw event counts grouped by status
+- PostgreSQL database size and table sizes for `chat_messages` and `raw_kick_events`
+- latest message, latest raw event receive, latest processed raw event, and oldest pending raw
+  event timestamps
+- listener heartbeat freshness based on `LISTENER_HEARTBEAT_STALE_AFTER_SECONDS`
+
+## Admin Data Management Contract
+
+Endpoints:
+
+```text
+GET /admin/data-management/summary
+PUT /admin/data-management/retention-settings
+POST /admin/data-management/cleanup/preview
+POST /admin/data-management/cleanup/confirm
+```
+
+Access:
+
+- Requires an authenticated admin or super admin session.
+
+Rules:
+
+- Retention settings are stored in `data_retention_settings`.
+- `message_retention_days = null` means keep messages forever.
+- `raw_event_retention_days = null` means keep raw events forever.
+- Allowed retained windows are `null`, `30`, and `90` days.
+- Cleanup preview returns affected `chat_messages` and `raw_kick_events` counts plus the exact
+  confirmation text required for execution.
+- Confirmed cleanup rejects requests when the supplied confirmation text does not match the
+  preview value.
+- Cleanup targets are old messages, old raw events, a specific channel, or a specific sender.
+- Channel/sender cleanup removes stored messages and matching raw events, but does not delete the
+  channel/sender metadata rows themselves.
+
+## Analytics Contract
+
+Endpoints:
+
+```text
+GET /analytics/overview
+GET /analytics/message-volume
+GET /analytics/top-senders
+GET /analytics/top-channels
+GET /analytics/top-emotes
+GET /users/{slug}/analytics
+GET /channels/{slug}/analytics
+```
+
+Access:
+
+- Public read-only endpoints for landing, user profile, and channel profile features.
+- No login is required.
+
+Common query parameters:
+
+- `start`
+- `end`
+- `channel`
+- `sender`
+
+Rules:
+
+- Date filters apply to `chat_messages.message_created_at`.
+- `sender` scope uses case-insensitive exact matching against sender username/slug and stored
+  sender snapshots.
+- `channel` scope uses case-insensitive exact matching against channel slug/display name.
+- `message-volume` accepts `bucket=hour|day`.
+- Top-list endpoints accept `limit` from 1 to 100.
+
+Responses:
+
+- `overview`: total messages, distinct senders, distinct channels, emote usage count, first
+  message timestamp, and latest message timestamp.
+- `message-volume`: compact bucket rows with bucket start and message count.
+- `top-senders`: sender identity/profile fields, message count, first seen in result scope, and
+  latest seen in result scope.
+- `top-channels`: channel identity/profile fields, message count, first activity in result scope,
+  and latest activity in result scope.
+- `top-emotes`: emote id/name/token/image URL, usage count, and distinct message count.
+- `users/{slug}/analytics`: sender identity/profile image, overview totals, day-bucket message
+  volume, top channels, top emotes, and latest messages. Unknown sender slugs return 404.
+- `channels/{slug}/analytics`: channel metadata/profile image/banner, overview totals, day-bucket
+  message volume, top senders, top emotes, and latest messages. Unknown channel slugs return 404.
 
 ## Frontend Architecture
 
@@ -360,6 +504,10 @@ apps/web/src/
     search/
       page.tsx
     admin/
+      page.tsx
+    users/[slug]/
+      page.tsx
+    channels/[slug]/
       page.tsx
   components/
     ui/
@@ -385,6 +533,22 @@ apps/web/src/
       api.ts
       types.ts
       user-admin.tsx
+    operations/
+      api.ts
+      operations-dashboard.tsx
+    data-management/
+      api.ts
+      data-management-panel.tsx
+    analytics/
+      api.ts
+    landing/
+      landing-page.tsx
+    user-profile/
+      api.ts
+      user-profile-page.tsx
+    channel-profile/
+      api.ts
+      channel-profile-page.tsx
   lib/
     api-client.ts
     utils.ts
@@ -401,8 +565,14 @@ Frontend rules:
 - `lib/api-client.ts` owns base URL, credentials, and response handling.
 - Use lucide-react icons for UI controls.
 - Use Tailwind for layout and visual styling.
-- Keep `/` reserved for a later landing page; current MVP redirects `/` to `/search`.
+- `/` is the public landing page backed by read-only analytics endpoints.
 - `/search` is the primary public app screen.
+- `/users/[slug]` is a public sender profile page backed by `/users/{slug}/analytics`.
+- `/channels/[slug]` is a public channel profile page backed by `/channels/{slug}/analytics`.
+- Public sender profile links use Kick-style profile slugs: display usernames may contain `_`,
+  but profile routes convert `_` to `-`, so `example_user` links to `/users/example-user`.
+- Search result channel labels and admin channel rows link to `/channels/[slug]` when channel slug
+  data is present.
 - `/admin` requires login and manages backend operational state such as followed channels.
 
 ## Frontend UI Direction

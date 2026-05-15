@@ -43,20 +43,21 @@
 - Super admin can create new admin users.
 - Use one listener worker for all enabled channels.
 - Add date range filters to search.
-- Use optional `AND` search filters with case-insensitive contains matching.
+- Use optional `AND` search filters; sender is exact case-insensitive, while channel and content are case-insensitive contains.
 - Store raw Kick payloads and all useful normalized fields.
 - Enrich sender profile images through Kick web endpoints when possible.
 - Parse `[emote:id:name]` tokens and render image fallback URLs.
-- Use `/search`, `/admin`, and reserve `/` for later landing content.
+- Use `/` for the public landing page, `/search` for public message search, and `/admin` for
+  authenticated backend management.
 - Allow multi-agent development for non-overlapping work scopes.
-- Use `docs/implementation_plan.md` as the sequential MVP implementation plan.
-- Use `docs/tasks/phaseN_tasks.md` files as phase-scoped task contracts; agents must not cross into later phase scope without explicit direction.
+- The original MVP used a sequential phase implementation plan; that completed plan now lives in `docs/archive/`.
+- Active implementation agents must use the current `docs/implementation_plan.md` and matching active task file.
 - Do not add placeholder `web` or `listener` services in Phase 1; add each service only in its owning phase.
 
 ## 2026-05-10
 
 - Public `/search` date inputs default to the last 7 days: `Başlangıç` is current local date/time minus 7 days and `Bitiş` is current local date/time. Users can clear date fields to omit date filters.
-- MVP root route `/` redirects to `/search`; future landing content can replace this deliberately after the application screens are stable.
+- MVP started search-first at `/search`; post-MVP work can use `/` for compact landing content.
 
 ## 2026-05-12
 
@@ -66,3 +67,48 @@
 - `/search` reply rows show the replied-to sender and replied-to message content above the current message in muted gray text.
 - Reply rendering uses `message_type === "reply"`, `reply_metadata.original_sender.username`, and `reply_metadata.original_message.content`; long reply previews expose the full original content through a `title` attribute.
 - Repository sponsorship uses Buy Me a Coffee account `yavuzselim` through GitHub `FUNDING.yml` and README links.
+- The completed MVP implementation plan is archived under `docs/archive/`; active work uses the post-MVP feature plan in `docs/implementation_plan.md`.
+- Post-MVP development is split into feature-scoped task files under `docs/tasks/post_mvp_*.md`.
+- The selected post-MVP roadmap prioritizes admin operations, search improvements, analytics, landing analytics, user/channel profiles, and admin data management.
+
+## 2026-05-13
+
+- Public `/messages` sender filtering uses case-insensitive exact matching against sender username/slug snapshots; channel and content filters remain case-insensitive contains matching.
+- Post-MVP Feature 1 stores listener heartbeat state in PostgreSQL instead of inferring
+  liveness from message timestamps, because quiet channels can be healthy but produce no
+  messages.
+- Admin operations metrics are exposed through `GET /admin/operations/summary` and remain
+  authenticated admin-only.
+- Post-MVP Feature 2 will render URLs found inside message content as safe clickable links in
+  `/search` result rows. Link rendering must not break inline emotes or matched-text
+  highlighting.
+- `/search` date presets update only the date fields and keep other filters intact.
+- `/search` CSV/JSON export actions use the last submitted filters, not unsent form edits.
+- `/search` keeps secondary controls compact: quick date ranges are a select, exports sit
+  behind one square download icon, and reply/emote filters use explicit `Sadece ...` labels.
+- `/search` export menu must close on outside click.
+- `/search` keeps date controls on their own row; result-type filters sit to the left of the
+  `İşlem` action group so the date row does not feel cramped.
+- Analytics endpoints are public read-only contracts under `/analytics/*` for future landing,
+  user profile, and channel profile screens.
+- Analytics `sender` scope uses case-insensitive exact sender username/slug matching;
+  analytics `channel` scope uses case-insensitive exact channel slug/display-name matching.
+
+## 2026-05-14
+
+- Public `/` is a compact landing page, not a redirect. It explains the self-hosted project and
+  loads public analytics from Feature 3 endpoints.
+- Landing message volume uses a recent day-bucket range, while overview/top-list cards summarize
+  current stored data.
+- Landing navigation links to `/search`, `/admin`, GitHub, and Buy Me a Coffee support.
+- Landing design must stay dark, compact, product-focused, and avoid oversized hero treatment.
+- Header brand/logo areas in `/search` and `/admin` navigate to `/`.
+- Public user profiles live at `/users/[slug]` and use `GET /users/{slug}/analytics`.
+- Search result sender names and avatars link to public user profiles when sender slug exists.
+- `/search` reply preview sender names also link to `/users/[slug]`; when Kick reply metadata has
+  no slug, the frontend derives a lowercase username fallback.
+- `/users/[slug]` top identity blocks use the same rounded bordered panel treatment as the rest of
+  the profile sections.
+- Public sender profile URLs follow Kick's profile slug behavior: chat usernames can display with
+  underscores, but profile routes convert `_` to `-`; backend profile/search lookups accept both
+  forms so existing underscore-stored data keeps working.

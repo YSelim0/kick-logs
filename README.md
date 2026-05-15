@@ -44,6 +44,7 @@ The project is built as a monorepo:
 
 ## Features
 
+- Public `/` landing page with self-hosted positioning and live analytics summary.
 - Public `/search` page with optional filters:
   - sender nickname
   - channel nickname/slug
@@ -54,10 +55,20 @@ The project is built as a monorepo:
 - Dense message rows with circular sender avatars.
 - Inline Kick emote rendering with text fallback.
 - Reply rendering: replied-to sender/content is shown above reply messages.
+- Public `/users/[slug]` pages with sender identity, analytics, top channels, top emotes, and
+  latest messages.
+- Sender names and avatars in search results link to public user profiles.
+- Public `/channels/[slug]` pages with stored Kick channel metadata, activity analytics, top
+  senders, top emotes, and latest messages.
+- Channel labels in search results and admin channel rows link to public channel profiles.
 - Admin login with HttpOnly JWT cookie sessions.
 - Default local super admin seed.
 - Admin dashboard for followed-channel management.
 - Super-admin-only admin user creation.
+- Admin operations dashboard for listener freshness, storage growth, raw event backlog, and
+  ingest timestamps.
+- Admin data management panel for database/table sizes, retention settings, dry-run cleanup
+  previews, and explicit confirmed deletion.
 - Durable raw event inbox:
   - websocket reader stores raw chat events first
   - workers process raw events into normalized messages
@@ -102,8 +113,10 @@ docker compose up --build -d
 
 Open:
 
-- Web app: http://localhost:3000
+- Landing page: http://localhost:3000
 - Public search: http://localhost:3000/search
+- Public user profile: http://localhost:3000/users/{sender-slug}
+- Public channel profile: http://localhost:3000/channels/{channel-slug}
 - Admin login: http://localhost:3000/login
 - API health: http://localhost:8000/health
 
@@ -130,9 +143,13 @@ POSTGRES_PASSWORD
 2. Open `http://localhost:3000/login`.
 3. Login with the local admin credentials.
 4. Go to `/admin`.
-5. Add a Kick channel by slug/nickname.
-6. Keep the `listener` service running.
-7. Search collected messages from `/search`.
+5. Check the operations dashboard for listener freshness, storage size, raw event status, and
+   latest ingest timestamps.
+6. Review the data management panel before changing retention or cleanup settings.
+7. Add a Kick channel by slug/nickname.
+8. Open `/channels/{channel-slug}` to inspect stored channel activity.
+9. Keep the `listener` service running.
+10. Search collected messages from `/search`.
 
 Useful listener logs:
 
@@ -177,6 +194,14 @@ Public:
 ```text
 GET /health
 GET /messages
+GET /messages/export
+GET /analytics/overview
+GET /analytics/message-volume
+GET /analytics/top-senders
+GET /analytics/top-channels
+GET /analytics/top-emotes
+GET /users/{slug}/analytics
+GET /channels/{slug}/analytics
 ```
 
 Auth:
@@ -195,6 +220,11 @@ POST   /admin/channels
 DELETE /admin/channels/{id}
 GET    /admin/users
 POST   /admin/users
+GET    /admin/operations/summary
+GET    /admin/data-management/summary
+PUT    /admin/data-management/retention-settings
+POST   /admin/data-management/cleanup/preview
+POST   /admin/data-management/cleanup/confirm
 ```
 
 Example public search:
@@ -203,8 +233,37 @@ Example public search:
 curl "http://localhost:8000/messages?sender=yavuz&q=selam&limit=50"
 ```
 
-Search filters combine with `AND`. Empty filters are omitted. Empty all filters
-returns latest messages across all followed channels.
+Example filtered export:
+
+```powershell
+curl "http://localhost:8000/messages/export?format=csv&q=selam&reply_only=true&limit=500"
+```
+
+Search filters combine with `AND`. Empty filters are omitted. The `sender`
+filter matches username/slug exactly, case-insensitively. Channel and content
+filters use case-insensitive contains matching. Empty all filters returns latest
+messages across all followed channels. `reply_only=true` limits results to reply
+messages, and `emote_only=true` limits results to messages with parsed emotes.
+Exports use the same filters and are capped by `MESSAGE_EXPORT_MAX_ROWS`.
+
+Analytics endpoints are public read-only endpoints for landing/profile features.
+They accept optional `start`, `end`, `channel`, and `sender` query params where
+relevant. Message volume also accepts `bucket=hour|day`; top lists accept
+`limit` up to 100. Analytics `sender` scope uses case-insensitive exact matching
+against sender username/slug snapshots; `channel` scope uses case-insensitive
+exact matching against channel slug/display name.
+
+Example analytics calls:
+
+```powershell
+curl "http://localhost:8000/analytics/overview"
+curl "http://localhost:8000/analytics/message-volume?bucket=day&channel=hype"
+curl "http://localhost:8000/analytics/top-senders?channel=hype&limit=10"
+curl "http://localhost:8000/analytics/top-channels?sender=yavuz&limit=10"
+curl "http://localhost:8000/analytics/top-emotes?channel=hype&sender=yavuz"
+curl "http://localhost:8000/users/yavuz/analytics"
+curl "http://localhost:8000/channels/hype/analytics"
+```
 
 ## Local Development
 
@@ -257,8 +316,8 @@ the repository's current double-quote style.
 
 ## Continuous Integration
 
-GitHub Actions runs backend and formatting checks on pull requests and pushes
-to `main`.
+GitHub Actions runs backend and formatting checks on pull requests targeting
+`main` or `dev`, and on pushes to `main` or `dev`.
 
 The Python workflow starts a PostgreSQL 16 service, installs backend
 dependencies with `uv`, applies Alembic migrations, then runs:
@@ -322,7 +381,58 @@ Stored data includes:
 - thread parent id
 - original raw Kick payload
 
-Messages are persisted indefinitely unless the operator removes data manually.
+Messages are persisted indefinitely unless the operator removes data manually or
+runs a confirmed retention cleanup from the admin data management panel.
+
+## Data Management And Backups
+
+The admin data management panel lives under `/admin`. It is admin-only and shows
+database size, table sizes, row counts, and the active retention settings for
+messages and raw Kick events.
+
+Retention settings support:
+
+- keep forever
+- 30 days
+- 90 days
+
+Retention settings do not delete data by themselves. They define the cutoff used
+by the old-message and old-raw-event cleanup actions. A destructive cleanup must
+first run a dry-run preview, then the admin must type the exact confirmation text
+returned by the backend.
+
+Cleanup targets:
+
+- old messages according to message retention
+- old raw events according to raw-event retention
+- all stored messages/raw events for a specific channel slug
+- all stored messages/raw events for a specific sender
+
+Back up PostgreSQL before running large cleanup operations. The Compose service
+uses the values from `.env`; adjust the `-U` and `-d` values below if you changed
+`POSTGRES_USER` or `POSTGRES_DB`.
+
+Create a compressed PostgreSQL dump:
+
+```powershell
+New-Item -ItemType Directory -Force backups
+docker compose exec postgres pg_dump -U kick_logs -d kick_logs -Fc -f /tmp/kick_logs.dump
+docker compose cp postgres:/tmp/kick_logs.dump .\backups\kick_logs.dump
+docker compose exec postgres rm /tmp/kick_logs.dump
+```
+
+Restore a dump into the Docker Compose database:
+
+```powershell
+docker compose stop api listener web
+docker compose cp .\backups\kick_logs.dump postgres:/tmp/kick_logs.dump
+docker compose exec postgres pg_restore -U kick_logs -d kick_logs --clean --if-exists /tmp/kick_logs.dump
+docker compose exec postgres rm /tmp/kick_logs.dump
+docker compose up -d api listener web
+```
+
+`docker compose down -v` removes the PostgreSQL volume. Use it only when you
+intentionally want to delete all stored data.
 
 ## Configuration
 
@@ -406,14 +516,18 @@ Good contribution areas:
 - Use a strong `JWT_SECRET_KEY`.
 - Treat Kick integration failures as expected operational events because the
   ingestion path relies on unofficial web behavior.
+- Use `/admin` to check listener freshness, database/table size, failed raw events, pending raw
+  events, and the latest ingest timestamps before digging into Docker logs.
 - Keep PostgreSQL backups if the logs matter.
 - Review data retention expectations before running against large channels.
 
 ## Project Status
 
-Kick Logs is an MVP. It is usable locally through Docker Compose, but the Kick
-integration should be considered best-effort because it depends on undocumented
-Kick web behavior.
+Kick Logs is a self-hosted MVP with its first post-MVP feature set completed:
+admin operations, search improvements/export, analytics-backed landing content,
+user/channel profiles, and guarded data management. It is usable locally through
+Docker Compose, but the Kick integration should be considered best-effort
+because it depends on undocumented Kick web behavior.
 
 Current quality gates used during development:
 

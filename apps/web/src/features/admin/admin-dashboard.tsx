@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { logout } from "@/features/auth/api";
 import { useCurrentUser } from "@/features/auth/use-auth";
 import { ChannelAdmin } from "@/features/channels/channel-admin";
+import { DataManagementPanel } from "@/features/data-management/data-management-panel";
+import { OperationsDashboard } from "@/features/operations/operations-dashboard";
 import { UserAdmin } from "@/features/users/user-admin";
 
 export function AdminDashboard() {
@@ -49,7 +51,7 @@ export function AdminDashboard() {
     <main className="min-h-screen bg-background px-4 py-4 text-foreground md:px-8 md:py-6">
       <div className="mx-auto flex max-w-[1440px] flex-col gap-6">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-black px-4 py-4 md:px-6">
-          <Link className="flex min-w-0 items-center gap-4" href="/admin">
+          <Link className="flex min-w-0 items-center gap-4" href="/">
             <Image
               alt="Kick Logs"
               className="h-11 w-11 shrink-0 rounded-md object-contain"
@@ -97,6 +99,8 @@ export function AdminDashboard() {
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="flex flex-col gap-6">
+            <OperationsDashboard />
+            <DataManagementPanel />
             <ChannelAdmin />
             {user.role === "super_admin" ? <UserAdmin /> : null}
           </div>

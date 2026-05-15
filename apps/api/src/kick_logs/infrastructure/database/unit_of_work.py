@@ -4,11 +4,15 @@ from types import TracebackType
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from kick_logs.infrastructure.database.repositories import (
+    SqlAlchemyAnalyticsRepository,
     SqlAlchemyChannelRepository,
+    SqlAlchemyDataManagementRepository,
     SqlAlchemyMessageRepository,
+    SqlAlchemyOperationsRepository,
     SqlAlchemyRawEventRepository,
     SqlAlchemySenderRepository,
     SqlAlchemyUserRepository,
+    SqlAlchemyWorkerHeartbeatRepository,
 )
 from kick_logs.infrastructure.database.session import create_session_factory
 
@@ -23,18 +27,26 @@ class SqlAlchemyUnitOfWork:
         self._session_factory = session_factory or create_session_factory()
         self.session: AsyncSession | None = None
         self.users: SqlAlchemyUserRepository
+        self.analytics: SqlAlchemyAnalyticsRepository
         self.channels: SqlAlchemyChannelRepository
+        self.data_management: SqlAlchemyDataManagementRepository
         self.senders: SqlAlchemySenderRepository
         self.messages: SqlAlchemyMessageRepository
         self.raw_events: SqlAlchemyRawEventRepository
+        self.worker_heartbeats: SqlAlchemyWorkerHeartbeatRepository
+        self.operations: SqlAlchemyOperationsRepository
 
     async def __aenter__(self) -> "SqlAlchemyUnitOfWork":
         self.session = self._session_factory()
         self.users = SqlAlchemyUserRepository(self.session)
+        self.analytics = SqlAlchemyAnalyticsRepository(self.session)
         self.channels = SqlAlchemyChannelRepository(self.session)
+        self.data_management = SqlAlchemyDataManagementRepository(self.session)
         self.senders = SqlAlchemySenderRepository(self.session)
         self.messages = SqlAlchemyMessageRepository(self.session)
         self.raw_events = SqlAlchemyRawEventRepository(self.session)
+        self.worker_heartbeats = SqlAlchemyWorkerHeartbeatRepository(self.session)
+        self.operations = SqlAlchemyOperationsRepository(self.session)
         return self
 
     async def __aexit__(

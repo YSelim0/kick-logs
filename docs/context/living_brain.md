@@ -20,6 +20,129 @@ This file is the active project memory. Keep it updated whenever project behavio
 - Phase 8 public search UI is complete.
 - Phase 9 admin UI is complete.
 - Phase 10 final MVP smoke and documentation cleanup are complete.
+- The original MVP implementation plan and phase task files are archived under `docs/archive/`.
+- `docs/implementation_plan.md` now tracks the active post-MVP feature roadmap.
+- Active post-MVP task files are under `docs/tasks/post_mvp_*.md`.
+- Selected post-MVP roadmap:
+  - admin operations dashboard
+  - search improvements
+  - analytics foundation
+  - landing page with analytics blocks
+  - user profile analytics
+  - channel/publisher profile analytics
+  - admin data management
+  - final smoke and docs
+- Post-MVP Feature 1 backend operations foundation is implemented:
+  - `worker_heartbeats` persists listener freshness
+  - listener records a `listener` heartbeat every `LISTENER_HEARTBEAT_INTERVAL_SECONDS`
+  - admin-only `GET /admin/operations/summary` returns listener freshness, core row counts,
+    raw event status counts, PostgreSQL database/table sizes, and key ingest timestamps
+  - backend verification passed with `python -m uv run pytest` reporting 101 tests
+  - `python -m uv run ruff check .` passed
+- Post-MVP Feature 1 admin operations UI is implemented:
+  - `/admin` mounts `OperationsDashboard` above channel/user management
+  - operations cards show listener status, database size, messages, raw events, failed raw,
+    pending raw, and last ingest time
+  - manual refresh and calm stale-listener/failed-raw/API-error states are covered by tests
+  - frontend verification passed with `pnpm --filter @kick-logs/web test`, `typecheck`, and
+    `lint`
+- Post-MVP Feature 1 admin operations dashboard is complete:
+  - README/admin usage notes are updated
+  - `docs/tasks/post_mvp_01_admin_operations.md` has all checkboxes closed
+  - final touched-area verification passed for backend tests/lint, frontend tests/typecheck/lint,
+    and `pnpm format:check`
+- Post-MVP Feature 3 analytics backend foundation is implemented:
+  - public read-only `GET /analytics/overview`
+  - public read-only `GET /analytics/message-volume`
+  - public read-only `GET /analytics/top-senders`
+  - public read-only `GET /analytics/top-channels`
+  - public read-only `GET /analytics/top-emotes`
+  - analytics repository aggregate queries run over `chat_messages`
+  - supported filters include date range plus exact channel/sender scope
+  - frontend typed analytics API wrappers exist under `apps/web/src/features/analytics/api.ts`
+- Post-MVP Feature 4 landing page is implemented:
+  - root `/` now renders a public compact landing page instead of redirecting
+  - landing fetches analytics overview, recent day-bucket message volume, top channels, top
+    emotes, and top senders
+  - landing includes loading, error, and fresh-install empty states
+  - landing links to `/search`, `/admin`, GitHub, and Buy Me a Coffee support
+  - `/search` and `/admin` header brand/logo areas navigate back to `/`
+  - frontend tests cover analytics rendering, empty data, and navigation links
+  - verification passed with `pnpm --filter @kick-logs/web test`, `typecheck`, `lint`, `build`,
+    `pnpm format:check`, Docker web rebuild/start, and route smoke for `/` plus `/search`
+- Post-MVP Feature 5 user profile analytics is implemented:
+  - public `GET /users/{slug}/analytics` returns sender identity/profile image, overview totals,
+    day-bucket message volume, top channels, top emotes, and latest messages
+  - unknown sender slugs return 404
+  - public `/users/[slug]` renders the user profile, loading/error/not-found states, top
+    channels, top emotes, volume bars, and latest messages
+  - `/search` sender names and avatars link to `/users/[slug]`
+  - public profile links follow Kick URL slug behavior: visible usernames can contain `_`, but
+    profile URLs convert `_` to `-`
+  - `/search` reply preview sender names also link to `/users/[slug]` using the reply metadata
+    slug or a lowercase username fallback, with `_` converted to `-`
+  - profile pages link back to `/search?sender={slug}`
+  - the profile top identity block uses the same rounded bordered padded panel treatment as the
+    rest of the profile UI
+  - verification passed with `python -m uv run pytest`, backend ruff checks, web
+    test/typecheck/lint/build, and `pnpm format:check`
+- Post-MVP Feature 6 backend channel profile analytics is implemented:
+  - public `GET /channels/{slug}/analytics` returns channel metadata, overview totals,
+    day-bucket message volume, top senders, top emotes, and latest messages
+  - unknown channel slugs return 404
+  - latest messages are loaded by exact channel id, so profile history does not depend on
+    contains-style public search matching
+  - verification passed with targeted profile/analytics/search backend tests and backend Ruff
+    checks
+- Post-MVP Feature 6 channel profile frontend is implemented:
+  - public `/channels/[slug]` renders channel summary, activity metrics, day-bucket message
+    volume, top senders, top emotes, latest messages, loading, empty, error, and not-found states
+  - channel profile pages link to `/search?channel={slug}`
+  - `/search` channel labels and `/admin` channel rows link to channel profile pages
+  - frontend verification passed with web tests, typecheck, lint, and build
+- Post-MVP Feature 6 channel/publisher profiles are complete:
+  - README documents the public channel profile route and API
+  - `docs/tasks/post_mvp_06_channel_profiles.md` has all checkboxes closed
+  - final verification passed with backend pytest/Ruff, web test/typecheck/lint/build, and
+    `pnpm format:check`
+- Post-MVP Feature 7 backend data management foundation is implemented:
+  - `data_retention_settings` stores message and raw-event retention windows
+  - default retention is `null` for both messages and raw events, meaning keep forever
+  - admin-only `GET /admin/data-management/summary` returns row counts, table sizes, database
+    size, and retention settings
+  - admin-only `PUT /admin/data-management/retention-settings` accepts `null`, `30`, or `90`
+    days for message/raw-event retention
+  - admin-only cleanup preview/confirm endpoints support old messages, old raw events, a
+    specific channel, or a specific sender
+  - destructive cleanup requires exact confirmation text from the preview response
+  - backend target tests and Ruff checks pass
+- Post-MVP Feature 7 admin data management UI is implemented:
+  - `/admin` now mounts `DataManagementPanel` below `OperationsDashboard`
+  - the panel shows database/table sizes and current retention settings
+  - admins can set message/raw-event retention to keep forever, 30 days, or 90 days
+  - cleanup flow requires dry-run preview before the destructive confirm UI appears
+  - delete button stays disabled until the exact backend confirmation text is typed
+  - success/error states show deleted message/raw-event counts or API failures
+  - frontend target tests, typecheck, and lint pass
+- Post-MVP Feature 7 data management is complete:
+  - README documents retention behavior, guarded cleanup, and Docker Compose PostgreSQL
+    backup/restore commands
+  - `docs/tasks/post_mvp_07_data_management.md` has all checkboxes closed
+  - final verification passed with backend pytest/Ruff, web test/typecheck/lint/build, and
+    `pnpm format:check`
+- Post-MVP Feature 8 final smoke and documentation is complete:
+  - backend assertions that were brittle against live local DB data were hardened
+  - full backend checks passed with 124 tests plus Ruff lint/format checks
+  - full frontend checks passed with 66 tests plus typecheck, lint, build, and Prettier check
+  - Docker Compose starts `postgres`, `api`, `listener`, and `web`
+  - live smoke passed for public landing/search/profile/analytics/export routes, authenticated
+    operations/data-management APIs, data cleanup dry-run, and unauthenticated admin API rejection
+  - archived MVP docs are explicitly marked historical
+  - `docs/tasks/post_mvp_08_final_smoke.md` has all checkboxes closed
+- Post-MVP Feature 2 planning now includes clickable message links:
+  - URLs inside `/search` message content should render as safe clickable anchors
+  - link rendering must preserve inline emote placement and matched-text highlighting
+  - `docs/tasks/post_mvp_02_search_improvements.md` includes explicit link rendering tests
 - Issue #1 durable ingestion implementation is complete locally on branch `feature/issue-1-durable-inbox`.
 - Issue #3 Kick reply rendering is implemented locally on branch `feat/issue-3-kick-reply-rendering`.
 - Kick listener now uses a durable raw event inbox design:
@@ -27,7 +150,7 @@ This file is the active project memory. Keep it updated whenever project behavio
   - raw event workers normalize and insert chat messages out of the websocket read path
   - stale `processing` events can be reclaimed after a timeout
   - listener periodically reconnects to refresh enabled channel subscriptions
-- Root `/` redirects to `/search` in the MVP; landing content remains a future post-MVP decision.
+- Root `/` is the public landing page; `/search` remains the primary search workflow.
 - Phase 9 auth foundation is implemented:
   - `/login` has an email/password form wired to `POST /auth/login`
   - `/admin` uses `GET /auth/me` for client-side route guarding
@@ -43,14 +166,19 @@ This file is the active project memory. Keep it updated whenever project behavio
   - user list calls `GET /admin/users`
   - create form calls `POST /admin/users`
   - password hashes or secrets are never rendered
+- Post-MVP admin operations UI is implemented:
+  - `OperationsDashboard` calls `GET /admin/operations/summary`
+  - stale listener heartbeat and failed raw event counts render compact warning states
+  - manual refresh re-fetches the operations summary without mixing with channel/user controls
 - `apps/api` contains the FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
 - Root `compose.yaml` currently has Phase 7 services:
   - `postgres`
   - `api`
   - `listener`
   - `web`
-- Sequential implementation plan exists at `docs/implementation_plan.md`.
-- Phase task files exist under `docs/tasks/phase1_tasks.md` through `docs/tasks/phase10_tasks.md`.
+- Active implementation plan exists at `docs/implementation_plan.md`.
+- Active task files exist under `docs/tasks/post_mvp_01_admin_operations.md` through `docs/tasks/post_mvp_08_final_smoke.md`.
+- Archived MVP task files exist under `docs/archive/tasks/phase1_tasks.md` through `docs/archive/tasks/phase10_tasks.md`.
 - Frontend `web` service exists and runs the Next.js development server.
 - Current backend verification:
   - `python -m uv run pytest` passes from `apps/api` with 94 tests.
@@ -66,6 +194,8 @@ This file is the active project memory. Keep it updated whenever project behavio
   - Admin channel add/disable smoke passes with slug `hype`.
   - Listener logs useful idle status when no enabled channels are ready.
   - `alembic current` reports `20260511_0002 (head)` after the durable inbox migration is applied.
+  - `python -m uv run pytest` passes from `apps/api` with 113 tests.
+  - `pnpm --filter @kick-logs/web test` passes with 13 files and 53 tests.
   - `pnpm --filter @kick-logs/web typecheck`, `lint`, and `build` pass.
   - `docker compose up --build -d web` builds and starts `web`.
   - `GET http://localhost:3000` returns HTTP 200.
@@ -133,6 +263,10 @@ Build an MVP monorepo with:
   - `chat_messages`
 - Alembic migration revision `20260511_0002` creates:
   - `raw_kick_events`
+- Alembic migration revision `20260513_0003` creates:
+  - `worker_heartbeats`
+- Alembic migration revision `20260515_0004` creates:
+  - `data_retention_settings`
 - PostgreSQL extension:
   - `pg_trgm`
 - JSONB fields:
@@ -162,6 +296,9 @@ Build an MVP monorepo with:
   - `SqlAlchemySenderRepository`
   - `SqlAlchemyMessageRepository`
   - `SqlAlchemyRawEventRepository`
+  - `SqlAlchemyOperationsRepository`
+  - `SqlAlchemyDataManagementRepository`
+  - `SqlAlchemyWorkerHeartbeatRepository`
   - `SqlAlchemyUnitOfWork`
 
 ## Auth Details
@@ -247,19 +384,25 @@ Build an MVP monorepo with:
 
 - Public route implemented:
   - `GET /messages`
+  - `GET /messages/export`
 - Query parameters:
   - `sender`
   - `channel`
   - `q`
   - `start`
   - `end`
+  - `reply_only`
+  - `emote_only`
   - `cursor`
   - `limit`
 - The route requires no authentication.
 - Empty filters return latest messages across all channels.
 - Non-empty filters combine with `AND`.
-- Sender, channel, and content filters use case-insensitive contains matching.
+- Sender filters use case-insensitive exact matching against sender username/slug snapshots.
+- Channel and content filters use case-insensitive contains matching.
 - Date filters apply to `message_created_at`.
+- `reply_only=true` filters to messages where `message_type` is `reply`.
+- `emote_only=true` filters to messages with one or more parsed emotes.
 - Results are newest-first.
 - Cursor format is:
   - `{message_created_at.isoformat()}|{message_id}`
@@ -274,6 +417,51 @@ Build an MVP monorepo with:
   - sender profile fields including avatar URL
   - channel metadata including profile/banner URLs
 - Search use case batches sender/channel lookup by id after message search to avoid one metadata query per row.
+- Export response supports:
+  - `format=json`
+  - `format=csv`
+  - the same filter semantics as `GET /messages`
+  - no auth requirement
+  - per-request `limit` clamped by `MESSAGE_EXPORT_MAX_ROWS`
+
+## Public Analytics API Details
+
+- Public routes implemented:
+  - `GET /analytics/overview`
+  - `GET /analytics/message-volume`
+  - `GET /analytics/top-senders`
+  - `GET /analytics/top-channels`
+  - `GET /analytics/top-emotes`
+  - `GET /channels/{slug}/analytics`
+- The routes require no authentication.
+- Common optional query parameters:
+  - `start`
+  - `end`
+  - `channel`
+  - `sender`
+- Date filters apply to `chat_messages.message_created_at`.
+- Analytics sender scope uses case-insensitive exact matching against sender username/slug and
+  stored message sender snapshots.
+- Analytics channel scope uses case-insensitive exact matching against channel slug/display name.
+- `message-volume` accepts `bucket=hour|day`.
+- Top-list endpoints accept `limit` from 1 to 100.
+- `overview` returns message, distinct sender, distinct channel, total emote usage, first message,
+  and latest message metrics.
+- `top-emotes` aggregates parsed `chat_messages.emotes` JSONB values by emote id/name/token/image.
+- Frontend typed wrappers live under `apps/web/src/features/analytics/api.ts`.
+- Channel profile analytics returns stored Kick channel metadata, scoped overview totals,
+  day-bucket message volume, top senders, top emotes, and latest messages.
+
+## Post-MVP Feature 3 Verification
+
+- `python -m uv run pytest`: 111 passed.
+- `python -m uv run ruff check .`: passed.
+- `python -m uv run ruff format --check .`: passed.
+- `pnpm --filter @kick-logs/web test`: 11 files, 47 tests passed.
+- `pnpm --filter @kick-logs/web typecheck`: passed.
+- `pnpm --filter @kick-logs/web lint`: passed.
+- `pnpm --filter @kick-logs/web build`: passed.
+- `pnpm format:check`: passed.
 
 ## Phase 4 Verification
 
@@ -302,8 +490,12 @@ Build an MVP monorepo with:
 - `ListenerService` composes enabled-channel loading, Pusher event streaming, event parsing, raw event persistence, and raw event worker processing.
 - `ListenerService.run_forever()` reconnects with backoff and reloads enabled channels on each reconnect.
 - `ListenerService.run_forever()` starts raw event worker tasks before connecting to Pusher.
+- `ListenerService.run_forever()` starts a heartbeat task that upserts `worker_heartbeats`
+  for service `listener`.
 - `ListenerService.run_once()` persists parsed chat events into `raw_kick_events` before message normalization or sender upsert work begins.
 - Raw event workers call `ProcessRawKickEventsUseCase` in batches and log claimed/processed/failed/pending counts.
+- Admin `GET /admin/operations/summary` exposes storage growth, raw backlog/status, latest
+  ingest timestamps, and listener heartbeat freshness without requiring Docker logs.
 - The websocket loop reconnects after `LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS` so followed-channel add/remove changes take effect without manual restart.
 - Sender profile enrichment is no longer on the websocket read path; profile images are stored when present in the raw message payload.
 - Worker entrypoint is `kick_logs.presentation.worker.main`.
@@ -410,6 +602,8 @@ Build an MVP monorepo with:
   - `Aramak istediğiniz Kelime` -> `q`
   - `Başlangıç` -> `start`
   - `Bitiş` -> `end`
+  - `Sadece yanıtlar` -> `reply_only`
+  - `Sadece emote` -> `emote_only`
 - Empty form fields are omitted from URL/backend query params.
 - Opening bare `/search` does not automatically call the backend.
 - Before the user submits a search, the result area shows `Arama yapmak için yukarıdaki formu kullanın.`
@@ -418,8 +612,15 @@ Build an MVP monorepo with:
   - `Başlangıç` is current local date/time minus 7 days.
   - `Bitiş` is current local date/time.
   - users can clear date fields to omit date filters.
+- A compact `Hızlı aralık` select sets the range to last 1 hour, 24 hours, 7 days, or 30
+  days without clearing other filters.
+- Date fields and `Hızlı aralık` occupy their own row; `Sadece yanıtlar` and `Sadece emote`
+  sit below them on the left side of the action row, before the `İşlem` buttons.
 - The `/search` initial SSR render uses an empty static search state; the default local date range is filled after hydration to avoid server/client timezone mismatches.
 - Submitted filter state is preserved in the URL query string.
+- A square `Dışa aktar` icon button opens compact `JSON indir` and `CSV indir` actions for
+  the last submitted filter state.
+- The export menu closes when the user chooses a format or clicks outside the menu.
 - Result fetching uses public `GET /messages` through the shared frontend API client.
 - Cursor pagination is wired to an IntersectionObserver sentinel for infinite scroll.
 - Result rows render inside one shared list container with:
@@ -434,9 +635,16 @@ Build an MVP monorepo with:
   - prefers backend parsed emote image URL
   - falls back to `https://files.kick.com/emotes/{id}/fullsize`
   - falls back to emote text if the image fails
+- Message content rendering:
+  - URLs render as safe new-tab links with `rel="noopener noreferrer"`
+  - matched `q` text renders as a compact inline highlight
+  - link rendering and highlighting are applied only to text parts, so inline emote placement is
+    preserved
 - Reply rendering:
   - messages with `message_type === "reply"` render replied-to context above current content
   - reply preview reads `reply_metadata.original_sender.username`
+  - reply preview sender links use `reply_metadata.original_sender.slug` when present, otherwise a
+    lowercase username-derived profile slug, then convert `_` to `-` for Kick profile URL behavior
   - reply preview reads `reply_metadata.original_message.content`
   - long reply previews use a `title` attribute for full-content hover inspection
 - Search summary panel shows loading/error status, loaded count, scope, last match, and active filters.
@@ -447,6 +655,27 @@ Build an MVP monorepo with:
   - active filter labels
   - infinite-scroll append dedupe helper
   - inline emote split/fallback rendering
+  - date preset helpers
+  - reply-only and emote-only URL/query mapping
+  - clickable link rendering
+  - matched-text highlighting with emote compatibility
+  - export button URL behavior
+
+## Post-MVP Feature 2 Verification
+
+- Latest search form density polish:
+  - `pnpm --filter @kick-logs/web test`: 10 files, 44 tests passed.
+  - `pnpm --filter @kick-logs/web typecheck`: passed.
+  - `pnpm --filter @kick-logs/web lint`: passed.
+  - `pnpm --filter @kick-logs/web build`: passed.
+  - `pnpm format:check`: passed.
+- `pnpm --filter @kick-logs/web test`: 10 files, 42 tests passed.
+- `pnpm --filter @kick-logs/web typecheck`: passed.
+- `pnpm --filter @kick-logs/web lint`: passed.
+- `pnpm --filter @kick-logs/web build`: passed.
+- `pnpm format:check`: passed.
+- `python -m uv run ruff check .`: passed.
+- `python -m uv run pytest tests/domain/test_value_objects.py tests/test_config.py tests/messages/test_http_search_messages.py`: 18 passed.
 
 ## Phase 8 Verification
 
@@ -562,7 +791,8 @@ Build an MVP monorepo with:
   - restarting the `postgres` service preserves the sample message in the named volume.
 - Cleanup:
   - no tracked `.env`, generated cache, dependency folder, log, or build output was found.
-  - removed the unused `RouteShell` scaffold and changed `/` to redirect to `/search`.
+  - removed the unused `RouteShell` scaffold and kept the MVP root behavior search-first at that
+    time.
 
 ## Issue #1 Durable Ingestion Verification
 
@@ -585,7 +815,7 @@ Build an MVP monorepo with:
 
 ## Design Direction
 
-- UI implementation is deferred until the backend API and listener are working end-to-end.
+- UI implementation is active and must stay aligned with the working backend API contracts.
 - `docs/design/design.md` is the source of truth for future UI and UX decisions.
 - Any future UI/frontend agent must read `docs/design/design.md` before changing frontend code.
 - The UI is dark-only with palette `#26001B`, `#810034`, `#FF005C`, `#FFF600`, black, and white.
@@ -593,7 +823,8 @@ Build an MVP monorepo with:
 - Do not use blur, glow, colored lighting, or atmospheric background effects.
 - The provided search screenshot is a layout/workflow reference only; do not copy its green visual style exactly.
 - The user-provided logo should be used where a product mark is needed.
-- The search screen is the first design target in `docs/design/design.pen`; admin panel screens should not be designed until the search screen is approved.
+- The approved `/search` screen remains represented in `docs/design/design.pen`; later UI work
+  should follow the same dark, compact product style.
 - Search results should render as dense rows inside one shared outer container, not as separate modal/card components per message.
 - Sender avatars should be circular, emotes should render inline at their message positions, and reply rows should show replied-to sender/content without adding per-message cards or modals.
 
@@ -605,7 +836,8 @@ Build an MVP monorepo with:
   - email: `admin@kicklogs.local`
   - password: `admin123`
 - Allow env override for default super admin credentials.
-- Use `/search` for the public app search screen, `/admin` for authenticated backend management, and redirect `/` to `/search` until a future landing page is intentionally designed.
+- Use `/` for the public landing page, `/search` for the public app search screen, and
+  `/admin` for authenticated backend management.
 - `/search` does not require login.
 - `/admin` manages backend operational state such as followed channels and admin users.
 - Search filters are optional and combined with `AND`:
@@ -614,7 +846,8 @@ Build an MVP monorepo with:
   - message content
   - start datetime
   - end datetime
-- Use case-insensitive contains matching for sender, channel, and message content.
+- Use case-insensitive exact matching for sender username/slug search.
+- Use case-insensitive contains matching for channel and message content.
 - Use one listener worker/container to subscribe to all enabled channels.
 - Store all useful available data, including normalized fields, parsed emotes, sender badges, profile image when enriched, reply metadata, and raw payload JSONB.
 - Render emotes with `https://files.kick.com/emotes/{id}/fullsize` and fall back to the emote name/token if the image fails.
@@ -622,8 +855,9 @@ Build an MVP monorepo with:
 ## Operational Rules
 
 - Every agent must read `AGENTS.md` and context files before making changes.
-- Every implementation agent must read `docs/implementation_plan.md` and the matching phase task file before changing files.
-- Phase task files are scoped handoff contracts; do not implement work from a later phase unless the user explicitly changes the plan.
+- Every implementation agent must read `docs/implementation_plan.md` and the matching active task file before changing files.
+- Active post-MVP task files are scoped handoff contracts; do not implement work from another feature unless the user explicitly changes the plan.
+- Archived MVP task files are historical context only.
 - Keep documentation and context current with implementation changes.
 - Update `docs/context/recent_changes.md` with a short latest-change handoff after each meaningful change.
 - Multi-agent work is allowed for non-overlapping scopes; assign clear file/subsystem ownership and integrate outputs before committing.

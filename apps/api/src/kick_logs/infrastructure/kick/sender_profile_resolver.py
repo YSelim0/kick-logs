@@ -5,6 +5,7 @@ from curl_cffi.requests import AsyncSession
 
 from kick_logs.application.dto.senders import ResolvedSenderProfileDTO
 from kick_logs.application.exceptions import SenderProfileResolutionError
+from kick_logs.domain.value_objects.sender_slug import normalize_kick_profile_slug
 
 FetchJson = Callable[[str], Awaitable[dict[str, Any]]]
 
@@ -19,7 +20,7 @@ class KickWebSenderProfileResolver:
         self._base_url = base_url.rstrip("/")
 
     async def resolve(self, slug: str) -> ResolvedSenderProfileDTO:
-        normalized_slug = slug.strip().lower()
+        normalized_slug = normalize_kick_profile_slug(slug)
         if not normalized_slug:
             raise SenderProfileResolutionError("Sender slug is required.")
 
@@ -53,7 +54,8 @@ class KickWebSenderProfileResolver:
         user_payload = user if isinstance(user, dict) else {}
 
         return ResolvedSenderProfileDTO(
-            slug=str(payload.get("slug") or fallback_slug).strip().lower(),
+            slug=normalize_kick_profile_slug(str(payload.get("slug") or fallback_slug))
+            or fallback_slug,
             username=self._first_non_empty_string([user_payload.get("username")]),
             profile_image_url=self._first_non_empty_string(
                 [

@@ -2,8 +2,306 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-15
+
+- Fixed Docker Compose backend env passthrough for release readiness:
+  - API service now receives `DATABASE_ECHO`, `JWT_ALGORITHM`, `JWT_EXPIRES_MINUTES`,
+    `JWT_COOKIE_SECURE`, `JWT_COOKIE_SAMESITE`, and `SEED_SUPER_ADMIN_ON_STARTUP` from `.env`
+  - listener service now receives `DATABASE_ECHO`
+  - verified `docker compose config` renders the expected environment variables
+- Completed Post-MVP Feature 8 final smoke and documentation:
+  - hardened three backend assertions that were too brittle against a live local database with
+    existing raw events/messages
+  - verified backend checks: `python -m uv run pytest` reported 124 passed,
+    `python -m uv run ruff check .` passed, and `python -m uv run ruff format --check .` passed
+  - verified frontend checks: `pnpm --filter @kick-logs/web test` reported 16 files and 66 tests
+    passed, plus typecheck, lint, build, and `pnpm format:check`
+  - verified `docker compose up --build -d` starts `postgres`, `api`, `listener`, and `web`
+  - smoke checked public landing/search/login/admin shell pages, public messages/search/export,
+    analytics, user profile, channel profile, authenticated operations, authenticated data
+    management summary, and data cleanup dry-run
+  - verified unauthenticated admin APIs return 401 while public routes remain accessible
+  - updated README project status and archived MVP docs so historical plans are clearly marked
+  - `docs/tasks/post_mvp_08_final_smoke.md` has all checkboxes closed
+- Completed Post-MVP Feature 7 data management:
+  - README now documents admin data-management usage, retention behavior, guarded cleanup, and
+    Docker Compose PostgreSQL backup/restore commands
+  - `docs/tasks/post_mvp_07_data_management.md` has all checkboxes closed
+  - destructive cleanup remains admin-only and requires dry-run preview plus exact confirmation
+    text before deletion
+  - verified `python -m uv run pytest`: 124 passed
+  - verified `python -m uv run ruff check .`
+  - verified `python -m uv run ruff format --check .`
+  - verified `pnpm --filter @kick-logs/web test`: 16 files, 66 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+  - verified `pnpm format:check`
+- Implemented the frontend for Post-MVP Feature 7 data management:
+  - added typed data-management API wrappers
+  - added `/admin` `DataManagementPanel` below operations status
+  - panel shows database/table sizes and current retention settings
+  - retention controls support keep forever, 30 days, and 90 days for messages/raw events
+  - cleanup flow requires dry-run preview before confirmation
+  - delete action is disabled until exact backend confirmation text is typed
+  - success state reports deleted message/raw-event counts
+  - added frontend tests for settings display, dry-run preview, blocked deletion without
+    confirmation, confirmed deletion, and API errors
+  - verified
+    `pnpm --filter @kick-logs/web test -- data-management-panel.test.tsx admin-dashboard.test.tsx`:
+    2 files, 8 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+- Implemented the backend foundation for Post-MVP Feature 7 data management:
+  - added `data_retention_settings` with singleton retention settings
+  - default message/raw-event retention is `null`, meaning keep forever
+  - added admin-only `GET /admin/data-management/summary`
+  - added admin-only `PUT /admin/data-management/retention-settings`
+  - added admin-only `POST /admin/data-management/cleanup/preview`
+  - added admin-only `POST /admin/data-management/cleanup/confirm`
+  - cleanup targets cover old messages, old raw events, a specific channel, or a specific sender
+  - confirmed cleanup requires the exact confirmation text returned by preview
+  - added backend tests for permissions, retention defaults/updates, dry-run counts, rejected
+    confirmation, and confirmed deletion
+  - verified
+    `python -m uv run pytest tests/data_management/test_http_admin_data_management.py tests/database/test_alembic_migration.py tests/database/test_models_metadata.py`:
+    13 passed
+  - verified `python -m uv run ruff check .`
+
+## 2026-05-14
+
+- Completed Post-MVP Feature 6 channel/publisher profiles:
+  - README documents `/channels/[slug]` and `GET /channels/{slug}/analytics`
+  - `docs/tasks/post_mvp_06_channel_profiles.md` has all checkboxes closed
+  - verified `python -m uv run pytest`: 119 passed
+  - verified `python -m uv run ruff check .`
+  - verified `python -m uv run ruff format --check .`
+  - verified `pnpm --filter @kick-logs/web test`: 15 files, 61 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+  - verified `pnpm format:check`
+- Implemented the frontend for Post-MVP Feature 6 channel profiles:
+  - added public `/channels/[slug]`
+  - added typed channel profile API wrapper and response types
+  - channel profile UI renders summary metadata, activity metrics, day-bucket message volume, top
+    senders, top emotes, latest messages, loading, empty, error, and not-found states
+  - channel profile pages link to `/search?channel={slug}`
+  - `/search` channel labels now link to public channel profiles
+  - `/admin` channel rows now link to public channel profiles when slug data is present
+  - verified `pnpm --filter @kick-logs/web test`: 15 files, 61 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+- Implemented the backend API for Post-MVP Feature 6 channel profiles:
+  - added public `GET /channels/{slug}/analytics`
+  - endpoint returns stored Kick channel metadata, overview totals, day-bucket message volume,
+    top senders, top emotes, and latest messages
+  - unknown channel slugs return 404
+  - latest profile messages are queried by exact channel id
+  - added backend coverage for existing channel profiles, unknown channels, volume, top senders,
+    top emotes, and latest messages
+  - verified
+    `python -m uv run pytest tests/profiles/test_http_channel_profiles.py tests/analytics/test_http_analytics.py tests/messages/test_http_search_messages.py`:
+    18 passed
+  - verified `python -m uv run ruff check .`
+  - verified `python -m uv run ruff format --check .`
+- Fixed Kick profile slug handling for usernames with underscores:
+  - frontend sender profile links now convert `_` to `-`, so `example_user` routes to
+    `/users/example-user`
+  - reply preview sender profile slugs use the same canonical Kick URL behavior
+  - backend ingestion normalizes new sender slugs to Kick profile URL form
+  - backend sender/profile/search/analytics lookups accept both underscore and hyphen forms so
+    existing stored data remains reachable
+  - added backend and frontend coverage for underscore-to-hyphen profile slug behavior
+  - verified targeted backend tests:
+    `python -m uv run pytest tests/domain/test_value_objects.py tests/messages/test_ingest_message.py tests/messages/test_http_search_messages.py tests/profiles/test_http_user_profiles.py`
+    returned 28 passed
+  - verified `python -m uv run ruff check .`
+  - verified `python -m uv run ruff format --check .`
+  - verified `pnpm --filter @kick-logs/web test`: 14 files, 56 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+  - verified `pnpm format:check`
+- Polished public profile navigation and profile panel styling:
+  - `/search` reply previews now link the muted replied-to sender name to `/users/[slug]`
+  - reply metadata extraction reads `original_sender.slug` when present and falls back to a
+    lowercase username-derived slug
+  - `/users/[slug]` top identity section now uses the same rounded bordered padded panel treatment
+    as the rest of the profile UI
+  - added frontend coverage for reply sender profile links and reply slug fallback
+  - verified `pnpm --filter @kick-logs/web test`: 13 files, 54 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+  - verified `pnpm format:check`
+- Implemented Post-MVP Feature 4 landing page with analytics:
+  - replaced root `/` search redirect with `LandingPage`
+  - landing explains the self-hosted Kick Logs project with compact product-focused copy
+  - landing fetches public analytics overview, recent day-bucket message volume, top channels,
+    top emotes, and top senders
+  - landing includes loading, API-error, and fresh-install empty states
+  - landing links to `/search`, `/admin`, GitHub, and Buy Me a Coffee support
+  - added frontend tests for analytics rendering, empty state, and navigation links
+  - updated README, design guide, project plan, architecture notes, implementation plan, and
+    context docs so `/` is documented as the landing page
+  - closed all checkboxes in `docs/tasks/post_mvp_04_landing_analytics.md`
+  - verified `pnpm --filter @kick-logs/web test`: 12 files, 50 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+  - verified `pnpm format:check`
+  - verified `docker compose up --build -d web`
+  - verified `GET http://localhost:3000/`: HTTP 200
+  - verified `GET http://localhost:3000/search`: HTTP 200
+- Linked the `/search` and `/admin` header brand/logo areas back to `/`:
+  - `/search` header now wraps the Kick Logs logo/title block in a `/` link
+  - `/admin` header brand link now points to `/` instead of `/admin`
+  - added frontend assertions for both brand links
+  - verified `pnpm --filter @kick-logs/web test -- search-screen.test.tsx admin-dashboard.test.tsx`:
+    2 files, 11 tests passed
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm format:check`
+- Implemented Post-MVP Feature 5 user profile analytics:
+  - added public `GET /users/{slug}/analytics`
+  - response includes sender identity/profile image, overview totals, day-bucket message volume,
+    top channels, top emotes, and latest messages
+  - unknown sender slugs return 404
+  - added backend tests for existing profile analytics, unknown sender, volume, top channels, top
+    emotes, and latest messages
+  - added public `/users/[slug]` frontend route and profile UI
+  - search result sender names and avatars link to `/users/[slug]`
+  - profile UI links to `/search?sender={slug}`
+  - added frontend tests for profile rendering, not-found behavior, and search-row sender links
+  - updated README, project plan, architecture, design guide, task checklist, and context docs
+  - verified `python -m uv run pytest`: 113 passed
+  - verified `python -m uv run ruff check .`
+  - verified `python -m uv run ruff format --check .`
+  - verified `pnpm --filter @kick-logs/web test`: 13 files, 53 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+  - verified `pnpm format:check`
+
+## 2026-05-13
+
+- Implemented Post-MVP Feature 3 analytics foundation:
+  - added `AnalyticsFilters` with date range and exact channel/sender scope
+  - added analytics DTOs, use cases, repository port, and SQLAlchemy aggregate repository
+  - added public read-only `GET /analytics/overview`
+  - added public read-only `GET /analytics/message-volume`
+  - added public read-only `GET /analytics/top-senders`
+  - added public read-only `GET /analytics/top-channels`
+  - added public read-only `GET /analytics/top-emotes`
+  - message volume supports `bucket=hour|day`
+  - top-list endpoints support `limit` from 1 to 100
+  - top emotes aggregate parsed `chat_messages.emotes` JSONB values
+  - added backend tests for aggregate correctness, empty datasets, date range filtering, channel
+    scope, sender scope, and limit handling
+  - added typed frontend analytics API wrappers and parameter mapping tests
+  - documented the analytics API shape in README, architecture, project plan, and context docs
+  - verified `python -m uv run pytest`: 111 passed
+  - verified `python -m uv run ruff check .`
+  - verified `python -m uv run ruff format --check .`
+  - verified `pnpm --filter @kick-logs/web test -- analytics/api.test.ts`: 1 file, 3 tests passed
+  - verified `pnpm --filter @kick-logs/web test`: 11 files, 47 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+  - verified `pnpm format:check`
+- Polished the public `/search` filter form density:
+  - moved quick date ranges from four visible buttons into one compact `Hızlı aralık` select
+  - moved JSON/CSV export actions behind one square `Dışa aktar` icon button
+  - added outside-click close behavior for the export menu
+  - relabeled result-type filters to `Sadece yanıtlar` and `Sadece emote` so their scope is clearer
+  - moved result-type filters below the date controls, to the left of the `İşlem` action group
+  - updated design and context docs for the compact control behavior
+  - verified `pnpm --filter @kick-logs/web test -- search-screen.test.tsx`: 1 file, 8 tests passed
+  - verified `pnpm --filter @kick-logs/web test`: 10 files, 44 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+  - verified `pnpm format:check`
+- Implemented the frontend for Post-MVP Feature 2 search improvements:
+  - added date preset buttons for last 1 hour, 24 hours, 7 days, and 30 days
+  - added `Yanıtlar` and `Emote içerenler` controls mapped to `reply_only` and `emote_only`
+  - kept the new filters shareable in `/search` URL query state
+  - rendered URLs inside message content as safe new-tab anchors
+  - highlighted matched `q` text in message content without moving inline emotes
+  - added CSV and JSON export buttons that use the last submitted filters
+  - updated `docs/design/design.md` and the Feature 2 task file
+  - verified `pnpm --filter @kick-logs/web test`: 10 files, 42 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+  - verified `pnpm format:check`
+  - re-verified backend `python -m uv run ruff check .`
+  - re-verified backend `python -m uv run pytest tests/domain/test_value_objects.py tests/test_config.py tests/messages/test_http_search_messages.py`: 18 passed
+  - closed all acceptance checkboxes in `docs/tasks/post_mvp_02_search_improvements.md`
+- Implemented the backend foundation for Post-MVP Feature 2 search improvements:
+  - `MessageSearchFilters` now carries `reply_only` and `emote_only`
+  - public `GET /messages` applies both filters with existing optional `AND` semantics
+  - added public `GET /messages/export` for filtered JSON and CSV exports
+  - export reuses the same search use case/filter contract and caps output with
+    `MESSAGE_EXPORT_MAX_ROWS`
+  - Compose and `.env.example` expose the export row cap
+  - README, architecture, project plan, task file, and context docs describe the new API
+  - verified `python -m uv run ruff check .`
+  - verified `python -m uv run pytest tests/domain/test_value_objects.py tests/test_config.py tests/messages/test_http_search_messages.py`: 18 passed
+- Added a Feature 2 planning task for clickable message links:
+  - `/search` result rows should render URLs inside message content as safe clickable links
+  - link rendering must preserve inline emote placement and matched-text highlighting
+  - link rendering tests were added to the Feature 2 task checklist
+- Completed Post-MVP Feature 1 admin operations acceptance:
+  - README now documents `/admin` operations dashboard usage and
+    `GET /admin/operations/summary`
+  - `docs/tasks/post_mvp_01_admin_operations.md` has all checkboxes closed
+  - verified backend, frontend, and formatting checks for the touched areas
+- Implemented the frontend dashboard for Post-MVP Feature 1 admin operations:
+  - added typed frontend operations API wrapper for `GET /admin/operations/summary`
+  - mounted `OperationsDashboard` at the top of `/admin`
+  - added compact cards for listener status, database size, message count, raw event count,
+    failed raw events, pending raw events, and last ingest time
+  - added manual refresh and warning/error states for stale listener heartbeat, failed raw
+    events, and API failures
+  - kept operations metrics visually separate from channel and user management
+  - verified `pnpm --filter @kick-logs/web test`: 10 files, 36 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+- Implemented the backend foundation for Post-MVP Feature 1 admin operations:
+  - added `worker_heartbeats` domain entity, SQLAlchemy model, repository, and Alembic
+    migration `20260513_0003`
+  - listener now records a periodic `listener` heartbeat controlled by
+    `LISTENER_HEARTBEAT_INTERVAL_SECONDS`
+  - added operations repository/use case and admin-only
+    `GET /admin/operations/summary`
+  - summary response includes core counts, raw event status counts, database/table sizes,
+    key ingest timestamps, and listener freshness based on
+    `LISTENER_HEARTBEAT_STALE_AFTER_SECONDS`
+  - updated Compose and `.env.example` with heartbeat settings
+  - verified `python -m uv run alembic upgrade head`
+  - verified `python -m uv run ruff check .`
+  - verified `python -m uv run pytest`: 101 passed
+- Updated validation workflow branch triggers:
+  - `Code Style` now runs for pull requests targeting `main` or `dev`
+  - `Code Style` now runs on pushes to `main` or `dev`
+  - `Python CI` now runs for pull requests targeting `main` or `dev`
+  - `Python CI` now runs on pushes to `main` or `dev`
+- Changed public message search sender filtering:
+  - `sender` now uses case-insensitive exact matching against sender username/slug snapshots
+  - partial sender queries such as `yavuz` no longer match `notyavuz` or `yavuz123`
+  - `channel` and message content filters keep case-insensitive contains behavior
+  - added backend coverage for exact sender matches and rejected partial sender matches
+
 ## 2026-05-12
 
+- Archived the completed MVP implementation plan:
+  - moved the old active plan to `docs/archive/mvp_implementation_plan.md`
+  - moved old phase task files to `docs/archive/tasks/`
+  - replaced `docs/implementation_plan.md` with the active post-MVP feature roadmap
+  - added post-MVP task files for admin operations, search improvements, analytics foundation, landing analytics, user profiles, channel profiles, data management, and final smoke/docs
+  - updated agent/project/context docs so archived MVP task files are historical context only
 - Added Buy Me a Coffee sponsorship metadata:
   - created `.github/FUNDING.yml` with `buy_me_a_coffee: yavuzselim` so GitHub can show the Sponsor button
   - added a README support badge linked to `https://buymeacoffee.com/yavuzselim`
@@ -403,7 +701,7 @@ This is a living implementation log. Add new entries for each meaningful project
   - frontend tests, typecheck, lint, and build passed
   - `docker compose up --build -d` starts all services
   - API health and web `/search`, `/login`, `/admin` routes return from host
-  - `/` returns HTTP 307 to `/search`
+  - historical MVP root returned HTTP 307 to `/search`
   - listener logs idle status and then channel subscription status after `hype` is enabled
   - default super admin login succeeds
   - authenticated channel add stores Kick metadata for `hype`
@@ -412,4 +710,5 @@ This is a living implementation log. Add new entries for each meaningful project
   - PostgreSQL restart preserves the sample message in the named volume
   - README and context files now reflect final MVP startup and smoke behavior
   - no tracked generated cache, dependency folder, `.env`, secret, log, or build output was found
-- Removed the unused frontend `RouteShell` scaffold and changed `/` to redirect to `/search` until a future landing page is intentionally designed.
+- Removed the unused frontend `RouteShell` scaffold and kept the MVP root behavior search-first
+  until post-MVP landing work.

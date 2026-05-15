@@ -3,11 +3,14 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { ChevronDown, Search } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import { MessageContent } from "@/features/search/message-content";
 import { getReplyContext } from "@/features/search/reply-metadata";
 import { formatMessageDate } from "@/features/search/search-params";
+import { buildUserProfileHref } from "@/lib/kick-profile-slugs";
+import { buildChannelProfileHref } from "@/lib/channel-profile-slugs";
 import { cn } from "@/lib/utils";
 import type { Message } from "@/types/api";
 
@@ -17,6 +20,7 @@ type MessageListProps = {
   isLoadingMore: boolean;
   hasMore: boolean;
   hasSearched: boolean;
+  highlightQuery?: string;
   error: string | null;
   sentinelRef: React.RefObject<HTMLDivElement>;
   onRetry: () => void;
@@ -28,6 +32,7 @@ export function MessageList({
   isLoadingMore,
   hasMore,
   hasSearched,
+  highlightQuery = "",
   error,
   sentinelRef,
   onRetry
@@ -69,7 +74,12 @@ export function MessageList({
             </div>
 
             {messages.map((message, index) => (
-              <MessageRow isAlt={index % 2 === 1} key={message.id} message={message} />
+              <MessageRow
+                highlightQuery={highlightQuery}
+                isAlt={index % 2 === 1}
+                key={message.id}
+                message={message}
+              />
             ))}
 
             {!isInitialLoading && !error && messages.length === 0 ? (
@@ -118,11 +128,23 @@ export function MessageList({
   );
 }
 
-function MessageRow({ message, isAlt }: { message: Message; isAlt: boolean }) {
+function MessageRow({
+  message,
+  isAlt,
+  highlightQuery
+}: {
+  message: Message;
+  isAlt: boolean;
+  highlightQuery: string;
+}) {
   const replyContext = getReplyContext(message);
   const replyTitle = replyContext
     ? `@${replyContext.senderUsername}: ${replyContext.content}`
     : undefined;
+  const replySenderProfileHref = buildUserProfileHref(replyContext?.senderSlug);
+  const senderProfileHref = buildUserProfileHref(message.sender.slug);
+  const channelProfileHref = buildChannelProfileHref(message.channel.slug);
+  const senderName = message.sender.username || message.sender_username_snapshot;
 
   return (
     <div
@@ -132,20 +154,46 @@ function MessageRow({ message, isAlt }: { message: Message; isAlt: boolean }) {
       )}
     >
       <div className="flex items-start md:items-center">
-        <SenderAvatar message={message} />
+        {senderProfileHref ? (
+          <Link href={senderProfileHref}>
+            <SenderAvatar message={message} />
+          </Link>
+        ) : (
+          <SenderAvatar message={message} />
+        )}
       </div>
 
       <div className="min-w-0 md:pr-3">
-        <div className="truncate font-medium text-foreground">
-          {message.sender.username || message.sender_username_snapshot}
-        </div>
+        {senderProfileHref ? (
+          <Link
+            className="block truncate font-medium text-foreground hover:text-primary"
+            href={senderProfileHref}
+          >
+            {senderName}
+          </Link>
+        ) : (
+          <div className="truncate font-medium text-foreground">{senderName}</div>
+        )}
         <div className="truncate text-xs text-muted-foreground md:hidden">
-          #{message.channel.slug} - {formatMessageDate(message.message_created_at)}
+          {channelProfileHref ? (
+            <Link className="text-accent hover:text-primary" href={channelProfileHref}>
+              #{message.channel.slug}
+            </Link>
+          ) : (
+            <span className="text-accent">#{message.channel.slug}</span>
+          )}{" "}
+          - {formatMessageDate(message.message_created_at)}
         </div>
       </div>
 
       <div className="hidden min-w-0 pr-3 text-accent md:block">
-        <span className="truncate">#{message.channel.slug}</span>
+        {channelProfileHref ? (
+          <Link className="block truncate hover:text-primary" href={channelProfileHref}>
+            #{message.channel.slug}
+          </Link>
+        ) : (
+          <span className="truncate">#{message.channel.slug}</span>
+        )}
       </div>
 
       <div className="col-span-2 min-w-0 text-foreground md:col-span-1 md:pr-4">
@@ -154,13 +202,26 @@ function MessageRow({ message, isAlt }: { message: Message; isAlt: boolean }) {
             className="mb-1 min-w-0 truncate text-xs leading-5 text-muted-foreground/70"
             title={replyTitle}
           >
-            <span className="font-medium text-muted-foreground/80">
-              @{replyContext.senderUsername}:
-            </span>{" "}
+            {replySenderProfileHref ? (
+              <Link
+                className="font-medium text-muted-foreground/80 hover:text-primary"
+                href={replySenderProfileHref}
+              >
+                @{replyContext.senderUsername}:
+              </Link>
+            ) : (
+              <span className="font-medium text-muted-foreground/80">
+                @{replyContext.senderUsername}:
+              </span>
+            )}{" "}
             {replyContext.content}
           </div>
         ) : null}
-        <MessageContent content={message.content} emotes={message.emotes} />
+        <MessageContent
+          content={message.content}
+          emotes={message.emotes}
+          highlight={highlightQuery}
+        />
       </div>
 
       <div className="hidden text-xs text-muted-foreground md:block">

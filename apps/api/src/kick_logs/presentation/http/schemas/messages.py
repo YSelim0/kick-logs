@@ -3,7 +3,11 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from kick_logs.application.dto.messages import MessageSearchItemDTO, MessageSearchPageDTO
+from kick_logs.application.dto.messages import (
+    MessageExportDTO,
+    MessageSearchItemDTO,
+    MessageSearchPageDTO,
+)
 from kick_logs.domain.value_objects.pagination import MessageCursor
 
 
@@ -98,3 +102,19 @@ class MessageSearchResponse(BaseModel):
         if cursor is None:
             return None
         return f"{cursor.message_created_at.isoformat()}|{cursor.message_id}"
+
+
+class MessageExportResponse(BaseModel):
+    items: list[MessageResponse]
+    count: int
+    max_rows: int
+    truncated: bool
+
+    @classmethod
+    def from_dto(cls, export: MessageExportDTO) -> "MessageExportResponse":
+        return cls(
+            items=[MessageResponse.from_dto(item) for item in export.items],
+            count=export.count,
+            max_rows=export.max_rows,
+            truncated=export.truncated,
+        )

@@ -18,6 +18,8 @@ class MessageSearchFilters:
     q: str | None = None
     start: datetime | None = None
     end: datetime | None = None
+    reply_only: bool = False
+    emote_only: bool = False
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "sender", _clean_optional_text(self.sender))
@@ -29,4 +31,14 @@ class MessageSearchFilters:
 
     @property
     def has_any_filter(self) -> bool:
-        return any((self.sender, self.channel, self.q, self.start, self.end))
+        return any(
+            (
+                self.sender,
+                self.channel,
+                self.q,
+                self.start,
+                self.end,
+                self.reply_only,
+                self.emote_only,
+            )
+        )

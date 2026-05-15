@@ -5,16 +5,24 @@ from kick_logs.infrastructure.database import Base
 from kick_logs.infrastructure.database.models import (
     ChannelModel,
     ChatMessageModel,
+    DataRetentionSettingsModel,
     RawKickEventModel,
     SenderModel,
     UserModel,
+    WorkerHeartbeatModel,
 )
 
 
 def test_metadata_contains_core_tables() -> None:
-    assert {"users", "channels", "senders", "chat_messages", "raw_kick_events"}.issubset(
-        Base.metadata.tables
-    )
+    assert {
+        "users",
+        "channels",
+        "senders",
+        "chat_messages",
+        "raw_kick_events",
+        "worker_heartbeats",
+        "data_retention_settings",
+    }.issubset(Base.metadata.tables)
 
 
 def test_jsonb_payload_columns_are_present() -> None:
@@ -26,10 +34,18 @@ def test_jsonb_payload_columns_are_present() -> None:
     assert isinstance(ChatMessageModel.__table__.c.raw_payload.type, JSONB)
     assert isinstance(RawKickEventModel.__table__.c.payload.type, JSONB)
     assert isinstance(RawKickEventModel.__table__.c.metadata.type, JSONB)
+    assert isinstance(WorkerHeartbeatModel.__table__.c.metadata.type, JSONB)
 
 
 def test_timestamp_columns_are_timezone_aware() -> None:
-    for model in (UserModel, ChannelModel, SenderModel, RawKickEventModel):
+    for model in (
+        UserModel,
+        ChannelModel,
+        SenderModel,
+        RawKickEventModel,
+        WorkerHeartbeatModel,
+        DataRetentionSettingsModel,
+    ):
         assert isinstance(model.__table__.c.created_at.type, DateTime)
         assert model.__table__.c.created_at.type.timezone is True
         assert isinstance(model.__table__.c.updated_at.type, DateTime)
@@ -39,6 +55,8 @@ def test_timestamp_columns_are_timezone_aware() -> None:
     assert ChatMessageModel.__table__.c.message_created_at.type.timezone is True
     assert isinstance(RawKickEventModel.__table__.c.received_at.type, DateTime)
     assert RawKickEventModel.__table__.c.received_at.type.timezone is True
+    assert isinstance(WorkerHeartbeatModel.__table__.c.last_seen_at.type, DateTime)
+    assert WorkerHeartbeatModel.__table__.c.last_seen_at.type.timezone is True
 
 
 def test_primary_keys_use_bigint_identity() -> None:

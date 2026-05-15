@@ -22,9 +22,15 @@ vi.mock("next/image", () => ({
   default: ({ alt }: { alt: string }) => <span aria-label={alt} role="img" />
 }));
 
-vi.mock("@/features/search/api", () => ({
-  searchMessages: apiMocks.searchMessages
-}));
+vi.mock("@/features/search/api", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/features/search/api")>("@/features/search/api");
+
+  return {
+    ...actual,
+    searchMessages: apiMocks.searchMessages
+  };
+});
 
 describe("SearchScreen", () => {
   beforeEach(() => {
@@ -40,6 +46,7 @@ describe("SearchScreen", () => {
     expect(
       await screen.findByText("Arama yapmak için yukarıdaki formu kullanın.")
     ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /kick logs/i })).toHaveAttribute("href", "/");
     expect(apiMocks.searchMessages).not.toHaveBeenCalled();
   });
 
@@ -75,6 +82,24 @@ describe("SearchScreen", () => {
     );
   });
 
+  it("keeps reply-only and emote-only URL state shareable", async () => {
+    navigationMocks.query = "q=hello&reply_only=true&emote_only=true";
+
+    render(<SearchScreen />);
+
+    await waitFor(() =>
+      expect(apiMocks.searchMessages).toHaveBeenCalledWith(
+        expect.objectContaining({
+          q: "hello",
+          reply_only: true,
+          emote_only: true
+        })
+      )
+    );
+    expect(screen.getByLabelText("Sadece yanıtlar")).toBeChecked();
+    expect(screen.getByLabelText("Sadece emote")).toBeChecked();
+  });
+
   it("allows an explicit empty search without navigating", async () => {
     render(<SearchScreen />);
 
@@ -92,5 +117,56 @@ describe("SearchScreen", () => {
       })
     );
     expect(navigationMocks.push).not.toHaveBeenCalled();
+  });
+
+  it("applies date presets from the compact quick range control", async () => {
+    render(<SearchScreen />);
+
+    const startInput = screen.getByLabelText("Başlangıç") as HTMLInputElement;
+
+    await waitFor(() => expect(startInput.value).toContain("T"));
+    const previousStart = startInput.value;
+    fireEvent.change(screen.getByLabelText("Hızlı aralık"), { target: { value: "24h" } });
+
+    await waitFor(() => expect(startInput.value).not.toBe(previousStart));
+  });
+
+  it("opens CSV export with the current submitted filters", async () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    navigationMocks.query = "q=hello&reply_only=true";
+
+    render(<SearchScreen />);
+
+    await waitFor(() => expect(apiMocks.searchMessages).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button", { name: "Dışa aktar" }));
+    fireEvent.click(screen.getByRole("button", { name: "CSV indir" }));
+
+    const [url, target, features] = openSpy.mock.calls[0];
+    expect(target).toBe("_blank");
+    expect(features).toBe("noopener,noreferrer");
+
+    const exportUrl = new URL(url as string);
+    expect(exportUrl.pathname).toBe("/messages/export");
+    expect(exportUrl.searchParams.get("format")).toBe("csv");
+    expect(exportUrl.searchParams.get("q")).toBe("hello");
+    expect(exportUrl.searchParams.get("reply_only")).toBe("true");
+
+    openSpy.mockRestore();
+  });
+
+  it("closes the export menu when the user clicks outside", async () => {
+    navigationMocks.query = "q=hello";
+
+    render(<SearchScreen />);
+
+    await waitFor(() => expect(apiMocks.searchMessages).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button", { name: "Dışa aktar" }));
+    expect(screen.getByRole("button", { name: "CSV indir" })).toBeInTheDocument();
+
+    fireEvent.mouseDown(document.body);
+
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "CSV indir" })).not.toBeInTheDocument()
+    );
   });
 });

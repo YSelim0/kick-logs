@@ -1,7 +1,11 @@
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from kick_logs.domain.entities.sender import Sender
+from kick_logs.domain.value_objects.sender_slug import (
+    build_sender_lookup_terms,
+    normalize_kick_profile_slug,
+)
 from kick_logs.infrastructure.database.mappers import sender_to_domain, sender_to_model
 from kick_logs.infrastructure.database.models import SenderModel
 
@@ -47,8 +51,22 @@ class SqlAlchemySenderRepository:
         return sender_to_domain(model) if model else None
 
     async def get_by_slug(self, slug: str) -> Sender | None:
+        lookup_terms = build_sender_lookup_terms(slug)
+        if not lookup_terms:
+            return None
+
+        preferred_slug = normalize_kick_profile_slug(slug)
         result = await self._session.execute(
-            select(SenderModel).where(SenderModel.slug == slug.strip().lower())
+            select(SenderModel)
+            .where(func.lower(SenderModel.slug).in_(lookup_terms))
+            .order_by(
+                case(
+                    (func.lower(SenderModel.slug) == preferred_slug, 0),
+                    else_=1,
+                ),
+                SenderModel.id.asc(),
+            )
+            .limit(1)
         )
         model = result.scalar_one_or_none()
         return sender_to_domain(model) if model else None

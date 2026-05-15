@@ -6,6 +6,10 @@ from kick_logs.domain.exceptions import DomainError
 from kick_logs.domain.value_objects.pagination import CursorPagination, MessageCursor
 from kick_logs.domain.value_objects.roles import UserRole
 from kick_logs.domain.value_objects.search_filters import MessageSearchFilters
+from kick_logs.domain.value_objects.sender_slug import (
+    build_sender_lookup_terms,
+    normalize_kick_profile_slug,
+)
 
 
 def test_search_filters_strip_empty_text() -> None:
@@ -17,12 +21,22 @@ def test_search_filters_strip_empty_text() -> None:
     assert filters.has_any_filter is True
 
 
+def test_search_filters_treat_boolean_flags_as_active_filters() -> None:
+    assert MessageSearchFilters(reply_only=True).has_any_filter is True
+    assert MessageSearchFilters(emote_only=True).has_any_filter is True
+
+
 def test_search_filters_reject_invalid_date_range() -> None:
     with pytest.raises(DomainError):
         MessageSearchFilters(
             start=datetime(2026, 5, 11, tzinfo=UTC),
             end=datetime(2026, 5, 10, tzinfo=UTC),
         )
+
+
+def test_sender_profile_slugs_match_kick_profile_urls() -> None:
+    assert normalize_kick_profile_slug(" Example_User ") == "example-user"
+    assert build_sender_lookup_terms("Example-User") == ("example-user", "example_user")
 
 
 def test_cursor_pagination_limits_range() -> None:

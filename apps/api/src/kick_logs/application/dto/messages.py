@@ -82,6 +82,14 @@ class MessageSearchPageDTO:
     next_cursor: MessageCursor | None
 
 
+@dataclass(frozen=True, slots=True)
+class MessageExportDTO:
+    items: list[MessageSearchItemDTO]
+    count: int
+    max_rows: int
+    truncated: bool
+
+
 def message_sender_to_dto(sender: Sender) -> MessageSenderDTO:
     if sender.id is None:
         raise ValueError("Sender id is required for API responses.")

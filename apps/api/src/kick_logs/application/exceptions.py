@@ -32,3 +32,15 @@ class MessageIngestionError(ApplicationError):
 
 class SenderProfileResolutionError(ApplicationError):
     """Raised when Kick sender profile metadata cannot be resolved."""
+
+
+class SenderNotFoundError(ApplicationError):
+    """Raised when a public sender profile cannot be found."""
+
+
+class InvalidDataCleanupRequestError(ApplicationError):
+    """Raised when a data cleanup request is incomplete or unsupported."""
+
+
+class CleanupConfirmationError(ApplicationError):
+    """Raised when destructive cleanup confirmation does not match."""

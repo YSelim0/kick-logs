@@ -170,3 +170,26 @@ class RawKickEventModel(TimestampMixin, Base):
         server_default=text("'{}'::jsonb"),
         nullable=False,
     )
+
+
+class WorkerHeartbeatModel(TimestampMixin, Base):
+    __tablename__ = "worker_heartbeats"
+    __table_args__ = (Index("ix_worker_heartbeats_last_seen_at", "last_seen_at"),)
+
+    service_name: Mapped[str] = mapped_column(String(80), primary_key=True)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    heartbeat_metadata: Mapped[dict[str, Any]] = mapped_column(
+        "metadata",
+        JSONB,
+        default=dict,
+        server_default=text("'{}'::jsonb"),
+        nullable=False,
+    )
+
+
+class DataRetentionSettingsModel(TimestampMixin, Base):
+    __tablename__ = "data_retention_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    message_retention_days: Mapped[int | None] = mapped_column(Integer)
+    raw_event_retention_days: Mapped[int | None] = mapped_column(Integer)

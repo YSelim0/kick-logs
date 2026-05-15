@@ -1,6 +1,14 @@
 from typing import Any
 
-from kick_logs.domain.entities import Channel, ChatMessage, Emote, RawKickEvent, Sender, User
+from kick_logs.domain.entities import (
+    Channel,
+    ChatMessage,
+    Emote,
+    RawKickEvent,
+    Sender,
+    User,
+    WorkerHeartbeat,
+)
 from kick_logs.domain.value_objects.raw_event_status import RawEventStatus
 from kick_logs.domain.value_objects.roles import UserRole
 from kick_logs.infrastructure.database.models import (
@@ -9,6 +17,7 @@ from kick_logs.infrastructure.database.models import (
     RawKickEventModel,
     SenderModel,
     UserModel,
+    WorkerHeartbeatModel,
 )
 
 
@@ -109,6 +118,16 @@ def raw_kick_event_to_domain(model: RawKickEventModel) -> RawKickEvent:
     )
 
 
+def worker_heartbeat_to_domain(model: WorkerHeartbeatModel) -> WorkerHeartbeat:
+    return WorkerHeartbeat(
+        service_name=model.service_name,
+        last_seen_at=model.last_seen_at,
+        metadata=model.heartbeat_metadata or {},
+        created_at=model.created_at,
+        updated_at=model.updated_at,
+    )
+
+
 def user_to_model(entity: User) -> UserModel:
     return UserModel(
         email=entity.email,
@@ -183,3 +202,11 @@ def raw_kick_event_to_model(entity: RawKickEvent) -> RawKickEventModel:
     if entity.id is not None:
         model.id = entity.id
     return model
+
+
+def worker_heartbeat_to_model(entity: WorkerHeartbeat) -> WorkerHeartbeatModel:
+    return WorkerHeartbeatModel(
+        service_name=entity.service_name,
+        last_seen_at=entity.last_seen_at,
+        heartbeat_metadata=entity.metadata,
+    )
