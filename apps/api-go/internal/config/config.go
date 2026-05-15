@@ -17,6 +17,14 @@ type Config struct {
 	BackendCORSOrigins   []string
 	KickPusherURL        string
 	MessageExportMaxRows int
+	JWTSecretKey         string
+	JWTAlgorithm         string
+	JWTExpiresMinutes    int
+	JWTCookieName        string
+	JWTCookieSecure      bool
+	JWTCookieSameSite    string
+	SeedSuperAdmin       bool
+	ListenerStaleAfter   int
 	SQLitePath           string
 	ClickHouseAddr       string
 	ClickHouseDatabase   string
@@ -38,6 +46,26 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	jwtExpiresMinutes, err := envInt("JWT_EXPIRES_MINUTES", 10080)
+	if err != nil {
+		return Config{}, err
+	}
+
+	jwtCookieSecure, err := envBool("JWT_COOKIE_SECURE", false)
+	if err != nil {
+		return Config{}, err
+	}
+
+	seedSuperAdmin, err := envBool("SEED_SUPER_ADMIN_ON_STARTUP", true)
+	if err != nil {
+		return Config{}, err
+	}
+
+	listenerStaleAfter, err := envInt("LISTENER_HEARTBEAT_STALE_AFTER_SECONDS", 45)
+	if err != nil {
+		return Config{}, err
+	}
+
 	clickHouseDebug, err := envBool("CLICKHOUSE_DEBUG", false)
 	if err != nil {
 		return Config{}, err
@@ -52,6 +80,14 @@ func Load() (Config, error) {
 		BackendCORSOrigins:   envCSV("BACKEND_CORS_ORIGINS", "http://localhost:3000"),
 		KickPusherURL:        envString("KICK_PUSHER_URL", "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0-rc2&flash=false"),
 		MessageExportMaxRows: maxRows,
+		JWTSecretKey:         envString("JWT_SECRET_KEY", "change-me-for-local-development-secret-key"),
+		JWTAlgorithm:         envString("JWT_ALGORITHM", "HS256"),
+		JWTExpiresMinutes:    jwtExpiresMinutes,
+		JWTCookieName:        envString("JWT_COOKIE_NAME", "kick_logs_session"),
+		JWTCookieSecure:      jwtCookieSecure,
+		JWTCookieSameSite:    envString("JWT_COOKIE_SAMESITE", "lax"),
+		SeedSuperAdmin:       seedSuperAdmin,
+		ListenerStaleAfter:   listenerStaleAfter,
 		SQLitePath:           envString("SQLITE_PATH", "var/kick-logs-go.sqlite3"),
 		ClickHouseAddr:       envString("CLICKHOUSE_ADDR", "127.0.0.1:9000"),
 		ClickHouseDatabase:   envString("CLICKHOUSE_DATABASE", "kick_logs"),

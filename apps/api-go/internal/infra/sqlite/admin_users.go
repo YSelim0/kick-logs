@@ -89,6 +89,17 @@ func (repo *AdminUserRepository) GetByEmail(ctx context.Context, email string) (
 	return scanAdminUser(row)
 }
 
+func (repo *AdminUserRepository) GetByID(ctx context.Context, id int64) (domain.AdminUser, error) {
+	row := repo.db.QueryRowContext(
+		ctx,
+		`SELECT id, email, password_hash, role, is_active, created_at, updated_at
+		 FROM admin_users
+		 WHERE id = ?`,
+		id,
+	)
+	return scanAdminUser(row)
+}
+
 func (repo *AdminUserRepository) ListActive(ctx context.Context) ([]domain.AdminUser, error) {
 	rows, err := repo.db.QueryContext(
 		ctx,

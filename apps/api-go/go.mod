@@ -4,6 +4,7 @@ go 1.26
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.46.0
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	golang.org/x/crypto v0.51.0
 	modernc.org/sqlite v1.50.1

@@ -117,3 +117,35 @@ type TableSize struct {
 	Rows        int64
 	BytesOnDisk int64
 }
+
+type OperationsCounts struct {
+	Channels        int64
+	EnabledChannels int64
+	Senders         int64
+	Messages        int64
+	RawEvents       int64
+}
+
+type OperationsTimestamps struct {
+	LatestMessageAt                 time.Time
+	LatestRawEventReceivedAt        time.Time
+	LatestRawEventProcessedAt       time.Time
+	OldestPendingRawEventReceivedAt time.Time
+}
+
+type ListenerHeartbeat struct {
+	ServiceName          string
+	LastSeenAt           time.Time
+	IsFresh              bool
+	StaleAfterSeconds    int
+	SecondsSinceLastSeen int64
+}
+
+type OperationsSummary struct {
+	Counts               OperationsCounts
+	RawEventStatusCounts map[string]int64
+	StorageDatabaseBytes int64
+	StorageTables        []TableSize
+	Timestamps           OperationsTimestamps
+	Listener             ListenerHeartbeat
+}

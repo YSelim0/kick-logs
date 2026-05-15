@@ -9,6 +9,7 @@ import (
 
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/config"
 	httpapi "github.com/YSelim0/kick-logs/apps/api-go/internal/http"
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/http/routes"
 )
 
 func NewLogger(level string) *slog.Logger {
@@ -27,10 +28,10 @@ func NewLogger(level string) *slog.Logger {
 	return slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slogLevel}))
 }
 
-func NewAPIServer(cfg config.Config, logger *slog.Logger) *http.Server {
+func NewAPIServer(cfg config.Config, logger *slog.Logger, dependencySets ...routes.Dependencies) *http.Server {
 	return &http.Server{
 		Addr:              cfg.APIAddress(),
-		Handler:           httpapi.NewRouter(cfg, logger),
+		Handler:           httpapi.NewRouter(cfg, logger, dependencySets...),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 }

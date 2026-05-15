@@ -79,6 +79,11 @@ There is no separate Python package for the listener in MVP. The `listener` Dock
 - `internal/infra/clickhouse`: ClickHouse client, message repository, raw-event repository, and
   table-size stats.
 - `internal/infra/migrations`: versioned SQLite and ClickHouse migration runners.
+- `internal/infra/auth`: bcrypt password hashing and JWT session token signing.
+- `internal/infra/kick`: Kick web channel resolver used by admin channel add.
+- `internal/infra/operations`: basic admin operations summary backed by SQLite and ClickHouse.
+- `internal/usecase/auth`: login, current-user lookup, admin-user list/create, and role checks.
+- `internal/usecase/channels`: followed-channel list/add/disable workflow.
 
 Compose exposes the optional Go API through profile `go-rewrite` as service `api-go`, mapped to
 `GO_API_PORT` or `8001` by default. The same profile exposes `clickhouse` and `migrate-go` for
@@ -94,6 +99,16 @@ Go rewrite storage split:
 - `chat_messages` stores denormalized sender/channel snapshots, reply fields, emote arrays,
   normalized lower-case search helpers, and message timestamps so search responses do not require a
   per-row join back to SQLite.
+
+Go rewrite auth/admin parity:
+
+- `POST /auth/login`, `POST /auth/logout`, and `GET /auth/me` preserve the current cookie-backed
+  session contract.
+- `GET /admin/users` and `POST /admin/users` preserve admin/super-admin role boundaries.
+- `GET /admin/channels`, `POST /admin/channels`, and `DELETE /admin/channels/{channel_id}` use the
+  SQLite followed-channel store and keep delete as disable behavior.
+- `GET /admin/operations/summary` returns the compatible response shape with SQLite control-plane
+  counts and ClickHouse data-plane counts when ClickHouse is available.
 
 ## Backend Principles
 

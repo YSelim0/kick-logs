@@ -351,12 +351,16 @@ docker compose --profile go-rewrite up --build api-go
 ```
 
 The optional Go API listens on http://localhost:8001 by default and exposes
-`GET /health`.
+`GET /health`, auth routes, admin user routes, admin channel routes, and the basic operations
+summary route.
 
 Go rewrite storage uses SQLite for admin/control-plane state and ClickHouse for chat messages,
 raw Kick events, and analytics-oriented reads. Local defaults are exposed through `.env.example`
 as `SQLITE_PATH`, `CLICKHOUSE_ADDR`, `CLICKHOUSE_DATABASE`, `CLICKHOUSE_USERNAME`, and
 `CLICKHOUSE_PASSWORD`.
+
+Default Go admin login uses the same env-overridable credentials as the Python backend:
+`admin@kicklogs.local` / `admin123`.
 
 ## Continuous Integration
 

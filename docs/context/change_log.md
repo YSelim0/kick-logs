@@ -4,6 +4,32 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-16
 
+- Completed Go rewrite Phase 4 auth/admin API parity:
+  - added JWT and bcrypt auth infrastructure for the Go API
+  - added auth config fields for JWT secret, algorithm, expiry, cookie name, cookie secure flag,
+    cookie SameSite value, super-admin seed behavior, and listener stale threshold
+  - Go API startup applies SQLite migrations and seeds the default super admin when
+    `SEED_SUPER_ADMIN_ON_STARTUP=true`
+  - Go API startup applies ClickHouse migrations when ClickHouse is reachable; otherwise admin
+    operations can still use SQLite-only data
+  - implemented `POST /auth/login`, `POST /auth/logout`, and `GET /auth/me`
+  - preserved response shapes and auth cookie behavior expected by the current frontend
+  - implemented admin auth checks and super-admin-only admin user creation
+  - implemented `GET /admin/users` and `POST /admin/users`
+  - added Go Kick web channel resolver for `https://kick.com/api/v2/channels/{slug}`
+  - implemented `GET /admin/channels`, `POST /admin/channels`, and disable-style
+    `DELETE /admin/channels/{channel_id}`
+  - implemented basic `GET /admin/operations/summary` with SQLite channel/sender/listener data
+    and ClickHouse message/raw-event/storage/timestamp data when available
+  - updated Compose `api-go` env passthrough for JWT and listener freshness settings
+  - closed all checklist items in `docs/tasks/go_rewrite_04_auth_admin_api.md`
+  - verified `go test ./...`
+  - verified `go vet ./...`
+  - verified Docker Go API smoke:
+    `POST /auth/login`, `GET /auth/me`, `GET /admin/users`, and
+    `GET /admin/operations/summary` against `http://localhost:8001`
+  - verified `docker compose --profile go-rewrite up --build -d api-go`
+
 - Completed Go rewrite Phase 3 storage/schema:
   - added Go config fields for SQLite path, ClickHouse connection, ClickHouse debug mode, and
     default super-admin credentials

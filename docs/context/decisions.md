@@ -131,3 +131,8 @@
   `migrate-go` service behind profile `go-rewrite`.
 - Go rewrite default super-admin seeding happens in SQLite migration startup and stores a bcrypt
   hash, not the plain password.
+- Go rewrite auth preserves the Python cookie contract and uses HS256 JWTs with `sub`, `iat`, and
+  `exp` claims.
+- Go rewrite API startup may apply SQLite and ClickHouse migrations for local developer ergonomics;
+  `migrate-go` remains the explicit migration command for Compose setup.
+- Go rewrite admin channel deletion remains disable-only to preserve historical chat data.

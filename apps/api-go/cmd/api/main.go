@@ -10,8 +10,18 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/app"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/config"
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/http/routes"
+	authinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/auth"
+	clickhouseinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/clickhouse"
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/kick"
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/migrations"
+	operationsinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/operations"
+	sqliteinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/sqlite"
+	authusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/auth"
+	channelsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/channels"
 )
 
 func main() {
@@ -22,7 +32,59 @@ func main() {
 	}
 
 	logger := app.NewLogger(cfg.LogLevel)
-	server := app.NewAPIServer(cfg, logger)
+
+	sqliteDB, err := sqliteinfra.Open(context.Background(), cfg.SQLitePath)
+	if err != nil {
+		logger.Error("failed to open sqlite", "error", err)
+		os.Exit(1)
+	}
+	defer sqliteDB.Close()
+	if err := migrations.ApplySQLite(context.Background(), sqliteDB); err != nil {
+		logger.Error("failed to apply sqlite migrations", "error", err)
+		os.Exit(1)
+	}
+
+	adminRepo := sqliteinfra.NewAdminUserRepository(sqliteDB)
+	if cfg.SeedSuperAdmin {
+		if _, err := sqliteinfra.SeedSuperAdmin(
+			context.Background(),
+			adminRepo,
+			cfg.DefaultAdminEmail,
+			cfg.DefaultAdminPassword,
+		); err != nil {
+			logger.Error("failed to seed default super admin", "error", err)
+			os.Exit(1)
+		}
+	}
+
+	var clickHouseConn driver.Conn
+	clickHouseConn, err = clickhouseinfra.Open(context.Background(), cfg)
+	if err != nil {
+		logger.Warn("ClickHouse unavailable; operations summary will use SQLite-only data", "error", err)
+	} else if err := migrations.ApplyClickHouse(context.Background(), clickHouseConn); err != nil {
+		logger.Warn("ClickHouse migrations failed; operations summary will use SQLite-only data", "error", err)
+		clickHouseConn = nil
+	}
+
+	channelRepo := sqliteinfra.NewFollowedChannelRepository(sqliteDB)
+	authService := authusecase.NewService(
+		adminRepo,
+		authinfra.NewBcryptPasswordHasher(),
+		authinfra.NewJWTTokenService(cfg),
+	)
+	channelService := channelsusecase.NewService(channelRepo, kick.NewWebChannelResolver())
+	operationsRepo := operationsinfra.NewRepository(
+		sqliteDB,
+		cfg.SQLitePath,
+		clickHouseConn,
+		cfg.ListenerStaleAfter,
+	)
+	server := app.NewAPIServer(cfg, logger, routes.Dependencies{
+		Config:     cfg,
+		Auth:       authService,
+		Channels:   channelService,
+		Operations: operationsRepo,
+	})
 
 	errs := make(chan error, 1)
 	go func() {

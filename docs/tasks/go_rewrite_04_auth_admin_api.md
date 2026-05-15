@@ -15,42 +15,42 @@ This phase should make the admin shell usable against the Go API for login and c
 
 ## Checklist
 
-- [ ] Implement password hashing and verification compatible with stored bcrypt hashes.
-- [ ] Implement JWT creation and verification.
-- [ ] Preserve auth cookie name, path, HttpOnly flag, secure flag, same-site value, and expiry.
-- [ ] Implement `POST /auth/login`.
-- [ ] Implement `POST /auth/logout`.
-- [ ] Implement `GET /auth/me`.
-- [ ] Implement admin auth middleware.
-- [ ] Implement super admin authorization checks.
-- [ ] Implement `GET /admin/users`.
-- [ ] Implement `POST /admin/users`.
-- [ ] Implement Kick channel resolver for admin channel add.
-- [ ] Implement `GET /admin/channels`.
-- [ ] Implement `POST /admin/channels`.
-- [ ] Implement `DELETE /admin/channels/{channel_id}` as disable behavior.
-- [ ] Implement basic `GET /admin/operations/summary` fields backed by available SQLite and
+- [x] Implement password hashing and verification compatible with stored bcrypt hashes.
+- [x] Implement JWT creation and verification.
+- [x] Preserve auth cookie name, path, HttpOnly flag, secure flag, same-site value, and expiry.
+- [x] Implement `POST /auth/login`.
+- [x] Implement `POST /auth/logout`.
+- [x] Implement `GET /auth/me`.
+- [x] Implement admin auth middleware.
+- [x] Implement super admin authorization checks.
+- [x] Implement `GET /admin/users`.
+- [x] Implement `POST /admin/users`.
+- [x] Implement Kick channel resolver for admin channel add.
+- [x] Implement `GET /admin/channels`.
+- [x] Implement `POST /admin/channels`.
+- [x] Implement `DELETE /admin/channels/{channel_id}` as disable behavior.
+- [x] Implement basic `GET /admin/operations/summary` fields backed by available SQLite and
       ClickHouse counts.
-- [ ] Keep CORS behavior compatible with local frontend dev.
+- [x] Keep CORS behavior compatible with local frontend dev.
 
 ## Tests And Checks
 
-- [ ] Login succeeds with seeded default super admin.
-- [ ] Login fails with invalid password.
-- [ ] `GET /auth/me` returns current user when authenticated.
-- [ ] Logout clears the cookie.
-- [ ] Admin routes reject unauthenticated users.
-- [ ] Admin user creation requires super admin.
-- [ ] Channel add resolves Kick metadata and persists followed channel data.
-- [ ] Deleting a channel disables it without deleting historical messages.
-- [ ] Contract fixtures for auth/admin routes match existing frontend expectations.
+- [x] Login succeeds with seeded default super admin.
+- [x] Login fails with invalid password.
+- [x] `GET /auth/me` returns current user when authenticated.
+- [x] Logout clears the cookie.
+- [x] Admin routes reject unauthenticated users.
+- [x] Admin user creation requires super admin.
+- [x] Channel add resolves Kick metadata and persists followed channel data.
+- [x] Deleting a channel disables it without deleting historical messages.
+- [x] Contract fixtures for auth/admin routes match existing frontend expectations.
 
 ## Acceptance Criteria
 
-- [ ] The frontend login and admin channel/user workflows can call the Go API without response
+- [x] The frontend login and admin channel/user workflows can call the Go API without response
       shape changes.
-- [ ] Default super admin behavior remains available and env-overridable.
-- [ ] Admin operations summary returns a compatible response, even if some counters are zero before
+- [x] Default super admin behavior remains available and env-overridable.
+- [x] Admin operations summary returns a compatible response, even if some counters are zero before
       message ingestion exists.
 
 ## Commit Boundary

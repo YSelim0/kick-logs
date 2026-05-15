@@ -19,6 +19,18 @@ This file is the active project memory. Keep it updated whenever project behavio
   - Compose profile `go-rewrite` includes `clickhouse`, `migrate-go`, and `api-go`
   - verification passed with `go test ./...`, live ClickHouse integration test, migration
     container run, and Go Docker image builds
+- Go rewrite Phase 4 auth/admin API parity is implemented:
+  - auth uses bcrypt password verification and HS256 JWT session tokens
+  - Go API startup applies SQLite migrations and seeds the default super admin when configured
+  - `POST /auth/login`, `POST /auth/logout`, and `GET /auth/me` preserve frontend response and
+    cookie expectations
+  - `GET /admin/users` and `POST /admin/users` preserve admin and super-admin role boundaries
+  - Go Kick web resolver powers `POST /admin/channels`
+  - `GET /admin/channels` lists followed channels and `DELETE /admin/channels/{channel_id}`
+    disables channels without deleting historical data
+  - `GET /admin/operations/summary` returns a compatible operations response using SQLite and
+    ClickHouse where available
+  - verification passed with Go tests/vet and Docker Go API smoke against `http://localhost:8001`
 - Go rewrite Phase 2 workspace/tooling is implemented:
   - `apps/api-go` exists with `cmd/api`, `cmd/listener`, and `cmd/migrate`
   - Go API uses stdlib HTTP routing and exposes contract-compatible `GET /health`

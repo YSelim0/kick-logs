@@ -104,6 +104,36 @@ func (repo *FollowedChannelRepository) GetBySlug(ctx context.Context, slug strin
 	return scanFollowedChannel(row)
 }
 
+func (repo *FollowedChannelRepository) GetByID(ctx context.Context, id int64) (domain.FollowedChannel, error) {
+	row := repo.db.QueryRowContext(
+		ctx,
+		`SELECT id, kick_channel_id, kick_chatroom_id, slug, display_name, profile_image_url,
+		        banner_image_url, is_enabled, raw_payload_json, created_at, updated_at,
+		        last_resolved_at, last_message_at, last_listener_error
+		 FROM followed_channels
+		 WHERE id = ?`,
+		id,
+	)
+	return scanFollowedChannel(row)
+}
+
+func (repo *FollowedChannelRepository) List(ctx context.Context) ([]domain.FollowedChannel, error) {
+	rows, err := repo.db.QueryContext(
+		ctx,
+		`SELECT id, kick_channel_id, kick_chatroom_id, slug, display_name, profile_image_url,
+		        banner_image_url, is_enabled, raw_payload_json, created_at, updated_at,
+		        last_resolved_at, last_message_at, last_listener_error
+		 FROM followed_channels
+		 ORDER BY slug ASC`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list followed channels: %w", err)
+	}
+	defer rows.Close()
+
+	return scanFollowedChannels(rows)
+}
+
 func (repo *FollowedChannelRepository) ListEnabled(ctx context.Context) ([]domain.FollowedChannel, error) {
 	rows, err := repo.db.QueryContext(
 		ctx,
@@ -119,6 +149,33 @@ func (repo *FollowedChannelRepository) ListEnabled(ctx context.Context) ([]domai
 	}
 	defer rows.Close()
 
+	return scanFollowedChannels(rows)
+}
+
+func (repo *FollowedChannelRepository) Disable(ctx context.Context, id int64) (domain.FollowedChannel, error) {
+	now := time.Now().UTC()
+	result, err := repo.db.ExecContext(
+		ctx,
+		`UPDATE followed_channels
+		 SET is_enabled = 0, updated_at = ?
+		 WHERE id = ?`,
+		formatTime(now),
+		id,
+	)
+	if err != nil {
+		return domain.FollowedChannel{}, fmt.Errorf("disable followed channel: %w", err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return domain.FollowedChannel{}, fmt.Errorf("check disabled followed channel: %w", err)
+	}
+	if rowsAffected == 0 {
+		return domain.FollowedChannel{}, sql.ErrNoRows
+	}
+	return repo.GetByID(ctx, id)
+}
+
+func scanFollowedChannels(rows *sql.Rows) ([]domain.FollowedChannel, error) {
 	channels := make([]domain.FollowedChannel, 0)
 	for rows.Next() {
 		channel, err := scanFollowedChannel(rows)
@@ -128,7 +185,7 @@ func (repo *FollowedChannelRepository) ListEnabled(ctx context.Context) ([]domai
 		channels = append(channels, channel)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate enabled followed channels: %w", err)
+		return nil, fmt.Errorf("iterate followed channels: %w", err)
 	}
 	return channels, nil
 }

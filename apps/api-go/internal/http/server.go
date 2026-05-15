@@ -9,9 +9,16 @@ import (
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/http/routes"
 )
 
-func NewRouter(cfg config.Config, logger *slog.Logger) http.Handler {
+func NewRouter(cfg config.Config, logger *slog.Logger, dependencySets ...routes.Dependencies) http.Handler {
 	mux := http.NewServeMux()
 	routes.RegisterHealthRoutes(mux)
+	if len(dependencySets) > 0 {
+		deps := dependencySets[0]
+		routes.RegisterAuthRoutes(mux, deps)
+		routes.RegisterAdminUserRoutes(mux, deps)
+		routes.RegisterAdminChannelRoutes(mux, deps)
+		routes.RegisterAdminOperationRoutes(mux, deps)
+	}
 
 	var handler http.Handler = mux
 	handler = middleware.Recover(logger)(handler)

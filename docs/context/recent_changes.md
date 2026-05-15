@@ -4,6 +4,23 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Completed Go rewrite Phase 4 auth/admin API parity:
+  - added Go bcrypt password hasher and JWT token service
+  - preserved auth cookie settings, expiry, HttpOnly behavior, SameSite, Secure, and session user
+    response shapes
+  - implemented `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`
+  - implemented admin middleware, super-admin checks, `GET /admin/users`, and `POST /admin/users`
+  - added Go Kick web channel resolver and admin followed-channel list/add/disable routes
+  - added basic `GET /admin/operations/summary` using SQLite control-plane counts and ClickHouse
+    data-plane counts when available
+  - Go API startup now applies SQLite migrations, seeds the default super admin, and applies
+    ClickHouse migrations when ClickHouse is reachable
+  - closed `docs/tasks/go_rewrite_04_auth_admin_api.md`
+  - verification: `go test ./...`, `go vet ./...`, Docker Go API smoke for login/me/users/ops,
+    Docker Go API rebuild, `pnpm format:check`, and `git diff --check`
+
+## Previous
+
 - Completed Go rewrite Phase 3 storage/schema:
   - added SQLite and ClickHouse configuration defaults for the Go runtime
   - added versioned migration runners for both stores
@@ -17,8 +34,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - closed `docs/tasks/go_rewrite_03_storage_schema.md`
   - verification: `go test ./...`, targeted live ClickHouse repository test,
     `docker compose --profile go-rewrite run --rm migrate-go`, and Go Docker image builds
-
-## Previous
 
 - Completed Go rewrite Phase 2 workspace/tooling:
   - added `apps/api-go` with `cmd/api`, `cmd/listener`, `cmd/migrate`, config, app bootstrap,

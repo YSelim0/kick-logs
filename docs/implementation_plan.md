@@ -6,8 +6,8 @@ message, raw-event, and analytics storage to ClickHouse.
 The completed Python/FastAPI/PostgreSQL plans are archived under `docs/archive/`. They remain useful
 as product and contract history, but they are no longer active implementation scope for this branch.
 
-Status: Phase 1 contract inventory, Phase 2 Go workspace/tooling, and Phase 3 storage schema are
-complete on branch `feat/go-clickhouse-rewrite`.
+Status: Phase 1 contract inventory, Phase 2 Go workspace/tooling, Phase 3 storage schema, and
+Phase 4 auth/admin API parity are complete on branch `feat/go-clickhouse-rewrite`.
 
 ## Primary Goal
 
@@ -198,6 +198,16 @@ Compatibility requirements:
 - CORS behavior remains compatible with the current Next.js dev server and Docker runtime.
 - Validation failures should keep the same practical frontend behavior even if exact error text
   differs where the frontend does not depend on it.
+
+Current Go auth/admin implementation:
+
+- bcrypt password hashing and verification are implemented in `internal/infra/auth`.
+- JWT session tokens preserve the `sub`, `iat`, and `exp` shape used by the Python backend.
+- Go API startup applies SQLite migrations and seeds the default super admin when enabled.
+- Admin users and followed channels are served from SQLite.
+- Admin channel add resolves Kick metadata through the Go Kick web resolver.
+- Basic operations summary combines SQLite control-plane counts and ClickHouse data-plane counts
+  when ClickHouse is reachable.
 
 ## Search Contract
 
