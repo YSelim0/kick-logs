@@ -4,16 +4,25 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Completed Go rewrite Phase 2 workspace/tooling:
+  - added `apps/api-go` with `cmd/api`, `cmd/listener`, `cmd/migrate`, config, app bootstrap,
+    stdlib HTTP server, middleware, health route, and package skeletons
+  - added an optional Docker Compose `api-go` service behind profile `go-rewrite`
+  - documented Go rewrite local commands in README and current architecture notes
+  - closed `docs/tasks/go_rewrite_02_workspace_tooling.md`
+  - verification: `go test ./...`, `go vet ./...`, local binary `GET /health`, Docker image
+    build, `pnpm format:check`, and `git diff --check`
+
+## Previous
+
 - Completed Go rewrite Phase 1 contract inventory:
   - added `docs/contracts/api_contract.md`
   - added representative JSON fixtures under `docs/contracts/fixtures/`
   - documented endpoint access, request bodies, query params, response shapes, auth cookie behavior,
     cursor format, CSV export columns, search matching rules, reply metadata, and emote fields
   - closed `docs/tasks/go_rewrite_01_contract_inventory.md`
-  - verification: `python -m uv run pytest` reported 72 passed and 52 skipped, `pnpm
-format:check` passed, and `git diff --check` passed
-
-## Previous
+  - verification: `python -m uv run pytest` reported 72 passed and 52 skipped, `pnpm format:check`
+    passed, and `git diff --check` passed
 
 - Started the Go + ClickHouse rewrite planning track:
   - archived completed MVP docs under `docs/archive/mvp/`

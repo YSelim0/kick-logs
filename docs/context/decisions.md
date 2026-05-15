@@ -112,3 +112,14 @@
 - Public sender profile URLs follow Kick's profile slug behavior: chat usernames can display with
   underscores, but profile routes convert `_` to `-`; backend profile/search lookups accept both
   forms so existing underscore-stored data keeps working.
+
+## 2026-05-16
+
+- Go rewrite work starts in parallel under `apps/api-go`; Python remains the default runtime until
+  explicit cutover.
+- Phase 2 Go workspace uses the Go standard library for the initial HTTP server, routing,
+  middleware, config, and logging to avoid unnecessary early dependencies.
+- The optional Go API Compose service is named `api-go`, gated behind profile `go-rewrite`, and
+  maps to host port `GO_API_PORT` or `8001` by default.
+- Go local build outputs and caches stay untracked under `apps/api-go/bin/` and
+  `apps/api-go/.gocache/`.

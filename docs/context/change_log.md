@@ -2,6 +2,27 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-16
+
+- Completed Go rewrite Phase 2 workspace/tooling:
+  - added `apps/api-go` Go module and command entrypoints for `api`, `listener`, and `migrate`
+  - added environment config loading with local defaults and structured `log/slog` JSON logging
+  - added stdlib HTTP server bootstrap with CORS, request logging, panic recovery, and
+    contract-compatible `GET /health`
+  - added internal package skeletons for domain, ports, use cases, infrastructure, HTTP routes, and
+    schemas
+  - added Go tests for config loading, CORS preflight, and health response shape
+  - added Go Dockerfile and optional Compose `api-go` service behind the `go-rewrite` profile
+  - documented Go rewrite development commands in README and added current architecture notes
+  - ignored local Go build outputs and build cache under `apps/api-go`
+  - closed all checklist items in `docs/tasks/go_rewrite_02_workspace_tooling.md`
+  - verified `go test ./...`
+  - verified `go vet ./...`
+  - verified local binary health smoke: `GET /health` returned `{"status":"ok"}`
+  - verified `docker compose --profile go-rewrite build api-go`
+  - verified `pnpm format:check`
+  - verified `git diff --check`
+
 ## 2026-05-15
 
 - Completed Go rewrite Phase 1 contract inventory:

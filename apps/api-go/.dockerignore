@@ -1,0 +1,6 @@
+.git
+bin/
+tmp/
+.gocache/
+coverage.out
+*.test

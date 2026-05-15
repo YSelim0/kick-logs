@@ -314,6 +314,43 @@ Use Prettier for frontend, JSON, YAML, and Markdown files. Use Ruff Format for
 Python files. Both formatters are configured to use 100-column line width and
 the repository's current double-quote style.
 
+### Go Rewrite Development
+
+The Go rewrite lives under `apps/api-go` while the Python backend remains the
+default runtime.
+
+Run Go checks:
+
+```powershell
+cd apps/api-go
+go test ./...
+go vet ./...
+```
+
+Run the Go API locally:
+
+```powershell
+cd apps/api-go
+go run ./cmd/api
+```
+
+Run skeleton listener or migration commands:
+
+```powershell
+cd apps/api-go
+go run ./cmd/listener
+go run ./cmd/migrate
+```
+
+Run the optional Go API container without replacing the Python API:
+
+```powershell
+docker compose --profile go-rewrite up --build api-go
+```
+
+The optional Go API listens on http://localhost:8001 by default and exposes
+`GET /health`.
+
 ## Continuous Integration
 
 GitHub Actions runs backend and formatting checks on pull requests targeting

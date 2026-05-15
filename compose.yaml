@@ -82,6 +82,24 @@ services:
       - -c
       - uv run alembic upgrade head && uv run python -m kick_logs.presentation.worker.main
 
+  api-go:
+    profiles:
+      - go-rewrite
+    build:
+      context: ./apps/api-go
+      args:
+        TARGET: api
+    environment:
+      APP_NAME: ${APP_NAME:-Kick Logs}
+      APP_ENV: ${APP_ENV:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000}
+      MESSAGE_EXPORT_MAX_ROWS: ${MESSAGE_EXPORT_MAX_ROWS:-1000}
+    ports:
+      - "${GO_API_PORT:-8001}:8000"
+
   web:
     build:
       context: .

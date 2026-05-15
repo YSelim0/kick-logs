@@ -4,6 +4,18 @@ This file is the active project memory. Keep it updated whenever project behavio
 
 ## Current State
 
+- Go rewrite Phase 2 workspace/tooling is implemented:
+  - `apps/api-go` exists with `cmd/api`, `cmd/listener`, and `cmd/migrate`
+  - Go API uses stdlib HTTP routing and exposes contract-compatible `GET /health`
+  - config loads local defaults from environment variables
+  - structured logging uses Go `log/slog`
+  - Compose has optional profile service `api-go` on `GO_API_PORT` or `8001`
+  - Python `api` and `listener` remain the default runtime
+  - verification passed with `go test ./...`, `go vet ./...`, local binary health smoke, Docker
+    image build, `pnpm format:check`, and `git diff --check`
+- Go rewrite Phase 1 contract inventory is complete:
+  - `docs/contracts/api_contract.md` captures the current Python backend API contract
+  - representative JSON fixtures live under `docs/contracts/fixtures/`
 - Repository `kick-logs` has been initialized locally.
 - Commit convention skill exists under `.agents/skills/commit-message-conventions`.
 - Phase 1 backend/Docker foundation is complete.

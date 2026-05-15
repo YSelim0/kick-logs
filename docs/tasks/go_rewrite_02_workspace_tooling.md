@@ -15,30 +15,30 @@ This phase owns build tooling, baseline config, health endpoint, logging, and lo
 
 ## Checklist
 
-- [ ] Add `apps/api-go/go.mod` and `go.sum`.
-- [ ] Add command entrypoints: - `cmd/api` - `cmd/listener` - `cmd/migrate`
-- [ ] Add internal package skeleton: - config - app bootstrap - HTTP server - middleware - domain - ports - use cases - infrastructure
-- [ ] Implement environment config loading with clear defaults for local development.
-- [ ] Implement structured logging for API and listener processes.
-- [ ] Implement `GET /health` in the Go API.
-- [ ] Add a Go Dockerfile or multi-stage build target.
-- [ ] Add Compose wiring for optional Go API service while Python remains available.
-- [ ] Add local commands in README or package scripts if needed: - test - lint or vet - build - run api - run listener - run migrations
-- [ ] Add `.gitignore` entries for Go build outputs if necessary.
+- [x] Add `apps/api-go/go.mod` and `go.sum`.
+- [x] Add command entrypoints: - `cmd/api` - `cmd/listener` - `cmd/migrate`
+- [x] Add internal package skeleton: - config - app bootstrap - HTTP server - middleware - domain - ports - use cases - infrastructure
+- [x] Implement environment config loading with clear defaults for local development.
+- [x] Implement structured logging for API and listener processes.
+- [x] Implement `GET /health` in the Go API.
+- [x] Add a Go Dockerfile or multi-stage build target.
+- [x] Add Compose wiring for optional Go API service while Python remains available.
+- [x] Add local commands in README or package scripts if needed: - test - lint or vet - build - run api - run listener - run migrations
+- [x] Add `.gitignore` entries for Go build outputs if necessary.
 
 ## Tests And Checks
 
-- [ ] `go test ./...` passes.
-- [ ] `go vet ./...` passes or an equivalent baseline check is documented.
-- [ ] Go API health route returns the expected health response locally.
-- [ ] Docker build for the Go API succeeds.
+- [x] `go test ./...` passes.
+- [x] `go vet ./...` passes or an equivalent baseline check is documented.
+- [x] Go API health route returns the expected health response locally.
+- [x] Docker build for the Go API succeeds.
 
 ## Acceptance Criteria
 
-- [ ] The Go workspace builds cleanly.
-- [ ] The Go API can run without replacing the Python API.
-- [ ] The health endpoint is available and contract-compatible.
-- [ ] No Python runtime behavior is removed.
+- [x] The Go workspace builds cleanly.
+- [x] The Go API can run without replacing the Python API.
+- [x] The health endpoint is available and contract-compatible.
+- [x] No Python runtime behavior is removed.
 
 ## Commit Boundary
 

@@ -4,6 +4,10 @@
 
 Kick Logs uses a pragmatic clean architecture backend and a feature-oriented Next.js frontend.
 
+The active `feat/go-clickhouse-rewrite` branch is introducing a parallel Go backend workspace under
+`apps/api-go`. The current Python API and listener remain the default runtime until Go API contract
+parity, data migration, and cutover smoke testing are complete.
+
 The backend is one Python codebase with two runtime entrypoints:
 
 - HTTP API service
@@ -38,12 +42,38 @@ kick-logs/
         features/
         lib/
         types/
+    api-go/
+      go.mod
+      cmd/
+        api/
+        listener/
+        migrate/
+      internal/
+        app/
+        config/
+        domain/
+        ports/
+        usecase/
+        infra/
+        http/
   docs/
   compose.yaml
   README.md
 ```
 
 There is no separate Python package for the listener in MVP. The `listener` Docker service runs the worker entrypoint from `apps/api`.
+
+`apps/api-go` currently provides the Go rewrite skeleton:
+
+- `cmd/api`: Go HTTP API entrypoint with `GET /health`.
+- `cmd/listener`: listener entrypoint placeholder for the later ingestion phase.
+- `cmd/migrate`: migration entrypoint placeholder for the later schema/data migration phases.
+- `internal/config`: environment-based configuration with local defaults.
+- `internal/app`: structured logging and API server bootstrap.
+- `internal/http`: stdlib HTTP router, middleware, route, and schema packages.
+
+Compose exposes the optional Go API through profile `go-rewrite` as service `api-go`, mapped to
+`GO_API_PORT` or `8001` by default. The Python `api` service remains the default API service.
 
 ## Backend Principles
 

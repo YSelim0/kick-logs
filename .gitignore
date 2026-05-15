@@ -27,6 +27,12 @@ pnpm-debug.log*
 logs/
 *.log
 
+apps/api-go/bin/
+apps/api-go/tmp/
+apps/api-go/.gocache/
+apps/api-go/coverage.out
+*.test
+
 .DS_Store
 Thumbs.db
 .idea/
