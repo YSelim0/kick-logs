@@ -31,6 +31,7 @@ apps/api-go/bin/
 apps/api-go/tmp/
 apps/api-go/.gocache/
 apps/api-go/.gomodcache/
+apps/api-go/.cache/
 apps/api-go/coverage.out
 *.test
 

@@ -121,8 +121,9 @@
   middleware, config, and logging to avoid unnecessary early dependencies.
 - The optional Go API Compose service is named `api-go`, gated behind profile `go-rewrite`, and
   maps to host port `GO_API_PORT` or `8001` by default.
-- Go local build outputs and caches stay untracked under `apps/api-go/bin/` and
-  `apps/api-go/.gocache/`.
+- Go local build outputs and caches stay untracked and outside Docker build context under
+  `apps/api-go/bin/`, `apps/api-go/.gocache/`, `apps/api-go/.gomodcache/`, and
+  `apps/api-go/.cache/`.
 - The Go rewrite uses SQLite for control-plane state and ClickHouse for message/raw-event data.
 - SQLite stores admin users, followed channels, sender profile cache, retention settings, worker
   heartbeats, and migration bookkeeping.
@@ -136,3 +137,5 @@
 - Go rewrite API startup may apply SQLite and ClickHouse migrations for local developer ergonomics;
   `migrate-go` remains the explicit migration command for Compose setup.
 - Go rewrite admin channel deletion remains disable-only to preserve historical chat data.
+- Go rewrite public message search/export reads denormalized ClickHouse `chat_messages` directly;
+  the hot search path must not join back to SQLite.

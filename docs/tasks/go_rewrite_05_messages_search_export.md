@@ -15,40 +15,40 @@ This phase owns query behavior, cursor pagination, response mapping, and CSV/JSO
 
 ## Checklist
 
-- [ ] Implement message response structs matching the current JSON shape.
-- [ ] Implement query parsing for: - `sender` - `channel` - `q` - `start` - `end` - `cursor` - `limit` - `reply_only` - `emote_only`
-- [ ] Preserve sender case-insensitive exact matching.
-- [ ] Preserve channel matching behavior.
-- [ ] Preserve content search behavior.
-- [ ] Preserve date range behavior.
-- [ ] Preserve newest-first ordering.
-- [ ] Preserve cursor format `message_created_at|message_id`.
-- [ ] Implement `GET /messages`.
-- [ ] Implement `GET /messages/export?format=json`.
-- [ ] Implement `GET /messages/export?format=csv`.
-- [ ] Clamp export rows to configured max rows.
-- [ ] Decode JSON columns into current nested response fields.
-- [ ] Render empty result behavior with `items: []` and `next_cursor: null`.
+- [x] Implement message response structs matching the current JSON shape.
+- [x] Implement query parsing for: - `sender` - `channel` - `q` - `start` - `end` - `cursor` - `limit` - `reply_only` - `emote_only`
+- [x] Preserve sender case-insensitive exact matching.
+- [x] Preserve channel matching behavior.
+- [x] Preserve content search behavior.
+- [x] Preserve date range behavior.
+- [x] Preserve newest-first ordering.
+- [x] Preserve cursor format `message_created_at|message_id`.
+- [x] Implement `GET /messages`.
+- [x] Implement `GET /messages/export?format=json`.
+- [x] Implement `GET /messages/export?format=csv`.
+- [x] Clamp export rows to configured max rows.
+- [x] Decode JSON columns into current nested response fields.
+- [x] Render empty result behavior with `items: []` and `next_cursor: null`.
 
 ## Tests And Checks
 
-- [ ] Search without filters returns newest rows.
-- [ ] Sender exact match does not return partial username matches.
-- [ ] Channel and content filters combine correctly.
-- [ ] Date range filters return only rows inside the range.
-- [ ] Reply-only filter returns only reply messages.
-- [ ] Emote-only filter returns only rows with parsed emotes.
-- [ ] Cursor pagination does not duplicate or skip rows in deterministic fixtures.
-- [ ] JSON export response matches current shape.
-- [ ] CSV export column order matches the contract inventory.
-- [ ] Public access requires no auth cookie.
+- [x] Search without filters returns newest rows.
+- [x] Sender exact match does not return partial username matches.
+- [x] Channel and content filters combine correctly.
+- [x] Date range filters return only rows inside the range.
+- [x] Reply-only filter returns only reply messages.
+- [x] Emote-only filter returns only rows with parsed emotes.
+- [x] Cursor pagination does not duplicate or skip rows in deterministic fixtures.
+- [x] JSON export response matches current shape.
+- [x] CSV export column order matches the contract inventory.
+- [x] Public access requires no auth cookie.
 
 ## Acceptance Criteria
 
-- [ ] `/search` can use the Go API for historical message search.
-- [ ] Infinite scroll works through existing `next_cursor` behavior.
-- [ ] Export buttons work without frontend contract changes.
-- [ ] Query performance is acceptable on realistic local seed data.
+- [x] `/search` can use the Go API for historical message search.
+- [x] Infinite scroll works through existing `next_cursor` behavior.
+- [x] Export buttons work without frontend contract changes.
+- [x] Query performance is acceptable on realistic local seed data.
 
 ## Commit Boundary
 

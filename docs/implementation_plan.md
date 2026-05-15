@@ -6,8 +6,9 @@ message, raw-event, and analytics storage to ClickHouse.
 The completed Python/FastAPI/PostgreSQL plans are archived under `docs/archive/`. They remain useful
 as product and contract history, but they are no longer active implementation scope for this branch.
 
-Status: Phase 1 contract inventory, Phase 2 Go workspace/tooling, Phase 3 storage schema, and
-Phase 4 auth/admin API parity are complete on branch `feat/go-clickhouse-rewrite`.
+Status: Phase 1 contract inventory, Phase 2 Go workspace/tooling, Phase 3 storage schema,
+Phase 4 auth/admin API parity, and Phase 5 message search/export parity are complete on branch
+`feat/go-clickhouse-rewrite`.
 
 ## Primary Goal
 
@@ -208,6 +209,20 @@ Current Go auth/admin implementation:
 - Admin channel add resolves Kick metadata through the Go Kick web resolver.
 - Basic operations summary combines SQLite control-plane counts and ClickHouse data-plane counts
   when ClickHouse is reachable.
+
+Current Go message search/export implementation:
+
+- `GET /messages` reads ClickHouse `chat_messages` directly and preserves the frontend response
+  shape.
+- `GET /messages/export` supports `format=json` and `format=csv` without auth.
+- Query parsing supports `sender`, `channel`, `q`, `start`, `end`, `cursor`, `limit`,
+  `reply_only`, and `emote_only`.
+- Sender matching is case-insensitive exact matching against username and slug snapshots; channel
+  and content matching remain case-insensitive contains matching.
+- Results are ordered newest-first and use the existing `message_created_at|message_id` cursor
+  format.
+- Export rows are clamped to `MESSAGE_EXPORT_MAX_ROWS`, and CSV columns match the contract
+  inventory.
 
 ## Search Contract
 

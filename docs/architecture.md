@@ -84,6 +84,7 @@ There is no separate Python package for the listener in MVP. The `listener` Dock
 - `internal/infra/operations`: basic admin operations summary backed by SQLite and ClickHouse.
 - `internal/usecase/auth`: login, current-user lookup, admin-user list/create, and role checks.
 - `internal/usecase/channels`: followed-channel list/add/disable workflow.
+- `internal/usecase/messages`: ClickHouse-backed public search and export workflow.
 
 Compose exposes the optional Go API through profile `go-rewrite` as service `api-go`, mapped to
 `GO_API_PORT` or `8001` by default. The same profile exposes `clickhouse` and `migrate-go` for
@@ -109,6 +110,17 @@ Go rewrite auth/admin parity:
   SQLite followed-channel store and keep delete as disable behavior.
 - `GET /admin/operations/summary` returns the compatible response shape with SQLite control-plane
   counts and ClickHouse data-plane counts when ClickHouse is available.
+
+Go rewrite message search/export parity:
+
+- `GET /messages` is public and reads from ClickHouse `chat_messages`.
+- `GET /messages/export` is public and supports JSON plus CSV with the current column order.
+- Query parsing preserves `sender`, `channel`, `q`, `start`, `end`, `cursor`, `limit`,
+  `reply_only`, and `emote_only`.
+- Sender matching remains case-insensitive exact; channel and content matching remain
+  case-insensitive contains.
+- Cursor pagination keeps the `message_created_at|message_id` format so the existing frontend
+  infinite scroll can switch to the Go API without a contract change.
 
 ## Backend Principles
 

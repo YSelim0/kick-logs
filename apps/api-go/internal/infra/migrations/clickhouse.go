@@ -18,6 +18,7 @@ func ClickHouseMigrations() []ClickHouseMigration {
 				`CREATE TABLE IF NOT EXISTS chat_messages (
 					id Int64,
 					kick_message_id String,
+					channel_id Nullable(Int64),
 					channel_kick_id Nullable(Int64),
 					channel_chatroom_id Nullable(Int64),
 					channel_slug String,
@@ -25,7 +26,9 @@ func ClickHouseMigrations() []ClickHouseMigration {
 					channel_display_name String,
 					channel_display_name_lower String,
 					channel_profile_image_url Nullable(String),
+					channel_banner_image_url Nullable(String),
 					channel_public_url String,
+					sender_id Nullable(Int64),
 					sender_kick_id Nullable(Int64),
 					sender_username String,
 					sender_username_lower String,
@@ -34,6 +37,7 @@ func ClickHouseMigrations() []ClickHouseMigration {
 					sender_display_color Nullable(String),
 					sender_profile_image_url Nullable(String),
 					sender_public_url String,
+					sender_badges_json String DEFAULT '[]',
 					message_type LowCardinality(String),
 					content String,
 					content_lower String,
@@ -47,6 +51,7 @@ func ClickHouseMigrations() []ClickHouseMigration {
 					reply_to_content Nullable(String),
 					reply_to_message_id Nullable(String),
 					thread_parent_id Nullable(String),
+					reply_metadata_json String DEFAULT '{}',
 					raw_payload_json String,
 					message_created_at DateTime64(3, 'UTC'),
 					ingested_at DateTime64(3, 'UTC'),
@@ -81,6 +86,17 @@ func ClickHouseMigrations() []ClickHouseMigration {
 				ENGINE = MergeTree
 				PARTITION BY toYYYYMM(started_at)
 				ORDER BY (started_at, raw_event_id, attempt);`,
+			},
+		},
+		{
+			Version: 2,
+			Name:    "add_message_response_snapshot_columns",
+			Statements: []string{
+				`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS channel_id Nullable(Int64);`,
+				`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS sender_id Nullable(Int64);`,
+				`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS sender_badges_json String DEFAULT '[]';`,
+				`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS reply_metadata_json String DEFAULT '{}';`,
+				`ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS channel_banner_image_url Nullable(String);`,
 			},
 		},
 	}

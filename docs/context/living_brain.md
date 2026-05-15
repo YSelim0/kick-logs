@@ -4,6 +4,18 @@ This file is the active project memory. Keep it updated whenever project behavio
 
 ## Current State
 
+- Go rewrite Phase 5 message search/export parity is implemented:
+  - `GET /messages` reads ClickHouse `chat_messages` and preserves the current public search
+    response shape
+  - `GET /messages/export` supports JSON and CSV without auth
+  - query parsing supports sender, channel, content, date range, cursor, limit, reply-only, and
+    emote-only filters
+  - sender matching is case-insensitive exact against username/slug snapshots; channel and content
+    remain case-insensitive contains
+  - response mapping decodes sender badges, reply metadata, emote arrays, and nested sender/channel
+    fields from denormalized ClickHouse rows
+  - verification passed with Go tests/vet, live ClickHouse repository test, Docker Go API smoke,
+    `pnpm format:check`, and `git diff --check`
 - Go rewrite Phase 3 storage/schema is implemented:
   - Go config includes SQLite path, ClickHouse connection settings, and default super-admin seed
     credentials

@@ -22,14 +22,15 @@ func (repo *MessageRepository) Insert(ctx context.Context, message domain.ChatMe
 	normalizeMessage(&message)
 
 	batch, err := repo.conn.PrepareBatch(ctx, `INSERT INTO chat_messages (
-		id, kick_message_id, channel_kick_id, channel_chatroom_id, channel_slug,
+		id, kick_message_id, channel_id, channel_kick_id, channel_chatroom_id, channel_slug,
 		channel_slug_lower, channel_display_name, channel_display_name_lower,
-		channel_profile_image_url, channel_public_url, sender_kick_id, sender_username,
+		channel_profile_image_url, channel_banner_image_url, channel_public_url,
+		sender_id, sender_kick_id, sender_username,
 		sender_username_lower, sender_slug, sender_slug_lower, sender_display_color,
-		sender_profile_image_url, sender_public_url, message_type, content, content_lower,
+		sender_profile_image_url, sender_public_url, sender_badges_json, message_type, content, content_lower,
 		emote_count, emote_ids, emote_names, emote_tokens, emote_image_urls,
 		reply_to_sender, reply_to_sender_lower, reply_to_content, reply_to_message_id,
-		thread_parent_id, raw_payload_json, message_created_at, ingested_at
+		thread_parent_id, reply_metadata_json, raw_payload_json, message_created_at, ingested_at
 	)`)
 	if err != nil {
 		return fmt.Errorf("prepare chat message insert: %w", err)
@@ -39,6 +40,7 @@ func (repo *MessageRepository) Insert(ctx context.Context, message domain.ChatMe
 	if err := batch.Append(
 		message.ID,
 		message.KickMessageID,
+		nullableInt64(message.ChannelID),
 		nullableInt64(message.ChannelKickID),
 		nullableInt64(message.ChannelChatroomID),
 		message.ChannelSlug,
@@ -46,7 +48,9 @@ func (repo *MessageRepository) Insert(ctx context.Context, message domain.ChatMe
 		message.ChannelDisplayName,
 		strings.ToLower(message.ChannelDisplayName),
 		nullableString(message.ChannelProfileImageURL),
+		nullableString(message.ChannelBannerImageURL),
 		message.ChannelPublicURL,
+		nullableInt64(message.SenderID),
 		nullableInt64(message.SenderKickID),
 		message.SenderUsername,
 		strings.ToLower(message.SenderUsername),
@@ -55,6 +59,7 @@ func (repo *MessageRepository) Insert(ctx context.Context, message domain.ChatMe
 		nullableString(message.SenderDisplayColor),
 		nullableString(message.SenderProfileImageURL),
 		message.SenderPublicURL,
+		message.SenderBadgesJSON,
 		message.MessageType,
 		message.Content,
 		strings.ToLower(message.Content),
@@ -68,6 +73,7 @@ func (repo *MessageRepository) Insert(ctx context.Context, message domain.ChatMe
 		nullableString(message.ReplyToContent),
 		nullableString(message.ReplyToMessageID),
 		nullableString(message.ThreadParentID),
+		message.ReplyMetadataJSON,
 		message.RawPayloadJSON,
 		message.MessageCreatedAt,
 		message.IngestedAt,
@@ -81,6 +87,10 @@ func (repo *MessageRepository) Insert(ctx context.Context, message domain.ChatMe
 }
 
 func (repo *MessageRepository) SearchBasic(ctx context.Context, filter domain.MessageSearchFilter) ([]domain.ChatMessage, error) {
+	return repo.Search(ctx, filter)
+}
+
+func (repo *MessageRepository) Search(ctx context.Context, filter domain.MessageSearchFilter) ([]domain.ChatMessage, error) {
 	limit := filter.Limit
 	if limit == 0 {
 		limit = 50
@@ -102,16 +112,35 @@ func (repo *MessageRepository) SearchBasic(ctx context.Context, filter domain.Me
 		where = append(where, "positionCaseInsensitive(content, ?) > 0")
 		args = append(args, strings.TrimSpace(filter.Query))
 	}
+	if !filter.Start.IsZero() {
+		where = append(where, "message_created_at >= ?")
+		args = append(args, filter.Start.UTC())
+	}
+	if !filter.End.IsZero() {
+		where = append(where, "message_created_at <= ?")
+		args = append(args, filter.End.UTC())
+	}
+	if filter.ReplyOnly {
+		where = append(where, "message_type = 'reply'")
+	}
+	if filter.EmoteOnly {
+		where = append(where, "emote_count > 0")
+	}
+	if filter.Cursor != nil {
+		where = append(where, "(message_created_at < ? OR (message_created_at = ? AND id < ?))")
+		args = append(args, filter.Cursor.MessageCreatedAt.UTC(), filter.Cursor.MessageCreatedAt.UTC(), filter.Cursor.MessageID)
+	}
 
 	query := fmt.Sprintf(`SELECT
-		id, kick_message_id, ifNull(channel_kick_id, 0), ifNull(channel_chatroom_id, 0),
+		id, kick_message_id, ifNull(channel_id, 0), ifNull(channel_kick_id, 0), ifNull(channel_chatroom_id, 0),
 		channel_slug, channel_display_name, ifNull(channel_profile_image_url, ''),
-		channel_public_url, ifNull(sender_kick_id, 0), sender_username, sender_slug,
+		ifNull(channel_banner_image_url, ''), channel_public_url,
+		ifNull(sender_id, 0), ifNull(sender_kick_id, 0), sender_username, sender_slug,
 		ifNull(sender_display_color, ''), ifNull(sender_profile_image_url, ''),
-		sender_public_url, message_type, content, emote_ids, emote_names, emote_tokens,
+		sender_public_url, sender_badges_json, message_type, content, emote_ids, emote_names, emote_tokens,
 		emote_image_urls, ifNull(reply_to_sender, ''), ifNull(reply_to_content, ''),
-		ifNull(reply_to_message_id, ''), ifNull(thread_parent_id, ''), raw_payload_json,
-		message_created_at, ingested_at
+		ifNull(reply_to_message_id, ''), ifNull(thread_parent_id, ''), reply_metadata_json,
+		raw_payload_json, message_created_at, ingested_at
 		FROM chat_messages
 		WHERE %s
 		ORDER BY message_created_at DESC, id DESC
@@ -139,8 +168,20 @@ func (repo *MessageRepository) SearchBasic(ctx context.Context, filter domain.Me
 }
 
 func normalizeMessage(message *domain.ChatMessage) {
+	if message.ChannelID == 0 {
+		message.ChannelID = message.ChannelKickID
+	}
+	if message.SenderID == 0 {
+		message.SenderID = message.SenderKickID
+	}
 	if message.MessageType == "" {
 		message.MessageType = "message"
+	}
+	if message.SenderBadgesJSON == "" {
+		message.SenderBadgesJSON = "[]"
+	}
+	if message.ReplyMetadataJSON == "" {
+		message.ReplyMetadataJSON = "{}"
 	}
 	if message.RawPayloadJSON == "" {
 		message.RawPayloadJSON = "{}"
@@ -201,18 +242,22 @@ func scanMessage(scanner messageScanner) (domain.ChatMessage, error) {
 	if err := scanner.Scan(
 		&message.ID,
 		&message.KickMessageID,
+		&message.ChannelID,
 		&message.ChannelKickID,
 		&message.ChannelChatroomID,
 		&message.ChannelSlug,
 		&message.ChannelDisplayName,
 		&message.ChannelProfileImageURL,
+		&message.ChannelBannerImageURL,
 		&message.ChannelPublicURL,
+		&message.SenderID,
 		&message.SenderKickID,
 		&message.SenderUsername,
 		&message.SenderSlug,
 		&message.SenderDisplayColor,
 		&message.SenderProfileImageURL,
 		&message.SenderPublicURL,
+		&message.SenderBadgesJSON,
 		&message.MessageType,
 		&message.Content,
 		&emoteIDs,
@@ -223,6 +268,7 @@ func scanMessage(scanner messageScanner) (domain.ChatMessage, error) {
 		&message.ReplyToContent,
 		&message.ReplyToMessageID,
 		&message.ThreadParentID,
+		&message.ReplyMetadataJSON,
 		&message.RawPayloadJSON,
 		&message.MessageCreatedAt,
 		&message.IngestedAt,

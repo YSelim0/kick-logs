@@ -15,6 +15,7 @@ func NewRouter(cfg config.Config, logger *slog.Logger, dependencySets ...routes.
 	if len(dependencySets) > 0 {
 		deps := dependencySets[0]
 		routes.RegisterAuthRoutes(mux, deps)
+		routes.RegisterMessageRoutes(mux, deps)
 		routes.RegisterAdminUserRoutes(mux, deps)
 		routes.RegisterAdminChannelRoutes(mux, deps)
 		routes.RegisterAdminOperationRoutes(mux, deps)

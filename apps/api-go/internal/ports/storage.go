@@ -24,7 +24,7 @@ type FollowedChannelRepository interface {
 
 type MessageRepository interface {
 	Insert(ctx context.Context, message domain.ChatMessage) error
-	SearchBasic(ctx context.Context, filter domain.MessageSearchFilter) ([]domain.ChatMessage, error)
+	Search(ctx context.Context, filter domain.MessageSearchFilter) ([]domain.ChatMessage, error)
 }
 
 type RawEventRepository interface {

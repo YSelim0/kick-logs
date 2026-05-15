@@ -4,6 +4,18 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Completed Go rewrite Phase 5 message search/export parity:
+  - added ClickHouse-backed public `GET /messages`
+  - added public `GET /messages/export` with JSON and CSV output
+  - preserved sender exact matching, channel/content contains matching, date range filters,
+    reply-only, emote-only, newest-first ordering, and existing cursor shape
+  - expanded ClickHouse message snapshots for nested sender/channel/badge/reply response fields
+  - wired Go API startup to create the message repository/use case when ClickHouse is reachable
+  - closed `docs/tasks/go_rewrite_05_messages_search_export.md`
+  - verification: `go test ./...`, `go vet ./...`, live ClickHouse repository test,
+    Docker Go API smoke for `/messages` and `/messages/export`, `pnpm format:check`, and
+    `git diff --check`
+
 - Completed Go rewrite Phase 4 auth/admin API parity:
   - added Go bcrypt password hasher and JWT token service
   - preserved auth cookie settings, expiry, HttpOnly behavior, SameSite, Secure, and session user

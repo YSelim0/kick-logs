@@ -76,3 +76,57 @@ type OperationsSummaryResponse struct {
 	Timestamps           OperationsTimestampsResponse `json:"timestamps"`
 	Listener             ListenerHeartbeatResponse    `json:"listener"`
 }
+
+type MessageEmoteResponse struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Token    string `json:"token"`
+	ImageURL string `json:"image_url"`
+}
+
+type MessageSenderResponse struct {
+	ID              int64   `json:"id"`
+	KickUserID      int64   `json:"kick_user_id"`
+	Username        string  `json:"username"`
+	Slug            string  `json:"slug"`
+	ProfileImageURL *string `json:"profile_image_url"`
+}
+
+type MessageChannelResponse struct {
+	ID              int64   `json:"id"`
+	Slug            string  `json:"slug"`
+	DisplayName     string  `json:"display_name"`
+	ProfileImageURL *string `json:"profile_image_url"`
+	BannerImageURL  *string `json:"banner_image_url"`
+}
+
+type MessageResponse struct {
+	ID                     int64                  `json:"id"`
+	KickMessageID          string                 `json:"kick_message_id"`
+	ChatroomID             int64                  `json:"chatroom_id"`
+	Content                string                 `json:"content"`
+	MessageType            string                 `json:"message_type"`
+	SenderUsernameSnapshot string                 `json:"sender_username_snapshot"`
+	SenderSlugSnapshot     string                 `json:"sender_slug_snapshot"`
+	SenderColorSnapshot    *string                `json:"sender_color_snapshot"`
+	SenderBadges           []map[string]any       `json:"sender_badges"`
+	Emotes                 []MessageEmoteResponse `json:"emotes"`
+	ReplyMetadata          map[string]any         `json:"reply_metadata"`
+	ThreadParentID         *string                `json:"thread_parent_id"`
+	MessageCreatedAt       string                 `json:"message_created_at"`
+	IngestedAt             string                 `json:"ingested_at"`
+	Sender                 MessageSenderResponse  `json:"sender"`
+	Channel                MessageChannelResponse `json:"channel"`
+}
+
+type MessageSearchResponse struct {
+	Items      []MessageResponse `json:"items"`
+	NextCursor *string           `json:"next_cursor"`
+}
+
+type MessageExportResponse struct {
+	Items     []MessageResponse `json:"items"`
+	Count     int               `json:"count"`
+	MaxRows   int               `json:"max_rows"`
+	Truncated bool              `json:"truncated"`
+}

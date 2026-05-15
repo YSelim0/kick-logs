@@ -9,12 +9,14 @@ import (
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/ports"
 	authusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/auth"
 	channelsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/channels"
+	messagesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/messages"
 )
 
 type Dependencies struct {
 	Config     config.Config
 	Auth       *authusecase.Service
 	Channels   *channelsusecase.Service
+	Messages   *messagesusecase.Service
 	Operations ports.OperationsRepository
 }
 

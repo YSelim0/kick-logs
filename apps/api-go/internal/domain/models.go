@@ -59,18 +59,22 @@ type ChatEmote struct {
 type ChatMessage struct {
 	ID                     int64
 	KickMessageID          string
+	ChannelID              int64
 	ChannelKickID          int64
 	ChannelChatroomID      int64
 	ChannelSlug            string
 	ChannelDisplayName     string
 	ChannelProfileImageURL string
+	ChannelBannerImageURL  string
 	ChannelPublicURL       string
+	SenderID               int64
 	SenderKickID           int64
 	SenderUsername         string
 	SenderSlug             string
 	SenderDisplayColor     string
 	SenderProfileImageURL  string
 	SenderPublicURL        string
+	SenderBadgesJSON       string
 	MessageType            string
 	Content                string
 	Emotes                 []ChatEmote
@@ -78,16 +82,27 @@ type ChatMessage struct {
 	ReplyToContent         string
 	ReplyToMessageID       string
 	ThreadParentID         string
+	ReplyMetadataJSON      string
 	RawPayloadJSON         string
 	MessageCreatedAt       time.Time
 	IngestedAt             time.Time
 }
 
+type MessageCursor struct {
+	MessageCreatedAt time.Time
+	MessageID        int64
+}
+
 type MessageSearchFilter struct {
-	Sender  string
-	Channel string
-	Query   string
-	Limit   uint64
+	Sender    string
+	Channel   string
+	Query     string
+	Start     time.Time
+	End       time.Time
+	ReplyOnly bool
+	EmoteOnly bool
+	Cursor    *MessageCursor
+	Limit     uint64
 }
 
 type RawKickEvent struct {

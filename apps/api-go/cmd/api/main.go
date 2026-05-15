@@ -22,6 +22,7 @@ import (
 	sqliteinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/sqlite"
 	authusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/auth"
 	channelsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/channels"
+	messagesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/messages"
 )
 
 func main() {
@@ -73,6 +74,10 @@ func main() {
 		authinfra.NewJWTTokenService(cfg),
 	)
 	channelService := channelsusecase.NewService(channelRepo, kick.NewWebChannelResolver())
+	var messageService *messagesusecase.Service
+	if clickHouseConn != nil {
+		messageService = messagesusecase.NewService(clickhouseinfra.NewMessageRepository(clickHouseConn))
+	}
 	operationsRepo := operationsinfra.NewRepository(
 		sqliteDB,
 		cfg.SQLitePath,
@@ -83,6 +88,7 @@ func main() {
 		Config:     cfg,
 		Auth:       authService,
 		Channels:   channelService,
+		Messages:   messageService,
 		Operations: operationsRepo,
 	})
 

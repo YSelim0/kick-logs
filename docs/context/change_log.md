@@ -4,6 +4,30 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-16
 
+- Completed Go rewrite Phase 5 message search/export parity:
+  - added ClickHouse-backed message search use case and public `GET /messages`
+  - added public `GET /messages/export` with JSON and CSV output
+  - preserved query parsing for `sender`, `channel`, `q`, `start`, `end`, `cursor`, `limit`,
+    `reply_only`, and `emote_only`
+  - preserved case-insensitive exact sender matching and case-insensitive contains matching for
+    channel/content
+  - preserved newest-first ordering and `message_created_at|message_id` cursor pagination
+  - expanded ClickHouse message snapshot columns for nested sender/channel IDs, channel banner,
+    sender badges, and reply metadata JSON
+  - mapped ClickHouse rows back to the current message JSON response shape
+  - CSV export uses the contract column order and formula-safe cell prefixing
+  - updated Go API startup to wire the message service when ClickHouse is reachable
+  - ignored local `apps/api-go/.cache/` so Go test caches do not enter Docker build context
+  - closed all checklist items in `docs/tasks/go_rewrite_05_messages_search_export.md`
+  - verified `go test ./...`
+  - verified `go vet ./...`
+  - verified live ClickHouse integration test with
+    `KICK_LOGS_RUN_CLICKHOUSE_TESTS=1 go test ./internal/infra/clickhouse -run TestClickHouseMigrationsAndRepositories -count=1 -v`
+  - verified Docker Go API smoke for `GET /messages`, JSON export, and CSV export against
+    `http://localhost:8001`
+  - verified `pnpm format:check`
+  - verified `git diff --check`
+
 - Completed Go rewrite Phase 4 auth/admin API parity:
   - added JWT and bcrypt auth infrastructure for the Go API
   - added auth config fields for JWT secret, algorithm, expiry, cookie name, cookie secure flag,
