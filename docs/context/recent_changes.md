@@ -4,6 +4,23 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Completed Post-MVP Feature 7 data management:
+  - README documents data-management usage, retention behavior, guarded cleanup, and Docker
+    Compose PostgreSQL backup/restore
+  - `docs/tasks/post_mvp_07_data_management.md` is fully checked off
+  - destructive cleanup requires dry-run preview plus exact confirmation text
+- Verification:
+  - `python -m uv run pytest`: 124 passed
+  - `python -m uv run ruff check .`: passed
+  - `python -m uv run ruff format --check .`: passed
+  - `pnpm --filter @kick-logs/web test`: 16 files, 66 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `pnpm format:check`: passed
+
+## Previous
+
 - Implemented the frontend for Post-MVP Feature 7 data management:
   - `/admin` now includes `DataManagementPanel` below operations status
   - panel shows database/table sizes and retention settings
@@ -14,8 +31,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - targeted frontend data-management/admin tests: 8 passed
   - `pnpm --filter @kick-logs/web typecheck`: passed
   - `pnpm --filter @kick-logs/web lint`: passed
-
-## Previous
 
 - Implemented the backend foundation for Post-MVP Feature 7 data management:
   - `data_retention_settings` persists message/raw-event retention windows

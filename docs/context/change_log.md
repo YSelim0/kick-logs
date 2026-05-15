@@ -4,6 +4,20 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-15
 
+- Completed Post-MVP Feature 7 data management:
+  - README now documents admin data-management usage, retention behavior, guarded cleanup, and
+    Docker Compose PostgreSQL backup/restore commands
+  - `docs/tasks/post_mvp_07_data_management.md` has all checkboxes closed
+  - destructive cleanup remains admin-only and requires dry-run preview plus exact confirmation
+    text before deletion
+  - verified `python -m uv run pytest`: 124 passed
+  - verified `python -m uv run ruff check .`
+  - verified `python -m uv run ruff format --check .`
+  - verified `pnpm --filter @kick-logs/web test`: 16 files, 66 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
+  - verified `pnpm --filter @kick-logs/web build`
+  - verified `pnpm format:check`
 - Implemented the frontend for Post-MVP Feature 7 data management:
   - added typed data-management API wrappers
   - added `/admin` `DataManagementPanel` below operations status

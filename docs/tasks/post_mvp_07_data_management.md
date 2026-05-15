@@ -37,9 +37,9 @@ analytics/profile pages here.
 
 ## Docs And Acceptance
 
-- [ ] Add backup/restore guidance for Docker Compose PostgreSQL.
-- [ ] Add cleanup/retention operational notes to README.
-- [ ] Update context docs.
-- [ ] Verify backend tests and frontend tests/typecheck/lint/build.
-- [ ] Acceptance: admins can preview and run cleanup intentionally, and no destructive action
+- [x] Add backup/restore guidance for Docker Compose PostgreSQL.
+- [x] Add cleanup/retention operational notes to README.
+- [x] Update context docs.
+- [x] Verify backend tests and frontend tests/typecheck/lint/build.
+- [x] Acceptance: admins can preview and run cleanup intentionally, and no destructive action
       can run from a single accidental click.

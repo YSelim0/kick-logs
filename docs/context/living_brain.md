@@ -124,6 +124,12 @@ This file is the active project memory. Keep it updated whenever project behavio
   - delete button stays disabled until the exact backend confirmation text is typed
   - success/error states show deleted message/raw-event counts or API failures
   - frontend target tests, typecheck, and lint pass
+- Post-MVP Feature 7 data management is complete:
+  - README documents retention behavior, guarded cleanup, and Docker Compose PostgreSQL
+    backup/restore commands
+  - `docs/tasks/post_mvp_07_data_management.md` has all checkboxes closed
+  - final verification passed with backend pytest/Ruff, web test/typecheck/lint/build, and
+    `pnpm format:check`
 - Post-MVP Feature 2 planning now includes clickable message links:
   - URLs inside `/search` message content should render as safe clickable anchors
   - link rendering must preserve inline emote placement and matched-text highlighting

@@ -67,6 +67,8 @@ The project is built as a monorepo:
 - Super-admin-only admin user creation.
 - Admin operations dashboard for listener freshness, storage growth, raw event backlog, and
   ingest timestamps.
+- Admin data management panel for database/table sizes, retention settings, dry-run cleanup
+  previews, and explicit confirmed deletion.
 - Durable raw event inbox:
   - websocket reader stores raw chat events first
   - workers process raw events into normalized messages
@@ -143,10 +145,11 @@ POSTGRES_PASSWORD
 4. Go to `/admin`.
 5. Check the operations dashboard for listener freshness, storage size, raw event status, and
    latest ingest timestamps.
-6. Add a Kick channel by slug/nickname.
-7. Open `/channels/{channel-slug}` to inspect stored channel activity.
-8. Keep the `listener` service running.
-9. Search collected messages from `/search`.
+6. Review the data management panel before changing retention or cleanup settings.
+7. Add a Kick channel by slug/nickname.
+8. Open `/channels/{channel-slug}` to inspect stored channel activity.
+9. Keep the `listener` service running.
+10. Search collected messages from `/search`.
 
 Useful listener logs:
 
@@ -218,6 +221,10 @@ DELETE /admin/channels/{id}
 GET    /admin/users
 POST   /admin/users
 GET    /admin/operations/summary
+GET    /admin/data-management/summary
+PUT    /admin/data-management/retention-settings
+POST   /admin/data-management/cleanup/preview
+POST   /admin/data-management/cleanup/confirm
 ```
 
 Example public search:
@@ -374,7 +381,58 @@ Stored data includes:
 - thread parent id
 - original raw Kick payload
 
-Messages are persisted indefinitely unless the operator removes data manually.
+Messages are persisted indefinitely unless the operator removes data manually or
+runs a confirmed retention cleanup from the admin data management panel.
+
+## Data Management And Backups
+
+The admin data management panel lives under `/admin`. It is admin-only and shows
+database size, table sizes, row counts, and the active retention settings for
+messages and raw Kick events.
+
+Retention settings support:
+
+- keep forever
+- 30 days
+- 90 days
+
+Retention settings do not delete data by themselves. They define the cutoff used
+by the old-message and old-raw-event cleanup actions. A destructive cleanup must
+first run a dry-run preview, then the admin must type the exact confirmation text
+returned by the backend.
+
+Cleanup targets:
+
+- old messages according to message retention
+- old raw events according to raw-event retention
+- all stored messages/raw events for a specific channel slug
+- all stored messages/raw events for a specific sender
+
+Back up PostgreSQL before running large cleanup operations. The Compose service
+uses the values from `.env`; adjust the `-U` and `-d` values below if you changed
+`POSTGRES_USER` or `POSTGRES_DB`.
+
+Create a compressed PostgreSQL dump:
+
+```powershell
+New-Item -ItemType Directory -Force backups
+docker compose exec postgres pg_dump -U kick_logs -d kick_logs -Fc -f /tmp/kick_logs.dump
+docker compose cp postgres:/tmp/kick_logs.dump .\backups\kick_logs.dump
+docker compose exec postgres rm /tmp/kick_logs.dump
+```
+
+Restore a dump into the Docker Compose database:
+
+```powershell
+docker compose stop api listener web
+docker compose cp .\backups\kick_logs.dump postgres:/tmp/kick_logs.dump
+docker compose exec postgres pg_restore -U kick_logs -d kick_logs --clean --if-exists /tmp/kick_logs.dump
+docker compose exec postgres rm /tmp/kick_logs.dump
+docker compose up -d api listener web
+```
+
+`docker compose down -v` removes the PostgreSQL volume. Use it only when you
+intentionally want to delete all stored data.
 
 ## Configuration
 
