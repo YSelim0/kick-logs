@@ -4,6 +4,22 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Completed Go rewrite Phase 3 storage/schema:
+  - added SQLite and ClickHouse configuration defaults for the Go runtime
+  - added versioned migration runners for both stores
+  - added SQLite control-plane schema for admin users, followed channels, sender profiles,
+    retention settings, worker heartbeats, and migration bookkeeping
+  - added ClickHouse schema for denormalized chat messages, raw Kick events, and raw-event
+    attempts
+  - added repository interfaces plus concrete SQLite/ClickHouse repositories and storage stats
+  - added SQLite default super-admin seeding with bcrypt hashes
+  - added Compose `clickhouse` and `migrate-go` services behind profile `go-rewrite`
+  - closed `docs/tasks/go_rewrite_03_storage_schema.md`
+  - verification: `go test ./...`, targeted live ClickHouse repository test,
+    `docker compose --profile go-rewrite run --rm migrate-go`, and Go Docker image builds
+
+## Previous
+
 - Completed Go rewrite Phase 2 workspace/tooling:
   - added `apps/api-go` with `cmd/api`, `cmd/listener`, `cmd/migrate`, config, app bootstrap,
     stdlib HTTP server, middleware, health route, and package skeletons
@@ -12,8 +28,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - closed `docs/tasks/go_rewrite_02_workspace_tooling.md`
   - verification: `go test ./...`, `go vet ./...`, local binary `GET /health`, Docker image
     build, `pnpm format:check`, and `git diff --check`
-
-## Previous
 
 - Completed Go rewrite Phase 1 contract inventory:
   - added `docs/contracts/api_contract.md`

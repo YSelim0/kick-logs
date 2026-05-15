@@ -4,6 +4,32 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-16
 
+- Completed Go rewrite Phase 3 storage/schema:
+  - added Go config fields for SQLite path, ClickHouse connection, ClickHouse debug mode, and
+    default super-admin credentials
+  - added versioned SQLite and ClickHouse migration runners with idempotent migration tracking
+  - added SQLite control-plane schema for `admin_users`, `followed_channels`, `sender_profiles`,
+    `retention_settings`, `worker_heartbeats`, `schema_migrations`, and `data_migrations`
+  - added ClickHouse data-plane schema for `chat_messages`, `raw_kick_events`, and
+    `raw_event_attempts`
+  - denormalized `chat_messages` with sender/channel snapshots, reply fields, thread parent id,
+    emote arrays, normalized sender/channel/content helpers, message type, raw payload JSON, and
+    ingestion timestamps
+  - added repository interfaces for admin users, followed channels, messages, raw events, and
+    storage stats
+  - added concrete SQLite repositories for admin users, followed channels, super-admin seeding, and
+    control-plane stats
+  - added concrete ClickHouse repositories for messages, raw events/attempts, and table-size stats
+  - added `clickhouse` and `migrate-go` Compose services behind profile `go-rewrite`
+  - corrected ClickHouse healthcheck to use `clickhouse-client` with the configured user/password
+  - updated README, architecture, implementation plan, and context docs for the storage foundation
+  - closed all checklist items in `docs/tasks/go_rewrite_03_storage_schema.md`
+  - verified `go test ./...`
+  - verified live ClickHouse integration test with
+    `KICK_LOGS_RUN_CLICKHOUSE_TESTS=1 go test ./internal/infra/clickhouse -run TestClickHouseMigrationsAndRepositories -count=1 -v`
+  - verified `docker compose --profile go-rewrite run --rm migrate-go`
+  - verified `docker compose --profile go-rewrite build api-go`
+
 - Completed Go rewrite Phase 2 workspace/tooling:
   - added `apps/api-go` Go module and command entrypoints for `api`, `listener`, and `migrate`
   - added environment config loading with local defaults and structured `log/slog` JSON logging

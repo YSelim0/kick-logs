@@ -82,6 +82,30 @@ services:
       - -c
       - uv run alembic upgrade head && uv run python -m kick_logs.presentation.worker.main
 
+  clickhouse:
+    profiles:
+      - go-rewrite
+    image: clickhouse/clickhouse-server:24.8-alpine
+    environment:
+      CLICKHOUSE_DB: ${CLICKHOUSE_DATABASE:-kick_logs}
+      CLICKHOUSE_USER: ${CLICKHOUSE_USERNAME:-kick_logs}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-kick_logs}
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ports:
+      - "${CLICKHOUSE_HTTP_PORT:-8123}:8123"
+      - "${CLICKHOUSE_NATIVE_PORT:-9000}:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "clickhouse-client --user $$CLICKHOUSE_USER --password $$CLICKHOUSE_PASSWORD --query 'SELECT 1'"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   api-go:
     profiles:
       - go-rewrite
@@ -97,8 +121,43 @@ services:
       API_PORT: 8000
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000}
       MESSAGE_EXPORT_MAX_ROWS: ${MESSAGE_EXPORT_MAX_ROWS:-1000}
+      SQLITE_PATH: ${SQLITE_PATH:-/data/kick-logs-go.sqlite3}
+      CLICKHOUSE_ADDR: ${CLICKHOUSE_ADDR:-clickhouse:9000}
+      CLICKHOUSE_DATABASE: ${CLICKHOUSE_DATABASE:-kick_logs}
+      CLICKHOUSE_USERNAME: ${CLICKHOUSE_USERNAME:-kick_logs}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-kick_logs}
+      CLICKHOUSE_DEBUG: ${CLICKHOUSE_DEBUG:-false}
+      DEFAULT_SUPER_ADMIN_EMAIL: ${DEFAULT_SUPER_ADMIN_EMAIL:-admin@kicklogs.local}
+      DEFAULT_SUPER_ADMIN_PASSWORD: ${DEFAULT_SUPER_ADMIN_PASSWORD:-admin123}
     ports:
       - "${GO_API_PORT:-8001}:8000"
+    volumes:
+      - api_go_data:/data
+
+  migrate-go:
+    profiles:
+      - go-rewrite
+    build:
+      context: ./apps/api-go
+      args:
+        TARGET: migrate
+    environment:
+      APP_NAME: ${APP_NAME:-Kick Logs}
+      APP_ENV: ${APP_ENV:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      SQLITE_PATH: ${SQLITE_PATH:-/data/kick-logs-go.sqlite3}
+      CLICKHOUSE_ADDR: ${CLICKHOUSE_ADDR:-clickhouse:9000}
+      CLICKHOUSE_DATABASE: ${CLICKHOUSE_DATABASE:-kick_logs}
+      CLICKHOUSE_USERNAME: ${CLICKHOUSE_USERNAME:-kick_logs}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-kick_logs}
+      CLICKHOUSE_DEBUG: ${CLICKHOUSE_DEBUG:-false}
+      DEFAULT_SUPER_ADMIN_EMAIL: ${DEFAULT_SUPER_ADMIN_EMAIL:-admin@kicklogs.local}
+      DEFAULT_SUPER_ADMIN_PASSWORD: ${DEFAULT_SUPER_ADMIN_PASSWORD:-admin123}
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    volumes:
+      - api_go_data:/data
 
   web:
     build:
@@ -121,6 +180,8 @@ volumes:
   postgres_data:
   api_venv:
   listener_venv:
+  clickhouse_data:
+  api_go_data:
   web_node_modules:
   web_app_node_modules:
   web_next:

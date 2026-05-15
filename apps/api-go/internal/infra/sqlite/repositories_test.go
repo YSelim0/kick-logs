@@ -1,0 +1,123 @@
+package sqlite_test
+
+import (
+	"context"
+	"database/sql"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/domain"
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/migrations"
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/sqlite"
+)
+
+func TestSQLiteMigrationsAreIdempotent(t *testing.T) {
+	ctx := context.Background()
+	db, path := openMigratedSQLite(t, ctx)
+	defer db.Close()
+
+	if err := migrations.ApplySQLite(ctx, db); err != nil {
+		t.Fatalf("ApplySQLite() second run error = %v", err)
+	}
+
+	stats := sqlite.NewStatsRepository(db, path)
+	sizes, err := stats.TableSizes(ctx)
+	if err != nil {
+		t.Fatalf("TableSizes() error = %v", err)
+	}
+	if len(sizes) == 0 {
+		t.Fatal("TableSizes() returned no tables")
+	}
+}
+
+func TestAdminUserRepositoryAndSeed(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openMigratedSQLite(t, ctx)
+	defer db.Close()
+
+	repo := sqlite.NewAdminUserRepository(db)
+	seeded, err := sqlite.SeedSuperAdmin(ctx, repo, "ADMIN@kicklogs.local", "admin123")
+	if err != nil {
+		t.Fatalf("SeedSuperAdmin() error = %v", err)
+	}
+	if seeded.Email != "admin@kicklogs.local" {
+		t.Fatalf("seeded email = %q", seeded.Email)
+	}
+	if seeded.Role != domain.AdminRoleSuperAdmin {
+		t.Fatalf("seeded role = %q", seeded.Role)
+	}
+	if seeded.PasswordHash == "admin123" {
+		t.Fatal("seeded password hash stored plain password")
+	}
+
+	fetched, err := repo.GetByEmail(ctx, "admin@kicklogs.local")
+	if err != nil {
+		t.Fatalf("GetByEmail() error = %v", err)
+	}
+	if fetched.ID == 0 || !fetched.IsActive {
+		t.Fatalf("fetched admin = %#v", fetched)
+	}
+
+	active, err := repo.ListActive(ctx)
+	if err != nil {
+		t.Fatalf("ListActive() error = %v", err)
+	}
+	if len(active) != 1 {
+		t.Fatalf("active users len = %d", len(active))
+	}
+}
+
+func TestFollowedChannelRepository(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openMigratedSQLite(t, ctx)
+	defer db.Close()
+
+	repo := sqlite.NewFollowedChannelRepository(db)
+	inserted, err := repo.Upsert(ctx, domain.FollowedChannel{
+		KickChannelID:  101,
+		KickChatroomID: 202,
+		Slug:           "Hype",
+		DisplayName:    "Hype",
+		IsEnabled:      true,
+		RawPayloadJSON: `{"slug":"hype"}`,
+		LastResolvedAt: time.Date(2026, 5, 16, 12, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatalf("Upsert() error = %v", err)
+	}
+	if inserted.ID == 0 {
+		t.Fatal("inserted channel ID = 0")
+	}
+
+	fetched, err := repo.GetBySlug(ctx, "hype")
+	if err != nil {
+		t.Fatalf("GetBySlug() error = %v", err)
+	}
+	if fetched.KickChatroomID != 202 || !fetched.IsEnabled {
+		t.Fatalf("fetched channel = %#v", fetched)
+	}
+
+	enabled, err := repo.ListEnabled(ctx)
+	if err != nil {
+		t.Fatalf("ListEnabled() error = %v", err)
+	}
+	if len(enabled) != 1 {
+		t.Fatalf("enabled channels len = %d", len(enabled))
+	}
+}
+
+func openMigratedSQLite(t *testing.T, ctx context.Context) (*sql.DB, string) {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), "kick-logs.sqlite3")
+	db, err := sqlite.Open(ctx, path)
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	if err := migrations.ApplySQLite(ctx, db); err != nil {
+		db.Close()
+		t.Fatalf("ApplySQLite() error = %v", err)
+	}
+	return db, path
+}

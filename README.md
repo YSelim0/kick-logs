@@ -334,22 +334,29 @@ cd apps/api-go
 go run ./cmd/api
 ```
 
-Run skeleton listener or migration commands:
+Run skeleton listener or storage migration commands:
 
 ```powershell
 cd apps/api-go
 go run ./cmd/listener
-go run ./cmd/migrate
+go run ./cmd/migrate -target=sqlite
 ```
 
-Run the optional Go API container without replacing the Python API:
+Run the optional Go API and ClickHouse stack without replacing the Python API:
 
 ```powershell
+docker compose --profile go-rewrite up -d clickhouse
+docker compose --profile go-rewrite run --rm migrate-go
 docker compose --profile go-rewrite up --build api-go
 ```
 
 The optional Go API listens on http://localhost:8001 by default and exposes
 `GET /health`.
+
+Go rewrite storage uses SQLite for admin/control-plane state and ClickHouse for chat messages,
+raw Kick events, and analytics-oriented reads. Local defaults are exposed through `.env.example`
+as `SQLITE_PATH`, `CLICKHOUSE_ADDR`, `CLICKHOUSE_DATABASE`, `CLICKHOUSE_USERNAME`, and
+`CLICKHOUSE_PASSWORD`.
 
 ## Continuous Integration
 

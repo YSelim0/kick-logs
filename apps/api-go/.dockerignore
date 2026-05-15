@@ -2,5 +2,6 @@
 bin/
 tmp/
 .gocache/
+.gomodcache/
 coverage.out
 *.test

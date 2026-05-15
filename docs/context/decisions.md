@@ -123,3 +123,11 @@
   maps to host port `GO_API_PORT` or `8001` by default.
 - Go local build outputs and caches stay untracked under `apps/api-go/bin/` and
   `apps/api-go/.gocache/`.
+- The Go rewrite uses SQLite for control-plane state and ClickHouse for message/raw-event data.
+- SQLite stores admin users, followed channels, sender profile cache, retention settings, worker
+  heartbeats, and migration bookkeeping.
+- ClickHouse stores denormalized chat messages, raw Kick events, and raw-event processing attempts.
+- Go rewrite migrations are run through `cmd/migrate`; Compose exposes that binary as the
+  `migrate-go` service behind profile `go-rewrite`.
+- Go rewrite default super-admin seeding happens in SQLite migration startup and stores a bcrypt
+  hash, not the plain password.

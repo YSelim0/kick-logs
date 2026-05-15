@@ -63,17 +63,37 @@ kick-logs/
 
 There is no separate Python package for the listener in MVP. The `listener` Docker service runs the worker entrypoint from `apps/api`.
 
-`apps/api-go` currently provides the Go rewrite skeleton:
+`apps/api-go` currently provides the Go rewrite foundation:
 
 - `cmd/api`: Go HTTP API entrypoint with `GET /health`.
 - `cmd/listener`: listener entrypoint placeholder for the later ingestion phase.
-- `cmd/migrate`: migration entrypoint placeholder for the later schema/data migration phases.
+- `cmd/migrate`: storage migration entrypoint for SQLite and ClickHouse.
 - `internal/config`: environment-based configuration with local defaults.
 - `internal/app`: structured logging and API server bootstrap.
 - `internal/http`: stdlib HTTP router, middleware, route, and schema packages.
+- `internal/domain`: storage-facing domain records shared by repository interfaces.
+- `internal/ports`: repository interfaces for admin users, followed channels, messages, raw events,
+  and storage statistics.
+- `internal/infra/sqlite`: SQLite client, admin-user repository, followed-channel repository,
+  super-admin seeding, and control-plane storage stats.
+- `internal/infra/clickhouse`: ClickHouse client, message repository, raw-event repository, and
+  table-size stats.
+- `internal/infra/migrations`: versioned SQLite and ClickHouse migration runners.
 
 Compose exposes the optional Go API through profile `go-rewrite` as service `api-go`, mapped to
-`GO_API_PORT` or `8001` by default. The Python `api` service remains the default API service.
+`GO_API_PORT` or `8001` by default. The same profile exposes `clickhouse` and `migrate-go` for
+rewrite storage development. The Python `api` service remains the default API service.
+
+Go rewrite storage split:
+
+- SQLite owns control-plane data that benefits from small transactional writes:
+  `admin_users`, `followed_channels`, `sender_profiles`, `retention_settings`,
+  `worker_heartbeats`, plus migration bookkeeping.
+- ClickHouse owns append-heavy and analytics-heavy data: `chat_messages`, `raw_kick_events`, and
+  `raw_event_attempts`.
+- `chat_messages` stores denormalized sender/channel snapshots, reply fields, emote arrays,
+  normalized lower-case search helpers, and message timestamps so search responses do not require a
+  per-row join back to SQLite.
 
 ## Backend Principles
 

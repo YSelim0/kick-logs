@@ -6,7 +6,8 @@ message, raw-event, and analytics storage to ClickHouse.
 The completed Python/FastAPI/PostgreSQL plans are archived under `docs/archive/`. They remain useful
 as product and contract history, but they are no longer active implementation scope for this branch.
 
-Status: planning started on branch `feat/go-clickhouse-rewrite`.
+Status: Phase 1 contract inventory, Phase 2 Go workspace/tooling, and Phase 3 storage schema are
+complete on branch `feat/go-clickhouse-rewrite`.
 
 ## Primary Goal
 
@@ -47,6 +48,16 @@ The rewrite uses two local stores:
 This keeps ClickHouse focused on append-heavy log and analytics work while avoiding the need to use
 ClickHouse as a transactional admin/auth database. SQLite does not add another database server to
 the self-hosted runtime.
+
+Current storage implementation:
+
+- SQLite migrations create `admin_users`, `followed_channels`, `sender_profiles`,
+  `retention_settings`, `worker_heartbeats`, and migration bookkeeping tables.
+- ClickHouse migrations create `chat_messages`, `raw_kick_events`, and `raw_event_attempts`.
+- `chat_messages` is denormalized with sender/channel snapshots, reply fields, emote arrays,
+  lower-case helper columns, message type, and timestamps for search/export/profile responses.
+- `cmd/migrate` applies SQLite and ClickHouse migrations and seeds the default super admin in
+  SQLite.
 
 ## Target Runtime
 

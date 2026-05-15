@@ -4,6 +4,21 @@ This file is the active project memory. Keep it updated whenever project behavio
 
 ## Current State
 
+- Go rewrite Phase 3 storage/schema is implemented:
+  - Go config includes SQLite path, ClickHouse connection settings, and default super-admin seed
+    credentials
+  - SQLite migrations create admin/control-plane tables: `admin_users`, `followed_channels`,
+    `sender_profiles`, `retention_settings`, `worker_heartbeats`, and migration bookkeeping
+  - ClickHouse migrations create data-plane tables: `chat_messages`, `raw_kick_events`, and
+    `raw_event_attempts`
+  - `chat_messages` stores denormalized sender/channel snapshots, reply fields, emote arrays,
+    normalized lower-case search helpers, raw payload JSON, message type, and timestamps
+  - concrete repositories exist for SQLite admin users/followed channels/stats and ClickHouse
+    messages/raw events/stats
+  - `cmd/migrate` applies both stores and seeds the default super admin into SQLite with bcrypt
+  - Compose profile `go-rewrite` includes `clickhouse`, `migrate-go`, and `api-go`
+  - verification passed with `go test ./...`, live ClickHouse integration test, migration
+    container run, and Go Docker image builds
 - Go rewrite Phase 2 workspace/tooling is implemented:
   - `apps/api-go` exists with `cmd/api`, `cmd/listener`, and `cmd/migrate`
   - Go API uses stdlib HTTP routing and exposes contract-compatible `GET /health`
@@ -183,11 +198,15 @@ This file is the active project memory. Keep it updated whenever project behavio
   - stale listener heartbeat and failed raw event counts render compact warning states
   - manual refresh re-fetches the operations summary without mixing with channel/user controls
 - `apps/api` contains the FastAPI skeleton with `GET /health`, settings/logging modules, clean architecture folders, tests, and `uv.lock`.
-- Root `compose.yaml` currently has Phase 7 services:
+- Root `compose.yaml` currently has the Python/default services:
   - `postgres`
   - `api`
   - `listener`
   - `web`
+- Root `compose.yaml` also has optional Go rewrite profile services:
+  - `clickhouse`
+  - `api-go`
+  - `migrate-go`
 - Active implementation plan exists at `docs/implementation_plan.md`.
 - Active task files exist under `docs/tasks/post_mvp_01_admin_operations.md` through `docs/tasks/post_mvp_08_final_smoke.md`.
 - Archived MVP task files exist under `docs/archive/tasks/phase1_tasks.md` through `docs/archive/tasks/phase10_tasks.md`.
