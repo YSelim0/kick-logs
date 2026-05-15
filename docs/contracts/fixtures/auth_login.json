@@ -1,0 +1,8 @@
+{
+  "user": {
+    "id": 1,
+    "email": "admin@kicklogs.local",
+    "role": "super_admin",
+    "is_active": true
+  }
+}

@@ -1,0 +1,22 @@
+[
+  {
+    "id": 10,
+    "kick_channel_id": 1001,
+    "kick_chatroom_id": 2001,
+    "slug": "hype",
+    "display_name": "Hype",
+    "profile_image_url": "https://files.kick.com/images/channel/hype-profile.png",
+    "banner_image_url": "https://files.kick.com/images/channel/hype-banner.png",
+    "is_enabled": true
+  },
+  {
+    "id": 11,
+    "kick_channel_id": 1002,
+    "kick_chatroom_id": 2002,
+    "slug": "rraenee",
+    "display_name": "rraenee",
+    "profile_image_url": null,
+    "banner_image_url": null,
+    "is_enabled": false
+  }
+]

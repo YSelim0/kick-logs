@@ -4,6 +4,18 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-15
 
+- Completed Go rewrite Phase 1 contract inventory:
+  - added `docs/contracts/api_contract.md` as the current Python backend contract snapshot for the
+    Go rewrite
+  - added representative successful and error JSON fixtures under `docs/contracts/fixtures/`
+  - documented endpoint paths, methods, access boundaries, request body fields, query parameters,
+    response shapes, auth cookie behavior, status-code expectations, cursor parsing, CSV export
+    column order, sender exact matching, channel/content matching, reply metadata, and emote fields
+  - verified the endpoint list against backend route/schema files and frontend API wrappers/types
+  - closed all checklist items in `docs/tasks/go_rewrite_01_contract_inventory.md`
+  - verified `python -m uv run pytest`: 72 passed, 52 skipped
+  - verified `pnpm format:check`
+  - verified `git diff --check`
 - Started the Go + ClickHouse rewrite planning track:
   - reorganized historical docs into `docs/archive/mvp/` and `docs/archive/post_mvp/`
   - archived completed post-MVP task files so `docs/tasks/` can hold only active rewrite tasks

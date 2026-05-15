@@ -1,0 +1,26 @@
+{
+  "counts": {
+    "channels": 3,
+    "senders": 240,
+    "messages": 1250,
+    "raw_events": 1280
+  },
+  "database_bytes": 104857600,
+  "tables": [
+    {
+      "table_name": "chat_messages",
+      "total_bytes": 73400320,
+      "row_count": 1250
+    },
+    {
+      "table_name": "raw_kick_events",
+      "total_bytes": 31457280,
+      "row_count": 1280
+    }
+  ],
+  "retention_settings": {
+    "message_retention_days": 90,
+    "raw_event_retention_days": 30,
+    "updated_at": "2026-05-15T19:00:00Z"
+  }
+}

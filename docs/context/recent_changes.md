@@ -4,14 +4,23 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Completed Go rewrite Phase 1 contract inventory:
+  - added `docs/contracts/api_contract.md`
+  - added representative JSON fixtures under `docs/contracts/fixtures/`
+  - documented endpoint access, request bodies, query params, response shapes, auth cookie behavior,
+    cursor format, CSV export columns, search matching rules, reply metadata, and emote fields
+  - closed `docs/tasks/go_rewrite_01_contract_inventory.md`
+  - verification: `python -m uv run pytest` reported 72 passed and 52 skipped, `pnpm
+format:check` passed, and `git diff --check` passed
+
+## Previous
+
 - Started the Go + ClickHouse rewrite planning track:
   - archived completed MVP docs under `docs/archive/mvp/`
   - archived completed post-MVP docs under `docs/archive/post_mvp/`
   - replaced the active implementation plan with the Go API/listener rewrite plan
   - added phase task files for contract inventory, Go workspace, storage, auth/admin, search,
     listener, analytics, migration, and cutover
-
-## Previous
 
 - Fixed Docker Compose backend env passthrough for release readiness:
   - API now receives `.env` overrides for database echo, JWT algorithm/expiry/cookie settings,

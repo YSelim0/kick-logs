@@ -15,38 +15,38 @@ This phase owns documentation and test fixtures for API compatibility only.
 
 ## Checklist
 
-- [ ] Record all public and admin endpoint paths, methods, and access rules.
-- [ ] Capture request body shapes for login, admin channel creation, admin user creation,
+- [x] Record all public and admin endpoint paths, methods, and access rules.
+- [x] Capture request body shapes for login, admin channel creation, admin user creation,
       retention settings, cleanup preview, and cleanup confirm.
-- [ ] Capture query parameters for messages, export, analytics, user profile, and channel profile
+- [x] Capture query parameters for messages, export, analytics, user profile, and channel profile
       endpoints.
-- [ ] Capture response body shapes for every endpoint used by the frontend.
-- [ ] Capture expected auth cookie name, path, HttpOnly flag, secure flag, same-site behavior, and
+- [x] Capture response body shapes for every endpoint used by the frontend.
+- [x] Capture expected auth cookie name, path, HttpOnly flag, secure flag, same-site behavior, and
       expiry behavior.
-- [ ] Capture practical status-code expectations for success, unauthenticated, unauthorized,
+- [x] Capture practical status-code expectations for success, unauthenticated, unauthorized,
       validation failure, not found, and conflict cases.
-- [ ] Create fixture JSON files for representative successful responses.
-- [ ] Create fixture JSON files or notes for frontend-sensitive error responses.
-- [ ] Document the current cursor format for message pagination.
-- [ ] Document CSV export column order and JSON export shape.
-- [ ] Document current date parsing expectations for `start` and `end`.
-- [ ] Document sender exact-match behavior and channel/content matching behavior.
-- [ ] Document reply and emote response fields, including `reply_metadata`, `thread_parent_id`,
+- [x] Create fixture JSON files for representative successful responses.
+- [x] Create fixture JSON files or notes for frontend-sensitive error responses.
+- [x] Document the current cursor format for message pagination.
+- [x] Document CSV export column order and JSON export shape.
+- [x] Document current date parsing expectations for `start` and `end`.
+- [x] Document sender exact-match behavior and channel/content matching behavior.
+- [x] Document reply and emote response fields, including `reply_metadata`, `thread_parent_id`,
       and emote image data.
 
 ## Tests And Checks
 
-- [ ] Run current backend tests before capturing fixtures if the local environment supports it.
-- [ ] Verify captured endpoint list against route files under `apps/api/src`.
-- [ ] Verify frontend API wrappers under `apps/web/src` are represented in the contract notes.
+- [x] Run current backend tests before capturing fixtures if the local environment supports it.
+- [x] Verify captured endpoint list against route files under `apps/api/src`.
+- [x] Verify frontend API wrappers under `apps/web/src` are represented in the contract notes.
 
 ## Acceptance Criteria
 
-- [ ] A future Go implementer can build route handlers without reading Python route files for basic
+- [x] A future Go implementer can build route handlers without reading Python route files for basic
       request/response shapes.
-- [ ] The contract inventory clearly identifies which behavior is strict compatibility and which
+- [x] The contract inventory clearly identifies which behavior is strict compatibility and which
       behavior is best-effort compatibility.
-- [ ] No active application code is changed in this phase.
+- [x] No active application code is changed in this phase.
 
 ## Commit Boundary
 

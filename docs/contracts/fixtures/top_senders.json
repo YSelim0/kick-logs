@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "sender_id": 101,
+      "kick_user_id": 9001,
+      "username": "example_user",
+      "slug": "example-user",
+      "profile_image_url": "https://files.kick.com/images/user/example-user.png",
+      "message_count": 84,
+      "first_message_at": "2026-05-01T10:00:00Z",
+      "latest_message_at": "2026-05-15T19:25:30Z"
+    }
+  ]
+}

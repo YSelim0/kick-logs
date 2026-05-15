@@ -1,0 +1,80 @@
+{
+  "authentication_required": {
+    "status": 401,
+    "body": {
+      "detail": "Authentication required."
+    }
+  },
+  "invalid_session": {
+    "status": 401,
+    "body": {
+      "detail": "Invalid session."
+    }
+  },
+  "invalid_credentials": {
+    "status": 401,
+    "body": {
+      "detail": "Invalid credentials."
+    }
+  },
+  "super_admin_required": {
+    "status": 403,
+    "body": {
+      "detail": "Super admin role required."
+    }
+  },
+  "duplicate_user_email": {
+    "status": 409,
+    "body": {
+      "detail": "User email already exists."
+    }
+  },
+  "channel_not_found": {
+    "status": 404,
+    "body": {
+      "detail": "Channel not found."
+    }
+  },
+  "sender_profile_not_found": {
+    "status": 404,
+    "body": {
+      "detail": "Sender profile not found."
+    }
+  },
+  "channel_profile_not_found": {
+    "status": 404,
+    "body": {
+      "detail": "Channel profile not found."
+    }
+  },
+  "kick_channel_unresolved": {
+    "status": 422,
+    "body": {
+      "detail": "Kick channel could not be resolved."
+    }
+  },
+  "invalid_cursor": {
+    "status": 422,
+    "body": {
+      "detail": "Invalid cursor."
+    }
+  },
+  "invalid_search_range": {
+    "status": 422,
+    "body": {
+      "detail": "Search start datetime must be before end datetime."
+    }
+  },
+  "invalid_analytics_range": {
+    "status": 422,
+    "body": {
+      "detail": "Analytics start datetime must be before end datetime."
+    }
+  },
+  "keep_forever_cleanup": {
+    "status": 422,
+    "body": {
+      "detail": "Retention is set to keep forever."
+    }
+  }
+}

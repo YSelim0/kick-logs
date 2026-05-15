@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "channel_id": 10,
+      "slug": "hype",
+      "display_name": "Hype",
+      "profile_image_url": "https://files.kick.com/images/channel/hype-profile.png",
+      "banner_image_url": "https://files.kick.com/images/channel/hype-banner.png",
+      "message_count": 720,
+      "first_message_at": "2026-05-01T10:00:00Z",
+      "latest_message_at": "2026-05-15T19:25:30Z"
+    }
+  ]
+}

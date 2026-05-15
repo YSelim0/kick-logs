@@ -1,0 +1,41 @@
+{
+  "counts": {
+    "channels": 3,
+    "enabled_channels": 2,
+    "senders": 240,
+    "messages": 1250,
+    "raw_events": 1280
+  },
+  "raw_event_status_counts": {
+    "pending": 2,
+    "processing": 1,
+    "processed": 1274,
+    "failed": 3
+  },
+  "storage": {
+    "database_bytes": 104857600,
+    "tables": [
+      {
+        "table_name": "chat_messages",
+        "total_bytes": 73400320
+      },
+      {
+        "table_name": "raw_kick_events",
+        "total_bytes": 31457280
+      }
+    ]
+  },
+  "timestamps": {
+    "latest_message_at": "2026-05-15T19:25:30Z",
+    "latest_raw_event_received_at": "2026-05-15T19:25:31Z",
+    "latest_raw_event_processed_at": "2026-05-15T19:25:32Z",
+    "oldest_pending_raw_event_received_at": "2026-05-15T19:20:00Z"
+  },
+  "listener": {
+    "service_name": "listener",
+    "last_seen_at": "2026-05-15T19:25:35Z",
+    "is_fresh": true,
+    "stale_after_seconds": 45,
+    "seconds_since_last_seen": 3
+  }
+}
