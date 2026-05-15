@@ -4,6 +4,20 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-15
 
+- Completed Post-MVP Feature 8 final smoke and documentation:
+  - hardened three backend assertions that were too brittle against a live local database with
+    existing raw events/messages
+  - verified backend checks: `python -m uv run pytest` reported 124 passed,
+    `python -m uv run ruff check .` passed, and `python -m uv run ruff format --check .` passed
+  - verified frontend checks: `pnpm --filter @kick-logs/web test` reported 16 files and 66 tests
+    passed, plus typecheck, lint, build, and `pnpm format:check`
+  - verified `docker compose up --build -d` starts `postgres`, `api`, `listener`, and `web`
+  - smoke checked public landing/search/login/admin shell pages, public messages/search/export,
+    analytics, user profile, channel profile, authenticated operations, authenticated data
+    management summary, and data cleanup dry-run
+  - verified unauthenticated admin APIs return 401 while public routes remain accessible
+  - updated README project status and archived MVP docs so historical plans are clearly marked
+  - `docs/tasks/post_mvp_08_final_smoke.md` has all checkboxes closed
 - Completed Post-MVP Feature 7 data management:
   - README now documents admin data-management usage, retention behavior, guarded cleanup, and
     Docker Compose PostgreSQL backup/restore commands

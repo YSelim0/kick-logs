@@ -4,6 +4,26 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Completed Post-MVP Feature 8 final smoke and documentation:
+  - backend tests/Ruff checks passed after hardening live-data-sensitive assertions
+  - frontend tests/typecheck/lint/build and `pnpm format:check` passed
+  - `docker compose up --build -d` starts `postgres`, `api`, `listener`, and `web`
+  - live smoke passed for public landing/search/profile/analytics/export routes, authenticated
+    operations/data-management APIs, and unauthenticated admin API rejection
+  - README project status and archived MVP docs were updated for the completed post-MVP state
+  - `docs/tasks/post_mvp_08_final_smoke.md` is fully checked off
+- Verification:
+  - `python -m uv run pytest`: 124 passed
+  - `python -m uv run ruff check .`: passed
+  - `python -m uv run ruff format --check .`: passed
+  - `pnpm --filter @kick-logs/web test`: 16 files, 66 tests passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `pnpm format:check`: passed
+
+## Previous
+
 - Completed Post-MVP Feature 7 data management:
   - README documents data-management usage, retention behavior, guarded cleanup, and Docker
     Compose PostgreSQL backup/restore
@@ -18,8 +38,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `pnpm --filter @kick-logs/web lint`: passed
   - `pnpm --filter @kick-logs/web build`: passed
   - `pnpm format:check`: passed
-
-## Previous
 
 - Implemented the frontend for Post-MVP Feature 7 data management:
   - `/admin` now includes `DataManagementPanel` below operations status

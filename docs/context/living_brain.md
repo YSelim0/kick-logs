@@ -130,6 +130,15 @@ This file is the active project memory. Keep it updated whenever project behavio
   - `docs/tasks/post_mvp_07_data_management.md` has all checkboxes closed
   - final verification passed with backend pytest/Ruff, web test/typecheck/lint/build, and
     `pnpm format:check`
+- Post-MVP Feature 8 final smoke and documentation is complete:
+  - backend assertions that were brittle against live local DB data were hardened
+  - full backend checks passed with 124 tests plus Ruff lint/format checks
+  - full frontend checks passed with 66 tests plus typecheck, lint, build, and Prettier check
+  - Docker Compose starts `postgres`, `api`, `listener`, and `web`
+  - live smoke passed for public landing/search/profile/analytics/export routes, authenticated
+    operations/data-management APIs, data cleanup dry-run, and unauthenticated admin API rejection
+  - archived MVP docs are explicitly marked historical
+  - `docs/tasks/post_mvp_08_final_smoke.md` has all checkboxes closed
 - Post-MVP Feature 2 planning now includes clickable message links:
   - URLs inside `/search` message content should render as safe clickable anchors
   - link rendering must preserve inline emote placement and matched-text highlighting

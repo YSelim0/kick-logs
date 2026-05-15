@@ -523,9 +523,11 @@ Good contribution areas:
 
 ## Project Status
 
-Kick Logs is an MVP. It is usable locally through Docker Compose, but the Kick
-integration should be considered best-effort because it depends on undocumented
-Kick web behavior.
+Kick Logs is a self-hosted MVP with its first post-MVP feature set completed:
+admin operations, search improvements/export, analytics-backed landing content,
+user/channel profiles, and guarded data management. It is usable locally through
+Docker Compose, but the Kick integration should be considered best-effort
+because it depends on undocumented Kick web behavior.
 
 Current quality gates used during development:
 

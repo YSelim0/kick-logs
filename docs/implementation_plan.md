@@ -4,6 +4,9 @@ This is the active implementation plan for feature development after the MVP.
 The original MVP plan is archived at `docs/archive/mvp_implementation_plan.md`, with
 its old phase task files under `docs/archive/tasks/`.
 
+Status: Features 1 through 8 have been completed locally. Future post-MVP work should be planned
+through new issues or new feature-scoped task files before implementation.
+
 ## Execution Rules
 
 - Work features in order unless the user explicitly reprioritizes.

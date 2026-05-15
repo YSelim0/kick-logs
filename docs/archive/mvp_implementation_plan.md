@@ -1,5 +1,8 @@
 # Kick Logs Implementation Plan
 
+> Historical archive: this was the completed MVP implementation plan. Active planning now lives
+> in `docs/implementation_plan.md` and `docs/tasks/post_mvp_*.md`.
+
 This document is the implementation source of truth. Each phase is sequential and has a matching task file under `docs/tasks/`.
 
 ## Execution Rules
