@@ -4,6 +4,21 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-15
 
+- Implemented the frontend for Post-MVP Feature 7 data management:
+  - added typed data-management API wrappers
+  - added `/admin` `DataManagementPanel` below operations status
+  - panel shows database/table sizes and current retention settings
+  - retention controls support keep forever, 30 days, and 90 days for messages/raw events
+  - cleanup flow requires dry-run preview before confirmation
+  - delete action is disabled until exact backend confirmation text is typed
+  - success state reports deleted message/raw-event counts
+  - added frontend tests for settings display, dry-run preview, blocked deletion without
+    confirmation, confirmed deletion, and API errors
+  - verified
+    `pnpm --filter @kick-logs/web test -- data-management-panel.test.tsx admin-dashboard.test.tsx`:
+    2 files, 8 tests passed
+  - verified `pnpm --filter @kick-logs/web typecheck`
+  - verified `pnpm --filter @kick-logs/web lint`
 - Implemented the backend foundation for Post-MVP Feature 7 data management:
   - added `data_retention_settings` with singleton retention settings
   - default message/raw-event retention is `null`, meaning keep forever

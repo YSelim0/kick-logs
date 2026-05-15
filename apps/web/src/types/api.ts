@@ -89,6 +89,79 @@ export type OperationsSummary = {
   listener: ListenerHeartbeat;
 };
 
+export type RetentionDays = 30 | 90 | null;
+
+export type RetentionSettings = {
+  message_retention_days: RetentionDays;
+  raw_event_retention_days: RetentionDays;
+  updated_at: string | null;
+};
+
+export type UpdateRetentionSettingsRequest = {
+  message_retention_days: RetentionDays;
+  raw_event_retention_days: RetentionDays;
+};
+
+export type DataManagementCounts = {
+  channels: number;
+  senders: number;
+  messages: number;
+  raw_events: number;
+};
+
+export type DataManagementTable = {
+  table_name: string;
+  total_bytes: number;
+  row_count: number;
+};
+
+export type DataManagementSummary = {
+  counts: DataManagementCounts;
+  database_bytes: number;
+  tables: DataManagementTable[];
+  retention_settings: RetentionSettings;
+};
+
+export type DataCleanupTarget = "old_messages" | "old_raw_events" | "channel" | "sender";
+
+export type DataCleanupRequest = {
+  target: DataCleanupTarget;
+  channel_slug?: string | null;
+  sender?: string | null;
+};
+
+export type DataCleanupConfirmRequest = DataCleanupRequest & {
+  confirmation_text: string;
+};
+
+export type DataCleanupCounts = {
+  messages: number;
+  raw_events: number;
+  total: number;
+};
+
+export type DataCleanupPreview = {
+  target: DataCleanupTarget;
+  affected: DataCleanupCounts;
+  confirmation_text: string;
+  can_execute: boolean;
+  cutoff_at: string | null;
+  channel_slug: string | null;
+  sender: string | null;
+  retention_days: number | null;
+  reason: string | null;
+};
+
+export type DataCleanupResult = {
+  target: DataCleanupTarget;
+  deleted: DataCleanupCounts;
+  confirmation_text: string;
+  cutoff_at: string | null;
+  channel_slug: string | null;
+  sender: string | null;
+  retention_days: number | null;
+};
+
 export type AnalyticsOverview = {
   total_messages: number;
   total_senders: number;

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { logout } from "@/features/auth/api";
 import { useCurrentUser } from "@/features/auth/use-auth";
 import { ChannelAdmin } from "@/features/channels/channel-admin";
+import { DataManagementPanel } from "@/features/data-management/data-management-panel";
 import { OperationsDashboard } from "@/features/operations/operations-dashboard";
 import { UserAdmin } from "@/features/users/user-admin";
 
@@ -99,6 +100,7 @@ export function AdminDashboard() {
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="flex flex-col gap-6">
             <OperationsDashboard />
+            <DataManagementPanel />
             <ChannelAdmin />
             {user.role === "super_admin" ? <UserAdmin /> : null}
           </div>

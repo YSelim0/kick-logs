@@ -26,13 +26,13 @@ analytics/profile pages here.
 
 ## Frontend Tasks
 
-- [ ] Add admin data management section.
-- [ ] Show database/table sizes and current retention settings.
-- [ ] Add retention controls for forever, 30 days, and 90 days.
-- [ ] Add dry-run preview before cleanup.
-- [ ] Add explicit confirmation UI for destructive cleanup.
-- [ ] Add success/error states that clearly show what was deleted.
-- [ ] Add frontend tests for settings display, dry-run preview, blocked deletion without
+- [x] Add admin data management section.
+- [x] Show database/table sizes and current retention settings.
+- [x] Add retention controls for forever, 30 days, and 90 days.
+- [x] Add dry-run preview before cleanup.
+- [x] Add explicit confirmation UI for destructive cleanup.
+- [x] Add success/error states that clearly show what was deleted.
+- [x] Add frontend tests for settings display, dry-run preview, blocked deletion without
       confirmation, confirmed deletion, and API errors.
 
 ## Docs And Acceptance

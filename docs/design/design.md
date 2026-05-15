@@ -327,6 +327,12 @@ Implemented admin layout:
   raw event count, failed raw events, pending raw events, and last ingest time.
 - Operations dashboard includes a manual refresh action and calm warning/error states for stale
   listener heartbeat, failed raw events, and API failures.
+- Data management appears as its own admin section below operations status, separate from channel
+  and user management.
+- Data management shows database/table sizes, retention settings, dry-run cleanup preview,
+  explicit confirmation input, and success/error states.
+- Destructive cleanup must never run from a single click. The UI must first show a dry-run preview
+  and require the admin to type the exact confirmation text returned by the backend.
 
 Default super admin credentials for local MVP:
 

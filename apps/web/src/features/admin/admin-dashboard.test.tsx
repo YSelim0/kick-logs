@@ -39,6 +39,10 @@ vi.mock("@/features/channels/channel-admin", () => ({
   ChannelAdmin: () => <section>Channel admin</section>
 }));
 
+vi.mock("@/features/data-management/data-management-panel", () => ({
+  DataManagementPanel: () => <section>Data management</section>
+}));
+
 vi.mock("@/features/operations/operations-dashboard", () => ({
   OperationsDashboard: () => <section>Operations dashboard</section>
 }));
@@ -89,6 +93,7 @@ describe("AdminDashboard", () => {
     expect(screen.getAllByText("admin@kicklogs.local")).toHaveLength(2);
     expect(screen.getByRole("link", { name: /kick logs/i })).toHaveAttribute("href", "/");
     expect(screen.getByText("Operations dashboard")).toBeInTheDocument();
+    expect(screen.getByText("Data management")).toBeInTheDocument();
     expect(screen.getByText("Admin users")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /çıkış/i }));
 

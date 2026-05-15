@@ -536,6 +536,9 @@ apps/web/src/
     operations/
       api.ts
       operations-dashboard.tsx
+    data-management/
+      api.ts
+      data-management-panel.tsx
     analytics/
       api.ts
     landing/

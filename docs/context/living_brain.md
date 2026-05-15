@@ -116,6 +116,14 @@ This file is the active project memory. Keep it updated whenever project behavio
     specific channel, or a specific sender
   - destructive cleanup requires exact confirmation text from the preview response
   - backend target tests and Ruff checks pass
+- Post-MVP Feature 7 admin data management UI is implemented:
+  - `/admin` now mounts `DataManagementPanel` below `OperationsDashboard`
+  - the panel shows database/table sizes and current retention settings
+  - admins can set message/raw-event retention to keep forever, 30 days, or 90 days
+  - cleanup flow requires dry-run preview before the destructive confirm UI appears
+  - delete button stays disabled until the exact backend confirmation text is typed
+  - success/error states show deleted message/raw-event counts or API failures
+  - frontend target tests, typecheck, and lint pass
 - Post-MVP Feature 2 planning now includes clickable message links:
   - URLs inside `/search` message content should render as safe clickable anchors
   - link rendering must preserve inline emote placement and matched-text highlighting

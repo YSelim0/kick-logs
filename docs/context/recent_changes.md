@@ -4,6 +4,19 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Implemented the frontend for Post-MVP Feature 7 data management:
+  - `/admin` now includes `DataManagementPanel` below operations status
+  - panel shows database/table sizes and retention settings
+  - retention controls support keep forever, 30 days, and 90 days
+  - cleanup requires dry-run preview and exact confirmation text before delete
+  - success/error states show deleted rows or API failures
+- Verification:
+  - targeted frontend data-management/admin tests: 8 passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+
+## Previous
+
 - Implemented the backend foundation for Post-MVP Feature 7 data management:
   - `data_retention_settings` persists message/raw-event retention windows
   - retention defaults to keep forever with `null` values
@@ -14,8 +27,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
 - Verification:
   - targeted backend data-management/migration/metadata tests: 13 passed
   - `python -m uv run ruff check .`: passed
-
-## Previous
 
 - Completed Post-MVP Feature 6 channel/publisher profiles:
   - README now documents `/channels/[slug]` and `GET /channels/{slug}/analytics`
