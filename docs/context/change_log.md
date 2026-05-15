@@ -4,6 +4,13 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-15
 
+- Started the Go + ClickHouse rewrite planning track:
+  - reorganized historical docs into `docs/archive/mvp/` and `docs/archive/post_mvp/`
+  - archived completed post-MVP task files so `docs/tasks/` can hold only active rewrite tasks
+  - replaced `docs/implementation_plan.md` with the Go + ClickHouse rewrite implementation plan
+  - documented the storage decision: ClickHouse for messages/raw events/analytics and SQLite for
+    auth/admin/control-plane state
+  - added active phase task files from contract inventory through cutover and smoke testing
 - Fixed Docker Compose backend env passthrough for release readiness:
   - API service now receives `DATABASE_ECHO`, `JWT_ALGORITHM`, `JWT_EXPIRES_MINUTES`,
     `JWT_COOKIE_SECURE`, `JWT_COOKIE_SAMESITE`, and `SEED_SUPER_ADMIN_ON_STARTUP` from `.env`

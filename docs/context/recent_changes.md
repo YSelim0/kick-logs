@@ -4,13 +4,20 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Started the Go + ClickHouse rewrite planning track:
+  - archived completed MVP docs under `docs/archive/mvp/`
+  - archived completed post-MVP docs under `docs/archive/post_mvp/`
+  - replaced the active implementation plan with the Go API/listener rewrite plan
+  - added phase task files for contract inventory, Go workspace, storage, auth/admin, search,
+    listener, analytics, migration, and cutover
+
+## Previous
+
 - Fixed Docker Compose backend env passthrough for release readiness:
   - API now receives `.env` overrides for database echo, JWT algorithm/expiry/cookie settings,
     and super-admin seed behavior
   - listener now receives `DATABASE_ECHO`
   - verified with `docker compose config`
-
-## Previous
 
 - Completed Post-MVP Feature 8 final smoke and documentation:
   - backend tests/Ruff checks passed after hardening live-data-sensitive assertions
