@@ -4,6 +4,11 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-15
 
+- Fixed Docker Compose backend env passthrough for release readiness:
+  - API service now receives `DATABASE_ECHO`, `JWT_ALGORITHM`, `JWT_EXPIRES_MINUTES`,
+    `JWT_COOKIE_SECURE`, `JWT_COOKIE_SAMESITE`, and `SEED_SUPER_ADMIN_ON_STARTUP` from `.env`
+  - listener service now receives `DATABASE_ECHO`
+  - verified `docker compose config` renders the expected environment variables
 - Completed Post-MVP Feature 8 final smoke and documentation:
   - hardened three backend assertions that were too brittle against a live local database with
     existing raw events/messages

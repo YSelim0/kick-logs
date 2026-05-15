@@ -4,6 +4,14 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Fixed Docker Compose backend env passthrough for release readiness:
+  - API now receives `.env` overrides for database echo, JWT algorithm/expiry/cookie settings,
+    and super-admin seed behavior
+  - listener now receives `DATABASE_ECHO`
+  - verified with `docker compose config`
+
+## Previous
+
 - Completed Post-MVP Feature 8 final smoke and documentation:
   - backend tests/Ruff checks passed after hardening live-data-sensitive assertions
   - frontend tests/typecheck/lint/build and `pnpm format:check` passed
@@ -21,8 +29,6 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `pnpm --filter @kick-logs/web lint`: passed
   - `pnpm --filter @kick-logs/web build`: passed
   - `pnpm format:check`: passed
-
-## Previous
 
 - Completed Post-MVP Feature 7 data management:
   - README documents data-management usage, retention behavior, guarded cleanup, and Docker
