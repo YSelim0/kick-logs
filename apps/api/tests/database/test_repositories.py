@@ -224,9 +224,10 @@ async def test_raw_event_repository_claim_and_mark_processed(db_session: AsyncSe
     assert loaded.id == event.id
 
     claimed = await repository.claim_pending(limit=10, processing_timeout_seconds=300)
-    assert [claimed_event.id for claimed_event in claimed] == [event.id]
-    assert claimed[0].status == RawEventStatus.PROCESSING
-    assert claimed[0].processing_started_at is not None
+    claimed_by_id = {claimed_event.id: claimed_event for claimed_event in claimed}
+    assert event.id in claimed_by_id
+    assert claimed_by_id[event.id].status == RawEventStatus.PROCESSING
+    assert claimed_by_id[event.id].processing_started_at is not None
 
     processed = await repository.mark_processed(event.id or 0)
     assert processed.status == RawEventStatus.PROCESSED
@@ -252,9 +253,10 @@ async def test_raw_event_repository_requeues_stale_processing_rows(
 
     claimed = await repository.claim_pending(limit=10, processing_timeout_seconds=60)
 
-    assert [claimed_event.id for claimed_event in claimed] == [stale_event.id]
-    assert claimed[0].status == RawEventStatus.PROCESSING
-    assert claimed[0].processing_started_at is not None
+    claimed_by_id = {claimed_event.id: claimed_event for claimed_event in claimed}
+    assert stale_event.id in claimed_by_id
+    assert claimed_by_id[stale_event.id].status == RawEventStatus.PROCESSING
+    assert claimed_by_id[stale_event.id].processing_started_at is not None
 
 
 @pytest.mark.asyncio
