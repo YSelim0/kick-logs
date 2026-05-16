@@ -1,0 +1,104 @@
+name: Go CI
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:24.8-alpine
+        env:
+          CLICKHOUSE_DB: kick_logs
+          CLICKHOUSE_USER: kick_logs
+          CLICKHOUSE_PASSWORD: kick_logs
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+        ports:
+          - 8123:8123
+          - 9000:9000
+        options: >-
+          --health-cmd "clickhouse-client --user kick_logs --password kick_logs --query 'SELECT 1'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    defaults:
+      run:
+        working-directory: apps/api-go
+
+    env:
+      APP_NAME: Kick Logs
+      APP_ENV: test
+      LOG_LEVEL: INFO
+      API_HOST: 0.0.0.0
+      API_PORT: "8000"
+      BACKEND_CORS_ORIGINS: http://localhost:3000
+      MESSAGE_EXPORT_MAX_ROWS: "1000"
+      JWT_SECRET_KEY: github-actions-test-secret-key-change-me
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRES_MINUTES: "10080"
+      JWT_COOKIE_NAME: kick_logs_session
+      JWT_COOKIE_SECURE: "false"
+      JWT_COOKIE_SAMESITE: lax
+      SEED_SUPER_ADMIN_ON_STARTUP: "false"
+      DEFAULT_SUPER_ADMIN_EMAIL: admin@kicklogs.local
+      DEFAULT_SUPER_ADMIN_PASSWORD: admin123
+      KICK_PUSHER_URL: wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0-rc2&flash=false
+      LISTENER_RECONNECT_INITIAL_DELAY_SECONDS: "1"
+      LISTENER_RECONNECT_MAX_DELAY_SECONDS: "30"
+      LISTENER_RECONNECT_MULTIPLIER: "2"
+      LISTENER_WORKER_COUNT: "4"
+      LISTENER_RAW_EVENT_BATCH_SIZE: "100"
+      LISTENER_RAW_EVENT_PROCESSING_TIMEOUT_SECONDS: "300"
+      LISTENER_RAW_EVENT_MAX_ATTEMPTS: "5"
+      LISTENER_RAW_EVENT_WORKER_IDLE_DELAY_SECONDS: "0.25"
+      LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS: "60"
+      LISTENER_HEARTBEAT_INTERVAL_SECONDS: "15"
+      LISTENER_HEARTBEAT_STALE_AFTER_SECONDS: "45"
+      SQLITE_PATH: ${{ runner.temp }}/kick-logs-ci.sqlite3
+      CLICKHOUSE_ADDR: 127.0.0.1:9000
+      CLICKHOUSE_DATABASE: kick_logs
+      CLICKHOUSE_USERNAME: kick_logs
+      CLICKHOUSE_PASSWORD: kick_logs
+      CLICKHOUSE_DEBUG: "false"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/api-go/go.mod
+          cache-dependency-path: apps/api-go/go.sum
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Check Go formatting
+        run: test -z "$(gofmt -l .)"
+
+      - name: Run go test
+        run: go test ./...
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run ClickHouse integration test
+        env:
+          KICK_LOGS_RUN_CLICKHOUSE_TESTS: "1"
+        run: go test ./internal/infra/clickhouse -run TestClickHouseMigrationsAndRepositories -count=1 -v
+
+      - name: Smoke SQLite migrations
+        run: go run ./cmd/migrate -target=sqlite
+
+      - name: Smoke ClickHouse migrations
+        run: go run ./cmd/migrate -target=clickhouse

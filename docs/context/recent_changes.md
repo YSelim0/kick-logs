@@ -4,6 +4,26 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Finalized Go + ClickHouse cutover cleanup:
+  - archived the completed Go rewrite implementation plan, task files, and API contract inventory
+    under `docs/archive/go_rewrite/`
+  - removed the Python/FastAPI application from `apps/api`
+  - removed PostgreSQL and Python runtime services/volumes from Docker Compose
+  - kept `migrate-go` as the legacy PostgreSQL import tool under the `tools` profile
+  - replaced Python CI with Go CI that runs on every push and pull request
+  - kept code-style CI running on every push and pull request
+  - updated README, architecture, project plan, context, and active implementation plan to make Go
+    - ClickHouse + SQLite the only current runtime
+  - local migration into fresh ClickHouse/SQLite succeeded with 2 admin users, 7 followed
+    channels, 8570 sender profiles, 1 retention setting, 1 heartbeat, 123790 chat messages,
+    121664 raw events, and 121664 raw-event attempts
+  - legacy PostgreSQL volume was intentionally left untouched
+  - verification: `go test ./...`, `go vet ./...`, live ClickHouse repository test,
+    `pnpm format:check`, `git diff --check`, `docker compose config --services`,
+    `docker compose --profile tools config --services`, `docker compose up --build -d
+--remove-orphans`, API health, latest-message search, default admin login, and admin channel
+    list smoke checks
+
 - Completed Go rewrite Phase 9 cutover:
   - default Compose services now use Go `api`, Go `listener`, `clickhouse`, and `web`
   - Python/FastAPI/PostgreSQL remains available through the `python-reference` profile as a

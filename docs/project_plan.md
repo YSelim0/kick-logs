@@ -14,9 +14,6 @@ The default runtime is Go + ClickHouse + SQLite:
   and migration metadata.
 - Next.js serves the public/search/admin web UI.
 
-The previous Python/FastAPI/PostgreSQL backend remains available only as a reference/rollback
-runtime through the `python-reference` Docker Compose profile.
-
 Default local startup:
 
 ```powershell
@@ -45,13 +42,11 @@ docker compose up --build -d
 
 ## Runtime Architecture
 
-- `apps/api-go`: default Go backend, listener, migrator, ClickHouse/SQLite repositories.
+- `apps/api-go`: Go backend, listener, migrator, ClickHouse/SQLite repositories.
 - `apps/web`: Next.js frontend using pnpm, Tailwind, shadcn/ui, and lucide-react.
-- `apps/api`: archived/reference Python backend and listener for contract comparison or rollback.
 - `clickhouse`: default data-plane database.
 - `api_go_data`: Docker volume that stores SQLite control-plane data.
 - `clickhouse_data`: Docker volume that stores ClickHouse data.
-- `postgres`: available only in the `python-reference` profile.
 
 Detailed structure lives in `docs/architecture.md`.
 
@@ -182,25 +177,22 @@ Cleanup requires a dry-run preview and exact confirmation text before execution.
 uses mutations; logical rows are removed before the API returns, while physical disk reclamation may
 lag behind background merges.
 
-## Migration And Rollback
+## Legacy Data Migration
 
-PostgreSQL migration uses `migrate-go`:
+PostgreSQL migration uses `migrate-go` when upgrading from an older deployment. PostgreSQL is not a
+current runtime service; expose or restore the old database separately and provide
+`POSTGRES_SOURCE_DSN`.
 
 ```powershell
-docker compose --profile python-reference up -d postgres
 docker compose up -d clickhouse
+$env:POSTGRES_SOURCE_DSN = "postgresql://kick_logs:kick_logs@host.docker.internal:5432/kick_logs"
 docker compose --profile tools run --rm migrate-go -target=data -dry-run
 docker compose --profile tools run --rm migrate-go -target=data -execute
 docker compose --profile tools run --rm migrate-go -target=data -validation-only
 ```
 
-Rollback/reference runtime:
-
-```powershell
-docker compose --profile python-reference up --build -d postgres api-python listener-python
-```
-
-PostgreSQL source data and volumes are not deleted by the cutover plan.
+The migrator is read-only against PostgreSQL. PostgreSQL source data and dumps are not deleted by
+the migration plan.
 
 ## Test Plan
 
@@ -213,7 +205,7 @@ Backend Go:
 - listener parsing and processing tests
 - analytics/profile tests
 - data-management tests
-- PostgreSQL migration tests
+- legacy PostgreSQL migration tests
 - ClickHouse repository integration tests when Docker is available
 
 Frontend:
@@ -240,6 +232,6 @@ Docker:
 - Kick web endpoints and Pusher channels are undocumented and may change.
 - Once a websocket event reaches the listener, raw payload persistence must happen before heavy
   normalization.
-- Python/PostgreSQL cleanup is a separate future decision.
+- Historical Python/PostgreSQL docs live under `docs/archive/`.
 - User manually pushes commits.
 - Keep implementation steps commit-sized.

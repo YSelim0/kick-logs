@@ -4,6 +4,42 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-16
 
+- Finalized Go + ClickHouse runtime cleanup:
+  - archived completed Go rewrite documents under `docs/archive/go_rewrite/`, including phase
+    tasks and the API contract inventory
+  - replaced the active implementation plan with a no-active-plan marker
+  - removed the Python/FastAPI application from `apps/api`
+  - removed PostgreSQL and Python runtime services/volumes from Docker Compose
+  - retained `migrate-go` as a `tools` profile legacy PostgreSQL import command that requires an
+    explicit `POSTGRES_SOURCE_DSN`
+  - removed Python-specific Docker/Git ignore rules that only existed for the deleted app
+  - replaced Python GitHub Actions validation with Go CI on every push and pull request
+  - changed code-style GitHub Actions validation to run on every push and pull request
+  - updated README, architecture, project plan, living context, decisions, and recent handoff docs
+    for Go + ClickHouse + SQLite as the only current runtime
+  - migrated local legacy data into fresh ClickHouse/SQLite targets:
+    - `admin_users`: 2
+    - `followed_channels`: 7
+    - `sender_profiles`: 8570
+    - `retention_settings`: 1
+    - `worker_heartbeats`: 1
+    - `chat_messages`: 123790
+    - `raw_kick_events`: 121664
+    - `raw_event_attempts`: 121664
+  - preserved the legacy PostgreSQL volume intentionally
+  - verified `go test ./...`
+  - verified `go vet ./...`
+  - verified live ClickHouse integration test with
+    `KICK_LOGS_RUN_CLICKHOUSE_TESTS=1 go test ./internal/infra/clickhouse -run TestClickHouseMigrationsAndRepositories -count=1 -v`
+  - verified `pnpm format:check`
+  - verified `git diff --check`
+  - verified `docker compose config --services`
+  - verified `docker compose --profile tools config --services`
+  - verified `docker compose up --build -d --remove-orphans` starts `clickhouse`, Go `api`, Go
+    `listener`, and `web`
+  - smoke verified `GET /health`, `GET /messages?limit=1`, default admin login, and
+    `GET /admin/channels`
+
 - Completed Go rewrite Phase 9 cutover:
   - added Go admin data-management API parity before switching the default runtime
   - implemented `GET /admin/data-management/summary`,

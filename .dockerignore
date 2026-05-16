@@ -8,11 +8,6 @@ docs
 **/coverage
 **/.turbo
 
-apps/api/.venv
-apps/api/.pytest_cache
-apps/api/.ruff_cache
-apps/api/__pycache__
-
 .env
 .env.*
 !.env.example

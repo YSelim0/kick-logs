@@ -159,11 +159,20 @@
   the Go binaries from `apps/api-go`.
 - ClickHouse is part of the default Compose runtime; PostgreSQL is not.
 - SQLite control-plane data is stored in the `api_go_data` Docker volume.
-- Python/FastAPI/PostgreSQL stays available behind the `python-reference` profile as an explicit
-  reference and rollback path.
+- During cutover, Python/FastAPI/PostgreSQL stayed temporarily behind an explicit reference profile
+  for rollback.
 - `migrate-go` is a `tools` profile service, not a default runtime service.
 - PostgreSQL volumes must not be removed automatically during cutover.
-- Python source remains in the repository until a separate explicit cleanup decision is made.
+- Python source remained in the repository until the final cleanup decision.
 - SQLite sender profile ingestion must tolerate concurrent live messages from the same sender; Go
   listener upsert uses `ON CONFLICT` for both `kick_user_id` and `slug` instead of pre-read then
   insert.
+- Superseding the earlier cleanup decision: Python/FastAPI source is now removed from the repo.
+- PostgreSQL is no longer a Compose service. Legacy PostgreSQL data can be imported only by running
+  `migrate-go` with an explicit external/restored `POSTGRES_SOURCE_DSN`.
+- The old PostgreSQL Docker volume is not removed automatically and was intentionally preserved
+  during cleanup.
+- Go CI is the backend validation source of truth. It runs on every push and pull request, along
+  with the repository code-style workflow.
+- Completed Go rewrite plan, task files, and API contract inventory are historical context under
+  `docs/archive/go_rewrite/`.

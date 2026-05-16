@@ -10,10 +10,6 @@ Kick Logs is a self-hosted Kick chat logging application. The default runtime is
 - SQLite for admin/control-plane state
 - Next.js web UI
 
-The previous Python/FastAPI/PostgreSQL backend remains in the repository as a reference runtime and
-rollback path behind the Docker Compose `python-reference` profile. It is not the default local
-startup path.
-
 ## Runtime Services
 
 Default `docker compose up --build -d` services:
@@ -25,17 +21,13 @@ listener
 web
 ```
 
-Reference/tool services:
+Tool services:
 
 ```text
-postgres          # python-reference profile
-api-python        # python-reference profile
-listener-python   # python-reference profile
-migrate-go        # tools profile
+migrate-go # tools profile
 ```
 
-The default API is exposed on `http://localhost:8000`. The reference Python API uses
-`PYTHON_API_PORT`, defaulting to `8002`, so it does not conflict with the Go API.
+The API is exposed on `http://localhost:8000`.
 
 ## Monorepo Layout
 
@@ -43,7 +35,6 @@ The default API is exposed on `http://localhost:8000`. The reference Python API 
 kick-logs/
   apps/
     api-go/       # default Go backend/listener/migrator
-    api/          # Python reference backend/listener
     web/          # Next.js frontend
   docs/
   compose.yaml
@@ -230,11 +221,13 @@ merges.
 
 ## Data Migration
 
-`migrate-go` owns PostgreSQL to SQLite/ClickHouse migration:
+`migrate-go` owns legacy PostgreSQL to SQLite/ClickHouse migration. PostgreSQL is not part of the
+current Compose runtime; restore or expose the old database separately and pass
+`POSTGRES_SOURCE_DSN` when running the data migrator:
 
 ```powershell
-docker compose --profile python-reference up -d postgres
 docker compose up -d clickhouse
+$env:POSTGRES_SOURCE_DSN = "postgresql://kick_logs:kick_logs@host.docker.internal:5432/kick_logs"
 docker compose --profile tools run --rm migrate-go -target=data -dry-run
 docker compose --profile tools run --rm migrate-go -target=data -execute
 docker compose --profile tools run --rm migrate-go -target=data -validation-only
@@ -265,17 +258,6 @@ Frontend rules:
 - `/users/[slug]` and `/channels/[slug]` are public profile/analytics pages.
 - `lib/api-client.ts` owns base URL, credentials, and response handling.
 - UI work must follow `docs/design/design.md`.
-
-## Python Reference Runtime
-
-The Python backend is intentionally retained for now:
-
-```powershell
-docker compose --profile python-reference up --build -d postgres api-python listener-python
-```
-
-Use it only for contract comparison, rollback, or pre-cutover PostgreSQL data access. Do not add new
-product features to the Python runtime unless the active plan explicitly calls for it.
 
 ## Verification
 

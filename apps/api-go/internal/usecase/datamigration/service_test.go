@@ -344,6 +344,20 @@ func (dest *fakeDataDestination) UpsertChatMessage(_ context.Context, message do
 	return true, nil
 }
 
+func (dest *fakeDataDestination) UpsertChatMessages(ctx context.Context, messages []domain.ChatMessage) (int64, error) {
+	var inserted int64
+	for _, message := range messages {
+		ok, err := dest.UpsertChatMessage(ctx, message)
+		if err != nil {
+			return inserted, err
+		}
+		if ok {
+			inserted++
+		}
+	}
+	return inserted, nil
+}
+
 func (dest *fakeDataDestination) UpsertRawEvent(_ context.Context, event domain.RawKickEvent) (bool, error) {
 	if _, ok := dest.rawEvents[event.ID]; ok {
 		return false, nil
@@ -352,12 +366,40 @@ func (dest *fakeDataDestination) UpsertRawEvent(_ context.Context, event domain.
 	return true, nil
 }
 
+func (dest *fakeDataDestination) UpsertRawEvents(ctx context.Context, events []domain.RawKickEvent) (int64, error) {
+	var inserted int64
+	for _, event := range events {
+		ok, err := dest.UpsertRawEvent(ctx, event)
+		if err != nil {
+			return inserted, err
+		}
+		if ok {
+			inserted++
+		}
+	}
+	return inserted, nil
+}
+
 func (dest *fakeDataDestination) UpsertRawEventAttempt(_ context.Context, attempt domain.RawEventAttempt) (bool, error) {
 	if _, ok := dest.rawAttempts[attempt.ID]; ok {
 		return false, nil
 	}
 	dest.rawAttempts[attempt.ID] = attempt
 	return true, nil
+}
+
+func (dest *fakeDataDestination) UpsertRawEventAttempts(ctx context.Context, attempts []domain.RawEventAttempt) (int64, error) {
+	var inserted int64
+	for _, attempt := range attempts {
+		ok, err := dest.UpsertRawEventAttempt(ctx, attempt)
+		if err != nil {
+			return inserted, err
+		}
+		if ok {
+			inserted++
+		}
+	}
+	return inserted, nil
 }
 
 func (dest *fakeDataDestination) DataCounts(context.Context) (domain.MigrationCounts, error) {

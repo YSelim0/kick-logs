@@ -6,19 +6,25 @@ implementation details, or working assumptions change.
 ## Current State
 
 - Branch: `feat/go-clickhouse-rewrite`.
-- Active Go rewrite plan status: Phase 9 cutover smoke/docs is complete.
+- Active plan status: no active feature plan. Completed plans are archived under `docs/archive/`.
 - Default runtime is:
   - `clickhouse`
   - `api` built from `apps/api-go`
   - `listener` built from `apps/api-go`
   - `web`
-- Python/FastAPI/PostgreSQL remains in-repo as a reference and rollback runtime through the
-  `python-reference` Compose profile:
-  - `postgres`
-  - `api-python`
-  - `listener-python`
-- `migrate-go` is under the `tools` profile and owns PostgreSQL to SQLite/ClickHouse migration.
-- PostgreSQL source data and volumes are not removed by the cutover.
+- Python/FastAPI/PostgreSQL runtime code has been removed from the repo.
+- `migrate-go` is under the `tools` profile and owns legacy PostgreSQL to SQLite/ClickHouse
+  import when `POSTGRES_SOURCE_DSN` points at an external/restored source database.
+- The local legacy PostgreSQL Docker volume was intentionally not deleted during cleanup.
+- Local data migration completed successfully into fresh ClickHouse/SQLite targets with:
+  - `admin_users`: 2
+  - `followed_channels`: 7
+  - `sender_profiles`: 8570
+  - `retention_settings`: 1
+  - `worker_heartbeats`: 1
+  - `chat_messages`: 123790
+  - `raw_kick_events`: 121664
+  - `raw_event_attempts`: 121664
 
 ## Default Data Stores
 
@@ -82,6 +88,8 @@ admin/super-admin role.
 - Phase 9: cutover smoke/docs.
 - Phase 9 also fixed SQLite sender-profile upsert to handle live listener races on
   `sender_profiles.kick_user_id` and `sender_profiles.slug`.
+- Completed Go rewrite plan, task files, and contract inventory now live under
+  `docs/archive/go_rewrite/`.
 
 ## Listener Rules
 
@@ -156,11 +164,10 @@ admin/super-admin role.
 ## Development Rules
 
 - Every agent must read `AGENTS.md` and context files before making changes.
-- Every implementation agent must read `docs/implementation_plan.md` and the matching active task
-  file before changing files.
-- Active Go rewrite task files are scoped handoff contracts; do not implement work from another
-  phase unless the user explicitly changes the plan.
-- Archived MVP/post-MVP files are historical context only.
+- Every implementation agent must read `docs/implementation_plan.md` before changing files.
+- When an active task file exists under `docs/tasks/`, read the matching task file and stay inside
+  that scope unless the user explicitly changes the plan.
+- Archived MVP/post-MVP/Go rewrite files are historical context only.
 - Keep documentation and context current with implementation changes.
 - Update `docs/context/recent_changes.md` with a short latest-change handoff after each meaningful
   change.

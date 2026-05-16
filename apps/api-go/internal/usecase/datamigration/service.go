@@ -41,8 +41,11 @@ type ControlDestination interface {
 
 type DataDestination interface {
 	UpsertChatMessage(ctx context.Context, message domain.ChatMessage) (bool, error)
+	UpsertChatMessages(ctx context.Context, messages []domain.ChatMessage) (int64, error)
 	UpsertRawEvent(ctx context.Context, event domain.RawKickEvent) (bool, error)
+	UpsertRawEvents(ctx context.Context, events []domain.RawKickEvent) (int64, error)
 	UpsertRawEventAttempt(ctx context.Context, attempt domain.RawEventAttempt) (bool, error)
+	UpsertRawEventAttempts(ctx context.Context, attempts []domain.RawEventAttempt) (int64, error)
 	DataCounts(ctx context.Context) (domain.MigrationCounts, error)
 	FindChatMessage(ctx context.Context, id int64, kickMessageID string) (domain.ChatMessage, error)
 	FindRawEvent(ctx context.Context, id string) (domain.RawKickEvent, error)
@@ -219,40 +222,47 @@ func (service *Service) execute(ctx context.Context, options Options) (domain.Mi
 		return written, err
 	}
 
-	if err := service.forEachChatMessage(ctx, options.BatchSize, func(message domain.ChatMessage) error {
-		inserted, err := service.data.UpsertChatMessage(ctx, normalizeMessage(message))
+	for offset := 0; ; offset += options.BatchSize {
+		messages, err := service.source.ChatMessages(ctx, options.BatchSize, offset)
 		if err != nil {
-			return err
+			return written, err
 		}
-		if inserted {
-			written.ChatMessages++
+		if len(messages) == 0 {
+			break
 		}
-		return nil
-	}); err != nil {
-		return written, err
+		for index := range messages {
+			messages[index] = normalizeMessage(messages[index])
+		}
+		inserted, err := service.data.UpsertChatMessages(ctx, messages)
+		if err != nil {
+			return written, err
+		}
+		written.ChatMessages += inserted
 	}
 
-	if err := service.forEachRawEvent(ctx, options.BatchSize, func(event domain.RawKickEvent) error {
-		event = normalizeRawEvent(event)
-		inserted, err := service.data.UpsertRawEvent(ctx, event)
+	for offset := 0; ; offset += options.BatchSize {
+		events, err := service.source.RawEvents(ctx, options.BatchSize, offset)
 		if err != nil {
-			return err
+			return written, err
 		}
-		if inserted {
-			written.RawEvents++
+		if len(events) == 0 {
+			break
 		}
-		for _, attempt := range AttemptsForRawEvent(event) {
-			inserted, err := service.data.UpsertRawEventAttempt(ctx, attempt)
-			if err != nil {
-				return err
-			}
-			if inserted {
-				written.RawEventAttempts++
-			}
+		attempts := make([]domain.RawEventAttempt, 0, len(events))
+		for index := range events {
+			events[index] = normalizeRawEvent(events[index])
+			attempts = append(attempts, AttemptsForRawEvent(events[index])...)
 		}
-		return nil
-	}); err != nil {
-		return written, err
+		insertedEvents, err := service.data.UpsertRawEvents(ctx, events)
+		if err != nil {
+			return written, err
+		}
+		written.RawEvents += insertedEvents
+		insertedAttempts, err := service.data.UpsertRawEventAttempts(ctx, attempts)
+		if err != nil {
+			return written, err
+		}
+		written.RawEventAttempts += insertedAttempts
 	}
 
 	return written, nil

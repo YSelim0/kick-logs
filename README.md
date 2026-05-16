@@ -17,8 +17,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/YSelim0/kick-logs/actions/workflows/python-tests.yml">
-    <img src="https://github.com/YSelim0/kick-logs/actions/workflows/python-tests.yml/badge.svg" alt="Python CI" />
+  <a href="https://github.com/YSelim0/kick-logs/actions/workflows/go-tests.yml">
+    <img src="https://github.com/YSelim0/kick-logs/actions/workflows/go-tests.yml/badge.svg" alt="Go CI" />
   </a>
   <a href="https://buymeacoffee.com/yavuzselim">
     <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-yavuzselim-FFF600?style=for-the-badge&logo=buymeacoffee&logoColor=000000" alt="Buy Me a Coffee" />
@@ -37,8 +37,7 @@ web interface.
 
 The project is built as a monorepo:
 
-- `apps/api-go`: Go backend and listener, ClickHouse persistence, SQLite control data
-- `apps/api`: archived Python/FastAPI reference backend for migration and parity checks
+- `apps/api-go`: Go backend, listener, migrator, ClickHouse persistence, SQLite control data
 - `apps/web`: Next.js frontend, public search UI, admin dashboard
 - `listener`: Docker service that subscribes to Kick chat events and stores raw events first
 - `docs`: architecture, implementation notes, task plans, and design decisions
@@ -80,10 +79,9 @@ The project is built as a monorepo:
 ## Tech Stack
 
 - Backend: Go, stdlib HTTP, SQLite, ClickHouse
-- Reference backend: Python 3.12, FastAPI, SQLAlchemy 2.x async ORM, Alembic, asyncpg
 - Frontend: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui primitives, lucide-react
 - Database: ClickHouse for messages/raw events/analytics, SQLite for admin/control-plane state
-- Tooling: `uv` for Python, `pnpm` for frontend packages
+- Tooling: Go toolchain for backend, `pnpm` for frontend packages
 - Runtime: Docker Compose
 
 ## Quick Start
@@ -188,15 +186,6 @@ docker compose down -v
 
 The Go API and listener apply SQLite and ClickHouse schema migrations on startup. SQLite data is
 stored in the `api_go_data` volume; ClickHouse data is stored in the `clickhouse_data` volume.
-
-The old Python/PostgreSQL runtime remains available as a reference profile:
-
-```powershell
-docker compose --profile python-reference up --build -d postgres api-python listener-python
-```
-
-The Python API listens on `http://localhost:8002` by default through `PYTHON_API_PORT`. Do not run
-both listeners against the same production channels during a real cutover.
 
 ## API Surface
 
@@ -307,16 +296,6 @@ For local `go run` outside Docker, point ClickHouse at the host port:
 $env:CLICKHOUSE_ADDR = "127.0.0.1:9000"
 ```
 
-Python reference backend commands are run from `apps/api`:
-
-```powershell
-cd apps/api
-python -m uv run alembic upgrade head
-python -m uv run pytest
-python -m uv run ruff check .
-python -m uv run ruff format --check .
-```
-
 Frontend checks are run from the repository root:
 
 ```powershell
@@ -334,22 +313,21 @@ Formatting:
 
 ```powershell
 pnpm format
-cd apps/api
-python -m uv run ruff format .
 ```
 
-Use Prettier for frontend, JSON, YAML, and Markdown files. Use Ruff Format for
-Python files. Both formatters are configured to use 100-column line width and
-the repository's current double-quote style.
+Use Prettier for frontend, JSON, YAML, and Markdown files. Go files must be formatted with
+`gofmt`. Prettier is configured to use 100-column line width and the repository's current
+double-quote style.
 
-### PostgreSQL Data Migration
+### Legacy PostgreSQL Data Migration
 
-Run the PostgreSQL to SQLite/ClickHouse data migrator after starting the reference PostgreSQL
-service and ClickHouse:
+The current runtime does not include PostgreSQL. If you are upgrading an older Kick Logs deployment,
+restore or expose the old PostgreSQL database separately, set `POSTGRES_SOURCE_DSN`, then run the
+one-time migrator:
 
 ```powershell
-docker compose --profile python-reference up -d postgres
 docker compose up -d clickhouse
+$env:POSTGRES_SOURCE_DSN = "postgresql://kick_logs:kick_logs@host.docker.internal:5432/kick_logs"
 docker compose --profile tools run --rm migrate-go -target=data -dry-run
 docker compose --profile tools run --rm migrate-go -target=data -execute
 docker compose --profile tools run --rm migrate-go -target=data -validation-only
@@ -362,37 +340,30 @@ execute/validation run metadata in SQLite. Use `-batch-size` to tune large local
 
 Cutover sequence from an existing PostgreSQL deployment:
 
-1. Stop the old Python listener.
+1. Stop the old listener.
 2. Run `migrate-go -target=data -execute`.
 3. Run `migrate-go -target=data -validation-only`.
 4. Start the default Go stack with `docker compose up --build -d`.
 
 ```powershell
-docker compose --profile python-reference stop listener-python
+$env:POSTGRES_SOURCE_DSN = "postgresql://kick_logs:kick_logs@host.docker.internal:5432/kick_logs"
 docker compose --profile tools run --rm migrate-go -target=data -execute
 docker compose --profile tools run --rm migrate-go -target=data -validation-only
 docker compose up --build -d
 ```
 
-Rollback path during cutover:
-
-```powershell
-docker compose stop api listener web
-docker compose --profile python-reference up --build -d postgres api-python listener-python
-```
-
 ## Continuous Integration
 
-GitHub Actions runs backend and formatting checks on pull requests targeting
-`main` or `dev`, and on pushes to `main` or `dev`.
+GitHub Actions runs backend and formatting checks on every pull request and every push.
 
-The Python workflow starts a PostgreSQL 16 service, installs backend
-dependencies with `uv`, applies Alembic migrations, then runs:
+The Go workflow starts ClickHouse, downloads Go dependencies, then runs:
 
 ```powershell
-python -m uv run ruff format --check .
-python -m uv run ruff check .
-python -m uv run pytest
+go test ./...
+go vet ./...
+KICK_LOGS_RUN_CLICKHOUSE_TESTS=1 go test ./internal/infra/clickhouse -run TestClickHouseMigrationsAndRepositories -count=1 -v
+go run ./cmd/migrate -target=sqlite
+go run ./cmd/migrate -target=clickhouse
 ```
 
 The code style workflow installs frontend dependencies and runs:
@@ -409,17 +380,13 @@ kick-logs/
     api-go/
       cmd/
       internal/
-    api/
-      alembic/
-      src/kick_logs/
-      tests/
     web/
       public/
       src/
   docs/
+    archive/
     context/
     design/
-    tasks/
   compose.yaml
   README.md
 ```
@@ -433,8 +400,8 @@ cmd -> app/config/http/worker
 ```
 
 Go domain code stays independent from HTTP, SQLite, ClickHouse, JWT, websocket, and external Kick
-clients. The Python backend remains in `apps/api` as a reference implementation until a later
-explicit cleanup.
+clients. Historical Python/PostgreSQL planning and contract inventory documents are archived under
+`docs/archive/`.
 
 ## Data Captured
 
@@ -514,8 +481,8 @@ ClickHouse `BACKUP DATABASE` target.
 `docker compose down -v` removes the ClickHouse and SQLite volumes. Use it only when you
 intentionally want to delete all stored data.
 
-For pre-cutover PostgreSQL data, keep a PostgreSQL dump from the `python-reference` profile until
-you are confident in the migrated ClickHouse/SQLite data.
+For pre-cutover PostgreSQL data, keep a PostgreSQL dump until you are confident in the migrated
+ClickHouse/SQLite data.
 
 ## Configuration
 
@@ -531,7 +498,7 @@ CLICKHOUSE_ADDR=clickhouse:9000
 CLICKHOUSE_DATABASE=kick_logs
 CLICKHOUSE_USERNAME=kick_logs
 CLICKHOUSE_PASSWORD=kick_logs
-POSTGRES_SOURCE_DSN=postgresql://kick_logs:kick_logs@postgres:5432/kick_logs
+POSTGRES_SOURCE_DSN=
 JWT_SECRET_KEY=change-me-for-local-development-secret-key
 KICK_PUSHER_URL=...
 LISTENER_WORKER_COUNT=4
@@ -621,8 +588,6 @@ Current quality gates used during development:
 
 - Go backend tests with `go test ./...`
 - Go backend static checks with `go vet ./...`
-- Python reference backend test suite with `pytest`
-- Python reference backend lint with `ruff`
 - frontend tests with Vitest and React Testing Library
 - frontend TypeScript typecheck
 - frontend lint

@@ -10,9 +10,10 @@ Before making any code, docs, config, dependency, database, Docker, or commit ch
 6. `docs/context/change_log.md`
 7. `docs/context/recent_changes.md`
 
-When working on a planned implementation feature, also read only the matching task file under `docs/tasks/`, such as `docs/tasks/post_mvp_01_admin_operations.md`. Stay inside that feature scope unless the user explicitly changes the plan.
+When working on a planned implementation feature, also read only the matching task file under `docs/tasks/` when an active task file exists. Stay inside that feature scope unless the user explicitly changes the plan.
 
-The completed MVP plan is archived under `docs/archive/`. Archived task files are historical context only and are not active implementation scope.
+Completed MVP, post-MVP, and Go rewrite plans are archived under `docs/archive/`. Archived task
+files are historical context only and are not active implementation scope.
 
 Keep these files current. When implementation decisions change, update the relevant context document in the same unit of work.
 Use `recent_changes.md` for the latest short handoff summary after each meaningful change, and `change_log.md` for chronological history.
@@ -24,8 +25,7 @@ For any frontend, UI, visual design, route layout, component styling, or UX work
 ## Project Defaults
 
 - Monorepo name: `kick-logs`
-- Backend: Python, FastAPI, PostgreSQL
-- Python tooling: `uv`
+- Backend: Go, ClickHouse, SQLite
 - Frontend: Next.js, pnpm, Tailwind, shadcn/ui, lucide-react
 - Runtime: Docker Compose dev stack
 - Commit format: `feat(scope): title`
