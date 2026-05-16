@@ -3,7 +3,6 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"time"
 
@@ -42,17 +41,6 @@ func (repo *SenderProfileRepository) Upsert(ctx context.Context, sender domain.S
 		sender.LastSeenAt = now
 	}
 
-	existing, err := repo.GetByKickUserID(ctx, sender.KickUserID)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return domain.SenderProfile{}, err
-	}
-	if errors.Is(err, sql.ErrNoRows) {
-		existing, err = repo.GetBySlug(ctx, sender.Slug)
-		if err != nil && !errors.Is(err, sql.ErrNoRows) {
-			return domain.SenderProfile{}, err
-		}
-	}
-
 	args := []any{
 		sender.KickUserID,
 		sender.Username,
@@ -64,33 +52,31 @@ func (repo *SenderProfileRepository) Upsert(ctx context.Context, sender domain.S
 		formatTime(sender.UpdatedAt),
 		formatTime(sender.LastSeenAt),
 	}
-	if errors.Is(err, sql.ErrNoRows) {
-		result, err := repo.db.ExecContext(
-			ctx,
-			`INSERT INTO sender_profiles (
-				kick_user_id, username, slug, profile_image_url, last_seen_color,
-				raw_profile_payload_json, created_at, updated_at, last_seen_at
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			args...,
-		)
-		if err != nil {
-			return domain.SenderProfile{}, fmt.Errorf("insert sender profile: %w", err)
-		}
-		sender.ID, _ = result.LastInsertId()
-		return sender, nil
-	}
-
-	args = append(args, existing.ID)
 	if _, err := repo.db.ExecContext(
 		ctx,
-		`UPDATE sender_profiles
-		 SET kick_user_id = ?, username = ?, slug = ?, profile_image_url = ?,
-		     last_seen_color = ?, raw_profile_payload_json = ?, created_at = ?,
-		     updated_at = ?, last_seen_at = ?
-		 WHERE id = ?`,
+		`INSERT INTO sender_profiles (
+			kick_user_id, username, slug, profile_image_url, last_seen_color,
+			raw_profile_payload_json, created_at, updated_at, last_seen_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(kick_user_id) DO UPDATE SET
+			username = excluded.username,
+			slug = excluded.slug,
+			profile_image_url = excluded.profile_image_url,
+			last_seen_color = excluded.last_seen_color,
+			raw_profile_payload_json = excluded.raw_profile_payload_json,
+			updated_at = excluded.updated_at,
+			last_seen_at = excluded.last_seen_at
+		ON CONFLICT(slug) DO UPDATE SET
+			kick_user_id = excluded.kick_user_id,
+			username = excluded.username,
+			profile_image_url = excluded.profile_image_url,
+			last_seen_color = excluded.last_seen_color,
+			raw_profile_payload_json = excluded.raw_profile_payload_json,
+			updated_at = excluded.updated_at,
+			last_seen_at = excluded.last_seen_at`,
 		args...,
 	); err != nil {
-		return domain.SenderProfile{}, fmt.Errorf("update sender profile: %w", err)
+		return domain.SenderProfile{}, fmt.Errorf("upsert sender profile: %w", err)
 	}
 	return repo.GetByKickUserID(ctx, sender.KickUserID)
 }

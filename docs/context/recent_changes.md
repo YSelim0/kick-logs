@@ -4,6 +4,23 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Completed Go rewrite Phase 9 cutover:
+  - default Compose services now use Go `api`, Go `listener`, `clickhouse`, and `web`
+  - Python/FastAPI/PostgreSQL remains available through the `python-reference` profile as a
+    reference/rollback runtime
+  - `migrate-go` is now a `tools` profile service for PostgreSQL to SQLite/ClickHouse migration
+  - `.env.example`, README, architecture, project plan, implementation plan, decisions, living
+    context, and Phase 9 task docs now reflect the Go + ClickHouse default runtime
+  - before cutover, Go admin data-management parity was added for summary, retention settings,
+    cleanup preview, and cleanup confirmation
+  - fixed a Go listener SQLite sender-profile upsert race that could fail on concurrent
+    `sender_profiles.slug` conflicts during live ingestion
+  - verification: `go test ./...`, `go vet ./...`, live ClickHouse repository test,
+    `docker compose up --build -d --remove-orphans`, Go API/listener/web smoke, live/fixture
+    searchable message checks, reply/emote metadata checks, JSON/CSV export, analytics/profile
+    API checks, frontend route smoke, admin operations/data-management smoke, cleanup preview, and
+    unauthenticated admin rejection
+
 - Completed Go rewrite Phase 8 PostgreSQL data migration:
   - added `cmd/migrate -target=data` with dry-run, execute, validation-only, batch size, sample
     size, and source PostgreSQL URL flags

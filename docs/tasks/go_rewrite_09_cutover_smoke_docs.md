@@ -16,50 +16,50 @@ This phase owns Docker Compose cutover, smoke testing, README updates, and clean
 
 ## Checklist
 
-- [ ] Update Compose so default `api` uses the Go API.
-- [ ] Update Compose so default `listener` uses the Go listener.
-- [ ] Keep a documented way to run the old Python/PostgreSQL reference runtime until final removal.
-- [ ] Update environment examples for ClickHouse and SQLite settings.
-- [ ] Update README quick start.
-- [ ] Update README migration instructions.
-- [ ] Update README backup/restore notes for ClickHouse and SQLite.
-- [ ] Update admin/data-management docs for ClickHouse mutation behavior.
-- [ ] Update architecture docs to reflect Go + ClickHouse + SQLite.
-- [ ] Update context docs with final cutover state.
-- [ ] Decide whether Python backend stays archived in-repo or is removed in a later cleanup commit.
-- [ ] Decide when PostgreSQL service is removed from Compose defaults.
+- [x] Update Compose so default `api` uses the Go API.
+- [x] Update Compose so default `listener` uses the Go listener.
+- [x] Keep a documented way to run the old Python/PostgreSQL reference runtime until final removal.
+- [x] Update environment examples for ClickHouse and SQLite settings.
+- [x] Update README quick start.
+- [x] Update README migration instructions.
+- [x] Update README backup/restore notes for ClickHouse and SQLite.
+- [x] Update admin/data-management docs for ClickHouse mutation behavior.
+- [x] Update architecture docs to reflect Go + ClickHouse + SQLite.
+- [x] Update context docs with final cutover state.
+- [x] Decide whether Python backend stays archived in-repo or is removed in a later cleanup commit.
+- [x] Decide when PostgreSQL service is removed from Compose defaults.
 
 ## Smoke Test Checklist
 
-- [ ] `docker compose up --build -d` starts ClickHouse, Go API, Go listener, and web.
-- [ ] `GET /health` succeeds.
-- [ ] Default super admin can log in.
-- [ ] Admin can list channels.
-- [ ] Admin can add a channel.
-- [ ] Admin can disable a channel.
-- [ ] Go listener records heartbeat.
-- [ ] Fixture or live message ingestion writes searchable messages.
-- [ ] `/search` can query by sender exact match.
-- [ ] `/search` can query by channel and content.
-- [ ] Reply messages render reply metadata.
-- [ ] Emote messages render emote image metadata.
-- [ ] JSON export works.
-- [ ] CSV export works.
-- [ ] Landing analytics load.
-- [ ] User profile analytics load.
-- [ ] Channel profile analytics load.
-- [ ] Admin operations dashboard loads.
-- [ ] Admin data-management summary loads.
-- [ ] Cleanup preview works.
-- [ ] Public routes remain unauthenticated.
-- [ ] Admin routes reject unauthenticated requests.
+- [x] `docker compose up --build -d` starts ClickHouse, Go API, Go listener, and web.
+- [x] `GET /health` succeeds.
+- [x] Default super admin can log in.
+- [x] Admin can list channels.
+- [x] Admin can add a channel.
+- [x] Admin can disable a channel.
+- [x] Go listener records heartbeat.
+- [x] Fixture or live message ingestion writes searchable messages.
+- [x] `/search` can query by sender exact match.
+- [x] `/search` can query by channel and content.
+- [x] Reply messages render reply metadata.
+- [x] Emote messages render emote image metadata.
+- [x] JSON export works.
+- [x] CSV export works.
+- [x] Landing analytics load.
+- [x] User profile analytics load.
+- [x] Channel profile analytics load.
+- [x] Admin operations dashboard loads.
+- [x] Admin data-management summary loads.
+- [x] Cleanup preview works.
+- [x] Public routes remain unauthenticated.
+- [x] Admin routes reject unauthenticated requests.
 
 ## Acceptance Criteria
 
-- [ ] The default self-hosted startup path uses Go and ClickHouse.
-- [ ] Existing frontend workflows work against the Go API.
-- [ ] Migration and rollback notes are documented.
-- [ ] Python/PostgreSQL cleanup is left as an explicit final decision, not an accidental deletion.
+- [x] The default self-hosted startup path uses Go and ClickHouse.
+- [x] Existing frontend workflows work against the Go API.
+- [x] Migration and rollback notes are documented.
+- [x] Python/PostgreSQL cleanup is left as an explicit final decision, not an accidental deletion.
 
 ## Commit Boundary
 

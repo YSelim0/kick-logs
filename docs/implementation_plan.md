@@ -8,8 +8,8 @@ as product and contract history, but they are no longer active implementation sc
 
 Status: Phase 1 contract inventory, Phase 2 Go workspace/tooling, Phase 3 storage schema,
 Phase 4 auth/admin API parity, Phase 5 message search/export parity, Phase 6 listener ingestion
-parity, Phase 7 analytics/profile parity, and Phase 8 PostgreSQL data migration are complete on
-branch `feat/go-clickhouse-rewrite`.
+parity, Phase 7 analytics/profile parity, Phase 8 PostgreSQL data migration, and Phase 9 cutover
+smoke/docs are complete on branch `feat/go-clickhouse-rewrite`.
 
 ## Primary Goal
 
@@ -63,16 +63,16 @@ Current storage implementation:
 
 ## Target Runtime
 
-The final Compose runtime should contain:
+The default Compose runtime should contain:
 
 - `clickhouse`: ClickHouse database service.
 - `api`: Go HTTP API service.
 - `listener`: Go Kick listener service.
 - `web`: existing Next.js frontend service.
 
-During rewrite and parity work, the Python backend and PostgreSQL service may remain available as a
-reference runtime. PostgreSQL is removed from the default runtime only after migration and contract
-parity are accepted.
+The Python backend and PostgreSQL service remain available only as the `python-reference` profile
+for rollback, contract comparison, and pre-cutover data migration. PostgreSQL volumes are not
+deleted by the cutover plan.
 
 ## Target Backend Layout
 
@@ -228,8 +228,7 @@ Current Go message search/export implementation:
 Current Go listener implementation:
 
 - `cmd/listener` opens SQLite and ClickHouse, applies migrations, wires Kick clients, and runs the
-  listener service as a dedicated Compose service named `listener-go` behind profile
-  `go-rewrite`.
+  default Compose `listener` service.
 - The listener loads enabled channels from SQLite, resolves missing Kick channel metadata, and
   subscribes to `chatrooms.{chatroom_id}.v2` plus channel-level streams through the Pusher
   websocket client.
@@ -584,14 +583,7 @@ Rules:
 
 ## Docker and Environment Plan
 
-During transition:
-
-- keep `postgres`, Python `api`, and Python `listener` available when needed for parity checks
-- add `clickhouse`
-- add Go API and listener build targets
-- keep `web` pointed at the selected API base URL
-
-Final default runtime:
+Default runtime:
 
 ```text
 clickhouse
@@ -599,6 +591,11 @@ api
 listener
 web
 ```
+
+Reference/tool profiles:
+
+- `python-reference`: `postgres`, `api-python`, `listener-python`
+- `tools`: `migrate-go`
 
 Environment variables should include:
 

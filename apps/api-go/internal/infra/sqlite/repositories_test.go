@@ -161,6 +161,48 @@ func TestSenderProfileAndHeartbeatRepositories(t *testing.T) {
 	}
 }
 
+func TestSenderProfileRepositoryUpsertHandlesNaturalKeyConflicts(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openMigratedSQLite(t, ctx)
+	defer db.Close()
+
+	senders := sqlite.NewSenderProfileRepository(db)
+	first, err := senders.Upsert(ctx, domain.SenderProfile{
+		KickUserID:            9001,
+		Username:              "FirstName",
+		Slug:                  "shared-user",
+		RawProfilePayloadJSON: `{}`,
+	})
+	if err != nil {
+		t.Fatalf("first Upsert() error = %v", err)
+	}
+	updatedByKickID, err := senders.Upsert(ctx, domain.SenderProfile{
+		KickUserID:            9001,
+		Username:              "UpdatedName",
+		Slug:                  "shared-user",
+		RawProfilePayloadJSON: `{}`,
+	})
+	if err != nil {
+		t.Fatalf("second Upsert() error = %v", err)
+	}
+	if updatedByKickID.ID != first.ID || updatedByKickID.Username != "UpdatedName" {
+		t.Fatalf("updatedByKickID = %#v, first = %#v", updatedByKickID, first)
+	}
+
+	updatedBySlug, err := senders.Upsert(ctx, domain.SenderProfile{
+		KickUserID:            9002,
+		Username:              "SlugOwner",
+		Slug:                  "shared-user",
+		RawProfilePayloadJSON: `{}`,
+	})
+	if err != nil {
+		t.Fatalf("slug-conflict Upsert() error = %v", err)
+	}
+	if updatedBySlug.ID != first.ID || updatedBySlug.KickUserID != 9002 {
+		t.Fatalf("updatedBySlug = %#v, first = %#v", updatedBySlug, first)
+	}
+}
+
 func openMigratedSQLite(t *testing.T, ctx context.Context) (*sql.DB, string) {
 	t.Helper()
 

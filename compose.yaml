@@ -1,90 +1,5 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-kick_logs}
-      POSTGRES_USER: ${POSTGRES_USER:-kick_logs}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kick_logs}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  api:
-    build:
-      context: ./apps/api
-    environment:
-      APP_NAME: ${APP_NAME:-Kick Logs}
-      APP_ENV: ${APP_ENV:-local}
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      API_HOST: 0.0.0.0
-      API_PORT: 8000
-      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000}
-      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://kick_logs:kick_logs@postgres:5432/kick_logs}
-      DATABASE_ECHO: ${DATABASE_ECHO:-false}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-for-local-development-secret-key}
-      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
-      JWT_EXPIRES_MINUTES: ${JWT_EXPIRES_MINUTES:-10080}
-      JWT_COOKIE_NAME: ${JWT_COOKIE_NAME:-kick_logs_session}
-      JWT_COOKIE_SECURE: ${JWT_COOKIE_SECURE:-false}
-      JWT_COOKIE_SAMESITE: ${JWT_COOKIE_SAMESITE:-lax}
-      SEED_SUPER_ADMIN_ON_STARTUP: ${SEED_SUPER_ADMIN_ON_STARTUP:-true}
-      DEFAULT_SUPER_ADMIN_EMAIL: ${DEFAULT_SUPER_ADMIN_EMAIL:-admin@kicklogs.local}
-      DEFAULT_SUPER_ADMIN_PASSWORD: ${DEFAULT_SUPER_ADMIN_PASSWORD:-admin123}
-      MESSAGE_EXPORT_MAX_ROWS: ${MESSAGE_EXPORT_MAX_ROWS:-1000}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    ports:
-      - "${API_PORT:-8000}:8000"
-    volumes:
-      - ./apps/api:/app
-      - api_venv:/app/.venv
-    command:
-      - sh
-      - -c
-      - uv run alembic upgrade head && uv run uvicorn kick_logs.main:app --host 0.0.0.0 --port 8000 --reload
-
-  listener:
-    build:
-      context: ./apps/api
-    environment:
-      APP_NAME: ${APP_NAME:-Kick Logs}
-      APP_ENV: ${APP_ENV:-local}
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://kick_logs:kick_logs@postgres:5432/kick_logs}
-      DATABASE_ECHO: ${DATABASE_ECHO:-false}
-      KICK_PUSHER_URL: ${KICK_PUSHER_URL:-wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0-rc2&flash=false}
-      LISTENER_RECONNECT_INITIAL_DELAY_SECONDS: ${LISTENER_RECONNECT_INITIAL_DELAY_SECONDS:-1}
-      LISTENER_RECONNECT_MAX_DELAY_SECONDS: ${LISTENER_RECONNECT_MAX_DELAY_SECONDS:-30}
-      LISTENER_RECONNECT_MULTIPLIER: ${LISTENER_RECONNECT_MULTIPLIER:-2}
-      LISTENER_WORKER_COUNT: ${LISTENER_WORKER_COUNT:-4}
-      LISTENER_RAW_EVENT_BATCH_SIZE: ${LISTENER_RAW_EVENT_BATCH_SIZE:-100}
-      LISTENER_RAW_EVENT_PROCESSING_TIMEOUT_SECONDS: ${LISTENER_RAW_EVENT_PROCESSING_TIMEOUT_SECONDS:-300}
-      LISTENER_RAW_EVENT_MAX_ATTEMPTS: ${LISTENER_RAW_EVENT_MAX_ATTEMPTS:-5}
-      LISTENER_RAW_EVENT_WORKER_IDLE_DELAY_SECONDS: ${LISTENER_RAW_EVENT_WORKER_IDLE_DELAY_SECONDS:-0.25}
-      LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS: ${LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS:-60}
-      LISTENER_HEARTBEAT_INTERVAL_SECONDS: ${LISTENER_HEARTBEAT_INTERVAL_SECONDS:-15}
-      LISTENER_HEARTBEAT_STALE_AFTER_SECONDS: ${LISTENER_HEARTBEAT_STALE_AFTER_SECONDS:-45}
-    depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      - ./apps/api:/app
-      - listener_venv:/app/.venv
-    command:
-      - sh
-      - -c
-      - uv run alembic upgrade head && uv run python -m kick_logs.presentation.worker.main
-
   clickhouse:
-    profiles:
-      - go-rewrite
     image: clickhouse/clickhouse-server:24.8-alpine
     environment:
       CLICKHOUSE_DB: ${CLICKHOUSE_DATABASE:-kick_logs}
@@ -106,9 +21,7 @@ services:
       timeout: 5s
       retries: 20
 
-  api-go:
-    profiles:
-      - go-rewrite
+  api:
     build:
       context: ./apps/api-go
       args:
@@ -137,40 +50,15 @@ services:
       CLICKHOUSE_DEBUG: ${CLICKHOUSE_DEBUG:-false}
       DEFAULT_SUPER_ADMIN_EMAIL: ${DEFAULT_SUPER_ADMIN_EMAIL:-admin@kicklogs.local}
       DEFAULT_SUPER_ADMIN_PASSWORD: ${DEFAULT_SUPER_ADMIN_PASSWORD:-admin123}
-    ports:
-      - "${GO_API_PORT:-8001}:8000"
-    volumes:
-      - api_go_data:/data
-
-  migrate-go:
-    profiles:
-      - go-rewrite
-    build:
-      context: ./apps/api-go
-      args:
-        TARGET: migrate
-    environment:
-      APP_NAME: ${APP_NAME:-Kick Logs}
-      APP_ENV: ${APP_ENV:-local}
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      SQLITE_PATH: ${SQLITE_PATH:-/data/kick-logs-go.sqlite3}
-      POSTGRES_SOURCE_DSN: ${POSTGRES_SOURCE_DSN:-postgresql://kick_logs:kick_logs@postgres:5432/kick_logs}
-      CLICKHOUSE_ADDR: ${CLICKHOUSE_ADDR:-clickhouse:9000}
-      CLICKHOUSE_DATABASE: ${CLICKHOUSE_DATABASE:-kick_logs}
-      CLICKHOUSE_USERNAME: ${CLICKHOUSE_USERNAME:-kick_logs}
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-kick_logs}
-      CLICKHOUSE_DEBUG: ${CLICKHOUSE_DEBUG:-false}
-      DEFAULT_SUPER_ADMIN_EMAIL: ${DEFAULT_SUPER_ADMIN_EMAIL:-admin@kicklogs.local}
-      DEFAULT_SUPER_ADMIN_PASSWORD: ${DEFAULT_SUPER_ADMIN_PASSWORD:-admin123}
     depends_on:
       clickhouse:
         condition: service_healthy
+    ports:
+      - "${API_PORT:-8000}:8000"
     volumes:
       - api_go_data:/data
 
-  listener-go:
-    profiles:
-      - go-rewrite
+  listener:
     build:
       context: ./apps/api-go
       args:
@@ -220,12 +108,127 @@ services:
       - web_app_node_modules:/repo/apps/web/node_modules
       - web_next:/repo/apps/web/.next
 
+  migrate-go:
+    profiles:
+      - tools
+    build:
+      context: ./apps/api-go
+      args:
+        TARGET: migrate
+    environment:
+      APP_NAME: ${APP_NAME:-Kick Logs}
+      APP_ENV: ${APP_ENV:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      SQLITE_PATH: ${SQLITE_PATH:-/data/kick-logs-go.sqlite3}
+      POSTGRES_SOURCE_DSN: ${POSTGRES_SOURCE_DSN:-postgresql://kick_logs:kick_logs@postgres:5432/kick_logs}
+      CLICKHOUSE_ADDR: ${CLICKHOUSE_ADDR:-clickhouse:9000}
+      CLICKHOUSE_DATABASE: ${CLICKHOUSE_DATABASE:-kick_logs}
+      CLICKHOUSE_USERNAME: ${CLICKHOUSE_USERNAME:-kick_logs}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-kick_logs}
+      CLICKHOUSE_DEBUG: ${CLICKHOUSE_DEBUG:-false}
+      DEFAULT_SUPER_ADMIN_EMAIL: ${DEFAULT_SUPER_ADMIN_EMAIL:-admin@kicklogs.local}
+      DEFAULT_SUPER_ADMIN_PASSWORD: ${DEFAULT_SUPER_ADMIN_PASSWORD:-admin123}
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    volumes:
+      - api_go_data:/data
+
+  postgres:
+    profiles:
+      - python-reference
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-kick_logs}
+      POSTGRES_USER: ${POSTGRES_USER:-kick_logs}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kick_logs}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api-python:
+    profiles:
+      - python-reference
+    build:
+      context: ./apps/api
+    environment:
+      APP_NAME: ${APP_NAME:-Kick Logs}
+      APP_ENV: ${APP_ENV:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://kick_logs:kick_logs@postgres:5432/kick_logs}
+      DATABASE_ECHO: ${DATABASE_ECHO:-false}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-for-local-development-secret-key}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_EXPIRES_MINUTES: ${JWT_EXPIRES_MINUTES:-10080}
+      JWT_COOKIE_NAME: ${JWT_COOKIE_NAME:-kick_logs_session}
+      JWT_COOKIE_SECURE: ${JWT_COOKIE_SECURE:-false}
+      JWT_COOKIE_SAMESITE: ${JWT_COOKIE_SAMESITE:-lax}
+      SEED_SUPER_ADMIN_ON_STARTUP: ${SEED_SUPER_ADMIN_ON_STARTUP:-true}
+      DEFAULT_SUPER_ADMIN_EMAIL: ${DEFAULT_SUPER_ADMIN_EMAIL:-admin@kicklogs.local}
+      DEFAULT_SUPER_ADMIN_PASSWORD: ${DEFAULT_SUPER_ADMIN_PASSWORD:-admin123}
+      MESSAGE_EXPORT_MAX_ROWS: ${MESSAGE_EXPORT_MAX_ROWS:-1000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${PYTHON_API_PORT:-8002}:8000"
+    volumes:
+      - ./apps/api:/app
+      - api_venv:/app/.venv
+    command:
+      - sh
+      - -c
+      - uv run alembic upgrade head && uv run uvicorn kick_logs.main:app --host 0.0.0.0 --port 8000 --reload
+
+  listener-python:
+    profiles:
+      - python-reference
+    build:
+      context: ./apps/api
+    environment:
+      APP_NAME: ${APP_NAME:-Kick Logs}
+      APP_ENV: ${APP_ENV:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://kick_logs:kick_logs@postgres:5432/kick_logs}
+      DATABASE_ECHO: ${DATABASE_ECHO:-false}
+      KICK_PUSHER_URL: ${KICK_PUSHER_URL:-wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0-rc2&flash=false}
+      LISTENER_RECONNECT_INITIAL_DELAY_SECONDS: ${LISTENER_RECONNECT_INITIAL_DELAY_SECONDS:-1}
+      LISTENER_RECONNECT_MAX_DELAY_SECONDS: ${LISTENER_RECONNECT_MAX_DELAY_SECONDS:-30}
+      LISTENER_RECONNECT_MULTIPLIER: ${LISTENER_RECONNECT_MULTIPLIER:-2}
+      LISTENER_WORKER_COUNT: ${LISTENER_WORKER_COUNT:-4}
+      LISTENER_RAW_EVENT_BATCH_SIZE: ${LISTENER_RAW_EVENT_BATCH_SIZE:-100}
+      LISTENER_RAW_EVENT_PROCESSING_TIMEOUT_SECONDS: ${LISTENER_RAW_EVENT_PROCESSING_TIMEOUT_SECONDS:-300}
+      LISTENER_RAW_EVENT_MAX_ATTEMPTS: ${LISTENER_RAW_EVENT_MAX_ATTEMPTS:-5}
+      LISTENER_RAW_EVENT_WORKER_IDLE_DELAY_SECONDS: ${LISTENER_RAW_EVENT_WORKER_IDLE_DELAY_SECONDS:-0.25}
+      LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS: ${LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS:-60}
+      LISTENER_HEARTBEAT_INTERVAL_SECONDS: ${LISTENER_HEARTBEAT_INTERVAL_SECONDS:-15}
+      LISTENER_HEARTBEAT_STALE_AFTER_SECONDS: ${LISTENER_HEARTBEAT_STALE_AFTER_SECONDS:-45}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./apps/api:/app
+      - listener_venv:/app/.venv
+    command:
+      - sh
+      - -c
+      - uv run alembic upgrade head && uv run python -m kick_logs.presentation.worker.main
+
 volumes:
+  clickhouse_data:
+  api_go_data:
   postgres_data:
   api_venv:
   listener_venv:
-  clickhouse_data:
-  api_go_data:
   web_node_modules:
   web_app_node_modules:
   web_next:

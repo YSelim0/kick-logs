@@ -4,6 +4,35 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-16
 
+- Completed Go rewrite Phase 9 cutover:
+  - added Go admin data-management API parity before switching the default runtime
+  - implemented `GET /admin/data-management/summary`,
+    `PUT /admin/data-management/retention-settings`,
+    `POST /admin/data-management/cleanup/preview`, and
+    `POST /admin/data-management/cleanup/confirm` in the Go API
+  - switched Compose intent so default `api` and `listener` build from `apps/api-go`
+  - made `clickhouse` part of the default Compose runtime
+  - moved Python/FastAPI/PostgreSQL services behind the `python-reference` profile as
+    `postgres`, `api-python`, and `listener-python`
+  - moved `migrate-go` behind the `tools` profile
+  - updated `.env.example`, README, architecture notes, project plan, implementation plan, and
+    active context docs for Go + ClickHouse default runtime
+  - PostgreSQL source data and volumes remain available for migration/rollback and are not deleted
+  - fixed SQLite sender profile upsert to use atomic `ON CONFLICT` handling for live listener
+    races on `kick_user_id` and `slug`
+  - closed all checklist items in `docs/tasks/go_rewrite_09_cutover_smoke_docs.md`
+  - verified `go test ./...`
+  - verified `go vet ./...`
+  - verified live ClickHouse integration test with
+    `KICK_LOGS_RUN_CLICKHOUSE_TESTS=1 go test ./internal/infra/clickhouse -run TestClickHouseMigrationsAndRepositories -count=1 -v`
+  - verified `docker compose up --build -d --remove-orphans` starts default `clickhouse`, Go
+    `api`, Go `listener`, and `web`
+  - smoke verified `GET /health`, default super-admin login, admin channel list/add/disable,
+    listener heartbeat, live and fixture searchable messages, sender exact search, channel/content
+    search, reply metadata, emote image metadata, JSON export, CSV export, landing/user/channel
+    pages, analytics/profile APIs, admin operations, admin data-management summary, cleanup
+    preview, public unauthenticated routes, and unauthenticated admin rejection
+
 - Completed Go rewrite Phase 8 PostgreSQL data migration:
   - added `POSTGRES_SOURCE_DSN` config and PostgreSQL source adapter under
     `internal/infra/postgres`

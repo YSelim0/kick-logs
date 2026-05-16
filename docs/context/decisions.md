@@ -115,12 +115,11 @@
 
 ## 2026-05-16
 
-- Go rewrite work starts in parallel under `apps/api-go`; Python remains the default runtime until
-  explicit cutover.
+- Go rewrite work lives under `apps/api-go`; after cutover the Go API/listener is the default
+  runtime and Python is reference-only.
 - Phase 2 Go workspace uses the Go standard library for the initial HTTP server, routing,
   middleware, config, and logging to avoid unnecessary early dependencies.
-- The optional Go API Compose service is named `api-go`, gated behind profile `go-rewrite`, and
-  maps to host port `GO_API_PORT` or `8001` by default.
+- Default Compose service `api` runs the Go API and maps to host `API_PORT` or `8000`.
 - Go local build outputs and caches stay untracked and outside Docker build context under
   `apps/api-go/bin/`, `apps/api-go/.gocache/`, `apps/api-go/.gomodcache/`, and
   `apps/api-go/.cache/`.
@@ -129,7 +128,7 @@
   heartbeats, and migration bookkeeping.
 - ClickHouse stores denormalized chat messages, raw Kick events, and raw-event processing attempts.
 - Go rewrite migrations are run through `cmd/migrate`; Compose exposes that binary as the
-  `migrate-go` service behind profile `go-rewrite`.
+  `migrate-go` service behind profile `tools`.
 - Go rewrite default super-admin seeding happens in SQLite migration startup and stores a bcrypt
   hash, not the plain password.
 - Go rewrite auth preserves the Python cookie contract and uses HS256 JWTs with `sub`, `iat`, and
@@ -139,8 +138,7 @@
 - Go rewrite admin channel deletion remains disable-only to preserve historical chat data.
 - Go rewrite public message search/export reads denormalized ClickHouse `chat_messages` directly;
   the hot search path must not join back to SQLite.
-- The Go listener Compose service is named `listener-go` and is gated behind profile
-  `go-rewrite` until cutover.
+- Default Compose service `listener` runs the Go listener.
 - Go listener ingestion keeps the durable-inbox rule: once a Kick websocket chat event reaches the
   process, persist the raw event to ClickHouse before normalization, sender enrichment, or visible
   message insertion.
@@ -157,3 +155,15 @@
   execute, and records run metadata in SQLite `data_migration_runs`.
 - Go migration rejects admin password hashes that `golang.org/x/crypto/bcrypt` cannot parse; it
   must not silently reset migrated credentials.
+- Cutover keeps the service names `api` and `listener`, but those default services now point to
+  the Go binaries from `apps/api-go`.
+- ClickHouse is part of the default Compose runtime; PostgreSQL is not.
+- SQLite control-plane data is stored in the `api_go_data` Docker volume.
+- Python/FastAPI/PostgreSQL stays available behind the `python-reference` profile as an explicit
+  reference and rollback path.
+- `migrate-go` is a `tools` profile service, not a default runtime service.
+- PostgreSQL volumes must not be removed automatically during cutover.
+- Python source remains in the repository until a separate explicit cleanup decision is made.
+- SQLite sender profile ingestion must tolerate concurrent live messages from the same sender; Go
+  listener upsert uses `ON CONFLICT` for both `kick_user_id` and `slug` instead of pre-read then
+  insert.
