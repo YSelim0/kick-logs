@@ -2,79 +2,79 @@
 
 ## Summary
 
-Kick Logs is an MVP monorepo for collecting public Kick chat messages from followed channels, storing the full useful payload in PostgreSQL, and searching historical messages through a Next.js web UI.
+Kick Logs is a self-hosted application for collecting public Kick chat messages from followed
+channels, storing them durably, and searching historical chat through a web UI.
 
-The ingestion method resolves Kick channel/chatroom metadata through Kick web endpoints, subscribes to Kick chat Pusher channels, parses `App\Events\ChatMessageEvent` payloads, enriches senders when possible, and persists messages.
+The default runtime is Go + ClickHouse + SQLite:
+
+- Go API serves the existing HTTP contract.
+- Go listener subscribes to Kick chat streams and persists raw events before normalization.
+- ClickHouse stores chat messages, raw Kick events, exports, analytics, and profile aggregates.
+- SQLite stores admin users, followed channels, sender profiles, retention settings, heartbeats,
+  and migration metadata.
+- Next.js serves the public/search/admin web UI.
 
 Default local startup:
 
 ```powershell
-docker compose up --build
+docker compose up --build -d
 ```
 
-## MVP Goals
+## Product Goals
 
 - Track one or more Kick channels.
-- Add/remove followed channels from an admin panel.
-- Persist messages indefinitely.
-- Store all useful available message data, including raw payloads.
+- Add/disable followed channels from an admin panel.
+- Persist useful message data, including normalized fields and raw payloads.
 - Search messages with optional filters:
   - sender nickname
   - channel nickname/slug
   - message content
   - start datetime
   - end datetime
+  - reply-only
+  - emote-only
 - Show results with infinite scroll.
-- Provide admin user management with a default super admin.
+- Render reply context and inline emotes in search results.
+- Export filtered messages as JSON or CSV.
+- Provide public analytics, user profile pages, and channel profile pages.
+- Provide admin operations and data-management panels.
 - Run locally through Docker Compose.
 
-## Architecture
+## Runtime Architecture
 
-- `apps/api`: FastAPI backend for auth, search, channel admin, user admin, health checks, and database access.
+- `apps/api-go`: Go backend, listener, migrator, ClickHouse/SQLite repositories.
 - `apps/web`: Next.js frontend using pnpm, Tailwind, shadcn/ui, and lucide-react.
-- `listener` Docker service: Python Kick chat ingestion worker entrypoint from the backend package.
-- PostgreSQL runs in Docker with a named volume.
-- Python dependency/project tooling uses `uv`.
-- Frontend package management uses `pnpm`.
-- Detailed backend/frontend structure lives in `docs/architecture.md`.
-- Active post-MVP feature planning and handoff task files live in `docs/implementation_plan.md` and `docs/tasks/`.
-- The completed MVP implementation plan is archived under `docs/archive/`.
+- `clickhouse`: default data-plane database.
+- `api_go_data`: Docker volume that stores SQLite control-plane data.
+- `clickhouse_data`: Docker volume that stores ClickHouse data.
 
-## Docker Services
-
-- `postgres`: PostgreSQL database.
-- `api`: FastAPI dev server with hot reload.
-- `listener`: single Python worker that subscribes to all enabled followed channels.
-- `web`: Next.js dev server.
+Detailed structure lives in `docs/architecture.md`.
 
 ## Auth And Admin
 
-- Full login system is required for MVP.
-- Login is required only for admin/backend management flows, not for public search.
+- Login is required only for admin/backend management flows.
+- Public search, analytics, user profiles, and channel profiles do not require login.
 - Roles:
   - `super_admin`
   - `admin`
 - Default super admin:
   - email: `admin@kicklogs.local`
   - password: `admin123`
-- Default credentials must be overridable with env:
+- Default credentials are overridable with:
   - `DEFAULT_SUPER_ADMIN_EMAIL`
   - `DEFAULT_SUPER_ADMIN_PASSWORD`
-- Passwords must be hashed, never stored as plain text.
-- Super admin can create new admin users from the UI.
+- Passwords are hashed, never stored as plain text.
+- Super admin can create new admin users.
 - Admin dashboard route: `/admin`.
-- Admin dashboard manages backend operational state, including followed channels for ingestion.
 
 ## Search Behavior
 
 Search route: `/search`.
 
-The `/search` screen is public and does not require login. It exposes historical chat search to any visitor.
-
-Search API:
+API:
 
 ```text
-GET /messages?sender=&channel=&q=&start=&end=&cursor=&limit=
+GET /messages?sender=&channel=&q=&start=&end=&cursor=&limit=&reply_only=&emote_only=
 GET /messages/export?format=json|csv&sender=&channel=&q=&start=&end=&reply_only=&emote_only=&limit=
 ```
 
@@ -82,39 +82,22 @@ Filter semantics:
 
 - All filters are optional.
 - Non-empty filters combine with `AND`.
-- Empty `sender` means all users.
-- Empty `channel` means all channels.
-- Empty `q` means all message contents.
-- Empty all filters returns latest messages across all channels.
+- Empty `sender` searches all users.
+- Empty `channel` searches all channels.
+- Empty `q` searches all message contents.
 - `sender` uses case-insensitive exact matching against sender username/slug snapshots.
 - `channel` and `q` use case-insensitive contains matching.
 - `start` and `end` filter by message timestamp.
 - `reply_only=true` narrows results to reply messages.
 - `emote_only=true` narrows results to messages with at least one parsed emote.
 - Results are ordered newest-first.
-- Infinite scroll uses cursor pagination based on `(created_at, id)`.
-- Export uses the same filter semantics as on-screen search, returns JSON or CSV, and clamps
-  rows to `MESSAGE_EXPORT_MAX_ROWS`.
-- The public `/search` UI defaults `start` to 7 days before the current local date/time and `end` to the current local date/time. Users can clear those fields to omit date filters.
-- Bare `/search` does not automatically fetch latest messages; the user must submit the form or open a URL with query parameters.
+- Infinite scroll uses cursor pagination based on `message_created_at|message_id`.
+- Export uses the same filters and clamps rows to `MESSAGE_EXPORT_MAX_ROWS`.
+- Bare `/search` does not fetch latest messages until the user submits a search.
+- The search UI defaults missing date inputs to the last 7 days through today; users can clear
+  either field to omit that filter.
 
-Example queries:
-
-- `sender=yavuz`: all messages from sender username/slug exactly matching `yavuz` across all channels.
-- `sender=yavuz&q=selam`: messages from sender username/slug exactly matching `yavuz` containing `selam`.
-- `channel=exampleChannel&q=hello`: messages in channels matching `exampleChannel` containing `hello`.
-- `q=hello`: all messages containing `hello` across all channels.
-
-## Data Model Draft
-
-- `users`: admin accounts with email, password hash, role, timestamps.
-- `channels`: followed Kick channels with slug, Kick channel id, Kick chatroom id, display metadata, profile image/banner when available, enabled status, timestamps.
-- `chat_messages`: normalized message records with Kick message id, channel reference, chatroom id, content, message type, sender reference fields, parsed emotes, reply/thread metadata, raw payload, message timestamp, ingestion timestamp.
-- `senders` or sender snapshot fields: store sender id, username, slug, color, badges, and profile image when available.
-
-Store raw payload as JSONB so future fields remain queryable without needing to re-ingest historical messages.
-
-## Kick Payload And Enrichment
+## Kick Payload And Rendering
 
 Live chat payload fields observed from Pusher:
 
@@ -129,163 +112,126 @@ Live chat payload fields observed from Pusher:
 - `sender.identity.color`
 - `sender.identity.badges`
 - `metadata.message_ref`
-- reply metadata such as `metadata.original_sender`, `metadata.original_message`
-- `thread_parent_id` when present
+- `metadata.original_sender`
+- `metadata.original_message`
+- `thread_parent_id`
 
-Sender profile images are not reliably present in chat events. Enrich sender profiles separately through Kick web endpoints using sender slug when possible and cache the result.
+Reply rendering uses:
 
-Emotes arrive in message content as:
+- `message_type === "reply"`
+- `reply_metadata.original_sender.username`
+- `reply_metadata.original_message.content`
+
+Emotes arrive as tokens such as:
 
 ```text
 [emote:37226:KEKW]
 ```
 
-Parse and store emotes as structured data:
-
-- `id`
-- `name`
-- original token
-- inferred image URL
-
-Render emote images with:
+They are parsed into structured values and rendered with:
 
 ```text
 https://files.kick.com/emotes/{id}/fullsize
 ```
 
-If the image fails, fall back to emote name or original token.
+If the image fails, the UI falls back to emote name/token text.
 
-## API Draft
+## Public Pages
 
-- `GET /health`
-- `POST /auth/login`
-- `POST /auth/logout`
-- `GET /auth/me`
-- `GET /messages`
-- `GET /admin/channels`
-- `POST /admin/channels`
-  - body: channel slug/nickname
-  - resolves Kick metadata and stores/enables channel
-- `DELETE /admin/channels/{id}`
-  - disables or removes a followed channel for MVP
-- `GET /admin/users`
-- `POST /admin/users`
-  - super admin only
-  - creates admin users
-- `GET /admin/operations/summary`
-  - admin only
-  - returns listener freshness, storage size, raw event backlog/status, and ingest timestamps
-- `GET /admin/data-management/summary`
-  - admin only
-  - returns database/table sizes, row counts, and retention settings
-- `PUT /admin/data-management/retention-settings`
-  - admin only
-  - stores message/raw-event retention windows; `null` means keep forever
-- `POST /admin/data-management/cleanup/preview`
-  - admin only
-  - dry-runs cleanup for old messages, old raw events, a channel, or a sender
-- `POST /admin/data-management/cleanup/confirm`
-  - admin only
-  - executes cleanup only when confirmation text matches the preview
-- `GET /analytics/overview`
-  - public read-only aggregate totals for messages, senders, channels, emote usage, and first/latest message timestamps
-- `GET /analytics/message-volume`
-  - public read-only message volume buckets with `bucket=hour|day`
-- `GET /analytics/top-senders`
-  - public read-only top senders by message count
-- `GET /analytics/top-channels`
-  - public read-only top channels by message count
-- `GET /analytics/top-emotes`
-  - public read-only top emotes by usage count
-- `GET /users/{slug}/analytics`
-  - public read-only sender profile analytics keyed by sender slug
-  - returns sender identity, profile image URL, totals, first/latest seen, message volume, top
-    channels, top emotes, and latest messages
-- `GET /channels/{slug}/analytics`
-  - public read-only channel profile analytics keyed by channel slug
-  - returns channel metadata, totals, first/latest activity, message volume, top senders, top
-    emotes, and latest messages
+- `/`: compact public landing page with self-hosted positioning and analytics blocks.
+- `/search`: public historical message search.
+- `/users/[slug]`: public sender profile with analytics and latest messages.
+- `/channels/[slug]`: public channel profile with metadata, analytics, and latest messages.
 
-Analytics endpoints accept optional `start`, `end`, `channel`, and `sender`
-scope where relevant. `sender` scope uses case-insensitive exact username/slug
-matching. `channel` scope uses case-insensitive exact slug/display-name
-matching. Top-list `limit` is capped at 100.
+Profile links follow Kick URL behavior: visible usernames may contain `_`, but profile route links
+convert `_` to `-`.
 
-## Frontend Draft
+## Admin Pages
 
-- `/search`: primary app search screen.
-- `/admin`: authenticated admin dashboard for backend operations.
-- `/`: public compact landing page with self-hosted project positioning, live analytics blocks,
-  and clear navigation into search/admin/community links.
-- `/users/[slug]`: public sender profile screen with analytics and latest messages.
-- `/channels/[slug]`: public channel profile screen with stored Kick metadata, analytics, and
-  latest messages.
+`/admin` supports:
 
-Search UI follows the dark professional palette documented in `docs/design/design.md`:
-
-- `Kullanıcı Adı`
-- `Kanal Adı`
-- `Aramak istediğiniz kelime`
-- `Başlangıç`
-- `Bitiş`
-- yellow search button with lucide search icon
-
-Result rows should render inside one shared outer list container and show:
-
-- sender avatar
-- sender nickname
-- channel nickname/slug
-- timestamp
-- message content with emote image rendering/fallback
-
-Sender names and avatars in result rows link to `/users/[slug]` when a sender slug is present.
-Kick profile URLs convert underscores in chat usernames/slugs to hyphens, so `example_user`
-links to `/users/example-user` while the visible username remains `example_user`.
-Channel labels in result rows link to `/channels/[slug]` when channel slug data is present.
-
-Do not render each message as its own modal-like card. The list should stay dense and efficient for many messages.
-
-Admin UI should support:
-
-- login
-- backend operational management
+- login/logout session flow
 - followed channel list
 - add channel by slug/nickname
-- remove/disable channel
-- create admin user when current user is super admin
-- view operations health, storage growth, raw event backlog, and listener freshness
-- view data-management summary, retention settings, and guarded cleanup previews/actions
+- disable channel without deleting historical data
+- create admin user when current user is `super_admin`
+- operations health, storage growth, raw event status, and listener freshness
+- retention settings and guarded cleanup preview/confirm flows
+
+## Data Management
+
+Retention values:
+
+- `null`: keep forever
+- `30`: keep 30 days
+- `90`: keep 90 days
+
+Cleanup targets:
+
+- old messages
+- old raw events
+- specific channel
+- specific sender
+
+Cleanup requires a dry-run preview and exact confirmation text before execution. ClickHouse cleanup
+uses mutations; logical rows are removed before the API returns, while physical disk reclamation may
+lag behind background merges.
+
+## Legacy Data Migration
+
+PostgreSQL migration uses `migrate-go` when upgrading from an older deployment. PostgreSQL is not a
+current runtime service; expose or restore the old database separately and provide
+`POSTGRES_SOURCE_DSN`.
+
+```powershell
+docker compose up -d clickhouse
+$env:POSTGRES_SOURCE_DSN = "postgresql://kick_logs:kick_logs@host.docker.internal:5432/kick_logs"
+docker compose --profile tools run --rm migrate-go -target=data -dry-run
+docker compose --profile tools run --rm migrate-go -target=data -execute
+docker compose --profile tools run --rm migrate-go -target=data -validation-only
+```
+
+The migrator is read-only against PostgreSQL. PostgreSQL source data and dumps are not deleted by
+the migration plan.
 
 ## Test Plan
 
-- Backend:
-  - auth login and role checks
-  - default super admin seed
-  - channel slug resolution
-  - message search filter combinations
-  - date range filtering
-  - cursor pagination
-  - message normalization and deduplication
-- Listener:
-  - Kick payload parsing
-  - emote token parsing
-  - multi-channel subscription from enabled channels
-  - reconnect behavior
-  - sender profile enrichment fallback
-- Frontend:
-  - `/search` filter form
-  - infinite scroll
-  - emote fallback rendering
-  - `/admin` login, channel management, user creation
-- Docker:
-  - `docker compose up --build`
-  - API health check passes
-  - web loads
-  - postgres volume persists data
+Backend Go:
 
-## MVP Constraints
+- config and route tests
+- auth/session tests
+- admin users/channels tests
+- message search/export tests
+- listener parsing and processing tests
+- analytics/profile tests
+- data-management tests
+- legacy PostgreSQL migration tests
+- ClickHouse repository integration tests when Docker is available
 
-- No official Kick OAuth/webhook integration in MVP; use Kick web Pusher events.
-- Kick web endpoints and emote image URLs are undocumented and may change; code must fail gracefully.
-- No push is performed by agents; user manually pushes commits.
-- Prefer small, commit-sized implementation steps.
+Frontend:
+
+- search form and URL query behavior
+- infinite scroll helpers
+- emote/reply/link/highlight rendering
+- auth guard and login flow
+- admin channel/user/operations/data-management panels
+- landing analytics, user profiles, and channel profiles
+
+Docker:
+
+- `docker compose up --build -d`
+- `GET /health`
+- default super admin login
+- public search/export
+- analytics/profile routes
+- admin operations/data-management routes
+- unauthenticated admin rejection
+
+## Constraints
+
+- Kick web endpoints and Pusher channels are undocumented and may change.
+- Once a websocket event reaches the listener, raw payload persistence must happen before heavy
+  normalization.
+- Historical Python/PostgreSQL docs live under `docs/archive/`.
+- User manually pushes commits.
+- Keep implementation steps commit-sized.

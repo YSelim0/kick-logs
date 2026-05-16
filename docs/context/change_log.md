@@ -2,8 +2,259 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-16
+
+- Finalized Go + ClickHouse runtime cleanup:
+  - archived completed Go rewrite documents under `docs/archive/go_rewrite/`, including phase
+    tasks and the API contract inventory
+  - replaced the active implementation plan with a no-active-plan marker
+  - removed the Python/FastAPI application from `apps/api`
+  - removed PostgreSQL and Python runtime services/volumes from Docker Compose
+  - retained `migrate-go` as a `tools` profile legacy PostgreSQL import command that requires an
+    explicit `POSTGRES_SOURCE_DSN`
+  - removed Python-specific Docker/Git ignore rules that only existed for the deleted app
+  - replaced Python GitHub Actions validation with Go CI on every push and pull request
+  - changed code-style GitHub Actions validation to run on every push and pull request
+  - updated README, architecture, project plan, living context, decisions, and recent handoff docs
+    for Go + ClickHouse + SQLite as the only current runtime
+  - migrated local legacy data into fresh ClickHouse/SQLite targets:
+    - `admin_users`: 2
+    - `followed_channels`: 7
+    - `sender_profiles`: 8570
+    - `retention_settings`: 1
+    - `worker_heartbeats`: 1
+    - `chat_messages`: 123790
+    - `raw_kick_events`: 121664
+    - `raw_event_attempts`: 121664
+  - preserved the legacy PostgreSQL volume intentionally
+  - verified `go test ./...`
+  - verified `go vet ./...`
+  - verified live ClickHouse integration test with
+    `KICK_LOGS_RUN_CLICKHOUSE_TESTS=1 go test ./internal/infra/clickhouse -run TestClickHouseMigrationsAndRepositories -count=1 -v`
+  - verified `pnpm format:check`
+  - verified `git diff --check`
+  - verified `docker compose config --services`
+  - verified `docker compose --profile tools config --services`
+  - verified `docker compose up --build -d --remove-orphans` starts `clickhouse`, Go `api`, Go
+    `listener`, and `web`
+  - smoke verified `GET /health`, `GET /messages?limit=1`, default admin login, and
+    `GET /admin/channels`
+
+- Completed Go rewrite Phase 9 cutover:
+  - added Go admin data-management API parity before switching the default runtime
+  - implemented `GET /admin/data-management/summary`,
+    `PUT /admin/data-management/retention-settings`,
+    `POST /admin/data-management/cleanup/preview`, and
+    `POST /admin/data-management/cleanup/confirm` in the Go API
+  - switched Compose intent so default `api` and `listener` build from `apps/api-go`
+  - made `clickhouse` part of the default Compose runtime
+  - moved Python/FastAPI/PostgreSQL services behind the `python-reference` profile as
+    `postgres`, `api-python`, and `listener-python`
+  - moved `migrate-go` behind the `tools` profile
+  - updated `.env.example`, README, architecture notes, project plan, implementation plan, and
+    active context docs for Go + ClickHouse default runtime
+  - PostgreSQL source data and volumes remain available for migration/rollback and are not deleted
+  - fixed SQLite sender profile upsert to use atomic `ON CONFLICT` handling for live listener
+    races on `kick_user_id` and `slug`
+  - closed all checklist items in `docs/tasks/go_rewrite_09_cutover_smoke_docs.md`
+  - verified `go test ./...`
+  - verified `go vet ./...`
+  - verified live ClickHouse integration test with
+    `KICK_LOGS_RUN_CLICKHOUSE_TESTS=1 go test ./internal/infra/clickhouse -run TestClickHouseMigrationsAndRepositories -count=1 -v`
+  - verified `docker compose up --build -d --remove-orphans` starts default `clickhouse`, Go
+    `api`, Go `listener`, and `web`
+  - smoke verified `GET /health`, default super-admin login, admin channel list/add/disable,
+    listener heartbeat, live and fixture searchable messages, sender exact search, channel/content
+    search, reply metadata, emote image metadata, JSON export, CSV export, landing/user/channel
+    pages, analytics/profile APIs, admin operations, admin data-management summary, cleanup
+    preview, public unauthenticated routes, and unauthenticated admin rejection
+
+- Completed Go rewrite Phase 8 PostgreSQL data migration:
+  - added `POSTGRES_SOURCE_DSN` config and PostgreSQL source adapter under
+    `internal/infra/postgres`
+  - added data migration use case under `internal/usecase/datamigration`
+  - added `cmd/migrate -target=data` with `-dry-run`, `-execute`, `-validation-only`,
+    `-batch-size`, `-sample-size`, and `-source-postgres-url`
+  - added SQLite data migration writer for admin users, followed channels, sender profiles,
+    retention settings, worker heartbeat state, and `data_migration_runs`
+  - added ClickHouse data migration writer for idempotent chat message, raw event, and raw-event
+    attempt inserts
+  - added ClickHouse raw event `metadata_json` migration and repository mapping
+  - preserved source IDs for migrated SQLite rows, ClickHouse messages, and raw events; raw-event
+    attempts use deterministic migrated IDs to avoid duplicates on rerun
+  - validated Go-compatible bcrypt admin password hashes before accepting migration
+  - added count validation, sample validation, rerun/idempotency coverage, migrated-search fixture
+    coverage, and migrated admin hash verification
+  - updated README, architecture notes, implementation plan, Compose env, `.env.example`, and
+    closed all checklist items in `docs/tasks/go_rewrite_08_data_migration.md`
+  - verified `go test ./...`
+  - verified `go vet ./...`
+  - verified live ClickHouse integration test with
+    `KICK_LOGS_RUN_CLICKHOUSE_TESTS=1 go test ./internal/infra/clickhouse -run TestClickHouseMigrationsAndRepositories -count=1 -v`
+  - verified `docker compose --profile go-rewrite build migrate-go`
+  - verified `docker compose --profile go-rewrite run --rm migrate-go -target=sqlite`
+  - verified `docker compose --profile go-rewrite run --rm migrate-go -target=clickhouse`
+
+- Completed Go rewrite Phase 7 analytics/profile parity:
+  - implemented public Go routes for `GET /analytics/overview`,
+    `GET /analytics/message-volume`, `GET /analytics/top-senders`,
+    `GET /analytics/top-channels`, and `GET /analytics/top-emotes`
+  - implemented public Go routes for `GET /users/{slug}/analytics` and
+    `GET /channels/{slug}/analytics`
+  - added ClickHouse analytics repository queries for overview counts, bucketed volume, top
+    senders, top channels, top emotes, and latest scoped messages
+  - preserved analytics date filters, exact channel scope, sender username/slug scope with
+    underscore/hyphen variants, `bucket=hour|day`, and top-list `limit` validation
+  - user and channel profile responses now combine SQLite identity metadata with ClickHouse
+    analytics and latest message rows
+  - unknown profile slugs return the existing 404 detail strings
+  - closed all checklist items in `docs/tasks/go_rewrite_07_analytics_profiles.md`
+  - verified `go test ./...`
+  - verified `go vet ./...`
+  - verified live ClickHouse integration test with
+    `KICK_LOGS_RUN_CLICKHOUSE_TESTS=1 go test ./internal/infra/clickhouse -run TestClickHouseMigrationsAndRepositories -count=1 -v`
+  - verified `docker compose --profile go-rewrite up --build -d api-go`
+  - verified live `GET /analytics/overview`, `GET /analytics/message-volume`,
+    `GET /analytics/top-senders`, `GET /analytics/top-channels`, `GET /analytics/top-emotes`,
+    analytics invalid-range 422, and unknown user-profile 404 smoke checks
+
+- Completed Go rewrite Phase 6 listener ingestion parity:
+  - implemented the Go listener runtime wiring in `cmd/listener`
+  - added Kick sender profile resolver and Pusher websocket client
+  - subscribed to `chatrooms.{chatroom_id}.v2` and channel-level streams for enabled followed
+    channels
+  - persisted raw Kick chat events into ClickHouse before normalization
+  - added raw-event retry processing, processing attempts, max-attempt filtering, and idempotent
+    message inserts by `kick_message_id`
+  - normalized sender/channel snapshots, reply metadata, emotes, badges, message type, timestamps,
+    raw payload JSON, and sender profile cache updates
+  - added listener heartbeat writes and operations-summary raw-event health fixes
+  - added `listener-go` to the `go-rewrite` Compose profile
+  - closed all checklist items in `docs/tasks/go_rewrite_06_listener_ingestion.md`
+  - verified `go test ./...`
+  - verified `go vet ./...`
+  - verified live ClickHouse integration test with
+    `KICK_LOGS_RUN_CLICKHOUSE_TESTS=1 go test ./internal/infra/clickhouse -run TestClickHouseMigrationsAndRepositories -count=1 -v`
+  - verified `docker compose --profile go-rewrite up --build -d api-go listener-go`
+  - verified authenticated `GET /admin/operations/summary` reports fresh listener heartbeat and
+    consistent raw-event counts
+
+- Completed Go rewrite Phase 5 message search/export parity:
+  - added ClickHouse-backed message search use case and public `GET /messages`
+  - added public `GET /messages/export` with JSON and CSV output
+  - preserved query parsing for `sender`, `channel`, `q`, `start`, `end`, `cursor`, `limit`,
+    `reply_only`, and `emote_only`
+  - preserved case-insensitive exact sender matching and case-insensitive contains matching for
+    channel/content
+  - preserved newest-first ordering and `message_created_at|message_id` cursor pagination
+  - expanded ClickHouse message snapshot columns for nested sender/channel IDs, channel banner,
+    sender badges, and reply metadata JSON
+  - mapped ClickHouse rows back to the current message JSON response shape
+  - CSV export uses the contract column order and formula-safe cell prefixing
+  - updated Go API startup to wire the message service when ClickHouse is reachable
+  - ignored local `apps/api-go/.cache/` so Go test caches do not enter Docker build context
+  - closed all checklist items in `docs/tasks/go_rewrite_05_messages_search_export.md`
+  - verified `go test ./...`
+  - verified `go vet ./...`
+  - verified live ClickHouse integration test with
+    `KICK_LOGS_RUN_CLICKHOUSE_TESTS=1 go test ./internal/infra/clickhouse -run TestClickHouseMigrationsAndRepositories -count=1 -v`
+  - verified Docker Go API smoke for `GET /messages`, JSON export, and CSV export against
+    `http://localhost:8001`
+  - verified `pnpm format:check`
+  - verified `git diff --check`
+
+- Completed Go rewrite Phase 4 auth/admin API parity:
+  - added JWT and bcrypt auth infrastructure for the Go API
+  - added auth config fields for JWT secret, algorithm, expiry, cookie name, cookie secure flag,
+    cookie SameSite value, super-admin seed behavior, and listener stale threshold
+  - Go API startup applies SQLite migrations and seeds the default super admin when
+    `SEED_SUPER_ADMIN_ON_STARTUP=true`
+  - Go API startup applies ClickHouse migrations when ClickHouse is reachable; otherwise admin
+    operations can still use SQLite-only data
+  - implemented `POST /auth/login`, `POST /auth/logout`, and `GET /auth/me`
+  - preserved response shapes and auth cookie behavior expected by the current frontend
+  - implemented admin auth checks and super-admin-only admin user creation
+  - implemented `GET /admin/users` and `POST /admin/users`
+  - added Go Kick web channel resolver for `https://kick.com/api/v2/channels/{slug}`
+  - implemented `GET /admin/channels`, `POST /admin/channels`, and disable-style
+    `DELETE /admin/channels/{channel_id}`
+  - implemented basic `GET /admin/operations/summary` with SQLite channel/sender/listener data
+    and ClickHouse message/raw-event/storage/timestamp data when available
+  - updated Compose `api-go` env passthrough for JWT and listener freshness settings
+  - closed all checklist items in `docs/tasks/go_rewrite_04_auth_admin_api.md`
+  - verified `go test ./...`
+  - verified `go vet ./...`
+  - verified Docker Go API smoke:
+    `POST /auth/login`, `GET /auth/me`, `GET /admin/users`, and
+    `GET /admin/operations/summary` against `http://localhost:8001`
+  - verified `docker compose --profile go-rewrite up --build -d api-go`
+
+- Completed Go rewrite Phase 3 storage/schema:
+  - added Go config fields for SQLite path, ClickHouse connection, ClickHouse debug mode, and
+    default super-admin credentials
+  - added versioned SQLite and ClickHouse migration runners with idempotent migration tracking
+  - added SQLite control-plane schema for `admin_users`, `followed_channels`, `sender_profiles`,
+    `retention_settings`, `worker_heartbeats`, `schema_migrations`, and `data_migrations`
+  - added ClickHouse data-plane schema for `chat_messages`, `raw_kick_events`, and
+    `raw_event_attempts`
+  - denormalized `chat_messages` with sender/channel snapshots, reply fields, thread parent id,
+    emote arrays, normalized sender/channel/content helpers, message type, raw payload JSON, and
+    ingestion timestamps
+  - added repository interfaces for admin users, followed channels, messages, raw events, and
+    storage stats
+  - added concrete SQLite repositories for admin users, followed channels, super-admin seeding, and
+    control-plane stats
+  - added concrete ClickHouse repositories for messages, raw events/attempts, and table-size stats
+  - added `clickhouse` and `migrate-go` Compose services behind profile `go-rewrite`
+  - corrected ClickHouse healthcheck to use `clickhouse-client` with the configured user/password
+  - updated README, architecture, implementation plan, and context docs for the storage foundation
+  - closed all checklist items in `docs/tasks/go_rewrite_03_storage_schema.md`
+  - verified `go test ./...`
+  - verified live ClickHouse integration test with
+    `KICK_LOGS_RUN_CLICKHOUSE_TESTS=1 go test ./internal/infra/clickhouse -run TestClickHouseMigrationsAndRepositories -count=1 -v`
+  - verified `docker compose --profile go-rewrite run --rm migrate-go`
+  - verified `docker compose --profile go-rewrite build api-go`
+
+- Completed Go rewrite Phase 2 workspace/tooling:
+  - added `apps/api-go` Go module and command entrypoints for `api`, `listener`, and `migrate`
+  - added environment config loading with local defaults and structured `log/slog` JSON logging
+  - added stdlib HTTP server bootstrap with CORS, request logging, panic recovery, and
+    contract-compatible `GET /health`
+  - added internal package skeletons for domain, ports, use cases, infrastructure, HTTP routes, and
+    schemas
+  - added Go tests for config loading, CORS preflight, and health response shape
+  - added Go Dockerfile and optional Compose `api-go` service behind the `go-rewrite` profile
+  - documented Go rewrite development commands in README and added current architecture notes
+  - ignored local Go build outputs and build cache under `apps/api-go`
+  - closed all checklist items in `docs/tasks/go_rewrite_02_workspace_tooling.md`
+  - verified `go test ./...`
+  - verified `go vet ./...`
+  - verified local binary health smoke: `GET /health` returned `{"status":"ok"}`
+  - verified `docker compose --profile go-rewrite build api-go`
+  - verified `pnpm format:check`
+  - verified `git diff --check`
+
 ## 2026-05-15
 
+- Completed Go rewrite Phase 1 contract inventory:
+  - added `docs/contracts/api_contract.md` as the current Python backend contract snapshot for the
+    Go rewrite
+  - added representative successful and error JSON fixtures under `docs/contracts/fixtures/`
+  - documented endpoint paths, methods, access boundaries, request body fields, query parameters,
+    response shapes, auth cookie behavior, status-code expectations, cursor parsing, CSV export
+    column order, sender exact matching, channel/content matching, reply metadata, and emote fields
+  - verified the endpoint list against backend route/schema files and frontend API wrappers/types
+  - closed all checklist items in `docs/tasks/go_rewrite_01_contract_inventory.md`
+  - verified `python -m uv run pytest`: 72 passed, 52 skipped
+  - verified `pnpm format:check`
+  - verified `git diff --check`
+- Started the Go + ClickHouse rewrite planning track:
+  - reorganized historical docs into `docs/archive/mvp/` and `docs/archive/post_mvp/`
+  - archived completed post-MVP task files so `docs/tasks/` can hold only active rewrite tasks
+  - replaced `docs/implementation_plan.md` with the Go + ClickHouse rewrite implementation plan
+  - documented the storage decision: ClickHouse for messages/raw events/analytics and SQLite for
+    auth/admin/control-plane state
+  - added active phase task files from contract inventory through cutover and smoke testing
 - Fixed Docker Compose backend env passthrough for release readiness:
   - API service now receives `DATABASE_ECHO`, `JWT_ALGORITHM`, `JWT_EXPIRES_MINUTES`,
     `JWT_COOKIE_SECURE`, `JWT_COOKIE_SAMESITE`, and `SEED_SUPER_ADMIN_ON_STARTUP` from `.env`

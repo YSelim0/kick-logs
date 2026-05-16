@@ -1,0 +1,56 @@
+{
+  "items": [
+    {
+      "id": 5002,
+      "kick_message_id": "msg_reply_5002",
+      "chatroom_id": 2001,
+      "content": "selam <3",
+      "message_type": "reply",
+      "sender_username_snapshot": "example_user",
+      "sender_slug_snapshot": "example-user",
+      "sender_color_snapshot": "#FF005C",
+      "sender_badges": [
+        {
+          "type": "subscriber",
+          "text": "Sub"
+        }
+      ],
+      "emotes": [
+        {
+          "id": "243242",
+          "name": "KEKW",
+          "token": "[emote:243242:KEKW]",
+          "image_url": "https://files.kick.com/emotes/243242/fullsize"
+        }
+      ],
+      "reply_metadata": {
+        "original_sender": {
+          "username": "yavuz"
+        },
+        "original_message": {
+          "content": "hello"
+        }
+      },
+      "thread_parent_id": "msg_parent_5001",
+      "message_created_at": "2026-05-15T19:25:30Z",
+      "ingested_at": "2026-05-15T19:25:31Z",
+      "sender": {
+        "id": 101,
+        "kick_user_id": 9001,
+        "username": "example_user",
+        "slug": "example-user",
+        "profile_image_url": "https://files.kick.com/images/user/example-user.png"
+      },
+      "channel": {
+        "id": 10,
+        "slug": "hype",
+        "display_name": "Hype",
+        "profile_image_url": "https://files.kick.com/images/channel/hype-profile.png",
+        "banner_image_url": "https://files.kick.com/images/channel/hype-banner.png"
+      }
+    }
+  ],
+  "count": 1,
+  "max_rows": 1000,
+  "truncated": false
+}

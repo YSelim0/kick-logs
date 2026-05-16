@@ -1,0 +1,383 @@
+package clickhouse
+
+import (
+	"context"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/domain"
+)
+
+type AnalyticsRepository struct {
+	conn driver.Conn
+}
+
+func NewAnalyticsRepository(conn driver.Conn) *AnalyticsRepository {
+	return &AnalyticsRepository{conn: conn}
+}
+
+func (repo *AnalyticsRepository) Overview(
+	ctx context.Context,
+	filter domain.AnalyticsFilter,
+) (domain.AnalyticsOverview, error) {
+	where, args := analyticsWhere(filter)
+	query := fmt.Sprintf(`SELECT
+		count(),
+		uniqExactIf(sender_id, isNotNull(sender_id)),
+		uniqExactIf(channel_id, isNotNull(channel_id)),
+		sum(emote_count),
+		min(message_created_at),
+		max(message_created_at)
+		FROM chat_messages
+		WHERE %s`, where)
+
+	var totalMessages uint64
+	var totalSenders uint64
+	var totalChannels uint64
+	var totalEmoteUsages uint64
+	var firstMessageAt time.Time
+	var latestMessageAt time.Time
+	if err := repo.conn.QueryRow(ctx, query, args...).Scan(
+		&totalMessages,
+		&totalSenders,
+		&totalChannels,
+		&totalEmoteUsages,
+		&firstMessageAt,
+		&latestMessageAt,
+	); err != nil {
+		return domain.AnalyticsOverview{}, fmt.Errorf("query analytics overview: %w", err)
+	}
+
+	overview := domain.AnalyticsOverview{
+		TotalMessages:    int64(totalMessages),
+		TotalSenders:     int64(totalSenders),
+		TotalChannels:    int64(totalChannels),
+		TotalEmoteUsages: int64(totalEmoteUsages),
+	}
+	if totalMessages > 0 {
+		overview.FirstMessageAt = firstMessageAt.UTC()
+		overview.LatestMessageAt = latestMessageAt.UTC()
+	}
+	return overview, nil
+}
+
+func (repo *AnalyticsRepository) MessageVolume(
+	ctx context.Context,
+	filter domain.AnalyticsFilter,
+	bucket domain.AnalyticsBucket,
+) ([]domain.MessageVolumePoint, error) {
+	where, args := analyticsWhere(filter)
+	bucketFunction := "toStartOfDay"
+	if bucket == domain.AnalyticsBucketHour {
+		bucketFunction = "toStartOfHour"
+	}
+	query := fmt.Sprintf(`SELECT
+		%s(message_created_at) AS bucket_start,
+		count() AS message_count
+		FROM chat_messages
+		WHERE %s
+		GROUP BY bucket_start
+		ORDER BY bucket_start ASC`, bucketFunction, where)
+
+	rows, err := repo.conn.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query message volume: %w", err)
+	}
+	defer rows.Close()
+
+	points := make([]domain.MessageVolumePoint, 0)
+	for rows.Next() {
+		var point domain.MessageVolumePoint
+		var messageCount uint64
+		if err := rows.Scan(&point.BucketStart, &messageCount); err != nil {
+			return nil, fmt.Errorf("scan message volume: %w", err)
+		}
+		point.BucketStart = point.BucketStart.UTC()
+		point.MessageCount = int64(messageCount)
+		points = append(points, point)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate message volume: %w", err)
+	}
+	return points, nil
+}
+
+func (repo *AnalyticsRepository) TopSenders(
+	ctx context.Context,
+	filter domain.AnalyticsFilter,
+	limit uint64,
+) ([]domain.TopSenderAnalytics, error) {
+	where, args := analyticsWhere(filter)
+	query := fmt.Sprintf(`SELECT
+		ifNull(sender_id, 0) AS sender_id,
+		ifNull(sender_kick_id, 0) AS kick_user_id,
+		argMax(sender_username, message_created_at) AS username,
+		argMax(sender_slug, message_created_at) AS slug,
+		argMax(ifNull(sender_profile_image_url, ''), message_created_at) AS profile_image_url,
+		count() AS message_count,
+		min(message_created_at) AS first_message_at,
+		max(message_created_at) AS latest_message_at
+		FROM chat_messages
+		WHERE %s
+		GROUP BY sender_id, kick_user_id
+		ORDER BY message_count DESC, latest_message_at DESC, slug ASC
+		LIMIT ?`, where)
+	args = append(args, limitOrDefault(limit))
+
+	rows, err := repo.conn.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query top senders: %w", err)
+	}
+	defer rows.Close()
+
+	senders := make([]domain.TopSenderAnalytics, 0)
+	for rows.Next() {
+		var sender domain.TopSenderAnalytics
+		var messageCount uint64
+		if err := rows.Scan(
+			&sender.SenderID,
+			&sender.KickUserID,
+			&sender.Username,
+			&sender.Slug,
+			&sender.ProfileImageURL,
+			&messageCount,
+			&sender.FirstMessageAt,
+			&sender.LatestMessageAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan top sender: %w", err)
+		}
+		sender.MessageCount = int64(messageCount)
+		sender.FirstMessageAt = sender.FirstMessageAt.UTC()
+		sender.LatestMessageAt = sender.LatestMessageAt.UTC()
+		senders = append(senders, sender)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate top senders: %w", err)
+	}
+	return senders, nil
+}
+
+func (repo *AnalyticsRepository) TopChannels(
+	ctx context.Context,
+	filter domain.AnalyticsFilter,
+	limit uint64,
+) ([]domain.TopChannelAnalytics, error) {
+	where, args := analyticsWhere(filter)
+	query := fmt.Sprintf(`SELECT
+		ifNull(channel_id, 0) AS channel_id,
+		argMax(channel_slug, message_created_at) AS slug,
+		argMax(channel_display_name, message_created_at) AS display_name,
+		argMax(ifNull(channel_profile_image_url, ''), message_created_at) AS profile_image_url,
+		argMax(ifNull(channel_banner_image_url, ''), message_created_at) AS banner_image_url,
+		count() AS message_count,
+		min(message_created_at) AS first_message_at,
+		max(message_created_at) AS latest_message_at
+		FROM chat_messages
+		WHERE %s
+		GROUP BY channel_id
+		ORDER BY message_count DESC, latest_message_at DESC, slug ASC
+		LIMIT ?`, where)
+	args = append(args, limitOrDefault(limit))
+
+	rows, err := repo.conn.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query top channels: %w", err)
+	}
+	defer rows.Close()
+
+	channels := make([]domain.TopChannelAnalytics, 0)
+	for rows.Next() {
+		var channel domain.TopChannelAnalytics
+		var messageCount uint64
+		if err := rows.Scan(
+			&channel.ChannelID,
+			&channel.Slug,
+			&channel.DisplayName,
+			&channel.ProfileImageURL,
+			&channel.BannerImageURL,
+			&messageCount,
+			&channel.FirstMessageAt,
+			&channel.LatestMessageAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan top channel: %w", err)
+		}
+		channel.MessageCount = int64(messageCount)
+		channel.FirstMessageAt = channel.FirstMessageAt.UTC()
+		channel.LatestMessageAt = channel.LatestMessageAt.UTC()
+		channels = append(channels, channel)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate top channels: %w", err)
+	}
+	return channels, nil
+}
+
+func (repo *AnalyticsRepository) TopEmotes(
+	ctx context.Context,
+	filter domain.AnalyticsFilter,
+	limit uint64,
+) ([]domain.TopEmoteAnalytics, error) {
+	where, args := analyticsWhere(filter)
+	query := fmt.Sprintf(`SELECT
+		emote_id,
+		emote_name,
+		emote_token,
+		emote_image_url,
+		count() AS usage_count,
+		uniqExact(kick_message_id) AS message_count
+		FROM chat_messages
+		ARRAY JOIN
+			emote_ids AS emote_id,
+			emote_names AS emote_name,
+			emote_tokens AS emote_token,
+			emote_image_urls AS emote_image_url
+		WHERE %s
+		GROUP BY emote_id, emote_name, emote_token, emote_image_url
+		ORDER BY usage_count DESC, message_count DESC, emote_name ASC
+		LIMIT ?`, where)
+	args = append(args, limitOrDefault(limit))
+
+	rows, err := repo.conn.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query top emotes: %w", err)
+	}
+	defer rows.Close()
+
+	emotes := make([]domain.TopEmoteAnalytics, 0)
+	for rows.Next() {
+		var emote domain.TopEmoteAnalytics
+		var usageCount uint64
+		var messageCount uint64
+		if err := rows.Scan(
+			&emote.ID,
+			&emote.Name,
+			&emote.Token,
+			&emote.ImageURL,
+			&usageCount,
+			&messageCount,
+		); err != nil {
+			return nil, fmt.Errorf("scan top emote: %w", err)
+		}
+		emote.UsageCount = int64(usageCount)
+		emote.MessageCount = int64(messageCount)
+		emotes = append(emotes, emote)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate top emotes: %w", err)
+	}
+	return emotes, nil
+}
+
+func (repo *AnalyticsRepository) LatestMessages(
+	ctx context.Context,
+	filter domain.AnalyticsFilter,
+	limit uint64,
+) ([]domain.ChatMessage, error) {
+	where, args := analyticsWhere(filter)
+	query := fmt.Sprintf(`SELECT
+		id, kick_message_id, ifNull(channel_id, 0), ifNull(channel_kick_id, 0), ifNull(channel_chatroom_id, 0),
+		channel_slug, channel_display_name, ifNull(channel_profile_image_url, ''),
+		ifNull(channel_banner_image_url, ''), channel_public_url,
+		ifNull(sender_id, 0), ifNull(sender_kick_id, 0), sender_username, sender_slug,
+		ifNull(sender_display_color, ''), ifNull(sender_profile_image_url, ''),
+		sender_public_url, sender_badges_json, message_type, content, emote_ids, emote_names, emote_tokens,
+		emote_image_urls, ifNull(reply_to_sender, ''), ifNull(reply_to_content, ''),
+		ifNull(reply_to_message_id, ''), ifNull(thread_parent_id, ''), reply_metadata_json,
+		raw_payload_json, message_created_at, ingested_at
+		FROM chat_messages
+		WHERE %s
+		ORDER BY message_created_at DESC, id DESC
+		LIMIT ?`, where)
+	args = append(args, limitOrDefault(limit))
+
+	rows, err := repo.conn.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query latest analytics messages: %w", err)
+	}
+	defer rows.Close()
+
+	messages := make([]domain.ChatMessage, 0)
+	for rows.Next() {
+		message, err := scanMessage(rows)
+		if err != nil {
+			return nil, err
+		}
+		messages = append(messages, message)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate latest analytics messages: %w", err)
+	}
+	return messages, nil
+}
+
+func analyticsWhere(filter domain.AnalyticsFilter) (string, []any) {
+	where := []string{"is_deleted = 0"}
+	args := make([]any, 0, 8)
+
+	if !filter.Start.IsZero() {
+		where = append(where, "message_created_at >= ?")
+		args = append(args, filter.Start.UTC())
+	}
+	if !filter.End.IsZero() {
+		where = append(where, "message_created_at <= ?")
+		args = append(args, filter.End.UTC())
+	}
+	if filter.Channel != "" {
+		channel := strings.ToLower(strings.TrimSpace(filter.Channel))
+		where = append(where, "(channel_slug_lower = ? OR channel_display_name_lower = ?)")
+		args = append(args, channel, channel)
+	}
+	if filter.Sender != "" {
+		terms := senderLookupTerms(filter.Sender)
+		if len(terms) > 0 {
+			placeholders := strings.TrimRight(strings.Repeat("?,", len(terms)), ",")
+			where = append(
+				where,
+				fmt.Sprintf("(sender_username_lower IN (%s) OR sender_slug_lower IN (%s))", placeholders, placeholders),
+			)
+			for _, term := range terms {
+				args = append(args, term)
+			}
+			for _, term := range terms {
+				args = append(args, term)
+			}
+		}
+	}
+	return strings.Join(where, " AND "), args
+}
+
+func senderLookupTerms(value string) []string {
+	cleaned := strings.ToLower(strings.TrimSpace(value))
+	if cleaned == "" {
+		return nil
+	}
+	terms := make([]string, 0, 3)
+	for _, term := range []string{
+		cleaned,
+		strings.ReplaceAll(cleaned, "_", "-"),
+		strings.ReplaceAll(cleaned, "-", "_"),
+	} {
+		if !hasTerm(terms, term) {
+			terms = append(terms, term)
+		}
+	}
+	return terms
+}
+
+func hasTerm(terms []string, candidate string) bool {
+	for _, term := range terms {
+		if term == candidate {
+			return true
+		}
+	}
+	return false
+}
+
+func limitOrDefault(limit uint64) uint64 {
+	if limit == 0 {
+		return 10
+	}
+	return limit
+}

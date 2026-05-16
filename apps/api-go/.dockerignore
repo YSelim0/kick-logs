@@ -1,0 +1,8 @@
+.git
+bin/
+tmp/
+.gocache/
+.gomodcache/
+.cache/
+coverage.out
+*.test

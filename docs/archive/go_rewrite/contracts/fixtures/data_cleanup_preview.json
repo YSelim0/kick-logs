@@ -1,0 +1,15 @@
+{
+  "target": "channel",
+  "affected": {
+    "messages": 720,
+    "raw_events": 735,
+    "total": 1455
+  },
+  "confirmation_text": "DELETE CHANNEL hype",
+  "can_execute": true,
+  "cutoff_at": null,
+  "channel_slug": "hype",
+  "sender": null,
+  "retention_days": null,
+  "reason": null
+}

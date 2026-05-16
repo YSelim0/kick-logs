@@ -5,7 +5,7 @@
 <h1 align="center">Kick Logs</h1>
 
 <p align="center">
-  A self-hosted Kick chat logger with durable ingestion, PostgreSQL storage, and a searchable web UI.
+  A self-hosted Kick chat logger with durable ingestion, ClickHouse storage, and a searchable web UI.
 </p>
 
 <p align="center">
@@ -17,8 +17,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/YSelim0/kick-logs/actions/workflows/python-tests.yml">
-    <img src="https://github.com/YSelim0/kick-logs/actions/workflows/python-tests.yml/badge.svg" alt="Python CI" />
+  <a href="https://github.com/YSelim0/kick-logs/actions/workflows/go-tests.yml">
+    <img src="https://github.com/YSelim0/kick-logs/actions/workflows/go-tests.yml/badge.svg" alt="Go CI" />
   </a>
   <a href="https://buymeacoffee.com/yavuzselim">
     <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-yavuzselim-FFF600?style=for-the-badge&logo=buymeacoffee&logoColor=000000" alt="Buy Me a Coffee" />
@@ -31,13 +31,13 @@
 
 ## Overview
 
-Kick Logs collects public chat messages from followed Kick channels, stores the
-useful payload in PostgreSQL, and lets users search historical messages from a
-Next.js web interface.
+Kick Logs collects public chat messages from followed Kick channels, stores the useful payload in
+ClickHouse with SQLite-backed control data, and lets users search historical messages from a Next.js
+web interface.
 
 The project is built as a monorepo:
 
-- `apps/api`: FastAPI backend, PostgreSQL persistence, auth, admin APIs, message search
+- `apps/api-go`: Go backend, listener, migrator, ClickHouse persistence, SQLite control data
 - `apps/web`: Next.js frontend, public search UI, admin dashboard
 - `listener`: Docker service that subscribes to Kick chat events and stores raw events first
 - `docs`: architecture, implementation notes, task plans, and design decisions
@@ -74,14 +74,14 @@ The project is built as a monorepo:
   - workers process raw events into normalized messages
   - stale processing rows can be reclaimed
   - duplicate message writes are avoided by Kick message id
-- Docker Compose runtime for PostgreSQL, API, listener, and web.
+- Docker Compose runtime for ClickHouse, Go API, Go listener, and web.
 
 ## Tech Stack
 
-- Backend: Python 3.12, FastAPI, SQLAlchemy 2.x async ORM, Alembic, asyncpg
+- Backend: Go, stdlib HTTP, SQLite, ClickHouse
 - Frontend: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui primitives, lucide-react
-- Database: PostgreSQL 16 with JSONB and `pg_trgm`
-- Tooling: `uv` for Python, `pnpm` for frontend packages
+- Database: ClickHouse for messages/raw events/analytics, SQLite for admin/control-plane state
+- Tooling: Go toolchain for backend, `pnpm` for frontend packages
 - Runtime: Docker Compose
 
 ## Quick Start
@@ -134,7 +134,7 @@ Before using the project outside local development, change these values in
 JWT_SECRET_KEY
 DEFAULT_SUPER_ADMIN_EMAIL
 DEFAULT_SUPER_ADMIN_PASSWORD
-POSTGRES_PASSWORD
+CLICKHOUSE_PASSWORD
 ```
 
 ## Basic Usage
@@ -169,7 +169,7 @@ Stop the stack:
 docker compose down
 ```
 
-Stop the stack and remove persisted PostgreSQL data:
+Stop the stack and remove persisted ClickHouse/SQLite data:
 
 ```powershell
 docker compose down -v
@@ -177,15 +177,15 @@ docker compose down -v
 
 ## Services
 
-| Service    | Purpose                    | Local URL               |
-| ---------- | -------------------------- | ----------------------- |
-| `postgres` | PostgreSQL database        | `localhost:5432`        |
-| `api`      | FastAPI HTTP API           | `http://localhost:8000` |
-| `listener` | Kick chat ingestion worker | background service      |
-| `web`      | Next.js web app            | `http://localhost:3000` |
+| Service      | Purpose                       | Local URL               |
+| ------------ | ----------------------------- | ----------------------- |
+| `clickhouse` | message/raw-event data store  | `localhost:8123/9000`   |
+| `api`        | Go HTTP API                   | `http://localhost:8000` |
+| `listener`   | Go Kick chat ingestion worker | background service      |
+| `web`        | Next.js web app               | `http://localhost:3000` |
 
-The API and listener automatically run Alembic migrations before startup in
-Docker Compose.
+The Go API and listener apply SQLite and ClickHouse schema migrations on startup. SQLite data is
+stored in the `api_go_data` volume; ClickHouse data is stored in the `clickhouse_data` volume.
 
 ## API Surface
 
@@ -279,14 +279,21 @@ Run the Next.js app:
 pnpm --filter @kick-logs/web dev
 ```
 
-Backend commands are run from `apps/api`:
+Go backend commands are run from `apps/api-go`:
 
 ```powershell
-cd apps/api
-python -m uv run alembic upgrade head
-python -m uv run pytest
-python -m uv run ruff check .
-python -m uv run ruff format --check .
+cd apps/api-go
+go test ./...
+go vet ./...
+go run ./cmd/api
+go run ./cmd/listener
+go run ./cmd/migrate -target=sqlite
+```
+
+For local `go run` outside Docker, point ClickHouse at the host port:
+
+```powershell
+$env:CLICKHOUSE_ADDR = "127.0.0.1:9000"
 ```
 
 Frontend checks are run from the repository root:
@@ -306,26 +313,57 @@ Formatting:
 
 ```powershell
 pnpm format
-cd apps/api
-python -m uv run ruff format .
 ```
 
-Use Prettier for frontend, JSON, YAML, and Markdown files. Use Ruff Format for
-Python files. Both formatters are configured to use 100-column line width and
-the repository's current double-quote style.
+Use Prettier for frontend, JSON, YAML, and Markdown files. Go files must be formatted with
+`gofmt`. Prettier is configured to use 100-column line width and the repository's current
+double-quote style.
+
+### Legacy PostgreSQL Data Migration
+
+The current runtime does not include PostgreSQL. If you are upgrading an older Kick Logs deployment,
+restore or expose the old PostgreSQL database separately, set `POSTGRES_SOURCE_DSN`, then run the
+one-time migrator:
+
+```powershell
+docker compose up -d clickhouse
+$env:POSTGRES_SOURCE_DSN = "postgresql://kick_logs:kick_logs@host.docker.internal:5432/kick_logs"
+docker compose --profile tools run --rm migrate-go -target=data -dry-run
+docker compose --profile tools run --rm migrate-go -target=data -execute
+docker compose --profile tools run --rm migrate-go -target=data -validation-only
+```
+
+The migrator reads `POSTGRES_SOURCE_DSN` or `DATABASE_URL`, accepts Python's
+`postgresql+asyncpg://` URL scheme, preserves source IDs, validates existing bcrypt admin hashes,
+copies control-plane rows into SQLite, copies chat/raw-event rows into ClickHouse, and records the
+execute/validation run metadata in SQLite. Use `-batch-size` to tune large local migrations.
+
+Cutover sequence from an existing PostgreSQL deployment:
+
+1. Stop the old listener.
+2. Run `migrate-go -target=data -execute`.
+3. Run `migrate-go -target=data -validation-only`.
+4. Start the default Go stack with `docker compose up --build -d`.
+
+```powershell
+$env:POSTGRES_SOURCE_DSN = "postgresql://kick_logs:kick_logs@host.docker.internal:5432/kick_logs"
+docker compose --profile tools run --rm migrate-go -target=data -execute
+docker compose --profile tools run --rm migrate-go -target=data -validation-only
+docker compose up --build -d
+```
 
 ## Continuous Integration
 
-GitHub Actions runs backend and formatting checks on pull requests targeting
-`main` or `dev`, and on pushes to `main` or `dev`.
+GitHub Actions runs backend and formatting checks on every pull request and every push.
 
-The Python workflow starts a PostgreSQL 16 service, installs backend
-dependencies with `uv`, applies Alembic migrations, then runs:
+The Go workflow starts ClickHouse, downloads Go dependencies, then runs:
 
 ```powershell
-python -m uv run ruff format --check .
-python -m uv run ruff check .
-python -m uv run pytest
+go test ./...
+go vet ./...
+KICK_LOGS_RUN_CLICKHOUSE_TESTS=1 go test ./internal/infra/clickhouse -run TestClickHouseMigrationsAndRepositories -count=1 -v
+go run ./cmd/migrate -target=sqlite
+go run ./cmd/migrate -target=clickhouse
 ```
 
 The code style workflow installs frontend dependencies and runs:
@@ -339,17 +377,16 @@ pnpm format:check
 ```text
 kick-logs/
   apps/
-    api/
-      alembic/
-      src/kick_logs/
-      tests/
+    api-go/
+      cmd/
+      internal/
     web/
       public/
       src/
   docs/
+    archive/
     context/
     design/
-    tasks/
   compose.yaml
   README.md
 ```
@@ -357,12 +394,14 @@ kick-logs/
 Backend dependency direction:
 
 ```text
-presentation -> application -> domain
-infrastructure -> application/domain
+http -> usecase -> domain
+infra -> ports/domain
+cmd -> app/config/http/worker
 ```
 
-Domain code stays independent from FastAPI, SQLAlchemy, Pydantic, and external
-Kick clients.
+Go domain code stays independent from HTTP, SQLite, ClickHouse, JWT, websocket, and external Kick
+clients. Historical Python/PostgreSQL planning and contract inventory documents are archived under
+`docs/archive/`.
 
 ## Data Captured
 
@@ -408,31 +447,42 @@ Cleanup targets:
 - all stored messages/raw events for a specific channel slug
 - all stored messages/raw events for a specific sender
 
-Back up PostgreSQL before running large cleanup operations. The Compose service
-uses the values from `.env`; adjust the `-U` and `-d` values below if you changed
-`POSTGRES_USER` or `POSTGRES_DB`.
+Cleanup runs ClickHouse mutations with synchronous completion requested by the API. Logical rows are
+removed before the API returns, but physical disk reclamation can still lag behind ClickHouse merge
+cycles.
 
-Create a compressed PostgreSQL dump:
+Back up ClickHouse and SQLite before running large cleanup operations.
+
+Create a local backup directory:
 
 ```powershell
 New-Item -ItemType Directory -Force backups
-docker compose exec postgres pg_dump -U kick_logs -d kick_logs -Fc -f /tmp/kick_logs.dump
-docker compose cp postgres:/tmp/kick_logs.dump .\backups\kick_logs.dump
-docker compose exec postgres rm /tmp/kick_logs.dump
 ```
 
-Restore a dump into the Docker Compose database:
+Back up SQLite control-plane data:
 
 ```powershell
-docker compose stop api listener web
-docker compose cp .\backups\kick_logs.dump postgres:/tmp/kick_logs.dump
-docker compose exec postgres pg_restore -U kick_logs -d kick_logs --clean --if-exists /tmp/kick_logs.dump
-docker compose exec postgres rm /tmp/kick_logs.dump
-docker compose up -d api listener web
+docker compose stop api listener
+docker run --rm -v kick-logs_api_go_data:/data -v ${PWD}\backups:/backup alpine sh -c "cp /data/kick-logs-go.sqlite3 /backup/kick-logs-go.sqlite3"
+docker compose up -d api listener
 ```
 
-`docker compose down -v` removes the PostgreSQL volume. Use it only when you
+Back up ClickHouse volume data:
+
+```powershell
+docker compose stop api listener clickhouse
+docker run --rm -v kick-logs_clickhouse_data:/var/lib/clickhouse -v ${PWD}\backups:/backup alpine tar czf /backup/clickhouse_data.tgz -C /var/lib/clickhouse .
+docker compose up -d clickhouse api listener
+```
+
+For production deployments, prefer your infrastructure-level volume snapshot or a configured
+ClickHouse `BACKUP DATABASE` target.
+
+`docker compose down -v` removes the ClickHouse and SQLite volumes. Use it only when you
 intentionally want to delete all stored data.
+
+For pre-cutover PostgreSQL data, keep a PostgreSQL dump until you are confident in the migrated
+ClickHouse/SQLite data.
 
 ## Configuration
 
@@ -443,7 +493,12 @@ Important variables:
 ```text
 BACKEND_CORS_ORIGINS=http://localhost:3000
 NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-DATABASE_URL=postgresql+asyncpg://kick_logs:kick_logs@postgres:5432/kick_logs
+SQLITE_PATH=/data/kick-logs-go.sqlite3
+CLICKHOUSE_ADDR=clickhouse:9000
+CLICKHOUSE_DATABASE=kick_logs
+CLICKHOUSE_USERNAME=kick_logs
+CLICKHOUSE_PASSWORD=kick_logs
+POSTGRES_SOURCE_DSN=
 JWT_SECRET_KEY=change-me-for-local-development-secret-key
 KICK_PUSHER_URL=...
 LISTENER_WORKER_COUNT=4
@@ -518,21 +573,21 @@ Good contribution areas:
   ingestion path relies on unofficial web behavior.
 - Use `/admin` to check listener freshness, database/table size, failed raw events, pending raw
   events, and the latest ingest timestamps before digging into Docker logs.
-- Keep PostgreSQL backups if the logs matter.
+- Keep ClickHouse and SQLite backups if the logs matter.
 - Review data retention expectations before running against large channels.
 
 ## Project Status
 
 Kick Logs is a self-hosted MVP with its first post-MVP feature set completed:
-admin operations, search improvements/export, analytics-backed landing content,
-user/channel profiles, and guarded data management. It is usable locally through
-Docker Compose, but the Kick integration should be considered best-effort
-because it depends on undocumented Kick web behavior.
+admin operations, search improvements/export, analytics-backed landing content, user/channel
+profiles, guarded data management, and a Go + ClickHouse default runtime. It is usable locally
+through Docker Compose, but the Kick integration should be considered best-effort because it depends
+on undocumented Kick web behavior.
 
 Current quality gates used during development:
 
-- backend test suite with `pytest`
-- backend lint with `ruff`
+- Go backend tests with `go test ./...`
+- Go backend static checks with `go vet ./...`
 - frontend tests with Vitest and React Testing Library
 - frontend TypeScript typecheck
 - frontend lint

@@ -112,3 +112,67 @@
 - Public sender profile URLs follow Kick's profile slug behavior: chat usernames can display with
   underscores, but profile routes convert `_` to `-`; backend profile/search lookups accept both
   forms so existing underscore-stored data keeps working.
+
+## 2026-05-16
+
+- Go rewrite work lives under `apps/api-go`; after cutover the Go API/listener is the default
+  runtime and Python is reference-only.
+- Phase 2 Go workspace uses the Go standard library for the initial HTTP server, routing,
+  middleware, config, and logging to avoid unnecessary early dependencies.
+- Default Compose service `api` runs the Go API and maps to host `API_PORT` or `8000`.
+- Go local build outputs and caches stay untracked and outside Docker build context under
+  `apps/api-go/bin/`, `apps/api-go/.gocache/`, `apps/api-go/.gomodcache/`, and
+  `apps/api-go/.cache/`.
+- The Go rewrite uses SQLite for control-plane state and ClickHouse for message/raw-event data.
+- SQLite stores admin users, followed channels, sender profile cache, retention settings, worker
+  heartbeats, and migration bookkeeping.
+- ClickHouse stores denormalized chat messages, raw Kick events, and raw-event processing attempts.
+- Go rewrite migrations are run through `cmd/migrate`; Compose exposes that binary as the
+  `migrate-go` service behind profile `tools`.
+- Go rewrite default super-admin seeding happens in SQLite migration startup and stores a bcrypt
+  hash, not the plain password.
+- Go rewrite auth preserves the Python cookie contract and uses HS256 JWTs with `sub`, `iat`, and
+  `exp` claims.
+- Go rewrite API startup may apply SQLite and ClickHouse migrations for local developer ergonomics;
+  `migrate-go` remains the explicit migration command for Compose setup.
+- Go rewrite admin channel deletion remains disable-only to preserve historical chat data.
+- Go rewrite public message search/export reads denormalized ClickHouse `chat_messages` directly;
+  the hot search path must not join back to SQLite.
+- Default Compose service `listener` runs the Go listener.
+- Go listener ingestion keeps the durable-inbox rule: once a Kick websocket chat event reaches the
+  process, persist the raw event to ClickHouse before normalization, sender enrichment, or visible
+  message insertion.
+- Go raw-event processing is at-least-once and idempotent: retries append attempt rows, while
+  visible message writes dedupe by `kick_message_id`.
+- Go listener heartbeat state remains in SQLite `worker_heartbeats` so operations health can be
+  read without Docker logs.
+- Go analytics/profile endpoints are public and keep reading denormalized ClickHouse
+  `chat_messages`; they must not add hot-path joins back to SQLite for aggregate lists.
+- Go user/channel profile identity comes from SQLite metadata, while profile analytics and latest
+  messages come from ClickHouse.
+- Go PostgreSQL data migration is one-way and read-only against PostgreSQL. It writes SQLite and
+  ClickHouse, preserves source IDs where API rows expose IDs, validates counts/samples after
+  execute, and records run metadata in SQLite `data_migration_runs`.
+- Go migration rejects admin password hashes that `golang.org/x/crypto/bcrypt` cannot parse; it
+  must not silently reset migrated credentials.
+- Cutover keeps the service names `api` and `listener`, but those default services now point to
+  the Go binaries from `apps/api-go`.
+- ClickHouse is part of the default Compose runtime; PostgreSQL is not.
+- SQLite control-plane data is stored in the `api_go_data` Docker volume.
+- During cutover, Python/FastAPI/PostgreSQL stayed temporarily behind an explicit reference profile
+  for rollback.
+- `migrate-go` is a `tools` profile service, not a default runtime service.
+- PostgreSQL volumes must not be removed automatically during cutover.
+- Python source remained in the repository until the final cleanup decision.
+- SQLite sender profile ingestion must tolerate concurrent live messages from the same sender; Go
+  listener upsert uses `ON CONFLICT` for both `kick_user_id` and `slug` instead of pre-read then
+  insert.
+- Superseding the earlier cleanup decision: Python/FastAPI source is now removed from the repo.
+- PostgreSQL is no longer a Compose service. Legacy PostgreSQL data can be imported only by running
+  `migrate-go` with an explicit external/restored `POSTGRES_SOURCE_DSN`.
+- The old PostgreSQL Docker volume is not removed automatically and was intentionally preserved
+  during cleanup.
+- Go CI is the backend validation source of truth. It runs on every push and pull request, along
+  with the repository code-style workflow.
+- Completed Go rewrite plan, task files, and API contract inventory are historical context under
+  `docs/archive/go_rewrite/`.

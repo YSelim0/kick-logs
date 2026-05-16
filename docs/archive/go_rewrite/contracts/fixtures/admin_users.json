@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "email": "admin@kicklogs.local",
+    "role": "super_admin",
+    "is_active": true
+  },
+  {
+    "id": 2,
+    "email": "moderator@kicklogs.local",
+    "role": "admin",
+    "is_active": true
+  }
+]
