@@ -4,6 +4,32 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-16
 
+- Completed Go rewrite Phase 8 PostgreSQL data migration:
+  - added `POSTGRES_SOURCE_DSN` config and PostgreSQL source adapter under
+    `internal/infra/postgres`
+  - added data migration use case under `internal/usecase/datamigration`
+  - added `cmd/migrate -target=data` with `-dry-run`, `-execute`, `-validation-only`,
+    `-batch-size`, `-sample-size`, and `-source-postgres-url`
+  - added SQLite data migration writer for admin users, followed channels, sender profiles,
+    retention settings, worker heartbeat state, and `data_migration_runs`
+  - added ClickHouse data migration writer for idempotent chat message, raw event, and raw-event
+    attempt inserts
+  - added ClickHouse raw event `metadata_json` migration and repository mapping
+  - preserved source IDs for migrated SQLite rows, ClickHouse messages, and raw events; raw-event
+    attempts use deterministic migrated IDs to avoid duplicates on rerun
+  - validated Go-compatible bcrypt admin password hashes before accepting migration
+  - added count validation, sample validation, rerun/idempotency coverage, migrated-search fixture
+    coverage, and migrated admin hash verification
+  - updated README, architecture notes, implementation plan, Compose env, `.env.example`, and
+    closed all checklist items in `docs/tasks/go_rewrite_08_data_migration.md`
+  - verified `go test ./...`
+  - verified `go vet ./...`
+  - verified live ClickHouse integration test with
+    `KICK_LOGS_RUN_CLICKHOUSE_TESTS=1 go test ./internal/infra/clickhouse -run TestClickHouseMigrationsAndRepositories -count=1 -v`
+  - verified `docker compose --profile go-rewrite build migrate-go`
+  - verified `docker compose --profile go-rewrite run --rm migrate-go -target=sqlite`
+  - verified `docker compose --profile go-rewrite run --rm migrate-go -target=clickhouse`
+
 - Completed Go rewrite Phase 7 analytics/profile parity:
   - implemented public Go routes for `GET /analytics/overview`,
     `GET /analytics/message-volume`, `GET /analytics/top-senders`,

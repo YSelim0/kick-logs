@@ -41,6 +41,7 @@ type Config struct {
 	ClickHouseUsername                   string
 	ClickHousePassword                   string
 	ClickHouseDebug                      bool
+	PostgresSourceDSN                    string
 	DefaultAdminEmail                    string
 	DefaultAdminPassword                 string
 }
@@ -164,6 +165,7 @@ func Load() (Config, error) {
 		ClickHouseUsername:                   envString("CLICKHOUSE_USERNAME", "kick_logs"),
 		ClickHousePassword:                   envString("CLICKHOUSE_PASSWORD", "kick_logs"),
 		ClickHouseDebug:                      clickHouseDebug,
+		PostgresSourceDSN:                    envString("POSTGRES_SOURCE_DSN", envString("DATABASE_URL", "")),
 		DefaultAdminEmail:                    envString("DEFAULT_SUPER_ADMIN_EMAIL", "admin@kicklogs.local"),
 		DefaultAdminPassword:                 envString("DEFAULT_SUPER_ADMIN_PASSWORD", "admin123"),
 	}, nil

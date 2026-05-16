@@ -108,5 +108,12 @@ func ClickHouseMigrations() []ClickHouseMigration {
 				`ALTER TABLE raw_kick_events ADD COLUMN IF NOT EXISTS channel_id Nullable(Int64);`,
 			},
 		},
+		{
+			Version: 4,
+			Name:    "add_raw_event_metadata_json",
+			Statements: []string{
+				`ALTER TABLE raw_kick_events ADD COLUMN IF NOT EXISTS metadata_json String DEFAULT '{}';`,
+			},
+		},
 	}
 }

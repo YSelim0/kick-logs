@@ -4,6 +4,21 @@ This file is the active project memory. Keep it updated whenever project behavio
 
 ## Current State
 
+- Go rewrite Phase 8 PostgreSQL data migration is implemented:
+  - `cmd/migrate -target=data` supports dry-run, execute, validation-only, batch size, sample size,
+    and explicit source PostgreSQL URL flags
+  - source config uses `POSTGRES_SOURCE_DSN` or `DATABASE_URL`; Python `postgresql+asyncpg://`
+    URLs are normalized for the Go PostgreSQL driver
+  - the migrator copies users, followed channels, senders, retention settings, heartbeats, chat
+    messages, raw Kick events, and raw-event attempt state from PostgreSQL to SQLite/ClickHouse
+  - migrated admin password hashes are accepted only if Go bcrypt can read them
+  - migrated JSONB payloads are serialized as canonical JSON strings and timestamps are normalized
+    to UTC
+  - source IDs are preserved for SQLite control-plane rows, ClickHouse chat messages, and raw event
+    rows; raw-event attempt IDs are deterministic for safe reruns
+  - execute/validation runs write metadata into SQLite `data_migration_runs`
+  - verification passed with Go tests/vet, live ClickHouse repository test, Docker migrate-go
+    build, and migrate-go SQLite/ClickHouse command smoke checks
 - Go rewrite Phase 7 analytics/profile parity is implemented:
   - public Go analytics endpoints now cover overview, message volume, top senders, top channels,
     and top emotes

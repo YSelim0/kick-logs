@@ -152,3 +152,8 @@
   `chat_messages`; they must not add hot-path joins back to SQLite for aggregate lists.
 - Go user/channel profile identity comes from SQLite metadata, while profile analytics and latest
   messages come from ClickHouse.
+- Go PostgreSQL data migration is one-way and read-only against PostgreSQL. It writes SQLite and
+  ClickHouse, preserves source IDs where API rows expose IDs, validates counts/samples after
+  execute, and records run metadata in SQLite `data_migration_runs`.
+- Go migration rejects admin password hashes that `golang.org/x/crypto/bcrypt` cannot parse; it
+  must not silently reset migrated credentials.

@@ -4,6 +4,22 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Completed Go rewrite Phase 8 PostgreSQL data migration:
+  - added `cmd/migrate -target=data` with dry-run, execute, validation-only, batch size, sample
+    size, and source PostgreSQL URL flags
+  - added read-only PostgreSQL source adapter that accepts Python `postgresql+asyncpg://` URLs
+  - added idempotent SQLite and ClickHouse migration writers that preserve source IDs where API
+    rows expose them
+  - migrated users, followed channels, senders, retention settings, heartbeats, chat messages, raw
+    events, and deterministic raw-event attempt rows
+  - validate bcrypt admin hashes, JSONB serialization, UTC timestamps, counts, and representative
+    samples before accepting a run
+  - record execute/validation run metadata in SQLite `data_migration_runs`
+  - closed `docs/tasks/go_rewrite_08_data_migration.md`
+  - verification: `go test ./...`, `go vet ./...`, live ClickHouse repository test,
+    `docker compose --profile go-rewrite build migrate-go`, and `migrate-go` SQLite/ClickHouse
+    command smoke checks
+
 - Completed Go rewrite Phase 7 analytics/profile parity:
   - added public Go analytics endpoints for overview, message volume, top senders, top channels,
     and top emotes

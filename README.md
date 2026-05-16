@@ -342,6 +342,20 @@ go run ./cmd/listener
 go run ./cmd/migrate -target=sqlite
 ```
 
+Run the PostgreSQL to SQLite/ClickHouse data migrator:
+
+```powershell
+cd apps/api-go
+go run ./cmd/migrate -target=data -dry-run
+go run ./cmd/migrate -target=data -execute
+go run ./cmd/migrate -target=data -validation-only
+```
+
+The data migrator reads `POSTGRES_SOURCE_DSN` or `DATABASE_URL`, accepts Python's
+`postgresql+asyncpg://` URL scheme, preserves source IDs, validates existing bcrypt admin hashes,
+copies control-plane rows into SQLite, copies chat/raw-event rows into ClickHouse, and records the
+execute/validation run metadata in SQLite. Use `-batch-size` to tune large local migrations.
+
 Run the optional Go API and ClickHouse stack without replacing the Python API:
 
 ```powershell
@@ -361,7 +375,8 @@ operations dashboard.
 Go rewrite storage uses SQLite for admin/control-plane state and ClickHouse for chat messages,
 raw Kick events, and analytics-oriented reads. Local defaults are exposed through `.env.example`
 as `SQLITE_PATH`, `CLICKHOUSE_ADDR`, `CLICKHOUSE_DATABASE`, `CLICKHOUSE_USERNAME`, and
-`CLICKHOUSE_PASSWORD`.
+`CLICKHOUSE_PASSWORD`. Data migration from the existing PostgreSQL store uses
+`POSTGRES_SOURCE_DSN`.
 
 Default Go admin login uses the same env-overridable credentials as the Python backend:
 `admin@kicklogs.local` / `admin123`.

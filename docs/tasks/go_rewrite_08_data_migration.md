@@ -17,42 +17,42 @@ existing data.
 
 ## Checklist
 
-- [ ] Add PostgreSQL source connection configuration for the migrator.
-- [ ] Add migration command flags for dry-run, execute, batch size, and validation-only mode.
-- [ ] Migrate users to SQLite `admin_users`.
-- [ ] Verify existing password hashes are Go-compatible before accepting migration.
-- [ ] Migrate channels to SQLite `followed_channels`.
-- [ ] Migrate senders to SQLite `sender_profiles`.
-- [ ] Migrate retention settings to SQLite.
-- [ ] Migrate useful heartbeat state to SQLite if present.
-- [ ] Migrate chat messages to ClickHouse `chat_messages`.
-- [ ] Migrate raw Kick events to ClickHouse `raw_kick_events`.
-- [ ] Map raw event status/attempt fields into ClickHouse `raw_event_attempts`.
-- [ ] Serialize JSONB payloads into valid JSON strings.
-- [ ] Normalize timestamps to UTC.
-- [ ] Preserve source IDs where current API exposes IDs.
-- [ ] Make the migration safe to rerun.
-- [ ] Record migration run metadata.
-- [ ] Add count validation.
-- [ ] Add representative sample validation by ID and `kick_message_id`.
-- [ ] Add clear failure messages for unsupported source data.
+- [x] Add PostgreSQL source connection configuration for the migrator.
+- [x] Add migration command flags for dry-run, execute, batch size, and validation-only mode.
+- [x] Migrate users to SQLite `admin_users`.
+- [x] Verify existing password hashes are Go-compatible before accepting migration.
+- [x] Migrate channels to SQLite `followed_channels`.
+- [x] Migrate senders to SQLite `sender_profiles`.
+- [x] Migrate retention settings to SQLite.
+- [x] Migrate useful heartbeat state to SQLite if present.
+- [x] Migrate chat messages to ClickHouse `chat_messages`.
+- [x] Migrate raw Kick events to ClickHouse `raw_kick_events`.
+- [x] Map raw event status/attempt fields into ClickHouse `raw_event_attempts`.
+- [x] Serialize JSONB payloads into valid JSON strings.
+- [x] Normalize timestamps to UTC.
+- [x] Preserve source IDs where current API exposes IDs.
+- [x] Make the migration safe to rerun.
+- [x] Record migration run metadata.
+- [x] Add count validation.
+- [x] Add representative sample validation by ID and `kick_message_id`.
+- [x] Add clear failure messages for unsupported source data.
 
 ## Tests And Checks
 
-- [ ] Migration test with empty source database.
-- [ ] Migration test with representative users, channels, senders, messages, raw events, replies,
+- [x] Migration test with empty source database.
+- [x] Migration test with representative users, channels, senders, messages, raw events, replies,
       and emotes.
-- [ ] Migration rerun test proves idempotency.
-- [ ] Validation fails when destination counts or samples do not match.
-- [ ] Migrated search results match equivalent source fixture behavior.
-- [ ] Migrated admin login works with existing admin hash.
+- [x] Migration rerun test proves idempotency.
+- [x] Validation fails when destination counts or samples do not match.
+- [x] Migrated search results match equivalent source fixture behavior.
+- [x] Migrated admin login works with existing admin hash.
 
 ## Acceptance Criteria
 
-- [ ] Existing local PostgreSQL data can be copied into ClickHouse and SQLite without manual SQL.
-- [ ] Migration can be rerun safely.
-- [ ] The migrator reports enough validation detail to decide whether cutover is safe.
-- [ ] PostgreSQL remains untouched after migration.
+- [x] Existing local PostgreSQL data can be copied into ClickHouse and SQLite without manual SQL.
+- [x] Migration can be rerun safely.
+- [x] The migrator reports enough validation detail to decide whether cutover is safe.
+- [x] PostgreSQL remains untouched after migration.
 
 ## Commit Boundary
 

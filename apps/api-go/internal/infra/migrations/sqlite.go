@@ -76,5 +76,24 @@ func SQLiteMigrations() []SQLiteMigration {
 				);`,
 			},
 		},
+		{
+			Version: 2,
+			Name:    "create_data_migration_runs",
+			Statements: []string{
+				`CREATE TABLE IF NOT EXISTS data_migration_runs (
+					run_id TEXT PRIMARY KEY,
+					name TEXT NOT NULL,
+					mode TEXT NOT NULL,
+					status TEXT NOT NULL,
+					source_counts_json TEXT NOT NULL DEFAULT '{}',
+					destination_counts_json TEXT NOT NULL DEFAULT '{}',
+					validation_json TEXT NOT NULL DEFAULT '{}',
+					error_message TEXT NOT NULL DEFAULT '',
+					started_at TEXT NOT NULL,
+					finished_at TEXT NOT NULL
+				);`,
+				`CREATE INDEX IF NOT EXISTS idx_data_migration_runs_started_at ON data_migration_runs (started_at);`,
+			},
+		},
 	}
 }

@@ -26,6 +26,9 @@ func (repo *RawEventRepository) InsertEvent(ctx context.Context, event domain.Ra
 	if event.PayloadJSON == "" {
 		event.PayloadJSON = "{}"
 	}
+	if event.MetadataJSON == "" {
+		event.MetadataJSON = "{}"
+	}
 	if event.Status == "" {
 		event.Status = "pending"
 	}
@@ -35,7 +38,7 @@ func (repo *RawEventRepository) InsertEvent(ctx context.Context, event domain.Ra
 
 	batch, err := repo.conn.PrepareBatch(ctx, `INSERT INTO raw_kick_events (
 		id, channel_slug, event_type, event_name, kick_message_id, chatroom_id, channel_id,
-		payload_json, status, received_at, processed_at, error_message
+		payload_json, metadata_json, status, received_at, processed_at, error_message
 	)`)
 	if err != nil {
 		return fmt.Errorf("prepare raw event insert: %w", err)
@@ -49,6 +52,7 @@ func (repo *RawEventRepository) InsertEvent(ctx context.Context, event domain.Ra
 		nullableInt64(event.ChatroomID),
 		nullableInt64(event.ChannelID),
 		event.PayloadJSON,
+		event.MetadataJSON,
 		event.Status,
 		event.ReceivedAt.UTC(),
 		nullableTime(event.ProcessedAt),
@@ -77,7 +81,7 @@ func (repo *RawEventRepository) ListUnprocessed(
 		ctx,
 		`SELECT
 			e.id, e.channel_slug, e.event_type, e.event_name, ifNull(e.kick_message_id, ''),
-			ifNull(e.chatroom_id, 0), ifNull(e.channel_id, 0), e.payload_json, e.status,
+			ifNull(e.chatroom_id, 0), ifNull(e.channel_id, 0), e.payload_json, e.metadata_json, e.status,
 			ifNull(a.attempts, 0), e.received_at, e.processed_at, e.error_message
 		 FROM raw_kick_events AS e
 		 LEFT JOIN (
@@ -210,6 +214,7 @@ func scanRawKickEvent(scanner rawEventScanner) (domain.RawKickEvent, error) {
 		&event.ChatroomID,
 		&event.ChannelID,
 		&event.PayloadJSON,
+		&event.MetadataJSON,
 		&event.Status,
 		&event.Attempts,
 		&event.ReceivedAt,

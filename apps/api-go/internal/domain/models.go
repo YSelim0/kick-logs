@@ -199,6 +199,7 @@ type RawKickEvent struct {
 	ChatroomID          int64
 	ChannelID           int64
 	PayloadJSON         string
+	MetadataJSON        string
 	Status              string
 	Attempts            uint16
 	ReceivedAt          time.Time
@@ -254,4 +255,36 @@ type OperationsSummary struct {
 	StorageTables        []TableSize
 	Timestamps           OperationsTimestamps
 	Listener             ListenerHeartbeat
+}
+
+type RetentionSettings struct {
+	ID                    int64
+	MessageRetentionDays  *int
+	RawEventRetentionDays *int
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+}
+
+type MigrationCounts struct {
+	AdminUsers        int64 `json:"admin_users"`
+	FollowedChannels  int64 `json:"followed_channels"`
+	SenderProfiles    int64 `json:"sender_profiles"`
+	RetentionSettings int64 `json:"retention_settings"`
+	WorkerHeartbeats  int64 `json:"worker_heartbeats"`
+	ChatMessages      int64 `json:"chat_messages"`
+	RawEvents         int64 `json:"raw_events"`
+	RawEventAttempts  int64 `json:"raw_event_attempts"`
+}
+
+type DataMigrationRun struct {
+	RunID                 string
+	Name                  string
+	Mode                  string
+	Status                string
+	SourceCountsJSON      string
+	DestinationCountsJSON string
+	ValidationJSON        string
+	ErrorMessage          string
+	StartedAt             time.Time
+	FinishedAt            time.Time
 }

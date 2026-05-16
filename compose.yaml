@@ -154,6 +154,7 @@ services:
       APP_ENV: ${APP_ENV:-local}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       SQLITE_PATH: ${SQLITE_PATH:-/data/kick-logs-go.sqlite3}
+      POSTGRES_SOURCE_DSN: ${POSTGRES_SOURCE_DSN:-postgresql://kick_logs:kick_logs@postgres:5432/kick_logs}
       CLICKHOUSE_ADDR: ${CLICKHOUSE_ADDR:-clickhouse:9000}
       CLICKHOUSE_DATABASE: ${CLICKHOUSE_DATABASE:-kick_logs}
       CLICKHOUSE_USERNAME: ${CLICKHOUSE_USERNAME:-kick_logs}

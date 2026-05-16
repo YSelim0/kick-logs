@@ -8,7 +8,8 @@ as product and contract history, but they are no longer active implementation sc
 
 Status: Phase 1 contract inventory, Phase 2 Go workspace/tooling, Phase 3 storage schema,
 Phase 4 auth/admin API parity, Phase 5 message search/export parity, Phase 6 listener ingestion
-parity, and Phase 7 analytics/profile parity are complete on branch `feat/go-clickhouse-rewrite`.
+parity, Phase 7 analytics/profile parity, and Phase 8 PostgreSQL data migration are complete on
+branch `feat/go-clickhouse-rewrite`.
 
 ## Primary Goal
 
@@ -255,6 +256,24 @@ Current Go analytics/profile implementation:
   analytics, top lists, day-bucket message volume, and latest message rows using the existing
   message response shape.
 - Unknown user and channel profile slugs return the existing 404 detail strings.
+
+Current Go data migration implementation:
+
+- `cmd/migrate -target=data` supports `-dry-run`, `-execute`, `-validation-only`, `-batch-size`,
+  `-sample-size`, and `-source-postgres-url`.
+- PostgreSQL source configuration comes from `POSTGRES_SOURCE_DSN` or `DATABASE_URL`; the migrator
+  normalizes Python's SQLAlchemy asyncpg URL scheme for Go's PostgreSQL driver.
+- The migrator copies PostgreSQL users, channels, senders, retention settings, worker heartbeat
+  state, chat messages, and raw Kick events into SQLite and ClickHouse.
+- Existing admin password hashes are checked with Go bcrypt before migration; incompatible hashes
+  fail the run with an explicit error.
+- JSONB fields are serialized as canonical JSON strings; timestamps are normalized to UTC.
+- Source IDs are preserved for SQLite control-plane rows, ClickHouse chat message rows, and raw
+  event rows. Raw-event attempt IDs are deterministic so the migration can be rerun safely.
+- Execute and validation-only runs record metadata in SQLite `data_migration_runs`, including mode,
+  status, source/destination counts, validation details, and timestamps.
+- Count validation and representative sample validation run after execute and in validation-only
+  mode.
 
 ## Search Contract
 

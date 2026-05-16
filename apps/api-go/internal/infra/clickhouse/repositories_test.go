@@ -290,6 +290,22 @@ func TestClickHouseMigrationsAndRepositories(t *testing.T) {
 		t.Fatalf("rawCount = %d", rawCount)
 	}
 
+	migrationRepo := clickhouseinfra.NewDataMigrationRepository(conn)
+	migrationCounts, err := migrationRepo.DataCounts(ctx)
+	if err != nil {
+		t.Fatalf("migrationRepo.DataCounts() error = %v", err)
+	}
+	if migrationCounts.ChatMessages < 3 || migrationCounts.RawEvents < 1 || migrationCounts.RawEventAttempts < 1 {
+		t.Fatalf("migration counts = %#v", migrationCounts)
+	}
+	migratedRaw, err := migrationRepo.FindRawEvent(ctx, rawEvent.ID)
+	if err != nil {
+		t.Fatalf("migrationRepo.FindRawEvent() error = %v", err)
+	}
+	if migratedRaw.ID != rawEvent.ID || migratedRaw.PayloadJSON == "" {
+		t.Fatalf("migratedRaw = %#v", migratedRaw)
+	}
+
 	stats := clickhouseinfra.NewStatsRepository(conn)
 	sizes, err := stats.TableSizes(ctx)
 	if err != nil {

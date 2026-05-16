@@ -68,7 +68,7 @@ There is no separate Python package for the listener in MVP. The `listener` Dock
 - `cmd/api`: Go HTTP API entrypoint with `GET /health`.
 - `cmd/listener`: Go Kick listener entrypoint that wires SQLite, ClickHouse, Kick clients, raw
   event workers, and heartbeat recording.
-- `cmd/migrate`: storage migration entrypoint for SQLite and ClickHouse.
+- `cmd/migrate`: storage migration entrypoint for SQLite, ClickHouse, and PostgreSQL data copy.
 - `internal/config`: environment-based configuration with local defaults.
 - `internal/app`: structured logging and API server bootstrap.
 - `internal/http`: stdlib HTTP router, middleware, route, and schema packages.
@@ -76,9 +76,10 @@ There is no separate Python package for the listener in MVP. The `listener` Dock
 - `internal/ports`: repository interfaces for admin users, followed channels, messages, raw events,
   and storage statistics.
 - `internal/infra/sqlite`: SQLite client, admin-user repository, followed-channel repository,
-  super-admin seeding, and control-plane storage stats.
+  data migration writer, super-admin seeding, and control-plane storage stats.
 - `internal/infra/clickhouse`: ClickHouse client, message repository, raw-event repository, and
-  table-size stats.
+  data migration writer.
+- `internal/infra/postgres`: read-only PostgreSQL source adapter for one-time data migration.
 - `internal/infra/migrations`: versioned SQLite and ClickHouse migration runners.
 - `internal/infra/auth`: bcrypt password hashing and JWT session token signing.
 - `internal/infra/kick`: Kick web channel/sender resolvers and Pusher websocket client.
@@ -91,6 +92,9 @@ There is no separate Python package for the listener in MVP. The `listener` Dock
 - `internal/usecase/analytics`: ClickHouse-backed public analytics workflow.
 - `internal/usecase/profiles`: public user/channel profile workflow composed from SQLite metadata
   and ClickHouse analytics/message rows.
+- `internal/usecase/datamigration`: idempotent PostgreSQL to SQLite/ClickHouse migration workflow
+  with dry-run, execute, validation-only, count validation, sample validation, and metadata
+  recording.
 
 Compose exposes the optional Go runtime through profile `go-rewrite` as `api-go`, `listener-go`,
 `clickhouse`, and `migrate-go`. The Go API is mapped to `GO_API_PORT` or `8001` by default. The
@@ -106,6 +110,8 @@ Go rewrite storage split:
 - `chat_messages` stores denormalized sender/channel snapshots, reply fields, emote arrays,
   normalized lower-case search helpers, and message timestamps so search responses do not require a
   per-row join back to SQLite.
+- `data_migration_runs` records PostgreSQL migration mode, status, source/destination counts,
+  validation details, and start/finish timestamps.
 
 Go rewrite auth/admin parity:
 
@@ -155,6 +161,23 @@ Go rewrite analytics/profile parity:
   metadata.
 - Profile responses include overview totals, day-bucket message volume, top lists, and latest
   messages in the same shape as public search results.
+
+Go rewrite data migration:
+
+- `cmd/migrate -target=data -dry-run` validates PostgreSQL source data and reports counts without
+  copying rows.
+- `cmd/migrate -target=data -execute` applies SQLite and ClickHouse schema migrations, then copies
+  PostgreSQL users, channels, senders, retention settings, heartbeats, chat messages, raw events,
+  and raw-event attempts.
+- `cmd/migrate -target=data -validation-only` rechecks destination counts and representative row
+  samples against PostgreSQL without migrating new rows.
+- The source DSN comes from `-source-postgres-url`, `POSTGRES_SOURCE_DSN`, or `DATABASE_URL`.
+  Python's `postgresql+asyncpg://` scheme is normalized for the Go PostgreSQL driver.
+- Admin password hashes must already be bcrypt-compatible; unsupported hashes fail migration
+  clearly instead of being reset.
+- Chat message source IDs and raw-event source IDs are preserved in the destination rows where the
+  API can expose them. Raw-event attempts use deterministic migrated IDs so reruns do not duplicate
+  attempt rows.
 
 ## Backend Principles
 
