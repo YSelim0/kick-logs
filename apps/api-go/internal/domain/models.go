@@ -113,6 +113,83 @@ type MessageSearchFilter struct {
 	Limit     uint64
 }
 
+type AnalyticsBucket string
+
+const (
+	AnalyticsBucketHour AnalyticsBucket = "hour"
+	AnalyticsBucketDay  AnalyticsBucket = "day"
+)
+
+type AnalyticsFilter struct {
+	Start   time.Time
+	End     time.Time
+	Channel string
+	Sender  string
+}
+
+type AnalyticsOverview struct {
+	TotalMessages    int64
+	TotalSenders     int64
+	TotalChannels    int64
+	TotalEmoteUsages int64
+	FirstMessageAt   time.Time
+	LatestMessageAt  time.Time
+}
+
+type MessageVolumePoint struct {
+	BucketStart  time.Time
+	MessageCount int64
+}
+
+type TopSenderAnalytics struct {
+	SenderID        int64
+	KickUserID      int64
+	Username        string
+	Slug            string
+	ProfileImageURL string
+	MessageCount    int64
+	FirstMessageAt  time.Time
+	LatestMessageAt time.Time
+}
+
+type TopChannelAnalytics struct {
+	ChannelID       int64
+	Slug            string
+	DisplayName     string
+	ProfileImageURL string
+	BannerImageURL  string
+	MessageCount    int64
+	FirstMessageAt  time.Time
+	LatestMessageAt time.Time
+}
+
+type TopEmoteAnalytics struct {
+	ID           string
+	Name         string
+	Token        string
+	ImageURL     string
+	UsageCount   int64
+	MessageCount int64
+}
+
+type UserProfile struct {
+	Sender         SenderProfile
+	Overview       AnalyticsOverview
+	MessageVolume  []MessageVolumePoint
+	TopChannels    []TopChannelAnalytics
+	TopEmotes      []TopEmoteAnalytics
+	LatestMessages []ChatMessage
+}
+
+type ChannelProfile struct {
+	Channel        FollowedChannel
+	Overview       AnalyticsOverview
+	MessageVolume  []MessageVolumePoint
+	TopSenders     []TopSenderAnalytics
+	TopEmotes      []TopEmoteAnalytics
+	LatestMessages []ChatMessage
+}
+
 type RawKickEvent struct {
 	ID                  string
 	ChannelSlug         string

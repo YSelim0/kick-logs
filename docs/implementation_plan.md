@@ -7,8 +7,8 @@ The completed Python/FastAPI/PostgreSQL plans are archived under `docs/archive/`
 as product and contract history, but they are no longer active implementation scope for this branch.
 
 Status: Phase 1 contract inventory, Phase 2 Go workspace/tooling, Phase 3 storage schema,
-Phase 4 auth/admin API parity, Phase 5 message search/export parity, and Phase 6 listener
-ingestion parity are complete on branch `feat/go-clickhouse-rewrite`.
+Phase 4 auth/admin API parity, Phase 5 message search/export parity, Phase 6 listener ingestion
+parity, and Phase 7 analytics/profile parity are complete on branch `feat/go-clickhouse-rewrite`.
 
 ## Primary Goal
 
@@ -241,6 +241,20 @@ Current Go listener implementation:
   listener freshness and ClickHouse raw-event health.
 - No-channel and websocket-failure paths reconnect with controlled backoff/resync timing instead of
   requiring a manual restart.
+
+Current Go analytics/profile implementation:
+
+- Public analytics routes are implemented for overview totals, message-volume buckets, top
+  senders, top channels, and top emotes.
+- Analytics filters support inclusive `start`/`end`, exact case-insensitive `channel` scope,
+  sender username/slug scope with `_`/`-` lookup variants, `bucket=hour|day`, and top-list
+  `limit` validation from 1 to 100.
+- ClickHouse aggregate queries read denormalized `chat_messages` directly and do not join back to
+  SQLite on hot analytics paths.
+- Public user profile and channel profile routes compose SQLite identity metadata with ClickHouse
+  analytics, top lists, day-bucket message volume, and latest message rows using the existing
+  message response shape.
+- Unknown user and channel profile slugs return the existing 404 detail strings.
 
 ## Search Contract
 

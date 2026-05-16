@@ -10,6 +10,8 @@ The active rewrite branch is rebuilding the backend and listener in Go with Clic
 and raw-event storage while preserving the existing HTTP contracts. Phase 6 has completed Go
 listener ingestion parity: `listener-go` stores raw Kick events first, retries normalization,
 dedupes by `kick_message_id`, and keeps listener heartbeat state visible in admin operations.
+Phase 7 has completed Go analytics/profile parity: public analytics and profile endpoints now read
+ClickHouse aggregates while keeping SQLite for identity metadata.
 
 Default local startup:
 

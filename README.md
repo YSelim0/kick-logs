@@ -352,10 +352,11 @@ docker compose --profile go-rewrite up --build api-go listener-go
 
 The optional Go API listens on http://localhost:8001 by default and exposes
 `GET /health`, auth routes, admin user routes, admin channel routes, the basic operations summary
-route, public `GET /messages`, and public `GET /messages/export`. The optional Go listener uses
-the same SQLite control-plane store and ClickHouse data-plane store, subscribes to followed Kick
-channels, writes raw events first, processes raw events into searchable messages, and updates
-listener heartbeat state for the operations dashboard.
+route, public `GET /messages`, public `GET /messages/export`, public analytics routes, and public
+user/channel profile analytics routes. The optional Go listener uses the same SQLite control-plane
+store and ClickHouse data-plane store, subscribes to followed Kick channels, writes raw events
+first, processes raw events into searchable messages, and updates listener heartbeat state for the
+operations dashboard.
 
 Go rewrite storage uses SQLite for admin/control-plane state and ClickHouse for chat messages,
 raw Kick events, and analytics-oriented reads. Local defaults are exposed through `.env.example`

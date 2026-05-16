@@ -88,6 +88,9 @@ There is no separate Python package for the listener in MVP. The `listener` Dock
 - `internal/usecase/messages`: ClickHouse-backed public search and export workflow.
 - `internal/usecase/listener`: Kick event parsing, raw-event durability, retry processing, message
   normalization, sender cache updates, idempotent message inserts, and listener heartbeat writes.
+- `internal/usecase/analytics`: ClickHouse-backed public analytics workflow.
+- `internal/usecase/profiles`: public user/channel profile workflow composed from SQLite metadata
+  and ClickHouse analytics/message rows.
 
 Compose exposes the optional Go runtime through profile `go-rewrite` as `api-go`, `listener-go`,
 `clickhouse`, and `migrate-go`. The Go API is mapped to `GO_API_PORT` or `8001` by default. The
@@ -137,6 +140,21 @@ Go rewrite listener ingestion parity:
 - Normalization preserves frontend-compatible reply metadata, emote arrays/image URLs, badges,
   sender color, sender/channel snapshots, and raw payload JSON.
 - `worker_heartbeats` tracks listener freshness for `GET /admin/operations/summary`.
+
+Go rewrite analytics/profile parity:
+
+- `GET /analytics/overview`, `/analytics/message-volume`, `/analytics/top-senders`,
+  `/analytics/top-channels`, and `/analytics/top-emotes` are public and read ClickHouse
+  `chat_messages`.
+- Analytics support inclusive date filters, exact case-insensitive channel scope, sender
+  username/slug scope with `_`/`-` lookup variants, `bucket=hour|day`, and top-list limit
+  validation.
+- `GET /users/{slug}/analytics` resolves sender identity from SQLite and accepts Kick URL-style
+  hyphen slugs for stored underscore usernames.
+- `GET /channels/{slug}/analytics` resolves channel identity from SQLite followed-channel
+  metadata.
+- Profile responses include overview totals, day-bucket message volume, top lists, and latest
+  messages in the same shape as public search results.
 
 ## Backend Principles
 

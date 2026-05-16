@@ -29,6 +29,35 @@ type MessageRepository interface {
 	Search(ctx context.Context, filter domain.MessageSearchFilter) ([]domain.ChatMessage, error)
 }
 
+type AnalyticsRepository interface {
+	Overview(ctx context.Context, filter domain.AnalyticsFilter) (domain.AnalyticsOverview, error)
+	MessageVolume(
+		ctx context.Context,
+		filter domain.AnalyticsFilter,
+		bucket domain.AnalyticsBucket,
+	) ([]domain.MessageVolumePoint, error)
+	TopSenders(
+		ctx context.Context,
+		filter domain.AnalyticsFilter,
+		limit uint64,
+	) ([]domain.TopSenderAnalytics, error)
+	TopChannels(
+		ctx context.Context,
+		filter domain.AnalyticsFilter,
+		limit uint64,
+	) ([]domain.TopChannelAnalytics, error)
+	TopEmotes(
+		ctx context.Context,
+		filter domain.AnalyticsFilter,
+		limit uint64,
+	) ([]domain.TopEmoteAnalytics, error)
+	LatestMessages(
+		ctx context.Context,
+		filter domain.AnalyticsFilter,
+		limit uint64,
+	) ([]domain.ChatMessage, error)
+}
+
 type RawEventRepository interface {
 	InsertEvent(ctx context.Context, event domain.RawKickEvent) error
 	InsertAttempt(ctx context.Context, attempt domain.RawEventAttempt) error

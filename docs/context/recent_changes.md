@@ -4,6 +4,18 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Completed Go rewrite Phase 7 analytics/profile parity:
+  - added public Go analytics endpoints for overview, message volume, top senders, top channels,
+    and top emotes
+  - added ClickHouse aggregate repository queries over denormalized `chat_messages`
+  - preserved date filters, exact channel scope, sender `_`/`-` lookup variants, hour/day buckets,
+    top-list limit validation, and public access
+  - added public Go user and channel profile analytics routes with SQLite identity metadata,
+    overview, day-bucket volume, top lists, and latest messages in the existing message shape
+  - closed `docs/tasks/go_rewrite_07_analytics_profiles.md`
+  - verification: `go test ./...`, `go vet ./...`, live ClickHouse repository test, Docker Go API
+    build, analytics route smoke, invalid-range smoke, and unknown-profile 404 smoke
+
 - Completed Go rewrite Phase 6 listener ingestion parity:
   - wired `cmd/listener` to SQLite, ClickHouse, Kick resolvers, Pusher websocket, raw workers, and
     heartbeat recording

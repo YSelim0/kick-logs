@@ -102,6 +102,130 @@ func messageExportResponse(export messagesusecase.MessageExport) schemas.Message
 	}
 }
 
+func analyticsOverviewResponse(overview domain.AnalyticsOverview) schemas.AnalyticsOverviewResponse {
+	return schemas.AnalyticsOverviewResponse{
+		TotalMessages:    overview.TotalMessages,
+		TotalSenders:     overview.TotalSenders,
+		TotalChannels:    overview.TotalChannels,
+		TotalEmoteUsages: overview.TotalEmoteUsages,
+		FirstMessageAt:   nullableTime(overview.FirstMessageAt),
+		LatestMessageAt:  nullableTime(overview.LatestMessageAt),
+	}
+}
+
+func messageVolumeResponse(points []domain.MessageVolumePoint) schemas.MessageVolumeResponse {
+	items := make([]schemas.MessageVolumePointResponse, 0, len(points))
+	for _, point := range points {
+		items = append(items, schemas.MessageVolumePointResponse{
+			BucketStart:  point.BucketStart.UTC().Format(time.RFC3339),
+			MessageCount: point.MessageCount,
+		})
+	}
+	return schemas.MessageVolumeResponse{Items: items}
+}
+
+func topSendersResponse(senders []domain.TopSenderAnalytics) schemas.TopSendersResponse {
+	items := make([]schemas.TopSenderResponse, 0, len(senders))
+	for _, sender := range senders {
+		items = append(items, topSenderResponse(sender))
+	}
+	return schemas.TopSendersResponse{Items: items}
+}
+
+func topSenderResponse(sender domain.TopSenderAnalytics) schemas.TopSenderResponse {
+	return schemas.TopSenderResponse{
+		SenderID:        sender.SenderID,
+		KickUserID:      sender.KickUserID,
+		Username:        sender.Username,
+		Slug:            sender.Slug,
+		ProfileImageURL: nullableString(sender.ProfileImageURL),
+		MessageCount:    sender.MessageCount,
+		FirstMessageAt:  sender.FirstMessageAt.UTC().Format(time.RFC3339),
+		LatestMessageAt: sender.LatestMessageAt.UTC().Format(time.RFC3339),
+	}
+}
+
+func topChannelsResponse(channels []domain.TopChannelAnalytics) schemas.TopChannelsResponse {
+	items := make([]schemas.TopChannelResponse, 0, len(channels))
+	for _, channel := range channels {
+		items = append(items, topChannelResponse(channel))
+	}
+	return schemas.TopChannelsResponse{Items: items}
+}
+
+func topChannelResponse(channel domain.TopChannelAnalytics) schemas.TopChannelResponse {
+	return schemas.TopChannelResponse{
+		ChannelID:       channel.ChannelID,
+		Slug:            channel.Slug,
+		DisplayName:     channel.DisplayName,
+		ProfileImageURL: nullableString(channel.ProfileImageURL),
+		BannerImageURL:  nullableString(channel.BannerImageURL),
+		MessageCount:    channel.MessageCount,
+		FirstMessageAt:  channel.FirstMessageAt.UTC().Format(time.RFC3339),
+		LatestMessageAt: channel.LatestMessageAt.UTC().Format(time.RFC3339),
+	}
+}
+
+func topEmotesResponse(emotes []domain.TopEmoteAnalytics) schemas.TopEmotesResponse {
+	items := make([]schemas.TopEmoteResponse, 0, len(emotes))
+	for _, emote := range emotes {
+		items = append(items, schemas.TopEmoteResponse{
+			ID:           emote.ID,
+			Name:         emote.Name,
+			Token:        emote.Token,
+			ImageURL:     emote.ImageURL,
+			UsageCount:   emote.UsageCount,
+			MessageCount: emote.MessageCount,
+		})
+	}
+	return schemas.TopEmotesResponse{Items: items}
+}
+
+func userProfileResponse(profile domain.UserProfile) schemas.UserProfileResponse {
+	return schemas.UserProfileResponse{
+		Sender: schemas.UserProfileSenderResponse{
+			ID:              profile.Sender.ID,
+			KickUserID:      profile.Sender.KickUserID,
+			Username:        profile.Sender.Username,
+			Slug:            profile.Sender.Slug,
+			ProfileImageURL: nullableString(profile.Sender.ProfileImageURL),
+		},
+		Overview:       analyticsOverviewResponse(profile.Overview),
+		MessageVolume:  messageVolumeResponse(profile.MessageVolume).Items,
+		TopChannels:    topChannelsResponse(profile.TopChannels).Items,
+		TopEmotes:      topEmotesResponse(profile.TopEmotes).Items,
+		LatestMessages: latestMessageResponses(profile.LatestMessages),
+	}
+}
+
+func channelProfileResponse(profile domain.ChannelProfile) schemas.ChannelProfileResponse {
+	return schemas.ChannelProfileResponse{
+		Channel: schemas.ChannelProfileChannelResponse{
+			ID:              profile.Channel.ID,
+			KickChannelID:   nullableInt64(profile.Channel.KickChannelID),
+			KickChatroomID:  nullableInt64(profile.Channel.KickChatroomID),
+			Slug:            profile.Channel.Slug,
+			DisplayName:     profile.Channel.DisplayName,
+			ProfileImageURL: nullableString(profile.Channel.ProfileImageURL),
+			BannerImageURL:  nullableString(profile.Channel.BannerImageURL),
+			IsEnabled:       profile.Channel.IsEnabled,
+		},
+		Overview:       analyticsOverviewResponse(profile.Overview),
+		MessageVolume:  messageVolumeResponse(profile.MessageVolume).Items,
+		TopSenders:     topSendersResponse(profile.TopSenders).Items,
+		TopEmotes:      topEmotesResponse(profile.TopEmotes).Items,
+		LatestMessages: latestMessageResponses(profile.LatestMessages),
+	}
+}
+
+func latestMessageResponses(messages []domain.ChatMessage) []schemas.MessageResponse {
+	items := make([]schemas.MessageResponse, 0, len(messages))
+	for _, message := range messages {
+		items = append(items, messageResponse(message))
+	}
+	return items
+}
+
 func messageResponse(message domain.ChatMessage) schemas.MessageResponse {
 	emotes := make([]schemas.MessageEmoteResponse, 0, len(message.Emotes))
 	for _, emote := range message.Emotes {

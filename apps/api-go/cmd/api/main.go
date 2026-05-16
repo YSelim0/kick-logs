@@ -20,9 +20,11 @@ import (
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/migrations"
 	operationsinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/operations"
 	sqliteinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/sqlite"
+	analyticsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/analytics"
 	authusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/auth"
 	channelsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/channels"
 	messagesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/messages"
+	profilesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/profiles"
 )
 
 func main() {
@@ -68,6 +70,7 @@ func main() {
 	}
 
 	channelRepo := sqliteinfra.NewFollowedChannelRepository(sqliteDB)
+	senderRepo := sqliteinfra.NewSenderProfileRepository(sqliteDB)
 	authService := authusecase.NewService(
 		adminRepo,
 		authinfra.NewBcryptPasswordHasher(),
@@ -75,8 +78,14 @@ func main() {
 	)
 	channelService := channelsusecase.NewService(channelRepo, kick.NewWebChannelResolver())
 	var messageService *messagesusecase.Service
+	var analyticsService *analyticsusecase.Service
+	var profileService *profilesusecase.Service
 	if clickHouseConn != nil {
-		messageService = messagesusecase.NewService(clickhouseinfra.NewMessageRepository(clickHouseConn))
+		messageRepository := clickhouseinfra.NewMessageRepository(clickHouseConn)
+		analyticsRepository := clickhouseinfra.NewAnalyticsRepository(clickHouseConn)
+		messageService = messagesusecase.NewService(messageRepository)
+		analyticsService = analyticsusecase.NewService(analyticsRepository)
+		profileService = profilesusecase.NewService(analyticsRepository, channelRepo, senderRepo)
 	}
 	operationsRepo := operationsinfra.NewRepository(
 		sqliteDB,
@@ -87,8 +96,10 @@ func main() {
 	server := app.NewAPIServer(cfg, logger, routes.Dependencies{
 		Config:     cfg,
 		Auth:       authService,
+		Analytics:  analyticsService,
 		Channels:   channelService,
 		Messages:   messageService,
+		Profiles:   profileService,
 		Operations: operationsRepo,
 	})
 

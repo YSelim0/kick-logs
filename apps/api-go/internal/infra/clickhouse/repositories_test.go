@@ -45,9 +45,9 @@ func TestClickHouseMigrationsAndRepositories(t *testing.T) {
 		KickMessageID:      "kick-" + suffix,
 		ChannelKickID:      123,
 		ChannelChatroomID:  456,
-		ChannelSlug:        "hype",
-		ChannelDisplayName: "Hype",
-		ChannelPublicURL:   "https://kick.com/hype",
+		ChannelSlug:        "hype-" + suffix,
+		ChannelDisplayName: "Hype " + suffix,
+		ChannelPublicURL:   "https://kick.com/hype-" + suffix,
 		SenderKickID:       789,
 		SenderUsername:     "phase3_user_" + suffix,
 		SenderSlug:         "phase3-user-" + suffix,
@@ -82,6 +82,9 @@ func TestClickHouseMigrationsAndRepositories(t *testing.T) {
 	otherChannelMessage := message
 	otherChannelMessage.ID = baseID + 1
 	otherChannelMessage.KickMessageID = "kick-other-" + suffix
+	otherChannelMessage.ChannelID = 124
+	otherChannelMessage.ChannelKickID = 124
+	otherChannelMessage.ChannelChatroomID = 457
 	otherChannelMessage.ChannelSlug = "other-" + suffix
 	otherChannelMessage.ChannelDisplayName = "Other " + suffix
 	otherChannelMessage.MessageType = "message"
@@ -175,6 +178,51 @@ func TestClickHouseMigrationsAndRepositories(t *testing.T) {
 	}
 	if len(secondPage) != 1 || firstPage[0].ID == secondPage[0].ID {
 		t.Fatalf("cursor pages first=%#v second=%#v", firstPage, secondPage)
+	}
+
+	analyticsRepo := clickhouseinfra.NewAnalyticsRepository(conn)
+	analyticsFilter := domain.AnalyticsFilter{Sender: message.SenderUsername}
+	overview, err := analyticsRepo.Overview(ctx, analyticsFilter)
+	if err != nil {
+		t.Fatalf("analyticsRepo.Overview() error = %v", err)
+	}
+	if overview.TotalMessages != 2 || overview.TotalSenders != 1 || overview.TotalChannels != 2 || overview.TotalEmoteUsages != 1 {
+		t.Fatalf("overview = %#v", overview)
+	}
+	volume, err := analyticsRepo.MessageVolume(ctx, analyticsFilter, domain.AnalyticsBucketDay)
+	if err != nil {
+		t.Fatalf("analyticsRepo.MessageVolume() error = %v", err)
+	}
+	if len(volume) != 1 || volume[0].MessageCount != 2 {
+		t.Fatalf("volume = %#v", volume)
+	}
+	topSenders, err := analyticsRepo.TopSenders(ctx, analyticsFilter, 5)
+	if err != nil {
+		t.Fatalf("analyticsRepo.TopSenders() error = %v", err)
+	}
+	if len(topSenders) != 1 || topSenders[0].MessageCount != 2 || topSenders[0].Username != message.SenderUsername {
+		t.Fatalf("top senders = %#v", topSenders)
+	}
+	topChannels, err := analyticsRepo.TopChannels(ctx, analyticsFilter, 5)
+	if err != nil {
+		t.Fatalf("analyticsRepo.TopChannels() error = %v", err)
+	}
+	if len(topChannels) != 2 || topChannels[0].Slug != message.ChannelSlug {
+		t.Fatalf("top channels = %#v", topChannels)
+	}
+	topEmotes, err := analyticsRepo.TopEmotes(ctx, domain.AnalyticsFilter{Channel: message.ChannelSlug}, 5)
+	if err != nil {
+		t.Fatalf("analyticsRepo.TopEmotes() error = %v", err)
+	}
+	if len(topEmotes) != 1 || topEmotes[0].ID != "1" || topEmotes[0].UsageCount != 1 {
+		t.Fatalf("top emotes = %#v", topEmotes)
+	}
+	latestMessages, err := analyticsRepo.LatestMessages(ctx, analyticsFilter, 10)
+	if err != nil {
+		t.Fatalf("analyticsRepo.LatestMessages() error = %v", err)
+	}
+	if len(latestMessages) != 2 || latestMessages[0].ID != message.ID || latestMessages[1].ID != otherChannelMessage.ID {
+		t.Fatalf("latest analytics messages = %#v", latestMessages)
 	}
 
 	rawRepo := clickhouseinfra.NewRawEventRepository(conn)

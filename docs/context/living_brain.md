@@ -4,6 +4,17 @@ This file is the active project memory. Keep it updated whenever project behavio
 
 ## Current State
 
+- Go rewrite Phase 7 analytics/profile parity is implemented:
+  - public Go analytics endpoints now cover overview, message volume, top senders, top channels,
+    and top emotes
+  - analytics read ClickHouse `chat_messages` directly and support date filters, exact channel
+    scope, sender `_`/`-` lookup variants, hour/day buckets, and top-list limit validation
+  - public user profile and channel profile analytics routes compose SQLite identity metadata with
+    ClickHouse overview, day-bucket volume, top lists, and latest messages
+  - latest profile messages reuse the existing public message response shape
+  - unknown user/channel profile slugs return existing 404 details
+  - verification passed with Go tests/vet, live ClickHouse repository test, Docker Go API build,
+    analytics route smoke, invalid-range smoke, and unknown-profile 404 smoke
 - Go rewrite Phase 6 listener ingestion parity is implemented:
   - `cmd/listener` now opens SQLite and ClickHouse, applies migrations, wires Kick clients, and
     runs raw-event workers plus listener heartbeat recording

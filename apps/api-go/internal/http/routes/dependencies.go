@@ -7,16 +7,20 @@ import (
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/config"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/domain"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/ports"
+	analyticsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/analytics"
 	authusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/auth"
 	channelsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/channels"
 	messagesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/messages"
+	profilesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/profiles"
 )
 
 type Dependencies struct {
 	Config     config.Config
 	Auth       *authusecase.Service
+	Analytics  *analyticsusecase.Service
 	Channels   *channelsusecase.Service
 	Messages   *messagesusecase.Service
+	Profiles   *profilesusecase.Service
 	Operations ports.OperationsRepository
 }
 

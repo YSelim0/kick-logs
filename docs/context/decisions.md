@@ -148,3 +148,7 @@
   visible message writes dedupe by `kick_message_id`.
 - Go listener heartbeat state remains in SQLite `worker_heartbeats` so operations health can be
   read without Docker logs.
+- Go analytics/profile endpoints are public and keep reading denormalized ClickHouse
+  `chat_messages`; they must not add hot-path joins back to SQLite for aggregate lists.
+- Go user/channel profile identity comes from SQLite metadata, while profile analytics and latest
+  messages come from ClickHouse.

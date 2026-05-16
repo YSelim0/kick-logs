@@ -4,6 +4,29 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-16
 
+- Completed Go rewrite Phase 7 analytics/profile parity:
+  - implemented public Go routes for `GET /analytics/overview`,
+    `GET /analytics/message-volume`, `GET /analytics/top-senders`,
+    `GET /analytics/top-channels`, and `GET /analytics/top-emotes`
+  - implemented public Go routes for `GET /users/{slug}/analytics` and
+    `GET /channels/{slug}/analytics`
+  - added ClickHouse analytics repository queries for overview counts, bucketed volume, top
+    senders, top channels, top emotes, and latest scoped messages
+  - preserved analytics date filters, exact channel scope, sender username/slug scope with
+    underscore/hyphen variants, `bucket=hour|day`, and top-list `limit` validation
+  - user and channel profile responses now combine SQLite identity metadata with ClickHouse
+    analytics and latest message rows
+  - unknown profile slugs return the existing 404 detail strings
+  - closed all checklist items in `docs/tasks/go_rewrite_07_analytics_profiles.md`
+  - verified `go test ./...`
+  - verified `go vet ./...`
+  - verified live ClickHouse integration test with
+    `KICK_LOGS_RUN_CLICKHOUSE_TESTS=1 go test ./internal/infra/clickhouse -run TestClickHouseMigrationsAndRepositories -count=1 -v`
+  - verified `docker compose --profile go-rewrite up --build -d api-go`
+  - verified live `GET /analytics/overview`, `GET /analytics/message-volume`,
+    `GET /analytics/top-senders`, `GET /analytics/top-channels`, `GET /analytics/top-emotes`,
+    analytics invalid-range 422, and unknown user-profile 404 smoke checks
+
 - Completed Go rewrite Phase 6 listener ingestion parity:
   - implemented the Go listener runtime wiring in `cmd/listener`
   - added Kick sender profile resolver and Pusher websocket client
