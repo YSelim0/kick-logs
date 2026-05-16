@@ -70,6 +70,70 @@ func operationsSummaryResponse(summary domain.OperationsSummary) schemas.Operati
 	}
 }
 
+func dataManagementSummaryResponse(summary domain.DataManagementSummary) schemas.DataManagementSummaryResponse {
+	tables := make([]schemas.DataManagementTableResponse, 0, len(summary.Tables))
+	for _, table := range summary.Tables {
+		tables = append(tables, schemas.DataManagementTableResponse{
+			TableName:  table.Name,
+			TotalBytes: table.BytesOnDisk,
+			RowCount:   table.Rows,
+		})
+	}
+	return schemas.DataManagementSummaryResponse{
+		Counts: schemas.DataManagementCountsResponse{
+			Channels:  summary.Counts.Channels,
+			Senders:   summary.Counts.Senders,
+			Messages:  summary.Counts.Messages,
+			RawEvents: summary.Counts.RawEvents,
+		},
+		DatabaseBytes:     summary.DatabaseBytes,
+		Tables:            tables,
+		RetentionSettings: retentionSettingsResponse(summary.RetentionSettings),
+	}
+}
+
+func retentionSettingsResponse(settings domain.RetentionSettings) schemas.RetentionSettingsResponse {
+	return schemas.RetentionSettingsResponse{
+		MessageRetentionDays:  settings.MessageRetentionDays,
+		RawEventRetentionDays: settings.RawEventRetentionDays,
+		UpdatedAt:             nullableTime(settings.UpdatedAt),
+	}
+}
+
+func dataCleanupPreviewResponse(preview domain.DataCleanupPreview) schemas.DataCleanupPreviewResponse {
+	return schemas.DataCleanupPreviewResponse{
+		Target:           string(preview.Target),
+		Affected:         dataCleanupCountsResponse(preview.Affected),
+		ConfirmationText: preview.ConfirmationText,
+		CanExecute:       preview.CanExecute,
+		CutoffAt:         nullableTime(preview.CutoffAt),
+		ChannelSlug:      nullableString(preview.ChannelSlug),
+		Sender:           nullableString(preview.Sender),
+		RetentionDays:    preview.RetentionDays,
+		Reason:           nullableString(preview.Reason),
+	}
+}
+
+func dataCleanupResultResponse(result domain.DataCleanupResult) schemas.DataCleanupResultResponse {
+	return schemas.DataCleanupResultResponse{
+		Target:           string(result.Target),
+		Deleted:          dataCleanupCountsResponse(result.Deleted),
+		ConfirmationText: result.ConfirmationText,
+		CutoffAt:         nullableTime(result.CutoffAt),
+		ChannelSlug:      nullableString(result.ChannelSlug),
+		Sender:           nullableString(result.Sender),
+		RetentionDays:    result.RetentionDays,
+	}
+}
+
+func dataCleanupCountsResponse(counts domain.DataCleanupCounts) schemas.DataCleanupCountsResponse {
+	return schemas.DataCleanupCountsResponse{
+		Messages:  counts.Messages,
+		RawEvents: counts.RawEvents,
+		Total:     counts.Total(),
+	}
+}
+
 func messageSearchResponse(page messagesusecase.SearchPage) schemas.MessageSearchResponse {
 	items := make([]schemas.MessageResponse, 0, len(page.Items))
 	for _, message := range page.Items {

@@ -83,3 +83,11 @@ type StorageStatsRepository interface {
 type OperationsRepository interface {
 	Summary(ctx context.Context) (domain.OperationsSummary, error)
 }
+
+type DataManagementRepository interface {
+	Summary(ctx context.Context) (domain.DataManagementSummary, error)
+	GetRetentionSettings(ctx context.Context) (domain.RetentionSettings, error)
+	UpdateRetentionSettings(ctx context.Context, settings domain.RetentionSettings) (domain.RetentionSettings, error)
+	CountCleanup(ctx context.Context, criteria domain.DataCleanupCriteria) (domain.DataCleanupCounts, error)
+	ExecuteCleanup(ctx context.Context, criteria domain.DataCleanupCriteria) (domain.DataCleanupCounts, error)
+}

@@ -16,11 +16,13 @@ import (
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/domain"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/http/routes"
 	authinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/auth"
+	datamanagementinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/data_management"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/migrations"
 	operationsinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/operations"
 	sqliteinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/sqlite"
 	authusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/auth"
 	channelsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/channels"
+	datamanagementusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/data_management"
 )
 
 func TestAuthAndAdminRoutes(t *testing.T) {
@@ -196,6 +198,55 @@ func TestOperationsSummaryRoute(t *testing.T) {
 	}
 }
 
+func TestDataManagementRoutes(t *testing.T) {
+	handler := newAdminTestRouter(t)
+	sessionCookie := loginAsAdmin(t, handler)
+
+	summaryResponse := httptest.NewRecorder()
+	summaryRequest := httptest.NewRequest(http.MethodGet, "/admin/data-management/summary", nil)
+	summaryRequest.AddCookie(sessionCookie)
+	handler.ServeHTTP(summaryResponse, summaryRequest)
+	if summaryResponse.Code != http.StatusOK {
+		t.Fatalf("summary status = %d body = %s", summaryResponse.Code, summaryResponse.Body.String())
+	}
+	if !strings.Contains(summaryResponse.Body.String(), `"retention_settings"`) {
+		t.Fatalf("summary body = %s", summaryResponse.Body.String())
+	}
+
+	updateResponse := httptest.NewRecorder()
+	updateRequest := jsonRequest(t, http.MethodPut, "/admin/data-management/retention-settings", `{"message_retention_days":30,"raw_event_retention_days":90}`)
+	updateRequest.AddCookie(sessionCookie)
+	handler.ServeHTTP(updateResponse, updateRequest)
+	if updateResponse.Code != http.StatusOK {
+		t.Fatalf("update status = %d body = %s", updateResponse.Code, updateResponse.Body.String())
+	}
+	if !strings.Contains(updateResponse.Body.String(), `"message_retention_days":30`) {
+		t.Fatalf("update body = %s", updateResponse.Body.String())
+	}
+
+	previewResponse := httptest.NewRecorder()
+	previewRequest := jsonRequest(t, http.MethodPost, "/admin/data-management/cleanup/preview", `{"target":"old_messages"}`)
+	previewRequest.AddCookie(sessionCookie)
+	handler.ServeHTTP(previewResponse, previewRequest)
+	if previewResponse.Code != http.StatusOK {
+		t.Fatalf("preview status = %d body = %s", previewResponse.Code, previewResponse.Body.String())
+	}
+	if !strings.Contains(previewResponse.Body.String(), `"confirmation_text":"DELETE OLD MESSAGES"`) {
+		t.Fatalf("preview body = %s", previewResponse.Body.String())
+	}
+
+	confirmResponse := httptest.NewRecorder()
+	confirmRequest := jsonRequest(t, http.MethodPost, "/admin/data-management/cleanup/confirm", `{"target":"old_messages","confirmation_text":"DELETE OLD MESSAGES"}`)
+	confirmRequest.AddCookie(sessionCookie)
+	handler.ServeHTTP(confirmResponse, confirmRequest)
+	if confirmResponse.Code != http.StatusOK {
+		t.Fatalf("confirm status = %d body = %s", confirmResponse.Code, confirmResponse.Body.String())
+	}
+	if !strings.Contains(confirmResponse.Body.String(), `"deleted":{"messages":0,"raw_events":0,"total":0}`) {
+		t.Fatalf("confirm body = %s", confirmResponse.Body.String())
+	}
+}
+
 func newAdminTestRouter(t *testing.T) http.Handler {
 	t.Helper()
 
@@ -233,11 +284,13 @@ func newAdminTestRouter(t *testing.T) http.Handler {
 	)
 	channelService := channelsusecase.NewService(channelRepo, fakeChannelResolver{})
 	operationsRepo := operationsinfra.NewRepository(db, dbPath, nil, cfg.ListenerStaleAfter)
+	dataManagementService := datamanagementusecase.NewService(datamanagementinfra.NewRepository(db, dbPath, nil))
 
 	return NewRouter(cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), routes.Dependencies{
 		Config:     cfg,
 		Auth:       authService,
 		Channels:   channelService,
+		Data:       dataManagementService,
 		Operations: operationsRepo,
 	})
 }

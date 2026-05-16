@@ -16,6 +16,7 @@ import (
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/http/routes"
 	authinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/auth"
 	clickhouseinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/clickhouse"
+	datamanagementinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/data_management"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/kick"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/migrations"
 	operationsinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/operations"
@@ -23,6 +24,7 @@ import (
 	analyticsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/analytics"
 	authusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/auth"
 	channelsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/channels"
+	datamanagementusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/data_management"
 	messagesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/messages"
 	profilesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/profiles"
 )
@@ -93,6 +95,9 @@ func main() {
 		clickHouseConn,
 		cfg.ListenerStaleAfter,
 	)
+	dataManagementService := datamanagementusecase.NewService(
+		datamanagementinfra.NewRepository(sqliteDB, cfg.SQLitePath, clickHouseConn),
+	)
 	server := app.NewAPIServer(cfg, logger, routes.Dependencies{
 		Config:     cfg,
 		Auth:       authService,
@@ -100,6 +105,7 @@ func main() {
 		Channels:   channelService,
 		Messages:   messageService,
 		Profiles:   profileService,
+		Data:       dataManagementService,
 		Operations: operationsRepo,
 	})
 

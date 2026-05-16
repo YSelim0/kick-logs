@@ -21,6 +21,7 @@ func NewRouter(cfg config.Config, logger *slog.Logger, dependencySets ...routes.
 		routes.RegisterAdminUserRoutes(mux, deps)
 		routes.RegisterAdminChannelRoutes(mux, deps)
 		routes.RegisterAdminOperationRoutes(mux, deps)
+		routes.RegisterAdminDataManagementRoutes(mux, deps)
 	}
 
 	var handler http.Handler = mux

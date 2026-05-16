@@ -288,3 +288,71 @@ type DataMigrationRun struct {
 	StartedAt             time.Time
 	FinishedAt            time.Time
 }
+
+type DataManagementCounts struct {
+	Channels  int64
+	Senders   int64
+	Messages  int64
+	RawEvents int64
+}
+
+type DataManagementSummary struct {
+	Counts            DataManagementCounts
+	DatabaseBytes     int64
+	Tables            []TableSize
+	RetentionSettings RetentionSettings
+}
+
+type DataCleanupTarget string
+
+const (
+	DataCleanupTargetOldMessages  DataCleanupTarget = "old_messages"
+	DataCleanupTargetOldRawEvents DataCleanupTarget = "old_raw_events"
+	DataCleanupTargetChannel      DataCleanupTarget = "channel"
+	DataCleanupTargetSender       DataCleanupTarget = "sender"
+)
+
+type DataCleanupRequest struct {
+	Target      DataCleanupTarget
+	ChannelSlug string
+	Sender      string
+}
+
+type DataCleanupCriteria struct {
+	Target        DataCleanupTarget
+	CutoffAt      time.Time
+	ChannelSlug   string
+	Sender        string
+	RetentionDays *int
+}
+
+type DataCleanupCounts struct {
+	Messages  int64
+	RawEvents int64
+}
+
+func (counts DataCleanupCounts) Total() int64 {
+	return counts.Messages + counts.RawEvents
+}
+
+type DataCleanupPreview struct {
+	Target           DataCleanupTarget
+	Affected         DataCleanupCounts
+	ConfirmationText string
+	CanExecute       bool
+	CutoffAt         time.Time
+	ChannelSlug      string
+	Sender           string
+	RetentionDays    *int
+	Reason           string
+}
+
+type DataCleanupResult struct {
+	Target           DataCleanupTarget
+	Deleted          DataCleanupCounts
+	ConfirmationText string
+	CutoffAt         time.Time
+	ChannelSlug      string
+	Sender           string
+	RetentionDays    *int
+}
