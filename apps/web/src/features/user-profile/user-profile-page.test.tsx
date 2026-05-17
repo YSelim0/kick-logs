@@ -30,6 +30,11 @@ describe("UserProfilePage", () => {
     expect(screen.getByText("Toplam Mesaj")).toBeInTheDocument();
     expect(screen.getAllByText("#hype")).toHaveLength(2);
     expect(screen.getByText("KEKW")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "@reply_user:" })).toHaveAttribute(
+      "href",
+      "/users/reply-user"
+    );
+    expect(screen.getByText("older profile context")).toBeInTheDocument();
     expect(screen.getByText("hello profile message")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /mesajlarda ara/i })).toHaveAttribute(
       "href",
@@ -96,13 +101,22 @@ function profileFixture(): UserProfile {
         kick_message_id: "message-1",
         chatroom_id: 100,
         content: "hello profile message",
-        message_type: "message",
+        message_type: "reply",
         sender_username_snapshot: "Yavuz",
         sender_slug_snapshot: "yavuz",
         sender_color_snapshot: null,
         sender_badges: [],
         emotes: [],
-        reply_metadata: {},
+        reply_metadata: {
+          original_sender: {
+            username: "reply_user",
+            slug: "reply_user"
+          },
+          original_message: {
+            id: "parent-message-1",
+            content: "older profile context"
+          }
+        },
         thread_parent_id: null,
         message_created_at: "2026-05-14T09:30:00Z",
         ingested_at: "2026-05-14T09:30:01Z",

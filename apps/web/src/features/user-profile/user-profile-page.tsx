@@ -20,8 +20,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { getUserProfile } from "@/features/user-profile/api";
 import { MessageContent } from "@/features/search/message-content";
+import { getReplyContext } from "@/features/search/reply-metadata";
 import { formatMessageDate } from "@/features/search/search-params";
 import { ApiClientError } from "@/lib/api-client";
+import { buildUserProfileHref } from "@/lib/kick-profile-slugs";
 import type {
   Message,
   MessageVolumePoint,
@@ -449,20 +451,48 @@ function LatestMessages({ messages }: { messages: Message[] }) {
 
   return (
     <div className="overflow-hidden rounded-md border border-border">
-      {messages.map((message, index) => (
-        <div
-          className={`grid gap-2 border-t border-border/70 px-3 py-3 text-sm first:border-t-0 ${
-            index % 2 === 1 ? "bg-kick-background" : "bg-black"
-          }`}
-          key={message.id}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-            <span className="text-accent">#{message.channel.slug}</span>
-            <span>{formatMessageDate(message.message_created_at)}</span>
+      {messages.map((message, index) => {
+        const replyContext = getReplyContext(message);
+        const replyTitle = replyContext
+          ? `@${replyContext.senderUsername}: ${replyContext.content}`
+          : undefined;
+        const replySenderProfileHref = buildUserProfileHref(replyContext?.senderSlug);
+
+        return (
+          <div
+            className={`grid gap-2 border-t border-border/70 px-3 py-3 text-sm first:border-t-0 ${
+              index % 2 === 1 ? "bg-kick-background" : "bg-black"
+            }`}
+            key={message.id}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span className="text-accent">#{message.channel.slug}</span>
+              <span>{formatMessageDate(message.message_created_at)}</span>
+            </div>
+            {replyContext ? (
+              <div
+                className="min-w-0 truncate text-xs leading-5 text-muted-foreground/70"
+                title={replyTitle}
+              >
+                {replySenderProfileHref ? (
+                  <Link
+                    className="font-medium text-muted-foreground/80 hover:text-primary"
+                    href={replySenderProfileHref}
+                  >
+                    @{replyContext.senderUsername}:
+                  </Link>
+                ) : (
+                  <span className="font-medium text-muted-foreground/80">
+                    @{replyContext.senderUsername}:
+                  </span>
+                )}{" "}
+                {replyContext.content}
+              </div>
+            ) : null}
+            <MessageContent content={message.content} emotes={message.emotes} />
           </div>
-          <MessageContent content={message.content} emotes={message.emotes} />
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
