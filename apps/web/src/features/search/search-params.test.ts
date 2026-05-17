@@ -4,6 +4,7 @@ import {
   EMPTY_SEARCH_STATE,
   appendUniqueMessages,
   applyDatePreset,
+  dedupeMessages,
   getActiveFilters,
   getDatePresetRange,
   getDefaultSearchState,
@@ -168,6 +169,17 @@ describe("search params", () => {
 
     expect(appendUniqueMessages([first], [first, second]).map((message) => message.id)).toEqual([
       1, 2
+    ]);
+  });
+
+  it("deduplicates a single page of messages", () => {
+    const first = messageFixture(1);
+    const duplicate = { ...first, content: "duplicate copy" };
+    const second = messageFixture(2);
+
+    expect(dedupeMessages([first, duplicate, second]).map((message) => message.content)).toEqual([
+      first.content,
+      second.content
     ]);
   });
 });

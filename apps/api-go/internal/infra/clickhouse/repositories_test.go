@@ -225,6 +225,34 @@ func TestClickHouseMigrationsAndRepositories(t *testing.T) {
 		t.Fatalf("latest analytics messages = %#v", latestMessages)
 	}
 
+	duplicateMessage := message
+	duplicateMessage.Content = "updated duplicate clickhouse phase3 needle " + suffix
+	duplicateMessage.IngestedAt = baseTime.Add(10 * time.Minute)
+	if err := messageRepo.Insert(ctx, duplicateMessage); err != nil {
+		t.Fatalf("messageRepo.Insert(duplicate) error = %v", err)
+	}
+	dedupedMessages, err := messageRepo.Search(ctx, domain.MessageSearchFilter{
+		Query: "phase3 needle " + suffix,
+		Limit: 10,
+	})
+	if err != nil {
+		t.Fatalf("messageRepo.Search(deduped) error = %v", err)
+	}
+	if len(dedupedMessages) != 3 {
+		t.Fatalf("deduped messages len = %d messages=%#v", len(dedupedMessages), dedupedMessages)
+	}
+	seenKickMessageIDs := make(map[string]bool)
+	for _, foundMessage := range dedupedMessages {
+		if seenKickMessageIDs[foundMessage.KickMessageID] {
+			t.Fatalf("duplicate kick message returned = %#v", dedupedMessages)
+		}
+		seenKickMessageIDs[foundMessage.KickMessageID] = true
+	}
+	if dedupedMessages[0].KickMessageID != message.KickMessageID ||
+		dedupedMessages[0].Content != duplicateMessage.Content {
+		t.Fatalf("latest duplicate was not selected = %#v", dedupedMessages[0])
+	}
+
 	rawRepo := clickhouseinfra.NewRawEventRepository(conn)
 	rawEvent := domain.RawKickEvent{
 		ID:            "raw-" + suffix,

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SearchScreen } from "@/features/search/search-screen";
 import { DEFAULT_MESSAGE_LIMIT } from "@/lib/constants";
+import type { Message } from "@/types/api";
 
 const navigationMocks = vi.hoisted(() => ({
   push: vi.fn(),
@@ -63,6 +64,22 @@ describe("SearchScreen", () => {
       })
     );
     expect(await screen.findByText("Bu filtrelerle mesaj bulunamadı.")).toBeInTheDocument();
+  });
+
+  it("deduplicates initial results before rendering message rows", async () => {
+    navigationMocks.query = "q=filter";
+    apiMocks.searchMessages.mockResolvedValue({
+      items: [
+        messageFixture(8333132417695925000, "first copy"),
+        messageFixture(8333132417695925000, "second copy")
+      ],
+      next_cursor: null
+    });
+
+    render(<SearchScreen />);
+
+    expect(await screen.findByText("first copy")).toBeInTheDocument();
+    expect(screen.queryByText("second copy")).not.toBeInTheDocument();
   });
 
   it("sends date filters to the API as UTC ISO values", async () => {
@@ -170,3 +187,36 @@ describe("SearchScreen", () => {
     );
   });
 });
+
+function messageFixture(id: number, content: string): Message {
+  return {
+    id,
+    kick_message_id: `kick-${id}`,
+    chatroom_id: 10,
+    content,
+    message_type: "message",
+    sender_username_snapshot: "yavuz",
+    sender_slug_snapshot: "yavuz",
+    sender_color_snapshot: null,
+    sender_badges: [],
+    emotes: [],
+    reply_metadata: {},
+    thread_parent_id: null,
+    message_created_at: "2026-05-09T02:41:00Z",
+    ingested_at: "2026-05-09T02:41:01Z",
+    sender: {
+      id: 1,
+      kick_user_id: 1,
+      username: "yavuz",
+      slug: "yavuz",
+      profile_image_url: null
+    },
+    channel: {
+      id: 1,
+      slug: "hype",
+      display_name: "hype",
+      profile_image_url: null,
+      banner_image_url: null
+    }
+  };
+}

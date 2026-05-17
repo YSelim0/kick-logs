@@ -141,6 +141,10 @@ export function getLastMatchTime(messages: Message[]) {
   return firstMessage ? formatMessageDate(firstMessage.message_created_at) : "-";
 }
 
+export function dedupeMessages(messages: Message[]) {
+  return appendUniqueMessages([], messages);
+}
+
 export function appendUniqueMessages(current: Message[], incoming: Message[]) {
   const existingIds = new Set(current.map((message) => message.id));
   return [

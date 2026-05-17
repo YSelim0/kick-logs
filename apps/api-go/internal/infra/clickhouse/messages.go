@@ -153,8 +153,25 @@ func (repo *MessageRepository) Search(ctx context.Context, filter domain.Message
 		emote_image_urls, ifNull(reply_to_sender, ''), ifNull(reply_to_content, ''),
 		ifNull(reply_to_message_id, ''), ifNull(thread_parent_id, ''), reply_metadata_json,
 		raw_payload_json, message_created_at, ingested_at
-		FROM chat_messages
+		FROM (
+			SELECT
+				id, kick_message_id, channel_id, channel_kick_id, channel_chatroom_id,
+				channel_slug, channel_slug_lower, channel_display_name, channel_display_name_lower,
+				channel_profile_image_url, channel_banner_image_url, channel_public_url,
+				sender_id, sender_kick_id, sender_username, sender_username_lower, sender_slug,
+				sender_slug_lower, sender_display_color, sender_profile_image_url, sender_public_url,
+				sender_badges_json, message_type, content, emote_count, emote_ids, emote_names,
+				emote_tokens, emote_image_urls, reply_to_sender, reply_to_content, reply_to_message_id,
+				thread_parent_id, reply_metadata_json, raw_payload_json, message_created_at, ingested_at,
+				is_deleted,
+				row_number() OVER (
+					PARTITION BY kick_message_id
+					ORDER BY ingested_at DESC, message_created_at DESC, id DESC
+				) AS message_rank
+			FROM chat_messages
+		)
 		WHERE %s
+			AND message_rank = 1
 		ORDER BY message_created_at DESC, id DESC
 		LIMIT ?`, strings.Join(where, " AND "))
 	args = append(args, limit)

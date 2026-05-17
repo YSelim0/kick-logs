@@ -12,6 +12,7 @@ import {
   EMPTY_SEARCH_STATE,
   appendUniqueMessages,
   applyDatePreset,
+  dedupeMessages,
   getDefaultSearchState,
   readSearchState,
   searchStateToMessageParams,
@@ -70,7 +71,7 @@ function SearchScreenInner() {
         return;
       }
 
-      setMessages(page.items);
+      setMessages(dedupeMessages(page.items));
       setNextCursor(page.next_cursor);
     } catch (caught) {
       if (requestId === requestSequenceRef.current) {
