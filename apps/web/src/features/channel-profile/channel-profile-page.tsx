@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -462,6 +463,7 @@ function LatestMessages({ messages }: { messages: Message[] }) {
     <div className="overflow-hidden rounded-md border border-border">
       {messages.map((message, index) => {
         const senderHref = buildUserProfileHref(message.sender.slug);
+        const senderNameStyle = senderColorStyle(message.sender_color_snapshot);
         return (
           <div
             className={`grid gap-2 border-t border-border/70 px-3 py-3 text-sm first:border-t-0 ${
@@ -471,11 +473,17 @@ function LatestMessages({ messages }: { messages: Message[] }) {
           >
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
               {senderHref ? (
-                <Link className="text-accent hover:text-primary" href={senderHref}>
+                <Link
+                  className="text-accent hover:text-primary"
+                  href={senderHref}
+                  style={senderNameStyle}
+                >
                   @{message.sender.username}
                 </Link>
               ) : (
-                <span className="text-accent">@{message.sender.username}</span>
+                <span className="text-accent" style={senderNameStyle}>
+                  @{message.sender.username}
+                </span>
               )}
               <span>{formatMessageDate(message.message_created_at)}</span>
             </div>
@@ -489,6 +497,14 @@ function LatestMessages({ messages }: { messages: Message[] }) {
 
 function SmallEmpty({ text }: { text: string }) {
   return <div className="text-sm text-muted-foreground">{text}</div>;
+}
+
+function senderColorStyle(color: string | null): CSSProperties | undefined {
+  if (!color || !/^#[0-9a-fA-F]{3,8}$/.test(color)) {
+    return undefined;
+  }
+
+  return { color };
 }
 
 function summarizeVolume(points: MessageVolumePoint[]) {

@@ -4,6 +4,7 @@
 
 import { ChevronDown, Search } from "lucide-react";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { useState } from "react";
 
 import { MessageContent } from "@/features/search/message-content";
@@ -145,6 +146,7 @@ function MessageRow({
   const senderProfileHref = buildUserProfileHref(message.sender.slug);
   const channelProfileHref = buildChannelProfileHref(message.channel.slug);
   const senderName = message.sender.username || message.sender_username_snapshot;
+  const senderNameStyle = senderColorStyle(message.sender_color_snapshot);
 
   return (
     <div
@@ -168,11 +170,14 @@ function MessageRow({
           <Link
             className="block truncate font-medium text-foreground hover:text-primary"
             href={senderProfileHref}
+            style={senderNameStyle}
           >
             {senderName}
           </Link>
         ) : (
-          <div className="truncate font-medium text-foreground">{senderName}</div>
+          <div className="truncate font-medium text-foreground" style={senderNameStyle}>
+            {senderName}
+          </div>
         )}
         <div className="truncate text-xs text-muted-foreground md:hidden">
           {channelProfileHref ? (
@@ -229,6 +234,14 @@ function MessageRow({
       </div>
     </div>
   );
+}
+
+function senderColorStyle(color: string | null): CSSProperties | undefined {
+  if (!color || !/^#[0-9a-fA-F]{3,8}$/.test(color)) {
+    return undefined;
+  }
+
+  return { color };
 }
 
 function SenderAvatar({ message }: { message: Message }) {
