@@ -18,6 +18,7 @@ import (
 type Service struct {
 	channels        ports.FollowedChannelRepository
 	rawEvents       ports.RawEventRepository
+	rawEventClaims  ports.RawEventClaimRepository
 	messages        ports.MessageRepository
 	senders         ports.SenderProfileRepository
 	heartbeats      ports.WorkerHeartbeatRepository
@@ -46,6 +47,7 @@ type ServiceConfig struct {
 type Dependencies struct {
 	Channels        ports.FollowedChannelRepository
 	RawEvents       ports.RawEventRepository
+	RawEventClaims  ports.RawEventClaimRepository
 	Messages        ports.MessageRepository
 	Senders         ports.SenderProfileRepository
 	Heartbeats      ports.WorkerHeartbeatRepository
@@ -74,6 +76,7 @@ func NewService(deps Dependencies) *Service {
 	return &Service{
 		channels:        deps.Channels,
 		rawEvents:       deps.RawEvents,
+		rawEventClaims:  deps.RawEventClaims,
 		messages:        deps.Messages,
 		senders:         deps.Senders,
 		heartbeats:      deps.Heartbeats,
@@ -187,6 +190,13 @@ func (service *Service) RunOnce(ctx context.Context) (int, error) {
 }
 
 func (service *Service) ProcessRawEventsOnce(ctx context.Context) (RawEventProcessingResult, error) {
+	return service.processRawEventsOnce(ctx, 0)
+}
+
+func (service *Service) processRawEventsOnce(ctx context.Context, workerID int) (RawEventProcessingResult, error) {
+	if service.rawEventClaims == nil {
+		return RawEventProcessingResult{}, errors.New("raw event claim repository is not configured")
+	}
 	events, err := service.rawEvents.ListUnprocessed(
 		ctx,
 		uint64(service.config.RawEventBatchSize),
@@ -196,15 +206,40 @@ func (service *Service) ProcessRawEventsOnce(ctx context.Context) (RawEventProce
 		return RawEventProcessingResult{}, err
 	}
 
-	result := RawEventProcessingResult{Claimed: len(events)}
+	result := RawEventProcessingResult{}
+	seenRawEventIDs := make(map[string]bool, len(events))
 	for _, rawEvent := range events {
+		if seenRawEventIDs[rawEvent.ID] {
+			continue
+		}
+		seenRawEventIDs[rawEvent.ID] = true
 		if rawEvent.Attempts >= service.config.RawEventMaxAttempts {
 			continue
 		}
+		claimWorkerID := service.rawEventClaimWorkerID(workerID)
+		claimed, err := service.rawEventClaims.TryClaim(
+			ctx,
+			rawEvent.ID,
+			claimWorkerID,
+			service.config.RawEventProcessingTimeout,
+		)
+		if err != nil {
+			return RawEventProcessingResult{}, err
+		}
+		if !claimed {
+			continue
+		}
+		result.Claimed++
 		if err := service.processRawEvent(ctx, rawEvent); err != nil {
 			result.Failed++
+			if releaseErr := service.rawEventClaims.Release(ctx, rawEvent.ID, claimWorkerID); releaseErr != nil {
+				service.logger.Error("failed to release raw Kick event claim", "raw_event_id", rawEvent.ID, "error", releaseErr)
+			}
 			service.logger.Error("Raw Kick event processing failed", "raw_event_id", rawEvent.ID, "error", err)
 			continue
+		}
+		if err := service.rawEventClaims.MarkCompleted(ctx, rawEvent.ID, claimWorkerID); err != nil {
+			return RawEventProcessingResult{}, err
 		}
 		result.Processed++
 	}
@@ -215,6 +250,13 @@ func (service *Service) ProcessRawEventsOnce(ctx context.Context) (RawEventProce
 	}
 	result.PendingCount = pendingCount
 	return result, nil
+}
+
+func (service *Service) rawEventClaimWorkerID(workerID int) string {
+	if workerID < 1 {
+		return service.config.HeartbeatServiceName + "-manual"
+	}
+	return fmt.Sprintf("%s-%d", service.config.HeartbeatServiceName, workerID)
 }
 
 func (service *Service) RecordHeartbeat(ctx context.Context) error {
@@ -359,7 +401,7 @@ func (service *Service) markRawEventFailed(ctx context.Context, rawEvent domain.
 
 func (service *Service) processRawEventsForever(ctx context.Context, workerID int) {
 	for ctx.Err() == nil {
-		result, err := service.ProcessRawEventsOnce(ctx)
+		result, err := service.processRawEventsOnce(ctx, workerID)
 		if err != nil {
 			service.logger.Error("raw Kick event worker failed", "worker_id", workerID, "error", err)
 		} else if result.Claimed > 0 {

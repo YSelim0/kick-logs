@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"time"
 
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/domain"
 )
@@ -64,6 +65,12 @@ type RawEventRepository interface {
 	ListUnprocessed(ctx context.Context, limit uint64, maxAttempts uint16) ([]domain.RawKickEvent, error)
 	CountUnprocessed(ctx context.Context, maxAttempts uint16) (int64, error)
 	AttemptCount(ctx context.Context, rawEventID string) (uint16, error)
+}
+
+type RawEventClaimRepository interface {
+	TryClaim(ctx context.Context, rawEventID string, workerID string, leaseDuration time.Duration) (bool, error)
+	MarkCompleted(ctx context.Context, rawEventID string, workerID string) error
+	Release(ctx context.Context, rawEventID string, workerID string) error
 }
 
 type SenderProfileRepository interface {

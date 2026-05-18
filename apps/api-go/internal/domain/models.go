@@ -218,6 +218,16 @@ type RawEventAttempt struct {
 	FinishedAt   time.Time
 }
 
+type RawEventClaim struct {
+	RawEventID     string
+	WorkerID       string
+	Status         string
+	LeaseExpiresAt time.Time
+	ClaimedAt      time.Time
+	CompletedAt    time.Time
+	UpdatedAt      time.Time
+}
+
 type TableSize struct {
 	Name        string
 	Rows        int64
