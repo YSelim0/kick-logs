@@ -212,6 +212,9 @@ func TestDataManagementRoutes(t *testing.T) {
 	if !strings.Contains(summaryResponse.Body.String(), `"retention_settings"`) {
 		t.Fatalf("summary body = %s", summaryResponse.Body.String())
 	}
+	if !strings.Contains(summaryResponse.Body.String(), `"table_name":"raw_event_claims"`) {
+		t.Fatalf("summary body = %s", summaryResponse.Body.String())
+	}
 
 	updateResponse := httptest.NewRecorder()
 	updateRequest := jsonRequest(t, http.MethodPut, "/admin/data-management/retention-settings", `{"message_retention_days":30,"raw_event_retention_days":90}`)

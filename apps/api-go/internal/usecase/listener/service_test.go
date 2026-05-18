@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -132,6 +133,93 @@ func TestRawEventProcessorNormalizesAndDeduplicatesMessages(t *testing.T) {
 	}
 }
 
+func TestRawEventProcessorSkipsAlreadyClaimedRawEvents(t *testing.T) {
+	unit := newFakeListenerUnit()
+	service := newTestService(unit, fakePusherClient{})
+	payload := buildPayload("message-claimed")
+	unit.rawEvents.events = append(unit.rawEvents.events, domain.RawKickEvent{
+		ID:            "raw-claimed",
+		EventName:     chatMessageEventName,
+		KickMessageID: "message-claimed",
+		ChatroomID:    123,
+		ChannelID:     1,
+		PayloadJSON:   rawPayloadJSON(payload),
+		Status:        "pending",
+		ReceivedAt:    time.Now().UTC(),
+	})
+	unit.rawEventClaims.active["raw-claimed"] = "other-worker"
+
+	result, err := service.ProcessRawEventsOnce(context.Background())
+	if err != nil {
+		t.Fatalf("ProcessRawEventsOnce() error = %v", err)
+	}
+	if result.Claimed != 0 || result.Processed != 0 || result.Failed != 0 {
+		t.Fatalf("result = %#v", result)
+	}
+	if len(unit.messages.messages) != 0 || len(unit.rawEvents.attempts) != 0 {
+		t.Fatalf("messages=%#v attempts=%#v", unit.messages.messages, unit.rawEvents.attempts)
+	}
+}
+
+func TestRawEventProcessorClaimsDuplicateRowsOnce(t *testing.T) {
+	unit := newFakeListenerUnit()
+	service := newTestService(unit, fakePusherClient{})
+	payload := buildPayload("message-same-raw")
+	rawEvent := domain.RawKickEvent{
+		ID:            "raw-same",
+		EventName:     chatMessageEventName,
+		KickMessageID: "message-same-raw",
+		ChatroomID:    123,
+		ChannelID:     1,
+		PayloadJSON:   rawPayloadJSON(payload),
+		Status:        "pending",
+		ReceivedAt:    time.Now().UTC(),
+	}
+	unit.rawEvents.events = append(unit.rawEvents.events, rawEvent, rawEvent)
+
+	result, err := service.ProcessRawEventsOnce(context.Background())
+	if err != nil {
+		t.Fatalf("ProcessRawEventsOnce() error = %v", err)
+	}
+	if result.Claimed != 1 || result.Processed != 1 || result.Failed != 0 {
+		t.Fatalf("result = %#v", result)
+	}
+	if len(unit.messages.messages) != 1 || len(unit.rawEvents.attempts) != 1 {
+		t.Fatalf("messages=%#v attempts=%#v", unit.messages.messages, unit.rawEvents.attempts)
+	}
+	if status := unit.rawEventClaims.completed["raw-same"]; !status {
+		t.Fatalf("claim was not completed = %#v", unit.rawEventClaims.completed)
+	}
+}
+
+func TestRawEventProcessorDoesNotRetryDuplicateRowsInSameBatch(t *testing.T) {
+	unit := newFakeListenerUnit()
+	service := newTestService(unit, fakePusherClient{})
+	payload := buildPayload("message-same-failing-raw")
+	payload["chatroom_id"] = 999
+	rawEvent := domain.RawKickEvent{
+		ID:            "raw-same-failing",
+		EventName:     chatMessageEventName,
+		KickMessageID: "message-same-failing-raw",
+		ChatroomID:    999,
+		PayloadJSON:   rawPayloadJSON(payload),
+		Status:        "pending",
+		ReceivedAt:    time.Now().UTC(),
+	}
+	unit.rawEvents.events = append(unit.rawEvents.events, rawEvent, rawEvent)
+
+	result, err := service.ProcessRawEventsOnce(context.Background())
+	if err != nil {
+		t.Fatalf("ProcessRawEventsOnce() error = %v", err)
+	}
+	if result.Claimed != 1 || result.Processed != 0 || result.Failed != 1 {
+		t.Fatalf("result = %#v", result)
+	}
+	if len(unit.rawEvents.attempts) != 1 || unit.rawEvents.attempts[0].Status != "failed" {
+		t.Fatalf("attempts = %#v", unit.rawEvents.attempts)
+	}
+}
+
 func TestRawEventProcessorMarksFailuresAndHeartbeat(t *testing.T) {
 	unit := newFakeListenerUnit()
 	service := newTestService(unit, fakePusherClient{})
@@ -249,6 +337,7 @@ func newTestService(unit *fakeListenerUnit, pusher fakePusher) *Service {
 	return NewService(Dependencies{
 		Channels:        unit.channels,
 		RawEvents:       unit.rawEvents,
+		RawEventClaims:  unit.rawEventClaims,
 		Messages:        unit.messages,
 		Senders:         unit.senders,
 		Heartbeats:      unit.heartbeats,
@@ -296,20 +385,22 @@ func (blockingPusherClient) Listen(ctx context.Context, _ []domain.ListenerChann
 }
 
 type fakeListenerUnit struct {
-	channels   *fakeChannelRepository
-	rawEvents  *fakeRawEventRepository
-	messages   *fakeMessageRepository
-	senders    *fakeSenderRepository
-	heartbeats *fakeHeartbeatRepository
+	channels       *fakeChannelRepository
+	rawEvents      *fakeRawEventRepository
+	rawEventClaims *fakeRawEventClaimRepository
+	messages       *fakeMessageRepository
+	senders        *fakeSenderRepository
+	heartbeats     *fakeHeartbeatRepository
 }
 
 func newFakeListenerUnit() *fakeListenerUnit {
 	return &fakeListenerUnit{
-		channels:   &fakeChannelRepository{channels: []domain.FollowedChannel{testChannel()}},
-		rawEvents:  &fakeRawEventRepository{},
-		messages:   &fakeMessageRepository{},
-		senders:    &fakeSenderRepository{},
-		heartbeats: &fakeHeartbeatRepository{},
+		channels:       &fakeChannelRepository{channels: []domain.FollowedChannel{testChannel()}},
+		rawEvents:      &fakeRawEventRepository{},
+		rawEventClaims: newFakeRawEventClaimRepository(),
+		messages:       &fakeMessageRepository{},
+		senders:        &fakeSenderRepository{},
+		heartbeats:     &fakeHeartbeatRepository{},
 	}
 }
 
@@ -438,6 +529,59 @@ func (repo *fakeRawEventRepository) attemptsFor(rawEventID string) uint16 {
 		}
 	}
 	return count
+}
+
+type fakeRawEventClaimRepository struct {
+	mu        sync.Mutex
+	active    map[string]string
+	completed map[string]bool
+}
+
+func newFakeRawEventClaimRepository() *fakeRawEventClaimRepository {
+	return &fakeRawEventClaimRepository{
+		active:    make(map[string]string),
+		completed: make(map[string]bool),
+	}
+}
+
+func (repo *fakeRawEventClaimRepository) TryClaim(
+	_ context.Context,
+	rawEventID string,
+	workerID string,
+	_ time.Duration,
+) (bool, error) {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
+	if repo.completed[rawEventID] {
+		return false, nil
+	}
+	if _, exists := repo.active[rawEventID]; exists {
+		return false, nil
+	}
+	repo.active[rawEventID] = workerID
+	return true, nil
+}
+
+func (repo *fakeRawEventClaimRepository) MarkCompleted(_ context.Context, rawEventID string, workerID string) error {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
+	if repo.active[rawEventID] == workerID {
+		delete(repo.active, rawEventID)
+		repo.completed[rawEventID] = true
+	}
+	return nil
+}
+
+func (repo *fakeRawEventClaimRepository) Release(_ context.Context, rawEventID string, workerID string) error {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
+	if repo.active[rawEventID] == workerID {
+		delete(repo.active, rawEventID)
+	}
+	return nil
 }
 
 type fakeMessageRepository struct {

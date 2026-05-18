@@ -161,6 +161,87 @@ func TestSenderProfileAndHeartbeatRepositories(t *testing.T) {
 	}
 }
 
+func TestRawEventClaimRepository(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openMigratedSQLite(t, ctx)
+	defer db.Close()
+
+	repo := sqlite.NewRawEventClaimRepository(db)
+	claimed, err := repo.TryClaim(ctx, "raw-1", "worker-1", time.Minute)
+	if err != nil {
+		t.Fatalf("TryClaim() error = %v", err)
+	}
+	if !claimed {
+		t.Fatal("first TryClaim() returned false")
+	}
+
+	claimed, err = repo.TryClaim(ctx, "raw-1", "worker-2", time.Minute)
+	if err != nil {
+		t.Fatalf("TryClaim(active) error = %v", err)
+	}
+	if claimed {
+		t.Fatal("active claim was acquired by another worker")
+	}
+
+	if err := repo.Release(ctx, "raw-1", "worker-1"); err != nil {
+		t.Fatalf("Release() error = %v", err)
+	}
+	claimed, err = repo.TryClaim(ctx, "raw-1", "worker-2", time.Minute)
+	if err != nil {
+		t.Fatalf("TryClaim(released) error = %v", err)
+	}
+	if !claimed {
+		t.Fatal("released claim was not acquired")
+	}
+
+	if err := repo.MarkCompleted(ctx, "raw-1", "worker-2"); err != nil {
+		t.Fatalf("MarkCompleted() error = %v", err)
+	}
+	claimed, err = repo.TryClaim(ctx, "raw-1", "worker-3", time.Minute)
+	if err != nil {
+		t.Fatalf("TryClaim(completed) error = %v", err)
+	}
+	if claimed {
+		t.Fatal("completed claim was acquired")
+	}
+
+	claimed, err = repo.TryClaim(ctx, "raw-expired", "worker-1", time.Minute)
+	if err != nil {
+		t.Fatalf("TryClaim(expired setup) error = %v", err)
+	}
+	if !claimed {
+		t.Fatal("expired setup claim returned false")
+	}
+	if _, err := db.ExecContext(
+		ctx,
+		"UPDATE raw_event_claims SET lease_expires_at = ? WHERE raw_event_id = ?",
+		time.Now().UTC().Add(-time.Minute).Format(time.RFC3339Nano),
+		"raw-expired",
+	); err != nil {
+		t.Fatalf("expire claim: %v", err)
+	}
+	claimed, err = repo.TryClaim(ctx, "raw-expired", "worker-2", time.Minute)
+	if err != nil {
+		t.Fatalf("TryClaim(expired takeover) error = %v", err)
+	}
+	if !claimed {
+		t.Fatal("expired claim was not acquired")
+	}
+
+	var status string
+	var workerID string
+	if err := db.QueryRowContext(
+		ctx,
+		"SELECT status, worker_id FROM raw_event_claims WHERE raw_event_id = ?",
+		"raw-expired",
+	).Scan(&status, &workerID); err != nil {
+		t.Fatalf("read raw event claim: %v", err)
+	}
+	if status != "claimed" || workerID != "worker-2" {
+		t.Fatalf("claim row status=%q worker=%q", status, workerID)
+	}
+}
+
 func TestSenderProfileRepositoryUpsertHandlesNaturalKeyConflicts(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openMigratedSQLite(t, ctx)

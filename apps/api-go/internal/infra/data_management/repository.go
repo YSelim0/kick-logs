@@ -217,7 +217,7 @@ func (repo *Repository) tableSizes(ctx context.Context) ([]domain.TableSize, int
 			BytesOnDisk: stat.Size(),
 		})
 	}
-	for _, table := range []string{"admin_users", "followed_channels", "sender_profiles", "retention_settings", "worker_heartbeats", "data_migration_runs"} {
+	for _, table := range []string{"admin_users", "followed_channels", "sender_profiles", "retention_settings", "worker_heartbeats", "raw_event_claims", "data_migration_runs"} {
 		rows, err := countSQLiteRows(ctx, repo.sqliteDB, table)
 		if err != nil {
 			return nil, 0, err

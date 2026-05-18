@@ -25,6 +25,7 @@ func (repo *StatsRepository) TableSizes(ctx context.Context) ([]domain.TableSize
 		"sender_profiles",
 		"retention_settings",
 		"worker_heartbeats",
+		"raw_event_claims",
 		"data_migrations",
 		"schema_migrations",
 	}

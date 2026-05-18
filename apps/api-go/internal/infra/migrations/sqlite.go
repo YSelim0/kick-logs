@@ -95,5 +95,21 @@ func SQLiteMigrations() []SQLiteMigration {
 				`CREATE INDEX IF NOT EXISTS idx_data_migration_runs_started_at ON data_migration_runs (started_at);`,
 			},
 		},
+		{
+			Version: 3,
+			Name:    "create_raw_event_claims",
+			Statements: []string{
+				`CREATE TABLE IF NOT EXISTS raw_event_claims (
+					raw_event_id TEXT PRIMARY KEY,
+					worker_id TEXT NOT NULL,
+					status TEXT NOT NULL CHECK (status IN ('claimed', 'released', 'completed')),
+					lease_expires_at TEXT NOT NULL DEFAULT '',
+					claimed_at TEXT NOT NULL,
+					completed_at TEXT NOT NULL DEFAULT '',
+					updated_at TEXT NOT NULL
+				);`,
+				`CREATE INDEX IF NOT EXISTS idx_raw_event_claims_status_lease ON raw_event_claims (status, lease_expires_at);`,
+			},
+		},
 	}
 }
