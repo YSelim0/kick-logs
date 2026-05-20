@@ -518,8 +518,18 @@ func (repo *fakeRawEventRepository) GetByID(_ context.Context, rawEventID string
 	return domain.RawKickEvent{}, sql.ErrNoRows
 }
 
+func (repo *fakeRawEventRepository) InsertEventsBatch(_ context.Context, events []domain.RawKickEvent) error {
+	repo.events = append(repo.events, events...)
+	return nil
+}
+
 func (repo *fakeRawEventRepository) InsertAttempt(_ context.Context, attempt domain.RawEventAttempt) error {
 	repo.attempts = append(repo.attempts, attempt)
+	return nil
+}
+
+func (repo *fakeRawEventRepository) InsertAttemptsBatch(_ context.Context, attempts []domain.RawEventAttempt) error {
+	repo.attempts = append(repo.attempts, attempts...)
 	return nil
 }
 
@@ -761,6 +771,11 @@ type fakeMessageRepository struct {
 
 func (repo *fakeMessageRepository) Insert(_ context.Context, message domain.ChatMessage) error {
 	repo.messages = append(repo.messages, message)
+	return nil
+}
+
+func (repo *fakeMessageRepository) InsertMessagesBatch(_ context.Context, messages []domain.ChatMessage) error {
+	repo.messages = append(repo.messages, messages...)
 	return nil
 }
 

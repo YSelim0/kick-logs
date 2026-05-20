@@ -304,6 +304,11 @@ func (repository *fakeMessageRepository) Insert(_ context.Context, message domai
 	return nil
 }
 
+func (repository *fakeMessageRepository) InsertMessagesBatch(_ context.Context, messages []domain.ChatMessage) error {
+	repository.messages = append(repository.messages, messages...)
+	return nil
+}
+
 func (repository *fakeMessageRepository) ExistsByKickMessageID(_ context.Context, kickMessageID string) (bool, error) {
 	for _, message := range repository.messages {
 		if message.KickMessageID == kickMessageID {

@@ -17,32 +17,32 @@ Repository batch methods are introduced in this phase; callers that use them liv
 
 ## Checklist
 
-- [ ] Add `InsertEventsBatch(ctx, []RawKickEvent) error` to `RawEventRepository`.
-- [ ] Add `InsertAttemptsBatch(ctx, []RawEventAttempt) error` to `RawEventRepository`.
-- [ ] Add `InsertMessagesBatch(ctx, []ChatMessage) error` to `MessageRepository`.
-- [ ] Update the matching ports in `internal/ports` so use cases can depend on the new methods.
-- [ ] Implement each method with a single `PrepareBatch`, loop `Append`, then one `Send`.
-- [ ] Preserve all field defaulting currently done in single-row insert paths (UUID generation,
+- [x] Add `InsertEventsBatch(ctx, []RawKickEvent) error` to `RawEventRepository`.
+- [x] Add `InsertAttemptsBatch(ctx, []RawEventAttempt) error` to `RawEventRepository`.
+- [x] Add `InsertMessagesBatch(ctx, []ChatMessage) error` to `MessageRepository`.
+- [x] Update the matching ports in `internal/ports` so use cases can depend on the new methods.
+- [x] Implement each method with a single `PrepareBatch`, loop `Append`, then one `Send`.
+- [x] Preserve all field defaulting currently done in single-row insert paths (UUID generation,
       empty payload JSON, status default, UTC time normalization, nullable helpers).
-- [ ] Tolerate empty slices: return `nil` immediately without calling `PrepareBatch`.
-- [ ] Keep existing single-row insert methods intact during this phase to avoid breaking the
+- [x] Tolerate empty slices: return `nil` immediately without calling `PrepareBatch`.
+- [x] Keep existing single-row insert methods intact during this phase to avoid breaking the
       hot path before Phases 3 and 4 land.
 
 ## Tests And Checks
 
-- [ ] Repository tests: batch insert of N raw events stores all rows with correct field values.
-- [ ] Repository tests: batch insert of N messages stores all rows with correct field values.
-- [ ] Repository tests: batch insert of N attempts stores all rows with correct field values.
-- [ ] Repository tests: empty slice returns nil and does not error.
-- [ ] Repository tests: batch insert is safe to call repeatedly without duplicate-row failures
+- [x] Repository tests: batch insert of N raw events stores all rows with correct field values.
+- [x] Repository tests: batch insert of N messages stores all rows with correct field values.
+- [x] Repository tests: batch insert of N attempts stores all rows with correct field values.
+- [x] Repository tests: empty slice returns nil and does not error.
+- [x] Repository tests: batch insert is safe to call repeatedly without duplicate-row failures
       under existing schema engines.
 
 ## Acceptance Criteria
 
-- [ ] Callers can insert any of the three row types in batches without changes to ClickHouse
+- [x] Callers can insert any of the three row types in batches without changes to ClickHouse
       schema.
-- [ ] Single-row insert methods still work and continue to be used by current call sites.
-- [ ] `go test ./...` and `go vet ./...` pass.
+- [x] Single-row insert methods still work and continue to be used by current call sites.
+- [x] `go test ./...` and `go vet ./...` pass.
 
 ## Verification
 

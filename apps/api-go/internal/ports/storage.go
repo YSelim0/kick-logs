@@ -26,6 +26,7 @@ type FollowedChannelRepository interface {
 
 type MessageRepository interface {
 	Insert(ctx context.Context, message domain.ChatMessage) error
+	InsertMessagesBatch(ctx context.Context, messages []domain.ChatMessage) error
 	ExistsByKickMessageID(ctx context.Context, kickMessageID string) (bool, error)
 	Search(ctx context.Context, filter domain.MessageSearchFilter) ([]domain.ChatMessage, error)
 }
@@ -61,7 +62,9 @@ type AnalyticsRepository interface {
 
 type RawEventRepository interface {
 	InsertEvent(ctx context.Context, event domain.RawKickEvent) error
+	InsertEventsBatch(ctx context.Context, events []domain.RawKickEvent) error
 	InsertAttempt(ctx context.Context, attempt domain.RawEventAttempt) error
+	InsertAttemptsBatch(ctx context.Context, attempts []domain.RawEventAttempt) error
 	ListUnprocessed(ctx context.Context, limit uint64, maxAttempts uint16) ([]domain.RawKickEvent, error)
 	CountUnprocessed(ctx context.Context, maxAttempts uint16) (int64, error)
 	AttemptCount(ctx context.Context, rawEventID string) (uint16, error)
