@@ -113,6 +113,23 @@
   underscores, but profile routes convert `_` to `-`; backend profile/search lookups accept both
   forms so existing underscore-stored data keeps working.
 
+## 2026-05-20
+
+- Issue #9 work moves the listener raw-event work queue out of ClickHouse into a new SQLite
+  `raw_event_queue` table. ClickHouse keeps the archive role for `raw_kick_events`,
+  `chat_messages`, and `raw_event_attempts`; SQLite owns pending list, attempts, claim
+  ownership, and last error.
+- Worker pending count and listing are read from SQLite, removing the heavy
+  `raw_event_attempts` GROUP BY + LEFT JOIN query from the hot path.
+- The websocket callback enqueues into SQLite in the same logical unit as the ClickHouse archive
+  insert; failure to enqueue is treated as a callback error so the websocket does not silently
+  drop the event.
+- Workers fetch raw payloads from ClickHouse by id via `RawEventRepository.GetByID` and keep
+  using the existing `markRawEventProcessed`/`markRawEventFailed` helpers for per-row CH attempt
+  audit; batching of those writes is deferred to phase 4 of the issue #9 plan.
+- Stale `claimed` rows older than `RawEventProcessingTimeout` are reset to `pending` at startup
+  and on a periodic background loop, so workers that die mid-claim do not block the queue.
+
 ## 2026-05-16
 
 - Go rewrite work lives under `apps/api-go`; after cutover the Go API/listener is the default

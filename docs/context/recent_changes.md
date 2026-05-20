@@ -4,6 +4,28 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Issue #9 phase 1: moved the raw-event work queue out of ClickHouse into SQLite.
+  - added migration v4 creating `raw_event_queue` with status, attempts, claim ownership,
+    enqueued_at, last_error, and indexes for pending scan and stale-claim recovery
+  - added `domain.RawEventQueueItem` plus status constants and `ports.RawEventQueueRepository`
+  - added SQLite `RawEventQueueRepository` covering enqueue, batch enqueue, list pending in
+    FIFO order, claim/release, mark processed/failed with max-attempts exhaustion, count
+    pending, oldest pending age, stale-claim recovery, and lookup by id
+  - added `RawEventRepository.GetByID` on ClickHouse so workers can load the raw payload by id
+  - listener websocket callback now enqueues the queue row alongside the ClickHouse archive
+    insert; failure to enqueue is returned as a callback error
+  - worker tick now lists, claims, and counts pending work from SQLite, removing the heavy
+    `raw_event_attempts` GROUP BY + LEFT JOIN ClickHouse query from the hot path
+  - `RawEventClaimRepository` is no longer wired into the listener because the queue
+    repository fully covers the claim contract
+  - listener bootstrap backfills any unprocessed ClickHouse raw events into the queue and runs
+    a stale-claim recovery sweep; a periodic background loop repeats the sweep
+  - listener tests now exercise the queue path with a faithful in-memory fake
+  - verification: `go build ./...`, `go test ./...`, `go vet ./...`, `pnpm exec prettier
+--check docs/tasks/`
+
+## Previously Latest
+
 - Finalized Go + ClickHouse cutover cleanup:
   - archived the completed Go rewrite implementation plan, task files, and API contract inventory
     under `docs/archive/go_rewrite/`

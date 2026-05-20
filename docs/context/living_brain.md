@@ -5,8 +5,9 @@ implementation details, or working assumptions change.
 
 ## Current State
 
-- Branch: `feat/go-clickhouse-rewrite`.
-- Active plan status: no active feature plan. Completed plans are archived under `docs/archive/`.
+- Branch: `feat/issue-9-ingestion-batching`.
+- Active plan: GitHub issue #9, stabilize high-volume Kick chat ingestion. Plan lives in
+  `docs/implementation_plan.md`; phase task files live under `docs/tasks/issue_09_*`.
 - Default runtime is:
   - `clickhouse`
   - `api` built from `apps/api-go`
@@ -34,6 +35,7 @@ implementation details, or working assumptions change.
   - sender profile cache
   - retention settings
   - worker heartbeats
+  - raw-event work queue (`raw_event_queue`)
   - schema/data migration metadata
 - ClickHouse stores data-plane rows:
   - chat messages
@@ -96,11 +98,18 @@ admin/super-admin role.
 - The listener loads enabled channels from SQLite.
 - It resolves missing Kick metadata before subscription.
 - It subscribes to `chatrooms.{chatroom_id}.v2` plus channel-level streams.
-- Once a Kick websocket chat event reaches the process, persist the raw event to ClickHouse before
-  normalization, sender enrichment, or visible message insertion.
+- Once a Kick websocket chat event reaches the process, persist the raw event to ClickHouse
+  archive **and** enqueue a tracking row into SQLite `raw_event_queue` before acknowledging the
+  event. Issue #9 phase 1 moved the work queue out of ClickHouse so the worker hot path no
+  longer runs heavy `raw_event_attempts` JOIN queries.
+- Workers list pending rows and claim them from SQLite, then load the raw payload from
+  ClickHouse by id, normalize, and insert the visible chat message.
 - Raw-event processing is at-least-once and idempotent; visible messages dedupe by
   `kick_message_id`.
 - Listener heartbeat state is stored in SQLite `worker_heartbeats`.
+- At startup the listener backfills any unprocessed ClickHouse raw events into the queue and
+  resets stale `claimed` rows older than `RawEventProcessingTimeout` back to `pending`; a
+  background loop repeats the stale-claim sweep.
 - Channel changes should take effect through periodic reconnect/resync without manual restart.
 
 ## Search Behavior
