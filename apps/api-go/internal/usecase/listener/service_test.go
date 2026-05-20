@@ -364,7 +364,7 @@ func testChannel() domain.FollowedChannel {
 }
 
 func newTestService(unit *fakeListenerUnit, pusher fakePusher) *Service {
-	return NewService(Dependencies{
+	service := NewService(Dependencies{
 		Channels:        unit.channels,
 		RawEvents:       unit.rawEvents,
 		Queue:           unit.queue,
@@ -389,6 +389,8 @@ func newTestService(unit *fakeListenerUnit, pusher fakePusher) *Service {
 			HeartbeatServiceName:      "listener",
 		},
 	})
+	service.writer = nil
+	return service
 }
 
 type fakePusher interface {

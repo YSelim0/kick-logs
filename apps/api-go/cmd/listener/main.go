@@ -73,6 +73,10 @@ func main() {
 			ReconnectMaxDelay:         durationFromSeconds(cfg.ListenerReconnectMaxDelaySeconds),
 			ReconnectMultiplier:       cfg.ListenerReconnectMultiplier,
 			HeartbeatServiceName:      "listener",
+			WriteBatchSize:            cfg.ListenerRawEventWriteBatchSize,
+			WriteFlushInterval:        time.Duration(cfg.ListenerRawEventWriteFlushIntervalMS) * time.Millisecond,
+			WriteQueueSize:            cfg.ListenerRawEventWriteQueueSize,
+			WriteMaxRetries:           cfg.ListenerRawEventWriteMaxRetries,
 		},
 	})
 

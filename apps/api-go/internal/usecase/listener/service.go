@@ -28,6 +28,7 @@ type Service struct {
 	parser          EventParser
 	logger          *slog.Logger
 	config          ServiceConfig
+	writer          *bufferedRawWriter
 }
 
 type ServiceConfig struct {
@@ -42,6 +43,10 @@ type ServiceConfig struct {
 	ReconnectMaxDelay         time.Duration
 	ReconnectMultiplier       float64
 	HeartbeatServiceName      string
+	WriteBatchSize            int
+	WriteFlushInterval        time.Duration
+	WriteQueueSize            int
+	WriteMaxRetries           int
 }
 
 type Dependencies struct {
@@ -73,7 +78,7 @@ func NewService(deps Dependencies) *Service {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &Service{
+	service := &Service{
 		channels:        deps.Channels,
 		rawEvents:       deps.RawEvents,
 		queue:           deps.Queue,
@@ -87,9 +92,21 @@ func NewService(deps Dependencies) *Service {
 		logger:          logger,
 		config:          cfg,
 	}
+	if deps.RawEvents != nil && deps.Queue != nil {
+		service.writer = newBufferedRawWriter(BufferedWriterConfig{
+			BatchSize:     cfg.WriteBatchSize,
+			FlushInterval: cfg.WriteFlushInterval,
+			QueueSize:     cfg.WriteQueueSize,
+			MaxRetries:    cfg.WriteMaxRetries,
+		}, deps.RawEvents, deps.Queue, logger)
+	}
+	return service
 }
 
 func (service *Service) RunForever(ctx context.Context) error {
+	if service.writer != nil {
+		go service.writer.Run(ctx)
+	}
 	if err := service.bootstrapQueue(ctx); err != nil && !errors.Is(err, context.Canceled) {
 		service.logger.Error("raw event queue bootstrap failed", "error", err)
 	}
@@ -189,19 +206,23 @@ func (service *Service) RunOnce(ctx context.Context) (int, error) {
 			Status:        "pending",
 			ReceivedAt:    time.Now().UTC(),
 		}
-		if err := service.rawEvents.InsertEvent(ctx, rawEvent); err != nil {
-			return err
-		}
-		if service.queue != nil {
-			if err := service.queue.Enqueue(ctx, domain.RawEventQueueItem{
-				RawEventID:    rawEvent.ID,
-				ChannelID:     rawEvent.ChannelID,
-				ChatroomID:    rawEvent.ChatroomID,
-				ChannelSlug:   rawEvent.ChannelSlug,
-				KickMessageID: rawEvent.KickMessageID,
-				EnqueuedAt:    rawEvent.ReceivedAt,
-			}); err != nil {
-				return fmt.Errorf("enqueue raw event: %w", err)
+		if service.writer != nil {
+			service.writer.Submit(rawEvent)
+		} else {
+			if err := service.rawEvents.InsertEvent(ctx, rawEvent); err != nil {
+				return err
+			}
+			if service.queue != nil {
+				if err := service.queue.Enqueue(ctx, domain.RawEventQueueItem{
+					RawEventID:    rawEvent.ID,
+					ChannelID:     rawEvent.ChannelID,
+					ChatroomID:    rawEvent.ChatroomID,
+					ChannelSlug:   rawEvent.ChannelSlug,
+					KickMessageID: rawEvent.KickMessageID,
+					EnqueuedAt:    rawEvent.ReceivedAt,
+				}); err != nil {
+					return fmt.Errorf("enqueue raw event: %w", err)
+				}
 			}
 		}
 		storedCount++
@@ -549,6 +570,14 @@ func (service *Service) reconnectDelay(attempt int) time.Duration {
 		}
 	}
 	return delay
+}
+
+// WriterStats returns the buffered writer counters or zero when no writer is wired.
+func (service *Service) WriterStats() BufferedWriterStats {
+	if service.writer == nil {
+		return BufferedWriterStats{}
+	}
+	return service.writer.Stats()
 }
 
 func (cfg ServiceConfig) withDefaults() ServiceConfig {

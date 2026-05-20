@@ -98,10 +98,13 @@ admin/super-admin role.
 - The listener loads enabled channels from SQLite.
 - It resolves missing Kick metadata before subscription.
 - It subscribes to `chatrooms.{chatroom_id}.v2` plus channel-level streams.
-- Once a Kick websocket chat event reaches the process, persist the raw event to ClickHouse
-  archive **and** enqueue a tracking row into SQLite `raw_event_queue` before acknowledging the
-  event. Issue #9 phase 1 moved the work queue out of ClickHouse so the worker hot path no
-  longer runs heavy `raw_event_attempts` JOIN queries.
+- Once a Kick websocket chat event reaches the process, submit it to the in-memory buffered
+  writer. The writer flushes batches to ClickHouse archive using `InsertEventsBatch` and then
+  enqueues the same batch into SQLite `raw_event_queue` in one logical step before treating
+  the batch as acknowledged. Buffered writes flush on `LISTENER_RAW_EVENT_WRITE_BATCH_SIZE`
+  events or `LISTENER_RAW_EVENT_WRITE_FLUSH_INTERVAL_MS` whichever first. Phase 1 moved the
+  work queue out of ClickHouse so the worker hot path no longer runs heavy
+  `raw_event_attempts` JOIN queries.
 - Workers list pending rows and claim them from SQLite, then load the raw payload from
   ClickHouse by id, normalize, and insert the visible chat message.
 - Raw-event processing is at-least-once and idempotent; visible messages dedupe by

@@ -35,6 +35,10 @@ type Config struct {
 	ListenerChannelResyncInterval        float64
 	ListenerHeartbeatInterval            float64
 	ListenerStaleAfter                   int
+	ListenerRawEventWriteBatchSize       int
+	ListenerRawEventWriteFlushIntervalMS int
+	ListenerRawEventWriteQueueSize       int
+	ListenerRawEventWriteMaxRetries      int
 	SQLitePath                           string
 	ClickHouseAddr                       string
 	ClickHouseDatabase                   string
@@ -127,6 +131,26 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	rawEventWriteBatchSize, err := envInt("LISTENER_RAW_EVENT_WRITE_BATCH_SIZE", 500)
+	if err != nil {
+		return Config{}, err
+	}
+
+	rawEventWriteFlushIntervalMS, err := envInt("LISTENER_RAW_EVENT_WRITE_FLUSH_INTERVAL_MS", 500)
+	if err != nil {
+		return Config{}, err
+	}
+
+	rawEventWriteQueueSize, err := envInt("LISTENER_RAW_EVENT_WRITE_QUEUE_SIZE", 50000)
+	if err != nil {
+		return Config{}, err
+	}
+
+	rawEventWriteMaxRetries, err := envInt("LISTENER_RAW_EVENT_WRITE_MAX_RETRIES", 10)
+	if err != nil {
+		return Config{}, err
+	}
+
 	clickHouseDebug, err := envBool("CLICKHOUSE_DEBUG", false)
 	if err != nil {
 		return Config{}, err
@@ -159,6 +183,10 @@ func Load() (Config, error) {
 		ListenerChannelResyncInterval:        channelResyncInterval,
 		ListenerHeartbeatInterval:            heartbeatInterval,
 		ListenerStaleAfter:                   listenerStaleAfter,
+		ListenerRawEventWriteBatchSize:       rawEventWriteBatchSize,
+		ListenerRawEventWriteFlushIntervalMS: rawEventWriteFlushIntervalMS,
+		ListenerRawEventWriteQueueSize:       rawEventWriteQueueSize,
+		ListenerRawEventWriteMaxRetries:      rawEventWriteMaxRetries,
 		SQLitePath:                           envString("SQLITE_PATH", "var/kick-logs-go.sqlite3"),
 		ClickHouseAddr:                       envString("CLICKHOUSE_ADDR", "127.0.0.1:9000"),
 		ClickHouseDatabase:                   envString("CLICKHOUSE_DATABASE", "kick_logs"),

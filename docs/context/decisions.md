@@ -115,6 +115,20 @@
 
 ## 2026-05-20
 
+- Issue #9 phase 3 introduces a buffered websocket writer. The websocket callback now submits
+  raw events to an in-memory channel; a dedicated goroutine flushes batches to ClickHouse using
+  the phase 2 batch insert and then enqueues the same batch into the SQLite work queue. Batch
+  size, flush interval, in-memory queue size, and max retries are env-tunable via
+  `LISTENER_RAW_EVENT_WRITE_BATCH_SIZE` (default 500),
+  `LISTENER_RAW_EVENT_WRITE_FLUSH_INTERVAL_MS` (default 500),
+  `LISTENER_RAW_EVENT_WRITE_QUEUE_SIZE` (default 50000), and
+  `LISTENER_RAW_EVENT_WRITE_MAX_RETRIES` (default 10).
+- When the in-memory buffer is full the writer drops the oldest event, increments a counter,
+  and logs a warning. Phase 6 will surface drop counters through the operations dashboard.
+- ClickHouse batch failures retry with bounded exponential delay up to `MaxRetries`; the batch
+  is dropped with a metric counter only after all retries fail. SQLite enqueue failures after a
+  successful ClickHouse archive retry indefinitely until the SQLite queue accepts the rows so
+  archived events do not silently fall out of the work queue.
 - Issue #9 work moves the listener raw-event work queue out of ClickHouse into a new SQLite
   `raw_event_queue` table. ClickHouse keeps the archive role for `raw_kick_events`,
   `chat_messages`, and `raw_event_attempts`; SQLite owns pending list, attempts, claim

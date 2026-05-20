@@ -4,6 +4,33 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Issue #9 phase 3: buffered websocket raw-event writer.
+  - new `bufferedRawWriter` accepts raw events from the websocket callback through an
+    in-memory channel and flushes batches to ClickHouse via `InsertEventsBatch`, then enqueues
+    the same batch into SQLite `raw_event_queue`
+  - flush triggers: batch size threshold, flush interval, or shutdown drain
+  - shutdown drains the buffer before returning so context cancellation does not lose events
+  - in-memory queue full drops the oldest event with a warning and a counter; the writer
+    still drops the incoming event when both the channel and the eviction attempt are full
+  - ClickHouse batch failures retry with bounded exponential delay up to
+    `LISTENER_RAW_EVENT_WRITE_MAX_RETRIES`; the batch is dropped after all retries fail and a
+    drop counter is incremented
+  - SQLite enqueue failures after a successful ClickHouse archive retry indefinitely so an
+    archived event always lands in the queue
+  - added env vars `LISTENER_RAW_EVENT_WRITE_BATCH_SIZE`,
+    `LISTENER_RAW_EVENT_WRITE_FLUSH_INTERVAL_MS`, `LISTENER_RAW_EVENT_WRITE_QUEUE_SIZE`, and
+    `LISTENER_RAW_EVENT_WRITE_MAX_RETRIES` with defaults 500, 500ms, 50000, 10
+  - `.env.example` exposes the new knobs
+  - `Service.WriterStats()` returns queue depth, high-water mark, drop count, flush count,
+    last flush size, last flush nanos, ClickHouse failure count, and SQLite enqueue failure
+    count for future operations dashboard fields
+  - listener service `RunForever` now starts the writer goroutine before bootstrap; tests
+    short-circuit the writer to keep the synchronous insert/enqueue path under coverage
+  - verification: `go build ./...`, `go test ./...`, `go vet ./...`, `pnpm exec prettier
+--check docs/tasks/`
+
+## Previously Latest
+
 - Issue #9 phase 1: moved the raw-event work queue out of ClickHouse into SQLite.
   - added migration v4 creating `raw_event_queue` with status, attempts, claim ownership,
     enqueued_at, last_error, and indexes for pending scan and stale-claim recovery
@@ -24,7 +51,7 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - verification: `go build ./...`, `go test ./...`, `go vet ./...`, `pnpm exec prettier
 --check docs/tasks/`
 
-## Previously Latest
+## Earlier Latest
 
 - Finalized Go + ClickHouse cutover cleanup:
   - archived the completed Go rewrite implementation plan, task files, and API contract inventory
