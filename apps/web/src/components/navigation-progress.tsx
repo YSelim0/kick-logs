@@ -15,7 +15,8 @@ function ProgressBar() {
       const anchor = (e.target as HTMLElement).closest("a");
       if (!anchor) return;
       const href = anchor.getAttribute("href");
-      if (!href || href.startsWith("http") || href.startsWith("#") || href.startsWith("mailto:")) return;
+      if (!href || href.startsWith("http") || href.startsWith("#") || href.startsWith("mailto:"))
+        return;
       NProgress.start();
     };
     document.addEventListener("click", handleClick);
