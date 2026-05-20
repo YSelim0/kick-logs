@@ -208,7 +208,7 @@ func (repo *RawEventRepository) GetByIDs(ctx context.Context, rawEventIDs []stri
 		`SELECT
 			id, channel_slug, event_type, event_name, ifNull(kick_message_id, ''),
 			ifNull(chatroom_id, 0), ifNull(channel_id, 0), payload_json, metadata_json, status,
-			0 AS attempts, received_at, processed_at, error_message
+			toUInt16(0) AS attempts, received_at, processed_at, error_message
 		 FROM raw_kick_events
 		 WHERE id IN (?)`,
 		rawEventIDs,
