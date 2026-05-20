@@ -56,20 +56,20 @@ Under high-volume Kick streams the listener degraded and the API returned 500s b
 
 Run: `go run ./cmd/loadgen -events-per-second=2000 -duration=60s -channels=5 -burst-factor=2`
 
-| Metric | Value |
-|--------|-------|
-| Total events emitted | 163,473 |
-| Writer drops | 0 |
-| ClickHouse failures | 0 |
-| Circuit breaker events | 0 |
-| Peak writer queue depth | 24,356 |
-| Writer high-water mark | 24,356 |
-| Total flushes | 302 |
-| Flush batch size (steady) | 500 |
-| Peak flush latency | 392 ms |
-| sqlite_enqueue_failures | 1 (isolated context timeout) |
-| API 500s during burst | 0 |
-| Queue drain time post-burst | ~90 s |
+| Metric                      | Value                        |
+| --------------------------- | ---------------------------- |
+| Total events emitted        | 163,473                      |
+| Writer drops                | 0                            |
+| ClickHouse failures         | 0                            |
+| Circuit breaker events      | 0                            |
+| Peak writer queue depth     | 24,356                       |
+| Writer high-water mark      | 24,356                       |
+| Total flushes               | 302                          |
+| Flush batch size (steady)   | 500                          |
+| Peak flush latency          | 392 ms                       |
+| sqlite_enqueue_failures     | 1 (isolated context timeout) |
+| API 500s during burst       | 0                            |
+| Queue drain time post-burst | ~90 s                        |
 
 ## Known Follow-Up Items
 

@@ -24,7 +24,7 @@ These were identified during issue #9 and deferred. They are candidates for the 
 
 2. **Batch duplicate check** — `messages.ExistsByKickMessageID` runs one ClickHouse query per
    message per tick. Replace with `ExistingKickMessageIDs(ctx, ids []string) (map[string]bool,
-   error)` for a single `IN (...)` query per tick.
+error)` for a single `IN (...)` query per tick.
 
 3. **Batch raw event load** — `rawEvents.GetByID` runs one ClickHouse point-lookup per queue
    item per tick. Replace with `GetByIDs(ctx, ids []string) ([]domain.RawKickEvent, error)` for
