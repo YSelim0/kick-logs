@@ -7,11 +7,14 @@ import {
   AlertTriangle,
   Clock3,
   Database,
+  Gauge,
   HardDrive,
   Inbox,
   Loader2,
   MessageSquareText,
-  RefreshCcw
+  RefreshCcw,
+  Timer,
+  Zap
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -112,6 +115,22 @@ export function OperationsDashboard() {
             />
           ) : null}
 
+          {summary.ingestion.breaker_state === "open" ? (
+            <OperationsNotice
+              icon={<AlertTriangle className="h-4 w-4" />}
+              message={`ClickHouse circuit breaker açık. Bekleme ${Math.round(summary.ingestion.breaker_current_delay_ms)} ms.`}
+              tone="danger"
+            />
+          ) : null}
+
+          {summary.ingestion.write_drop_count > 0 ? (
+            <OperationsNotice
+              icon={<AlertTriangle className="h-4 w-4" />}
+              message={`Buffered writer ${formatNumber(summary.ingestion.write_drop_count)} event düşürdü. Pusher trafiği buffer kapasitesini aştı.`}
+              tone="warning"
+            />
+          ) : null}
+
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {cards.map((card) => (
               <MetricCard key={card.label} {...card} />
@@ -199,6 +218,40 @@ function buildMetricCards(summary: OperationsSummary) {
       value: formatDate(lastIngestAt),
       detail: "En güncel mesaj/işleme",
       icon: <Clock3 className="h-4 w-4" />,
+      tone: "default"
+    },
+    {
+      label: "Queue Backlog",
+      value: formatNumber(summary.ingestion.queue_depth),
+      detail:
+        summary.ingestion.oldest_pending_age_seconds > 0
+          ? `En eski ${formatDuration(summary.ingestion.oldest_pending_age_seconds)}`
+          : "Bekleyen yok",
+      icon: <Inbox className="h-4 w-4" />,
+      tone: summary.ingestion.queue_depth > 1000 ? "warning" : "default"
+    },
+    {
+      label: "Writer Buffer",
+      value: formatNumber(summary.ingestion.write_queue_depth),
+      detail: `Tepe ${formatNumber(summary.ingestion.write_queue_high_water_mark)} / Drop ${formatNumber(summary.ingestion.write_drop_count)}`,
+      icon: <Gauge className="h-4 w-4" />,
+      tone: summary.ingestion.write_drop_count > 0 ? "warning" : "default"
+    },
+    {
+      label: "ClickHouse Breaker",
+      value: summary.ingestion.breaker_state === "open" ? "Açık" : "Kapalı",
+      detail: `${formatNumber(summary.ingestion.clickhouse_insert_failures)} insert hatası`,
+      icon: <Zap className="h-4 w-4" />,
+      tone: summary.ingestion.breaker_state === "open" ? "danger" : "success"
+    },
+    {
+      label: "Son Flush",
+      value: formatNumber(summary.ingestion.last_flush_size),
+      detail:
+        summary.ingestion.last_flush_millis > 0
+          ? `${formatNumber(summary.ingestion.last_flush_millis)} ms`
+          : "Flush yok",
+      icon: <Timer className="h-4 w-4" />,
       tone: "default"
     }
   ] satisfies Array<{
@@ -312,6 +365,22 @@ function formatBytes(value: number) {
   return `${new Intl.NumberFormat("tr-TR", {
     maximumFractionDigits: index === 0 ? 0 : 2
   }).format(amount)} ${units[index]}`;
+}
+
+function formatDuration(seconds: number) {
+  if (seconds <= 0) {
+    return "0 sn";
+  }
+  if (seconds < 60) {
+    return `${seconds} sn`;
+  }
+  if (seconds < 3600) {
+    return `${Math.floor(seconds / 60)} dk`;
+  }
+  if (seconds < 86400) {
+    return `${Math.floor(seconds / 3600)} sa`;
+  }
+  return `${Math.floor(seconds / 86400)} gün`;
 }
 
 function formatDate(value: string | null) {

@@ -113,6 +113,10 @@ admin/super-admin role.
   ClickHouse failures open the breaker; while open, every listener goroutine that calls
   `Wait` sleeps for the current backoff window before the next attempt. Successful operations
   close the breaker and reset the backoff.
+- Listener heartbeat metadata JSON carries buffered-writer stats and circuit-breaker state so
+  the admin operations summary can surface ingestion health (queue backlog, oldest pending
+  age, writer buffer depth, drops, flushes, ClickHouse insert failures, breaker state) without
+  any cross-process call into the listener.
 - Raw-event processing is at-least-once and idempotent; visible messages dedupe by
   `kick_message_id`.
 - Listener heartbeat state is stored in SQLite `worker_heartbeats`.

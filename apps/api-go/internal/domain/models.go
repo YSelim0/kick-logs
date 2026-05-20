@@ -287,6 +287,22 @@ type OperationsSummary struct {
 	StorageTables        []TableSize
 	Timestamps           OperationsTimestamps
 	Listener             ListenerHeartbeat
+	Ingestion            IngestionHealth
+}
+
+type IngestionHealth struct {
+	QueueDepth              int64
+	OldestPendingAgeSeconds int64
+	WriteQueueDepth         int64
+	WriteQueueHighWater     int64
+	WriteDropCount          int64
+	WriteFlushCount         int64
+	LastFlushSize           int64
+	LastFlushMillis         int64
+	ClickHouseFailures      int64
+	QueueEnqueueFailures    int64
+	BreakerState            string
+	BreakerCurrentDelayMS   int64
 }
 
 type RetentionSettings struct {

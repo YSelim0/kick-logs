@@ -4,6 +4,26 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Issue #9 phase 6: ingestion metrics on admin operations summary.
+  - listener heartbeat metadata JSON now embeds buffered writer stats (queue depth,
+    high-water mark, drop count, flush count, last flush size + ms, ClickHouse failure count,
+    SQLite enqueue failure count) and circuit breaker state (state, current delay ms,
+    failures)
+  - operations repository reads SQLite `raw_event_queue` directly for live queue depth and
+    oldest pending age, then parses the heartbeat metadata to fill the new
+    `domain.IngestionHealth` block
+  - new HTTP `IngestionHealthResponse` is emitted under
+    `operations_summary.ingestion`
+  - frontend types include `IngestionHealth`; operations dashboard renders four new cards
+    (Queue Backlog, Writer Buffer, ClickHouse Breaker, Son Flush) and warning banners for an
+    open breaker or non-zero writer drop count
+  - tests cover the ingestion cards and the breaker-open notice
+  - verification: `go build ./...`, `go test ./...`, `go vet ./...`,
+    `pnpm --filter @kick-logs/web test`, `pnpm --filter @kick-logs/web typecheck`,
+    `pnpm --filter @kick-logs/web lint`
+
+## Previously Latest
+
 - Issue #9 phase 5: bounded backoff and shared ClickHouse circuit breaker.
   - new `Backoff` helper produces non-decreasing delays with full jitter, capped at max
   - new `CircuitBreaker` opens after a configurable consecutive failure threshold and holds
@@ -22,7 +42,7 @@ This file is the short handoff summary of the latest project changes. Keep it co
     context-cancellation, and shared-breaker waiting
   - verification: `go build ./...`, `go test ./...`, `go vet ./...`
 
-## Previously Latest
+## Earlier Phase 4 Notes
 
 - Issue #9 phase 4: worker batch normalization output.
   - worker tick claims all pending queue rows, loads each raw payload from ClickHouse by id,

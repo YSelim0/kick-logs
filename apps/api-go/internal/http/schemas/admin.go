@@ -75,6 +75,22 @@ type OperationsSummaryResponse struct {
 	Storage              OperationsStorageResponse    `json:"storage"`
 	Timestamps           OperationsTimestampsResponse `json:"timestamps"`
 	Listener             ListenerHeartbeatResponse    `json:"listener"`
+	Ingestion            IngestionHealthResponse      `json:"ingestion"`
+}
+
+type IngestionHealthResponse struct {
+	QueueDepth              int64  `json:"queue_depth"`
+	OldestPendingAgeSeconds int64  `json:"oldest_pending_age_seconds"`
+	WriteQueueDepth         int64  `json:"write_queue_depth"`
+	WriteQueueHighWater     int64  `json:"write_queue_high_water_mark"`
+	WriteDropCount          int64  `json:"write_drop_count"`
+	WriteFlushCount         int64  `json:"write_flush_count"`
+	LastFlushSize           int64  `json:"last_flush_size"`
+	LastFlushMillis         int64  `json:"last_flush_millis"`
+	ClickHouseFailures      int64  `json:"clickhouse_insert_failures"`
+	QueueEnqueueFailures    int64  `json:"queue_enqueue_failures"`
+	BreakerState            string `json:"breaker_state"`
+	BreakerCurrentDelayMS   int64  `json:"breaker_current_delay_ms"`
 }
 
 type MessageEmoteResponse struct {

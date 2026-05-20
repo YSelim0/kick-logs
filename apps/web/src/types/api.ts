@@ -81,12 +81,28 @@ export type ListenerHeartbeat = {
   seconds_since_last_seen: number | null;
 };
 
+export type IngestionHealth = {
+  queue_depth: number;
+  oldest_pending_age_seconds: number;
+  write_queue_depth: number;
+  write_queue_high_water_mark: number;
+  write_drop_count: number;
+  write_flush_count: number;
+  last_flush_size: number;
+  last_flush_millis: number;
+  clickhouse_insert_failures: number;
+  queue_enqueue_failures: number;
+  breaker_state: string;
+  breaker_current_delay_ms: number;
+};
+
 export type OperationsSummary = {
   counts: OperationsCounts;
   raw_event_status_counts: RawEventStatusCounts;
   storage: OperationsStorage;
   timestamps: OperationsTimestamps;
   listener: ListenerHeartbeat;
+  ingestion: IngestionHealth;
 };
 
 export type RetentionDays = 30 | 90 | null;

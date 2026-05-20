@@ -67,6 +67,20 @@ func operationsSummaryResponse(summary domain.OperationsSummary) schemas.Operati
 			StaleAfterSeconds:    summary.Listener.StaleAfterSeconds,
 			SecondsSinceLastSeen: nullableListenerSeconds(summary.Listener),
 		},
+		Ingestion: schemas.IngestionHealthResponse{
+			QueueDepth:              summary.Ingestion.QueueDepth,
+			OldestPendingAgeSeconds: summary.Ingestion.OldestPendingAgeSeconds,
+			WriteQueueDepth:         summary.Ingestion.WriteQueueDepth,
+			WriteQueueHighWater:     summary.Ingestion.WriteQueueHighWater,
+			WriteDropCount:          summary.Ingestion.WriteDropCount,
+			WriteFlushCount:         summary.Ingestion.WriteFlushCount,
+			LastFlushSize:           summary.Ingestion.LastFlushSize,
+			LastFlushMillis:         summary.Ingestion.LastFlushMillis,
+			ClickHouseFailures:      summary.Ingestion.ClickHouseFailures,
+			QueueEnqueueFailures:    summary.Ingestion.QueueEnqueueFailures,
+			BreakerState:            summary.Ingestion.BreakerState,
+			BreakerCurrentDelayMS:   summary.Ingestion.BreakerCurrentDelayMS,
+		},
 	}
 }
 

@@ -397,6 +397,23 @@ func (service *Service) RecordHeartbeat(ctx context.Context) error {
 		"channel_resync_interval_seconds":     service.config.ChannelResyncInterval.Seconds(),
 		"raw_event_worker_idle_delay_seconds": service.config.RawEventWorkerIdleDelay.Seconds(),
 	}
+	if service.writer != nil {
+		stats := service.writer.Stats()
+		metadata["write_queue_depth"] = stats.QueueDepth
+		metadata["write_queue_high_water_mark"] = stats.QueueHighWaterMark
+		metadata["write_drop_count"] = stats.DropCount
+		metadata["write_flush_count"] = stats.FlushCount
+		metadata["last_flush_size"] = stats.LastFlushSize
+		metadata["last_flush_millis"] = stats.LastFlushNanos / int64(time.Millisecond)
+		metadata["clickhouse_insert_failures"] = stats.ClickHouseFailures
+		metadata["queue_enqueue_failures"] = stats.QueueEnqueueFails
+	}
+	if service.breaker != nil {
+		state := service.breaker.State()
+		metadata["breaker_state"] = state.State
+		metadata["breaker_current_delay_ms"] = state.CurrentDelay / time.Millisecond
+		metadata["breaker_failures"] = state.Failures
+	}
 	encoded, err := json.Marshal(metadata)
 	if err != nil {
 		return err

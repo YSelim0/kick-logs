@@ -115,6 +115,13 @@
 
 ## 2026-05-20
 
+- Issue #9 phase 6 surfaces ingestion health on the admin operations summary. The listener
+  heartbeat now embeds buffered-writer stats and circuit-breaker state in its metadata JSON; the
+  API operations repository reads SQLite `raw_event_queue` for live queue depth and oldest
+  pending age, and parses the heartbeat metadata to populate the new `ingestion` block on
+  `GET /admin/operations/summary`. The `/admin` operations dashboard renders queue backlog,
+  writer buffer, ClickHouse breaker state, and last flush cards plus warnings for an open
+  breaker or non-zero writer drop count.
 - Issue #9 phase 5 wraps ClickHouse access in the listener with bounded exponential backoff and
   a single shared `CircuitBreaker`. The breaker opens after a configurable consecutive failure
   threshold and holds the open state for the current backoff delay before allowing a probe call.
