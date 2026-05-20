@@ -20,11 +20,7 @@ batch.
 
 ## Checklist
 
-- [ ] Add config knobs with sane defaults:
-      - `LISTENER_RAW_EVENT_WRITE_BATCH_SIZE` (default 500)
-      - `LISTENER_RAW_EVENT_WRITE_FLUSH_INTERVAL_MS` (default 500)
-      - `LISTENER_RAW_EVENT_WRITE_QUEUE_SIZE` (default 50000)
-      - `LISTENER_RAW_EVENT_WRITE_MAX_RETRIES` (default 10)
+- [ ] Add config knobs with sane defaults: - `LISTENER_RAW_EVENT_WRITE_BATCH_SIZE` (default 500) - `LISTENER_RAW_EVENT_WRITE_FLUSH_INTERVAL_MS` (default 500) - `LISTENER_RAW_EVENT_WRITE_QUEUE_SIZE` (default 50000) - `LISTENER_RAW_EVENT_WRITE_MAX_RETRIES` (default 10)
 - [ ] Add a `bufferedRawWriter` type with start/stop lifecycle tied to the listener context.
 - [ ] Websocket callback enqueues to the buffered writer channel and returns immediately.
 - [ ] When the in-memory queue is full, drop the oldest buffered event, log a warning with the

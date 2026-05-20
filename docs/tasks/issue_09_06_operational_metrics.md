@@ -13,26 +13,11 @@ Expose ingestion health to operators through structured listener logs and the
 
 ## Checklist
 
-- [ ] Add an in-process metrics struct in the listener tracking:
-      - buffered writer queue depth (current and high-water mark)
-      - last flush batch size
-      - last flush duration
-      - dropped event counter
-      - ClickHouse insert failure counter per table
-      - worker processed/failed per minute
-      - circuit breaker state and current backoff delay
+- [ ] Add an in-process metrics struct in the listener tracking: - buffered writer queue depth (current and high-water mark) - last flush batch size - last flush duration - dropped event counter - ClickHouse insert failure counter per table - worker processed/failed per minute - circuit breaker state and current backoff delay
 - [ ] Worker batch log line includes batch size, duration, queue depth, pending backlog, and
       oldest pending age.
 - [ ] Add SQLite query for `oldest_pending_age_seconds` using the work-queue `enqueued_at`.
-- [ ] Extend `GET /admin/operations/summary` with new fields:
-      - `raw_event_queue_depth`
-      - `raw_event_oldest_pending_age_seconds`
-      - `raw_event_write_queue_depth`
-      - `raw_event_write_drop_count`
-      - `clickhouse_insert_failures` (per table)
-      - `clickhouse_breaker_state`
-      - `worker_processed_per_minute`
-      - `worker_failed_per_minute`
+- [ ] Extend `GET /admin/operations/summary` with new fields: - `raw_event_queue_depth` - `raw_event_oldest_pending_age_seconds` - `raw_event_write_queue_depth` - `raw_event_write_drop_count` - `clickhouse_insert_failures` (per table) - `clickhouse_breaker_state` - `worker_processed_per_minute` - `worker_failed_per_minute`
 - [ ] Update the operations schema struct and HTTP response shape.
 - [ ] Update the Next.js operations dashboard to render the new fields with the existing card
       layout and warning states (stale listener, growing backlog, breaker open).

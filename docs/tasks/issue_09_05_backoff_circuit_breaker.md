@@ -20,18 +20,11 @@ writer flush, workers, pending count) sleep on the breaker instead of tight-loop
       `RecordFailure`, and `WaitUntilAllowed` methods.
 - [ ] Breaker opens after N consecutive failures (default 5) and stays open for the current
       backoff delay before allowing a single probe call.
-- [ ] Apply the breaker around:
-      - buffered writer batch insert
-      - worker `InsertMessagesBatch` / `InsertAttemptsBatch`
-      - any remaining ClickHouse calls in the hot path
+- [ ] Apply the breaker around: - buffered writer batch insert - worker `InsertMessagesBatch` / `InsertAttemptsBatch` - any remaining ClickHouse calls in the hot path
 - [ ] Workers and the buffered writer call `WaitUntilAllowed` before issuing the ClickHouse
       operation. Successful calls reset the breaker and backoff.
 - [ ] Log breaker open/half-open/closed transitions at info level with the current delay.
-- [ ] Add config knobs:
-      - `LISTENER_CLICKHOUSE_BACKOFF_INITIAL_MS` (default 1000)
-      - `LISTENER_CLICKHOUSE_BACKOFF_MAX_MS` (default 30000)
-      - `LISTENER_CLICKHOUSE_BACKOFF_MULTIPLIER` (default 2)
-      - `LISTENER_CLICKHOUSE_BREAKER_FAILURE_THRESHOLD` (default 5)
+- [ ] Add config knobs: - `LISTENER_CLICKHOUSE_BACKOFF_INITIAL_MS` (default 1000) - `LISTENER_CLICKHOUSE_BACKOFF_MAX_MS` (default 30000) - `LISTENER_CLICKHOUSE_BACKOFF_MULTIPLIER` (default 2) - `LISTENER_CLICKHOUSE_BREAKER_FAILURE_THRESHOLD` (default 5)
 
 ## Tests And Checks
 
