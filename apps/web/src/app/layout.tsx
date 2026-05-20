@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import "./globals.css";
+import { NavigationProgress } from "@/components/navigation-progress";
 
 export const metadata: Metadata = {
   title: "Kick Logs",
@@ -19,7 +21,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="tr" className="dark">
-      <body>{children}</body>
+      <body>
+        <Suspense>
+          <NavigationProgress />
+        </Suspense>
+        {children}
+      </body>
     </html>
   );
 }
