@@ -233,6 +233,134 @@ func TestRawEventProcessorDoesNotRetryDuplicateRowsInSameBatch(t *testing.T) {
 	}
 }
 
+func TestRawEventProcessorWritesOneBatchPerTick(t *testing.T) {
+	unit := newFakeListenerUnit()
+	service := newTestService(unit, fakePusherClient{})
+	for i := 0; i < 5; i++ {
+		messageID := "message-batch-" + idAt(i)
+		payload := buildPayload(messageID)
+		enqueueRawEvent(t, unit, domain.RawKickEvent{
+			ID:            "raw-batch-" + idAt(i),
+			EventName:     chatMessageEventName,
+			KickMessageID: messageID,
+			ChatroomID:    123,
+			ChannelID:     1,
+			PayloadJSON:   rawPayloadJSON(payload),
+			Status:        "pending",
+			ReceivedAt:    time.Now().UTC(),
+		})
+	}
+
+	result, err := service.ProcessRawEventsOnce(context.Background())
+	if err != nil {
+		t.Fatalf("ProcessRawEventsOnce() error = %v", err)
+	}
+	if result.Claimed != 5 || result.Processed != 5 || result.Failed != 0 {
+		t.Fatalf("result = %#v", result)
+	}
+	if len(unit.messages.batchCallSizes) != 1 || unit.messages.batchCallSizes[0] != 5 {
+		t.Fatalf("message batch calls = %#v", unit.messages.batchCallSizes)
+	}
+	if len(unit.rawEvents.attemptBatchSizes) != 1 || unit.rawEvents.attemptBatchSizes[0] != 5 {
+		t.Fatalf("attempt batch calls = %#v", unit.rawEvents.attemptBatchSizes)
+	}
+	if unit.messages.insertCallCount != 0 {
+		t.Fatalf("single-row Insert called %d times in batch path", unit.messages.insertCallCount)
+	}
+}
+
+func TestRawEventProcessorMixesProcessedAndFailedInOneTick(t *testing.T) {
+	unit := newFakeListenerUnit()
+	service := newTestService(unit, fakePusherClient{})
+
+	goodPayload := buildPayload("message-good")
+	enqueueRawEvent(t, unit, domain.RawKickEvent{
+		ID:            "raw-good",
+		EventName:     chatMessageEventName,
+		KickMessageID: "message-good",
+		ChatroomID:    123,
+		ChannelID:     1,
+		PayloadJSON:   rawPayloadJSON(goodPayload),
+		Status:        "pending",
+		ReceivedAt:    time.Now().UTC(),
+	})
+
+	badPayload := buildPayload("message-bad")
+	badPayload["chatroom_id"] = 999
+	enqueueRawEvent(t, unit, domain.RawKickEvent{
+		ID:            "raw-bad",
+		EventName:     chatMessageEventName,
+		KickMessageID: "message-bad",
+		ChatroomID:    999,
+		PayloadJSON:   rawPayloadJSON(badPayload),
+		Status:        "pending",
+		ReceivedAt:    time.Now().UTC(),
+	})
+
+	result, err := service.ProcessRawEventsOnce(context.Background())
+	if err != nil {
+		t.Fatalf("ProcessRawEventsOnce() error = %v", err)
+	}
+	if result.Claimed != 2 || result.Processed != 1 || result.Failed != 1 {
+		t.Fatalf("result = %#v", result)
+	}
+	if len(unit.messages.batchCallSizes) != 1 || unit.messages.batchCallSizes[0] != 1 {
+		t.Fatalf("message batch calls = %#v", unit.messages.batchCallSizes)
+	}
+	if len(unit.rawEvents.attemptBatchSizes) != 1 || unit.rawEvents.attemptBatchSizes[0] != 2 {
+		t.Fatalf("attempt batch calls = %#v", unit.rawEvents.attemptBatchSizes)
+	}
+	good, err := unit.queue.GetByID(context.Background(), "raw-good")
+	if err != nil {
+		t.Fatalf("GetByID good error = %v", err)
+	}
+	if good.Status != domain.RawEventQueueStatusProcessed {
+		t.Fatalf("good status = %q", good.Status)
+	}
+	bad, err := unit.queue.GetByID(context.Background(), "raw-bad")
+	if err != nil {
+		t.Fatalf("GetByID bad error = %v", err)
+	}
+	if bad.Status != domain.RawEventQueueStatusPending || bad.Attempts != 1 {
+		t.Fatalf("bad item = %#v", bad)
+	}
+}
+
+func TestRawEventProcessorReleasesClaimsWhenBatchInsertFails(t *testing.T) {
+	unit := newFakeListenerUnit()
+	service := newTestService(unit, fakePusherClient{})
+	unit.messages.failBatch = errors.New("clickhouse unavailable")
+
+	for i := 0; i < 3; i++ {
+		messageID := "message-fail-" + idAt(i)
+		payload := buildPayload(messageID)
+		enqueueRawEvent(t, unit, domain.RawKickEvent{
+			ID:            "raw-fail-batch-" + idAt(i),
+			EventName:     chatMessageEventName,
+			KickMessageID: messageID,
+			ChatroomID:    123,
+			ChannelID:     1,
+			PayloadJSON:   rawPayloadJSON(payload),
+			Status:        "pending",
+			ReceivedAt:    time.Now().UTC(),
+		})
+	}
+
+	_, err := service.ProcessRawEventsOnce(context.Background())
+	if err == nil {
+		t.Fatal("expected batch insert failure to surface as error")
+	}
+	for i := 0; i < 3; i++ {
+		item, err := unit.queue.GetByID(context.Background(), "raw-fail-batch-"+idAt(i))
+		if err != nil {
+			t.Fatalf("GetByID error = %v", err)
+		}
+		if item.Status != domain.RawEventQueueStatusPending {
+			t.Fatalf("status = %q for id %d, want pending after batch failure", item.Status, i)
+		}
+	}
+}
+
 func TestRawEventProcessorMarksFailuresAndHeartbeat(t *testing.T) {
 	unit := newFakeListenerUnit()
 	service := newTestService(unit, fakePusherClient{})
@@ -501,8 +629,9 @@ func (repo *fakeChannelRepository) Disable(_ context.Context, id int64) (domain.
 }
 
 type fakeRawEventRepository struct {
-	events   []domain.RawKickEvent
-	attempts []domain.RawEventAttempt
+	events            []domain.RawKickEvent
+	attempts          []domain.RawEventAttempt
+	attemptBatchSizes []int
 }
 
 func (repo *fakeRawEventRepository) InsertEvent(_ context.Context, event domain.RawKickEvent) error {
@@ -531,6 +660,7 @@ func (repo *fakeRawEventRepository) InsertAttempt(_ context.Context, attempt dom
 }
 
 func (repo *fakeRawEventRepository) InsertAttemptsBatch(_ context.Context, attempts []domain.RawEventAttempt) error {
+	repo.attemptBatchSizes = append(repo.attemptBatchSizes, len(attempts))
 	repo.attempts = append(repo.attempts, attempts...)
 	return nil
 }
@@ -768,15 +898,23 @@ func (repo *fakeRawEventQueueRepository) GetByID(_ context.Context, rawEventID s
 }
 
 type fakeMessageRepository struct {
-	messages []domain.ChatMessage
+	messages        []domain.ChatMessage
+	batchCallSizes  []int
+	insertCallCount int
+	failBatch       error
 }
 
 func (repo *fakeMessageRepository) Insert(_ context.Context, message domain.ChatMessage) error {
+	repo.insertCallCount++
 	repo.messages = append(repo.messages, message)
 	return nil
 }
 
 func (repo *fakeMessageRepository) InsertMessagesBatch(_ context.Context, messages []domain.ChatMessage) error {
+	if repo.failBatch != nil {
+		return repo.failBatch
+	}
+	repo.batchCallSizes = append(repo.batchCallSizes, len(messages))
 	repo.messages = append(repo.messages, messages...)
 	return nil
 }

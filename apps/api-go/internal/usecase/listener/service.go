@@ -238,6 +238,14 @@ func (service *Service) ProcessRawEventsOnce(ctx context.Context) (RawEventProce
 	return service.processRawEventsOnce(ctx, 0)
 }
 
+type rawEventOutcome struct {
+	item       domain.RawEventQueueItem
+	processed  bool
+	message    domain.ChatMessage
+	hasMessage bool
+	failure    error
+}
+
 func (service *Service) processRawEventsOnce(ctx context.Context, workerID int) (RawEventProcessingResult, error) {
 	if service.queue == nil {
 		return RawEventProcessingResult{}, errors.New("raw event queue repository is not configured")
@@ -253,39 +261,83 @@ func (service *Service) processRawEventsOnce(ctx context.Context, workerID int) 
 
 	result := RawEventProcessingResult{}
 	claimWorkerID := service.rawEventClaimWorkerID(workerID)
+
+	claimed := make([]domain.RawEventQueueItem, 0, len(items))
 	for _, item := range items {
-		claimed, err := service.queue.Claim(ctx, item.RawEventID, claimWorkerID)
+		ok, err := service.queue.Claim(ctx, item.RawEventID, claimWorkerID)
 		if err != nil {
+			service.releaseClaims(ctx, claimed, claimWorkerID)
 			return RawEventProcessingResult{}, err
 		}
-		if !claimed {
+		if !ok {
 			continue
 		}
-		result.Claimed++
+		claimed = append(claimed, item)
+	}
+	result.Claimed = len(claimed)
 
+	outcomes := make([]rawEventOutcome, 0, len(claimed))
+	messages := make([]domain.ChatMessage, 0, len(claimed))
+	attempts := make([]domain.RawEventAttempt, 0, len(claimed))
+	seenKickMessageIDs := make(map[string]bool, len(claimed))
+	for _, item := range claimed {
+		outcome := rawEventOutcome{item: item}
 		rawEvent, err := service.rawEvents.GetByID(ctx, item.RawEventID)
 		if err != nil {
-			result.Failed++
-			service.recordAttempt(ctx, item, "failed", err)
-			if markErr := service.queue.MarkFailed(ctx, item.RawEventID, err.Error(), service.config.RawEventMaxAttempts); markErr != nil {
-				service.logger.Error("failed to mark queue item failed", "raw_event_id", item.RawEventID, "error", markErr)
-			}
-			service.logger.Error("load raw Kick event failed", "raw_event_id", item.RawEventID, "error", err)
+			outcome.failure = fmt.Errorf("load raw event: %w", err)
+			outcomes = append(outcomes, outcome)
+			attempts = append(attempts, buildAttempt(item, "failed", outcome.failure))
 			continue
 		}
+		message, alreadyExists, normErr := service.prepareMessage(ctx, rawEvent)
+		if normErr != nil {
+			outcome.failure = normErr
+			outcomes = append(outcomes, outcome)
+			attempts = append(attempts, buildAttempt(item, "failed", normErr))
+			continue
+		}
+		outcome.processed = true
+		if !alreadyExists && !seenKickMessageIDs[message.KickMessageID] {
+			seenKickMessageIDs[message.KickMessageID] = true
+			outcome.message = message
+			outcome.hasMessage = true
+			messages = append(messages, message)
+		}
+		outcomes = append(outcomes, outcome)
+		attempts = append(attempts, buildAttempt(item, "processed", nil))
+	}
 
-		if err := service.processRawEvent(ctx, rawEvent); err != nil {
-			result.Failed++
-			if markErr := service.queue.MarkFailed(ctx, item.RawEventID, err.Error(), service.config.RawEventMaxAttempts); markErr != nil {
-				service.logger.Error("failed to mark queue item failed", "raw_event_id", item.RawEventID, "error", markErr)
+	if len(messages) > 0 {
+		if err := service.messages.InsertMessagesBatch(ctx, messages); err != nil {
+			service.releaseClaims(ctx, claimed, claimWorkerID)
+			return RawEventProcessingResult{}, fmt.Errorf("insert chat messages batch: %w", err)
+		}
+	}
+	if len(attempts) > 0 {
+		if err := service.rawEvents.InsertAttemptsBatch(ctx, attempts); err != nil {
+			service.logger.Error("raw event attempts batch insert failed", "batch_size", len(attempts), "error", err)
+		}
+	}
+
+	for _, outcome := range outcomes {
+		if outcome.processed {
+			if err := service.queue.MarkProcessed(ctx, outcome.item.RawEventID); err != nil {
+				service.logger.Error("failed to mark queue item processed", "raw_event_id", outcome.item.RawEventID, "error", err)
+				continue
 			}
-			service.logger.Error("Raw Kick event processing failed", "raw_event_id", item.RawEventID, "error", err)
-			continue
+			result.Processed++
+		} else {
+			message := ""
+			if outcome.failure != nil {
+				message = outcome.failure.Error()
+			}
+			if err := service.queue.MarkFailed(ctx, outcome.item.RawEventID, message, service.config.RawEventMaxAttempts); err != nil {
+				service.logger.Error("failed to mark queue item failed", "raw_event_id", outcome.item.RawEventID, "error", err)
+				continue
+			}
+			result.Failed++
+			service.logger.Error("raw Kick event processing failed", "raw_event_id", outcome.item.RawEventID, "error", outcome.failure)
 		}
-		if err := service.queue.MarkProcessed(ctx, item.RawEventID); err != nil {
-			return RawEventProcessingResult{}, err
-		}
-		result.Processed++
 	}
 
 	pendingCount, err := service.queue.CountPending(ctx, service.config.RawEventMaxAttempts)
@@ -296,7 +348,15 @@ func (service *Service) processRawEventsOnce(ctx context.Context, workerID int) 
 	return result, nil
 }
 
-func (service *Service) recordAttempt(ctx context.Context, item domain.RawEventQueueItem, status string, cause error) {
+func (service *Service) releaseClaims(ctx context.Context, items []domain.RawEventQueueItem, workerID string) {
+	for _, item := range items {
+		if err := service.queue.Release(ctx, item.RawEventID, workerID); err != nil {
+			service.logger.Error("failed to release queue claim", "raw_event_id", item.RawEventID, "error", err)
+		}
+	}
+}
+
+func buildAttempt(item domain.RawEventQueueItem, status string, cause error) domain.RawEventAttempt {
 	attempt := domain.RawEventAttempt{
 		RawEventID: item.RawEventID,
 		Attempt:    item.Attempts + 1,
@@ -307,9 +367,7 @@ func (service *Service) recordAttempt(ctx context.Context, item domain.RawEventQ
 	if cause != nil {
 		attempt.ErrorMessage = fmt.Sprintf("%T: %v", cause, cause)
 	}
-	if err := service.rawEvents.InsertAttempt(ctx, attempt); err != nil {
-		service.logger.Error("failed to record raw event attempt", "raw_event_id", item.RawEventID, "error", err)
-	}
+	return attempt
 }
 
 func (service *Service) rawEventClaimWorkerID(workerID int) string {
@@ -369,22 +427,22 @@ func (service *Service) loadEnabledChannels(ctx context.Context) ([]domain.Follo
 	return ready, nil
 }
 
-func (service *Service) processRawEvent(ctx context.Context, rawEvent domain.RawKickEvent) error {
+func (service *Service) prepareMessage(ctx context.Context, rawEvent domain.RawKickEvent) (domain.ChatMessage, bool, error) {
 	var payload map[string]any
 	if err := json.Unmarshal([]byte(rawEvent.PayloadJSON), &payload); err != nil {
-		return service.markRawEventFailed(ctx, rawEvent, fmt.Errorf("decode raw payload: %w", err))
+		return domain.ChatMessage{}, false, fmt.Errorf("decode raw payload: %w", err)
 	}
 
 	kickMessageID := cleanText(payload["id"])
 	if kickMessageID == "" {
-		return service.markRawEventFailed(ctx, rawEvent, fmt.Errorf("raw event payload missing message id"))
+		return domain.ChatMessage{}, false, fmt.Errorf("raw event payload missing message id")
 	}
 	exists, err := service.messages.ExistsByKickMessageID(ctx, kickMessageID)
 	if err != nil {
-		return service.markRawEventFailed(ctx, rawEvent, err)
+		return domain.ChatMessage{}, false, err
 	}
 	if exists {
-		return service.markRawEventProcessed(ctx, rawEvent)
+		return domain.ChatMessage{}, true, nil
 	}
 
 	chatroomID := rawEvent.ChatroomID
@@ -396,12 +454,12 @@ func (service *Service) processRawEvent(ctx context.Context, rawEvent domain.Raw
 		if errors.Is(err, sql.ErrNoRows) {
 			err = fmt.Errorf("message channel is not followed")
 		}
-		return service.markRawEventFailed(ctx, rawEvent, err)
+		return domain.ChatMessage{}, false, err
 	}
 
 	sender, err := senderProfileFromPayload(payload)
 	if err != nil {
-		return service.markRawEventFailed(ctx, rawEvent, err)
+		return domain.ChatMessage{}, false, err
 	}
 	if service.senderResolver != nil && sender.Slug != "" {
 		if resolved, err := service.senderResolver.ResolveSender(ctx, sender.Slug); err == nil {
@@ -419,44 +477,14 @@ func (service *Service) processRawEvent(ctx context.Context, rawEvent domain.Raw
 	}
 	sender, err = service.senders.Upsert(ctx, sender)
 	if err != nil {
-		return service.markRawEventFailed(ctx, rawEvent, err)
+		return domain.ChatMessage{}, false, err
 	}
 
 	message, err := normalizeMessagePayload(payload, channel, sender)
 	if err != nil {
-		return service.markRawEventFailed(ctx, rawEvent, err)
+		return domain.ChatMessage{}, false, err
 	}
-	if err := service.messages.Insert(ctx, message); err != nil {
-		return service.markRawEventFailed(ctx, rawEvent, err)
-	}
-	return service.markRawEventProcessed(ctx, rawEvent)
-}
-
-func (service *Service) markRawEventProcessed(ctx context.Context, rawEvent domain.RawKickEvent) error {
-	attempt := rawEvent.Attempts + 1
-	return service.rawEvents.InsertAttempt(ctx, domain.RawEventAttempt{
-		RawEventID: rawEvent.ID,
-		Attempt:    attempt,
-		Status:     "processed",
-		StartedAt:  time.Now().UTC(),
-		FinishedAt: time.Now().UTC(),
-	})
-}
-
-func (service *Service) markRawEventFailed(ctx context.Context, rawEvent domain.RawKickEvent, cause error) error {
-	attempt := rawEvent.Attempts + 1
-	status := "failed"
-	if err := service.rawEvents.InsertAttempt(ctx, domain.RawEventAttempt{
-		RawEventID:   rawEvent.ID,
-		Attempt:      attempt,
-		Status:       status,
-		ErrorMessage: fmt.Sprintf("%T: %v", cause, cause),
-		StartedAt:    time.Now().UTC(),
-		FinishedAt:   time.Now().UTC(),
-	}); err != nil {
-		return err
-	}
-	return cause
+	return message, false, nil
 }
 
 func (service *Service) processRawEventsForever(ctx context.Context, workerID int) {

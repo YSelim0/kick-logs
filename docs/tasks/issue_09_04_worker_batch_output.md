@@ -18,40 +18,40 @@ path.
 
 ## Checklist
 
-- [ ] Worker tick uses SQLite work queue to claim a batch of up to
+- [x] Worker tick uses SQLite work queue to claim a batch of up to
       `LISTENER_RAW_EVENT_BATCH_SIZE` rows in a single transaction.
-- [ ] For each claimed row, fetch the raw event payload from the buffered writer cache when
+- [x] For each claimed row, fetch the raw event payload from the buffered writer cache when
       available; otherwise load by ID from ClickHouse with a single multi-key query.
-- [ ] Normalize each event into a `chat_messages` row and a `raw_event_attempts` row in memory.
+- [x] Normalize each event into a `chat_messages` row and a `raw_event_attempts` row in memory.
       Sender resolution and `sender_profiles` upserts still happen per row.
-- [ ] After the loop, call `InsertMessagesBatch` once for the collected messages.
-- [ ] Call `InsertAttemptsBatch` once for the collected attempts (`processed` and `failed`).
-- [ ] Mark SQLite queue rows processed or failed in a single SQLite transaction per tick.
-- [ ] If batch ClickHouse write fails, release all claimed queue rows for the tick so they can be
+- [x] After the loop, call `InsertMessagesBatch` once for the collected messages.
+- [x] Call `InsertAttemptsBatch` once for the collected attempts (`processed` and `failed`).
+- [x] Mark SQLite queue rows processed or failed in a single SQLite transaction per tick.
+- [x] If batch ClickHouse write fails, release all claimed queue rows for the tick so they can be
       retried on the next worker pass. Do not partially mark some rows processed.
-- [ ] Remove the per-row `InsertAttempt` and `Insert(message)` calls from the hot path. Keep the
+- [x] Remove the per-row `InsertAttempt` and `Insert(message)` calls from the hot path. Keep the
       single-row methods only if other use cases still need them.
-- [ ] Update listener service tests to reflect batched processing.
+- [x] Update listener service tests to reflect batched processing.
 
 ## Tests And Checks
 
-- [ ] Service test: a tick that claims 50 events produces exactly one
+- [x] Service test: a tick that claims 50 events produces exactly one
       `InsertMessagesBatch` and one `InsertAttemptsBatch` call.
-- [ ] Service test: when normalization fails for some rows, only those rows are marked failed and
+- [x] Service test: when normalization fails for some rows, only those rows are marked failed and
       the rest are processed in the same tick.
-- [ ] Service test: ClickHouse batch failure releases every claimed row in the tick back to
+- [x] Service test: ClickHouse batch failure releases every claimed row in the tick back to
       `pending` without losing the attempt counter.
-- [ ] Service test: duplicate `kick_message_id` events still dedupe and mark processed without
+- [x] Service test: duplicate `kick_message_id` events still dedupe and mark processed without
       double-inserting the visible message.
-- [ ] Existing dedupe and reply/emote tests still pass.
+- [x] Existing dedupe and reply/emote tests still pass.
 
 ## Acceptance Criteria
 
-- [ ] One worker tick produces at most one ClickHouse insert per output table.
-- [ ] Pending count and oldest pending age come from SQLite.
-- [ ] Functional behavior is unchanged: messages, replies, emotes, and sender profile
+- [x] One worker tick produces at most one ClickHouse insert per output table.
+- [x] Pending count and oldest pending age come from SQLite.
+- [x] Functional behavior is unchanged: messages, replies, emotes, and sender profile
       enrichment still work as before.
-- [ ] All Go tests pass.
+- [x] All Go tests pass.
 
 ## Verification
 

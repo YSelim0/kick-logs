@@ -4,6 +4,24 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Issue #9 phase 4: worker batch normalization output.
+  - worker tick claims all pending queue rows, loads each raw payload from ClickHouse by id,
+    normalizes the message in memory, then writes the entire tick as one
+    `InsertMessagesBatch` and one `InsertAttemptsBatch`
+  - tick-internal dedupe via `seenKickMessageIDs` prevents two queue rows with the same
+    `kick_message_id` from inserting a duplicate visible message in the same batch
+  - ClickHouse `InsertMessagesBatch` failure releases every claimed queue row back to pending
+    so the next tick retries the full set
+  - attempts batch is best-effort: a failure logs and the worker continues marking the queue
+    rows so audit gaps recover on the next attempt
+  - removed the per-row `markRawEventProcessed`/`markRawEventFailed`/`recordAttempt` helpers;
+    `prepareMessage` is now a pure normalization function used by the worker
+  - listener service tests cover one-batch-per-tick, mixed processed/failed in a single tick,
+    and full claim-release on ClickHouse batch failure
+  - verification: `go build ./...`, `go test ./...`, `go vet ./...`
+
+## Previously Latest
+
 - Issue #9 phase 3: buffered websocket raw-event writer.
   - new `bufferedRawWriter` accepts raw events from the websocket callback through an
     in-memory channel and flushes batches to ClickHouse via `InsertEventsBatch`, then enqueues
@@ -29,7 +47,7 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - verification: `go build ./...`, `go test ./...`, `go vet ./...`, `pnpm exec prettier
 --check docs/tasks/`
 
-## Previously Latest
+## Older Phase Notes
 
 - Issue #9 phase 1: moved the raw-event work queue out of ClickHouse into SQLite.
   - added migration v4 creating `raw_event_queue` with status, attempts, claim ownership,

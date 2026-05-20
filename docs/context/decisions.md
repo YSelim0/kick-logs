@@ -115,6 +115,17 @@
 
 ## 2026-05-20
 
+- Issue #9 phase 4 batches worker output writes. A single worker tick now claims pending queue
+  rows, loads raw payloads through `RawEventRepository.GetByID`, normalizes them in memory, then
+  writes one `InsertMessagesBatch` and one `InsertAttemptsBatch` per tick. Successful items are
+  marked processed in the SQLite queue; failing items are marked failed with the cause.
+- Tick-internal dedupe keeps a `seenKickMessageIDs` set so two queue rows carrying the same
+  `kick_message_id` do not both insert a visible message in the same batch. ClickHouse
+  `ExistsByKickMessageID` continues to dedupe across ticks.
+- ClickHouse `InsertMessagesBatch` failure during a tick releases every claimed queue row back
+  to pending so the next tick retries the same set. The attempt batch insert is best-effort; a
+  failure logs an error but does not roll back the message batch because audit attempts are
+  recoverable on the next attempt.
 - Issue #9 phase 3 introduces a buffered websocket writer. The websocket callback now submits
   raw events to an in-memory channel; a dedicated goroutine flushes batches to ClickHouse using
   the phase 2 batch insert and then enqueues the same batch into the SQLite work queue. Batch

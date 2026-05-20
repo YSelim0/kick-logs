@@ -105,8 +105,10 @@ admin/super-admin role.
   events or `LISTENER_RAW_EVENT_WRITE_FLUSH_INTERVAL_MS` whichever first. Phase 1 moved the
   work queue out of ClickHouse so the worker hot path no longer runs heavy
   `raw_event_attempts` JOIN queries.
-- Workers list pending rows and claim them from SQLite, then load the raw payload from
-  ClickHouse by id, normalize, and insert the visible chat message.
+- Workers list pending rows and claim them from SQLite, then load each raw payload from
+  ClickHouse by id, normalize in memory, and write the entire tick's chat messages and
+  raw-event attempts as one batch each. ClickHouse insert failure releases every claim back to
+  pending and the next tick retries.
 - Raw-event processing is at-least-once and idempotent; visible messages dedupe by
   `kick_message_id`.
 - Listener heartbeat state is stored in SQLite `worker_heartbeats`.
