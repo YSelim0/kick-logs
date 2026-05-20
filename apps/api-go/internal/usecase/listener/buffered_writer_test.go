@@ -260,6 +260,10 @@ func (repo *recordingRawEventRepository) GetByID(_ context.Context, _ string) (d
 	return domain.RawKickEvent{}, nil
 }
 
+func (repo *recordingRawEventRepository) GetByIDs(_ context.Context, ids []string) (map[string]domain.RawKickEvent, error) {
+	return map[string]domain.RawKickEvent{}, nil
+}
+
 type blockingRawEventRepository struct {
 	recordingRawEventRepository
 	block chan struct{}

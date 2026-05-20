@@ -112,6 +112,33 @@ func (repo *MessageRepository) ExistsByKickMessageID(ctx context.Context, kickMe
 	return count > 0, nil
 }
 
+func (repo *MessageRepository) ExistingKickMessageIDs(ctx context.Context, kickMessageIDs []string) (map[string]bool, error) {
+	if len(kickMessageIDs) == 0 {
+		return map[string]bool{}, nil
+	}
+	rows, err := repo.conn.Query(
+		ctx,
+		"SELECT kick_message_id FROM chat_messages WHERE kick_message_id IN (?) AND is_deleted = 0",
+		kickMessageIDs,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("batch check chat messages exist: %w", err)
+	}
+	defer rows.Close()
+	result := make(map[string]bool, len(kickMessageIDs))
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan kick message id: %w", err)
+		}
+		result[id] = true
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate existing kick message ids: %w", err)
+	}
+	return result, nil
+}
+
 func (repo *MessageRepository) Search(ctx context.Context, filter domain.MessageSearchFilter) ([]domain.ChatMessage, error) {
 	limit := filter.Limit
 	if limit == 0 {
