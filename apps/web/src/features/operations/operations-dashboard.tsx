@@ -19,6 +19,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { getOperationsSummary } from "@/features/operations/api";
+import { FailedEventsModal } from "@/features/operations/failed-events-modal";
 import type { IngestionHealth, OperationsSummary } from "@/types/api";
 
 const EMPTY_INGESTION: IngestionHealth = {
@@ -43,6 +44,7 @@ export function OperationsDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [failedModalOpen, setFailedModalOpen] = useState(false);
 
   const loadSummary = useCallback(async (mode: "initial" | "refresh" = "initial") => {
     if (mode === "refresh") {
@@ -68,6 +70,7 @@ export function OperationsDashboard() {
 
   const cards = useMemo(() => (summary ? buildMetricCards(summary) : []), [summary]);
   const failedRawEvents = summary ? getStatusCount(summary, "failed") : 0;
+  const hasFailedEvents = failedRawEvents > 0;
 
   return (
     <section className="rounded-lg border border-border bg-black p-5">
@@ -148,7 +151,15 @@ export function OperationsDashboard() {
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {cards.map((card) => (
-              <MetricCard key={card.label} {...card} />
+              <MetricCard
+                key={card.label}
+                {...card}
+                onDetailClick={
+                  card.label === "Failed Raw" && hasFailedEvents
+                    ? () => setFailedModalOpen(true)
+                    : undefined
+                }
+              />
             ))}
           </div>
 
@@ -168,6 +179,12 @@ export function OperationsDashboard() {
           </div>
         </div>
       ) : null}
+
+      <FailedEventsModal
+        open={failedModalOpen}
+        onOpenChange={setFailedModalOpen}
+        onActionComplete={() => void loadSummary("refresh")}
+      />
     </section>
   );
 }
@@ -282,12 +299,14 @@ function MetricCard({
   detail,
   icon,
   label,
+  onDetailClick,
   tone,
   value
 }: {
   detail: string;
   icon: ReactNode;
   label: string;
+  onDetailClick?: () => void;
   tone: MetricTone;
   value: string;
 }) {
@@ -300,9 +319,19 @@ function MetricCard({
       <div className="truncate text-xl font-semibold text-foreground" title={value}>
         {value}
       </div>
-      <div className="mt-1 truncate text-xs text-muted-foreground" title={detail}>
-        {detail}
-      </div>
+      {onDetailClick ? (
+        <button
+          className="mt-1 truncate text-xs text-muted-foreground underline-offset-2 hover:cursor-pointer hover:underline"
+          onClick={onDetailClick}
+          type="button"
+        >
+          {detail}
+        </button>
+      ) : (
+        <div className="mt-1 truncate text-xs text-muted-foreground" title={detail}>
+          {detail}
+        </div>
+      )}
     </div>
   );
 }

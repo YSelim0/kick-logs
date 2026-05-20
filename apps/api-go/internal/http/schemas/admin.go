@@ -93,6 +93,25 @@ type IngestionHealthResponse struct {
 	BreakerCurrentDelayMS   int64  `json:"breaker_current_delay_ms"`
 }
 
+type FailedRawEventResponse struct {
+	RawEventID   string `json:"raw_event_id"`
+	ChannelSlug  string `json:"channel_slug"`
+	ErrorMessage string `json:"error_message"`
+	Attempts     uint16 `json:"attempts"`
+	ReceivedAt   string `json:"received_at"`
+	FailedAt     string `json:"failed_at"`
+}
+
+type FailedRawEventsResponse struct {
+	Events []FailedRawEventResponse `json:"events"`
+	Total  int                      `json:"total"`
+}
+
+type FailedEventsActionResponse struct {
+	Affected int64  `json:"affected"`
+	Message  string `json:"message"`
+}
+
 type MessageEmoteResponse struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`

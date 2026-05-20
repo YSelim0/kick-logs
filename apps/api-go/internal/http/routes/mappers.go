@@ -84,6 +84,24 @@ func operationsSummaryResponse(summary domain.OperationsSummary) schemas.Operati
 	}
 }
 
+func failedRawEventsResponse(events []domain.FailedRawEvent) schemas.FailedRawEventsResponse {
+	items := make([]schemas.FailedRawEventResponse, 0, len(events))
+	for _, ev := range events {
+		items = append(items, schemas.FailedRawEventResponse{
+			RawEventID:   ev.RawEventID,
+			ChannelSlug:  ev.ChannelSlug,
+			ErrorMessage: ev.ErrorMessage,
+			Attempts:     ev.Attempts,
+			ReceivedAt:   ev.ReceivedAt.Format(time.RFC3339),
+			FailedAt:     ev.FailedAt.Format(time.RFC3339),
+		})
+	}
+	return schemas.FailedRawEventsResponse{
+		Events: items,
+		Total:  len(items),
+	}
+}
+
 func dataManagementSummaryResponse(summary domain.DataManagementSummary) schemas.DataManagementSummaryResponse {
 	tables := make([]schemas.DataManagementTableResponse, 0, len(summary.Tables))
 	for _, table := range summary.Tables {

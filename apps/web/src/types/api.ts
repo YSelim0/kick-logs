@@ -105,6 +105,25 @@ export type OperationsSummary = {
   ingestion: IngestionHealth;
 };
 
+export type FailedRawEvent = {
+  raw_event_id: string;
+  channel_slug: string;
+  error_message: string;
+  attempts: number;
+  received_at: string;
+  failed_at: string;
+};
+
+export type FailedRawEventsResponse = {
+  events: FailedRawEvent[];
+  total: number;
+};
+
+export type FailedEventsActionResponse = {
+  affected: number;
+  message: string;
+};
+
 export type RetentionDays = 30 | 90 | null;
 
 export type RetentionSettings = {

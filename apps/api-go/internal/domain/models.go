@@ -305,6 +305,15 @@ type IngestionHealth struct {
 	BreakerCurrentDelayMS   int64
 }
 
+type FailedRawEvent struct {
+	RawEventID   string
+	ChannelSlug  string
+	ErrorMessage string
+	Attempts     uint16
+	ReceivedAt   time.Time
+	FailedAt     time.Time
+}
+
 type RetentionSettings struct {
 	ID                    int64
 	MessageRetentionDays  *int

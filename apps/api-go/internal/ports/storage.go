@@ -109,6 +109,9 @@ type StorageStatsRepository interface {
 
 type OperationsRepository interface {
 	Summary(ctx context.Context) (domain.OperationsSummary, error)
+	ListFailedEvents(ctx context.Context, limit int) ([]domain.FailedRawEvent, error)
+	RetryFailedEvents(ctx context.Context) (int64, error)
+	ClearFailedEvents(ctx context.Context) (int64, error)
 }
 
 type DataManagementRepository interface {
