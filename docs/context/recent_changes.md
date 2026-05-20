@@ -4,6 +4,21 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Issue #9 phase 7: live load test completed and all acceptance criteria met.
+  - baseline run: 163,473 events at 2000 events/s over 60s (burst-factor 2, 5 channels)
+  - peak writer queue depth 24,356; all 302 flushes at batch size 500; peak flush latency 392ms
+  - 0 writer drops, 0 ClickHouse failures, 0 circuit breaker events
+  - 1 isolated sqlite_enqueue_failure (non-critical, claim release context timeout)
+  - all HTTP endpoints (`/health`, `/messages`, `/analytics/overview`) returned 200 during burst
+  - two WebSocket close 1006 events on real Kick Pusher (Docker DNS blip); listener reconnected
+    automatically; no ClickHouse DNS errors
+  - SQLite queue backlog drained to 0 within ~90s after burst ended
+  - external durable queue (RabbitMQ/NATS/Kafka) confirmed deferred: in-process pipeline
+    handles 2000 events/s sustained burst without drops or 500s
+  - PR `feat/issue-9-ingestion-batching` → `main` opened with load-test summary
+
+## Previously Latest
+
 - Issue #9 phase 7: synthetic ingestion load harness and operator runbook.
   - new `apps/api-go/cmd/loadgen` command wires the real listener service with a synthetic
     Pusher emitter that produces configurable events-per-second, supports a burst factor for
