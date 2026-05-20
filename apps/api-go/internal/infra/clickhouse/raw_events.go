@@ -20,22 +20,13 @@ func NewRawEventRepository(conn driver.Conn) *RawEventRepository {
 }
 
 func (repo *RawEventRepository) InsertEvent(ctx context.Context, event domain.RawKickEvent) error {
-	if event.ID == "" {
-		event.ID = uuid.NewString()
-	}
-	if event.PayloadJSON == "" {
-		event.PayloadJSON = "{}"
-	}
-	if event.MetadataJSON == "" {
-		event.MetadataJSON = "{}"
-	}
-	if event.Status == "" {
-		event.Status = "pending"
-	}
-	if event.ReceivedAt.IsZero() {
-		event.ReceivedAt = time.Now().UTC()
-	}
+	return repo.InsertEventsBatch(ctx, []domain.RawKickEvent{event})
+}
 
+func (repo *RawEventRepository) InsertEventsBatch(ctx context.Context, events []domain.RawKickEvent) error {
+	if len(events) == 0 {
+		return nil
+	}
 	batch, err := repo.conn.PrepareBatch(ctx, `INSERT INTO raw_kick_events (
 		id, channel_slug, event_type, event_name, kick_message_id, chatroom_id, channel_id,
 		payload_json, metadata_json, status, received_at, processed_at, error_message
@@ -43,22 +34,40 @@ func (repo *RawEventRepository) InsertEvent(ctx context.Context, event domain.Ra
 	if err != nil {
 		return fmt.Errorf("prepare raw event insert: %w", err)
 	}
-	if err := batch.Append(
-		event.ID,
-		event.ChannelSlug,
-		event.EventType,
-		event.EventName,
-		nullableString(event.KickMessageID),
-		nullableInt64(event.ChatroomID),
-		nullableInt64(event.ChannelID),
-		event.PayloadJSON,
-		event.MetadataJSON,
-		event.Status,
-		event.ReceivedAt.UTC(),
-		nullableTime(event.ProcessedAt),
-		nullableString(event.ErrorMessage),
-	); err != nil {
-		return fmt.Errorf("append raw event insert: %w", err)
+	for index := range events {
+		event := events[index]
+		if event.ID == "" {
+			event.ID = uuid.NewString()
+		}
+		if event.PayloadJSON == "" {
+			event.PayloadJSON = "{}"
+		}
+		if event.MetadataJSON == "" {
+			event.MetadataJSON = "{}"
+		}
+		if event.Status == "" {
+			event.Status = "pending"
+		}
+		if event.ReceivedAt.IsZero() {
+			event.ReceivedAt = time.Now().UTC()
+		}
+		if err := batch.Append(
+			event.ID,
+			event.ChannelSlug,
+			event.EventType,
+			event.EventName,
+			nullableString(event.KickMessageID),
+			nullableInt64(event.ChatroomID),
+			nullableInt64(event.ChannelID),
+			event.PayloadJSON,
+			event.MetadataJSON,
+			event.Status,
+			event.ReceivedAt.UTC(),
+			nullableTime(event.ProcessedAt),
+			nullableString(event.ErrorMessage),
+		); err != nil {
+			return fmt.Errorf("append raw event insert: %w", err)
+		}
 	}
 	if err := batch.Send(); err != nil {
 		return fmt.Errorf("send raw event insert: %w", err)
@@ -163,33 +172,69 @@ func (repo *RawEventRepository) AttemptCount(ctx context.Context, rawEventID str
 	return uint16(count), nil
 }
 
-func (repo *RawEventRepository) InsertAttempt(ctx context.Context, attempt domain.RawEventAttempt) error {
-	if attempt.ID == "" {
-		attempt.ID = uuid.NewString()
+func (repo *RawEventRepository) GetByID(ctx context.Context, rawEventID string) (domain.RawKickEvent, error) {
+	if rawEventID == "" {
+		return domain.RawKickEvent{}, fmt.Errorf("raw event id is required")
 	}
-	if attempt.Status == "" {
-		attempt.Status = "started"
+	row := repo.conn.QueryRow(
+		ctx,
+		`SELECT
+			e.id, e.channel_slug, e.event_type, e.event_name, ifNull(e.kick_message_id, ''),
+			ifNull(e.chatroom_id, 0), ifNull(e.channel_id, 0), e.payload_json, e.metadata_json, e.status,
+			ifNull(a.attempts, 0), e.received_at, e.processed_at, e.error_message
+		 FROM raw_kick_events AS e
+		 LEFT JOIN (
+			SELECT raw_event_id, max(attempt) AS attempts
+			FROM raw_event_attempts
+			GROUP BY raw_event_id
+		 ) AS a ON a.raw_event_id = e.id
+		 WHERE e.id = ?
+		 LIMIT 1`,
+		rawEventID,
+	)
+	event, err := scanRawKickEvent(row)
+	if err != nil {
+		return domain.RawKickEvent{}, fmt.Errorf("get raw event by id: %w", err)
 	}
-	if attempt.StartedAt.IsZero() {
-		attempt.StartedAt = time.Now().UTC()
-	}
+	return event, nil
+}
 
+func (repo *RawEventRepository) InsertAttempt(ctx context.Context, attempt domain.RawEventAttempt) error {
+	return repo.InsertAttemptsBatch(ctx, []domain.RawEventAttempt{attempt})
+}
+
+func (repo *RawEventRepository) InsertAttemptsBatch(ctx context.Context, attempts []domain.RawEventAttempt) error {
+	if len(attempts) == 0 {
+		return nil
+	}
 	batch, err := repo.conn.PrepareBatch(ctx, `INSERT INTO raw_event_attempts (
 		id, raw_event_id, attempt, status, error_message, started_at, finished_at
 	)`)
 	if err != nil {
 		return fmt.Errorf("prepare raw event attempt insert: %w", err)
 	}
-	if err := batch.Append(
-		attempt.ID,
-		attempt.RawEventID,
-		attempt.Attempt,
-		attempt.Status,
-		nullableString(attempt.ErrorMessage),
-		attempt.StartedAt.UTC(),
-		nullableTime(attempt.FinishedAt),
-	); err != nil {
-		return fmt.Errorf("append raw event attempt insert: %w", err)
+	for index := range attempts {
+		attempt := attempts[index]
+		if attempt.ID == "" {
+			attempt.ID = uuid.NewString()
+		}
+		if attempt.Status == "" {
+			attempt.Status = "started"
+		}
+		if attempt.StartedAt.IsZero() {
+			attempt.StartedAt = time.Now().UTC()
+		}
+		if err := batch.Append(
+			attempt.ID,
+			attempt.RawEventID,
+			attempt.Attempt,
+			attempt.Status,
+			nullableString(attempt.ErrorMessage),
+			attempt.StartedAt.UTC(),
+			nullableTime(attempt.FinishedAt),
+		); err != nil {
+			return fmt.Errorf("append raw event attempt insert: %w", err)
+		}
 	}
 	if err := batch.Send(); err != nil {
 		return fmt.Errorf("send raw event attempt insert: %w", err)

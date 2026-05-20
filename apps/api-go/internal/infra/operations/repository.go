@@ -3,6 +3,7 @@ package operations
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -82,23 +83,109 @@ func (repo *Repository) fillSQLiteSummary(ctx context.Context, summary *domain.O
 	}
 
 	var lastSeenAt string
+	var metadataJSON string
 	err = repo.sqliteDB.QueryRowContext(
 		ctx,
-		`SELECT last_seen_at FROM worker_heartbeats WHERE service_name = 'listener'`,
-	).Scan(&lastSeenAt)
+		`SELECT last_seen_at, metadata_json FROM worker_heartbeats WHERE service_name = 'listener'`,
+	).Scan(&lastSeenAt, &metadataJSON)
 	if err != nil && err != sql.ErrNoRows {
 		return fmt.Errorf("read listener heartbeat: %w", err)
 	}
 	if err == nil {
 		parsed := parseTime(lastSeenAt)
 		summary.Listener.LastSeenAt = parsed
+		summary.Listener.MetadataJSON = metadataJSON
 		if !parsed.IsZero() {
 			seconds := int64(time.Since(parsed).Seconds())
 			summary.Listener.SecondsSinceLastSeen = seconds
 			summary.Listener.IsFresh = seconds <= int64(repo.listenerStaleAfter)
 		}
+		if metadataJSON != "" {
+			applyIngestionMetadata(metadataJSON, &summary.Ingestion)
+		}
 	}
+
+	queueDepth, err := repo.queueDepth(ctx)
+	if err != nil {
+		return err
+	}
+	summary.Ingestion.QueueDepth = queueDepth
+
+	oldestAge, err := repo.oldestPendingAgeSeconds(ctx)
+	if err != nil {
+		return err
+	}
+	summary.Ingestion.OldestPendingAgeSeconds = oldestAge
+
 	return nil
+}
+
+func (repo *Repository) queueDepth(ctx context.Context) (int64, error) {
+	var count int64
+	if err := repo.sqliteDB.QueryRowContext(
+		ctx,
+		`SELECT COUNT(*) FROM raw_event_queue WHERE status IN ('pending', 'claimed')`,
+	).Scan(&count); err != nil {
+		return 0, fmt.Errorf("count raw_event_queue: %w", err)
+	}
+	return count, nil
+}
+
+func (repo *Repository) oldestPendingAgeSeconds(ctx context.Context) (int64, error) {
+	var enqueuedAt sql.NullString
+	if err := repo.sqliteDB.QueryRowContext(
+		ctx,
+		`SELECT MIN(enqueued_at) FROM raw_event_queue WHERE status IN ('pending', 'claimed')`,
+	).Scan(&enqueuedAt); err != nil {
+		return 0, fmt.Errorf("query oldest pending: %w", err)
+	}
+	if !enqueuedAt.Valid || enqueuedAt.String == "" {
+		return 0, nil
+	}
+	parsed := parseTime(enqueuedAt.String)
+	if parsed.IsZero() {
+		return 0, nil
+	}
+	age := int64(time.Since(parsed).Seconds())
+	if age < 0 {
+		return 0, nil
+	}
+	return age, nil
+}
+
+func applyIngestionMetadata(metadataJSON string, ingestion *domain.IngestionHealth) {
+	var raw map[string]any
+	if err := json.Unmarshal([]byte(metadataJSON), &raw); err != nil {
+		return
+	}
+	ingestion.WriteQueueDepth = readInt64(raw, "write_queue_depth")
+	ingestion.WriteQueueHighWater = readInt64(raw, "write_queue_high_water_mark")
+	ingestion.WriteDropCount = readInt64(raw, "write_drop_count")
+	ingestion.WriteFlushCount = readInt64(raw, "write_flush_count")
+	ingestion.LastFlushSize = readInt64(raw, "last_flush_size")
+	ingestion.LastFlushMillis = readInt64(raw, "last_flush_millis")
+	ingestion.ClickHouseFailures = readInt64(raw, "clickhouse_insert_failures")
+	ingestion.QueueEnqueueFailures = readInt64(raw, "queue_enqueue_failures")
+	if state, ok := raw["breaker_state"].(string); ok {
+		ingestion.BreakerState = state
+	}
+	ingestion.BreakerCurrentDelayMS = readInt64(raw, "breaker_current_delay_ms")
+}
+
+func readInt64(raw map[string]any, key string) int64 {
+	value, ok := raw[key]
+	if !ok {
+		return 0
+	}
+	switch typed := value.(type) {
+	case float64:
+		return int64(typed)
+	case int64:
+		return typed
+	case int:
+		return int64(typed)
+	}
+	return 0
 }
 
 func (repo *Repository) fillClickHouseSummary(ctx context.Context, summary *domain.OperationsSummary) error {

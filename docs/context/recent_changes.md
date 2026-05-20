@@ -4,6 +4,146 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Issue #9 phase 7: live load test completed and all acceptance criteria met.
+  - baseline run: 163,473 events at 2000 events/s over 60s (burst-factor 2, 5 channels)
+  - peak writer queue depth 24,356; all 302 flushes at batch size 500; peak flush latency 392ms
+  - 0 writer drops, 0 ClickHouse failures, 0 circuit breaker events
+  - 1 isolated sqlite_enqueue_failure (non-critical, claim release context timeout)
+  - all HTTP endpoints (`/health`, `/messages`, `/analytics/overview`) returned 200 during burst
+  - two WebSocket close 1006 events on real Kick Pusher (Docker DNS blip); listener reconnected
+    automatically; no ClickHouse DNS errors
+  - SQLite queue backlog drained to 0 within ~90s after burst ended
+  - external durable queue (RabbitMQ/NATS/Kafka) confirmed deferred: in-process pipeline
+    handles 2000 events/s sustained burst without drops or 500s
+  - PR `feat/issue-9-ingestion-batching` → `main` opened with load-test summary
+
+## Previously Latest
+
+- Issue #9 phase 7: synthetic ingestion load harness and operator runbook.
+  - new `apps/api-go/cmd/loadgen` command wires the real listener service with a synthetic
+    Pusher emitter that produces configurable events-per-second, supports a burst factor for
+    the second half of the run, seeds `loadgen-*` channels in SQLite, and reports buffered
+    writer stats periodically
+  - flags: `-events-per-second`, `-duration`, `-channels`, `-burst-factor`, `-report-every`
+  - new `docs/operations/load_test.md` documents prerequisites, run commands, observable
+    metrics, pass/fail thresholds, and cleanup queries
+  - README configuration block lists every new `LISTENER_RAW_EVENT_WRITE_*` and
+    `LISTENER_CLICKHOUSE_*` knob and links to the load-test runbook
+  - external durable queues (RabbitMQ/NATS/Kafka) remain deferred pending the live load run
+  - verification: `go build ./...`, `go test ./...`, `go vet ./...`,
+    `pnpm --filter @kick-logs/web test`, `pnpm --filter @kick-logs/web typecheck`,
+    `pnpm --filter @kick-logs/web lint`, `pnpm --filter @kick-logs/web build`,
+    `pnpm exec prettier --check docs/operations/ docs/tasks/`
+
+## Previously Latest
+
+- Issue #9 phase 6: ingestion metrics on admin operations summary.
+  - listener heartbeat metadata JSON now embeds buffered writer stats (queue depth,
+    high-water mark, drop count, flush count, last flush size + ms, ClickHouse failure count,
+    SQLite enqueue failure count) and circuit breaker state (state, current delay ms,
+    failures)
+  - operations repository reads SQLite `raw_event_queue` directly for live queue depth and
+    oldest pending age, then parses the heartbeat metadata to fill the new
+    `domain.IngestionHealth` block
+  - new HTTP `IngestionHealthResponse` is emitted under
+    `operations_summary.ingestion`
+  - frontend types include `IngestionHealth`; operations dashboard renders four new cards
+    (Queue Backlog, Writer Buffer, ClickHouse Breaker, Son Flush) and warning banners for an
+    open breaker or non-zero writer drop count
+  - tests cover the ingestion cards and the breaker-open notice
+  - verification: `go build ./...`, `go test ./...`, `go vet ./...`,
+    `pnpm --filter @kick-logs/web test`, `pnpm --filter @kick-logs/web typecheck`,
+    `pnpm --filter @kick-logs/web lint`
+
+## Earlier Phase 5 Notes
+
+- Issue #9 phase 5: bounded backoff and shared ClickHouse circuit breaker.
+  - new `Backoff` helper produces non-decreasing delays with full jitter, capped at max
+  - new `CircuitBreaker` opens after a configurable consecutive failure threshold and holds
+    the open window for the current backoff delay; the next caller probes ClickHouse and the
+    breaker closes on success or re-opens with a longer delay on failure
+  - one breaker instance is created in `NewService` and shared by the buffered writer flush
+    and the worker loop so opening it in one path pauses the other
+  - workers call `breaker.Wait(ctx)` before each tick and record success/failure based on the
+    tick outcome; the buffered writer wraps each ClickHouse batch insert attempt
+  - env knobs: `LISTENER_CLICKHOUSE_BACKOFF_INITIAL_MS` (1000),
+    `LISTENER_CLICKHOUSE_BACKOFF_MAX_MS` (30000),
+    `LISTENER_CLICKHOUSE_BACKOFF_MULTIPLIER` (2), and
+    `LISTENER_CLICKHOUSE_BREAKER_FAILURE_THRESHOLD` (5)
+  - added unit tests for backoff growth, reset, breaker open-after-threshold,
+    probe-success-closes, probe-failure-re-opens-with-longer-delay,
+    context-cancellation, and shared-breaker waiting
+  - verification: `go build ./...`, `go test ./...`, `go vet ./...`
+
+## Earlier Phase 4 Notes
+
+- Issue #9 phase 4: worker batch normalization output.
+  - worker tick claims all pending queue rows, loads each raw payload from ClickHouse by id,
+    normalizes the message in memory, then writes the entire tick as one
+    `InsertMessagesBatch` and one `InsertAttemptsBatch`
+  - tick-internal dedupe via `seenKickMessageIDs` prevents two queue rows with the same
+    `kick_message_id` from inserting a duplicate visible message in the same batch
+  - ClickHouse `InsertMessagesBatch` failure releases every claimed queue row back to pending
+    so the next tick retries the full set
+  - attempts batch is best-effort: a failure logs and the worker continues marking the queue
+    rows so audit gaps recover on the next attempt
+  - removed the per-row `markRawEventProcessed`/`markRawEventFailed`/`recordAttempt` helpers;
+    `prepareMessage` is now a pure normalization function used by the worker
+  - listener service tests cover one-batch-per-tick, mixed processed/failed in a single tick,
+    and full claim-release on ClickHouse batch failure
+  - verification: `go build ./...`, `go test ./...`, `go vet ./...`
+
+## Earlier Phase Notes
+
+- Issue #9 phase 3: buffered websocket raw-event writer.
+  - new `bufferedRawWriter` accepts raw events from the websocket callback through an
+    in-memory channel and flushes batches to ClickHouse via `InsertEventsBatch`, then enqueues
+    the same batch into SQLite `raw_event_queue`
+  - flush triggers: batch size threshold, flush interval, or shutdown drain
+  - shutdown drains the buffer before returning so context cancellation does not lose events
+  - in-memory queue full drops the oldest event with a warning and a counter; the writer
+    still drops the incoming event when both the channel and the eviction attempt are full
+  - ClickHouse batch failures retry with bounded exponential delay up to
+    `LISTENER_RAW_EVENT_WRITE_MAX_RETRIES`; the batch is dropped after all retries fail and a
+    drop counter is incremented
+  - SQLite enqueue failures after a successful ClickHouse archive retry indefinitely so an
+    archived event always lands in the queue
+  - added env vars `LISTENER_RAW_EVENT_WRITE_BATCH_SIZE`,
+    `LISTENER_RAW_EVENT_WRITE_FLUSH_INTERVAL_MS`, `LISTENER_RAW_EVENT_WRITE_QUEUE_SIZE`, and
+    `LISTENER_RAW_EVENT_WRITE_MAX_RETRIES` with defaults 500, 500ms, 50000, 10
+  - `.env.example` exposes the new knobs
+  - `Service.WriterStats()` returns queue depth, high-water mark, drop count, flush count,
+    last flush size, last flush nanos, ClickHouse failure count, and SQLite enqueue failure
+    count for future operations dashboard fields
+  - listener service `RunForever` now starts the writer goroutine before bootstrap; tests
+    short-circuit the writer to keep the synchronous insert/enqueue path under coverage
+  - verification: `go build ./...`, `go test ./...`, `go vet ./...`, `pnpm exec prettier
+--check docs/tasks/`
+
+## Older Phase Notes
+
+- Issue #9 phase 1: moved the raw-event work queue out of ClickHouse into SQLite.
+  - added migration v4 creating `raw_event_queue` with status, attempts, claim ownership,
+    enqueued_at, last_error, and indexes for pending scan and stale-claim recovery
+  - added `domain.RawEventQueueItem` plus status constants and `ports.RawEventQueueRepository`
+  - added SQLite `RawEventQueueRepository` covering enqueue, batch enqueue, list pending in
+    FIFO order, claim/release, mark processed/failed with max-attempts exhaustion, count
+    pending, oldest pending age, stale-claim recovery, and lookup by id
+  - added `RawEventRepository.GetByID` on ClickHouse so workers can load the raw payload by id
+  - listener websocket callback now enqueues the queue row alongside the ClickHouse archive
+    insert; failure to enqueue is returned as a callback error
+  - worker tick now lists, claims, and counts pending work from SQLite, removing the heavy
+    `raw_event_attempts` GROUP BY + LEFT JOIN ClickHouse query from the hot path
+  - `RawEventClaimRepository` is no longer wired into the listener because the queue
+    repository fully covers the claim contract
+  - listener bootstrap backfills any unprocessed ClickHouse raw events into the queue and runs
+    a stale-claim recovery sweep; a periodic background loop repeats the sweep
+  - listener tests now exercise the queue path with a faithful in-memory fake
+  - verification: `go build ./...`, `go test ./...`, `go vet ./...`, `pnpm exec prettier
+--check docs/tasks/`
+
+## Earlier Latest
+
 - Finalized Go + ClickHouse cutover cleanup:
   - archived the completed Go rewrite implementation plan, task files, and API contract inventory
     under `docs/archive/go_rewrite/`

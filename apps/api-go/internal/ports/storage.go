@@ -26,6 +26,7 @@ type FollowedChannelRepository interface {
 
 type MessageRepository interface {
 	Insert(ctx context.Context, message domain.ChatMessage) error
+	InsertMessagesBatch(ctx context.Context, messages []domain.ChatMessage) error
 	ExistsByKickMessageID(ctx context.Context, kickMessageID string) (bool, error)
 	Search(ctx context.Context, filter domain.MessageSearchFilter) ([]domain.ChatMessage, error)
 }
@@ -61,16 +62,33 @@ type AnalyticsRepository interface {
 
 type RawEventRepository interface {
 	InsertEvent(ctx context.Context, event domain.RawKickEvent) error
+	InsertEventsBatch(ctx context.Context, events []domain.RawKickEvent) error
 	InsertAttempt(ctx context.Context, attempt domain.RawEventAttempt) error
+	InsertAttemptsBatch(ctx context.Context, attempts []domain.RawEventAttempt) error
 	ListUnprocessed(ctx context.Context, limit uint64, maxAttempts uint16) ([]domain.RawKickEvent, error)
 	CountUnprocessed(ctx context.Context, maxAttempts uint16) (int64, error)
 	AttemptCount(ctx context.Context, rawEventID string) (uint16, error)
+	GetByID(ctx context.Context, rawEventID string) (domain.RawKickEvent, error)
 }
 
 type RawEventClaimRepository interface {
 	TryClaim(ctx context.Context, rawEventID string, workerID string, leaseDuration time.Duration) (bool, error)
 	MarkCompleted(ctx context.Context, rawEventID string, workerID string) error
 	Release(ctx context.Context, rawEventID string, workerID string) error
+}
+
+type RawEventQueueRepository interface {
+	Enqueue(ctx context.Context, item domain.RawEventQueueItem) error
+	EnqueueBatch(ctx context.Context, items []domain.RawEventQueueItem) error
+	ListPending(ctx context.Context, limit uint64, maxAttempts uint16) ([]domain.RawEventQueueItem, error)
+	Claim(ctx context.Context, rawEventID string, workerID string) (bool, error)
+	Release(ctx context.Context, rawEventID string, workerID string) error
+	MarkProcessed(ctx context.Context, rawEventID string) error
+	MarkFailed(ctx context.Context, rawEventID string, errMessage string, maxAttempts uint16) error
+	CountPending(ctx context.Context, maxAttempts uint16) (int64, error)
+	OldestPendingAge(ctx context.Context, maxAttempts uint16) (time.Duration, error)
+	RecoverStaleClaims(ctx context.Context, olderThan time.Duration) (int64, error)
+	GetByID(ctx context.Context, rawEventID string) (domain.RawEventQueueItem, error)
 }
 
 type SenderProfileRepository interface {

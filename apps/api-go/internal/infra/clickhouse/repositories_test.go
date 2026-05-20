@@ -342,4 +342,134 @@ func TestClickHouseMigrationsAndRepositories(t *testing.T) {
 	if len(sizes) == 0 {
 		t.Fatal("stats.TableSizes() returned no rows")
 	}
+
+	if err := rawRepo.InsertEventsBatch(ctx, nil); err != nil {
+		t.Fatalf("rawRepo.InsertEventsBatch(empty) error = %v", err)
+	}
+	if err := messageRepo.InsertMessagesBatch(ctx, nil); err != nil {
+		t.Fatalf("messageRepo.InsertMessagesBatch(empty) error = %v", err)
+	}
+	if err := rawRepo.InsertAttemptsBatch(ctx, nil); err != nil {
+		t.Fatalf("rawRepo.InsertAttemptsBatch(empty) error = %v", err)
+	}
+
+	batchEvents := []domain.RawKickEvent{
+		{
+			ID:            "raw-batch-1-" + suffix,
+			ChannelSlug:   "hype",
+			EventType:     "pusher",
+			EventName:     "App\\Events\\ChatMessageEvent",
+			KickMessageID: "raw-batch-1-" + suffix,
+			ChatroomID:    456,
+			ChannelID:     123,
+			PayloadJSON:   `{"event":"App\\Events\\ChatMessageEvent","seq":1}`,
+			Status:        "pending",
+			ReceivedAt:    time.Now().UTC(),
+		},
+		{
+			ID:            "raw-batch-2-" + suffix,
+			ChannelSlug:   "hype",
+			EventType:     "pusher",
+			EventName:     "App\\Events\\ChatMessageEvent",
+			KickMessageID: "raw-batch-2-" + suffix,
+			ChatroomID:    456,
+			ChannelID:     123,
+			PayloadJSON:   `{"event":"App\\Events\\ChatMessageEvent","seq":2}`,
+			Status:        "pending",
+			ReceivedAt:    time.Now().UTC(),
+		},
+		{
+			ID:            "raw-batch-3-" + suffix,
+			ChannelSlug:   "hype",
+			EventType:     "pusher",
+			EventName:     "App\\Events\\ChatMessageEvent",
+			KickMessageID: "raw-batch-3-" + suffix,
+			ChatroomID:    456,
+			ChannelID:     123,
+			PayloadJSON:   `{"event":"App\\Events\\ChatMessageEvent","seq":3}`,
+			Status:        "pending",
+			ReceivedAt:    time.Now().UTC(),
+		},
+	}
+	if err := rawRepo.InsertEventsBatch(ctx, batchEvents); err != nil {
+		t.Fatalf("rawRepo.InsertEventsBatch() error = %v", err)
+	}
+	for _, event := range batchEvents {
+		fetched, err := rawRepo.GetByID(ctx, event.ID)
+		if err != nil {
+			t.Fatalf("rawRepo.GetByID(%s) error = %v", event.ID, err)
+		}
+		if fetched.ID != event.ID || fetched.KickMessageID != event.KickMessageID {
+			t.Fatalf("batch event mismatch = %#v", fetched)
+		}
+	}
+
+	batchAttempts := []domain.RawEventAttempt{
+		{ID: "attempt-batch-1-" + suffix, RawEventID: batchEvents[0].ID, Attempt: 1, Status: "processed", StartedAt: time.Now().UTC(), FinishedAt: time.Now().UTC()},
+		{ID: "attempt-batch-2-" + suffix, RawEventID: batchEvents[1].ID, Attempt: 1, Status: "processed", StartedAt: time.Now().UTC(), FinishedAt: time.Now().UTC()},
+		{ID: "attempt-batch-3-" + suffix, RawEventID: batchEvents[2].ID, Attempt: 1, Status: "failed", StartedAt: time.Now().UTC(), FinishedAt: time.Now().UTC()},
+	}
+	if err := rawRepo.InsertAttemptsBatch(ctx, batchAttempts); err != nil {
+		t.Fatalf("rawRepo.InsertAttemptsBatch() error = %v", err)
+	}
+	for _, attempt := range batchAttempts {
+		count, err := rawRepo.AttemptCount(ctx, attempt.RawEventID)
+		if err != nil {
+			t.Fatalf("rawRepo.AttemptCount(%s) error = %v", attempt.RawEventID, err)
+		}
+		if count != 1 {
+			t.Fatalf("batch attempt count = %d for %s", count, attempt.RawEventID)
+		}
+	}
+
+	batchMessages := []domain.ChatMessage{
+		{
+			ID:                 baseID + 100,
+			KickMessageID:      "kick-batch-1-" + suffix,
+			ChannelKickID:      123,
+			ChannelChatroomID:  456,
+			ChannelSlug:        "hype-batch-" + suffix,
+			ChannelDisplayName: "Hype Batch " + suffix,
+			ChannelPublicURL:   "https://kick.com/hype-batch-" + suffix,
+			SenderKickID:       321,
+			SenderUsername:     "batch_user_" + suffix,
+			SenderSlug:         "batch-user-" + suffix,
+			SenderPublicURL:    "https://kick.com/batch-user-" + suffix,
+			MessageType:        "message",
+			Content:            "batch needle 1 " + suffix,
+			RawPayloadJSON:     `{"type":"ChatMessageEvent"}`,
+			MessageCreatedAt:   baseTime.Add(5 * time.Minute),
+		},
+		{
+			ID:                 baseID + 101,
+			KickMessageID:      "kick-batch-2-" + suffix,
+			ChannelKickID:      123,
+			ChannelChatroomID:  456,
+			ChannelSlug:        "hype-batch-" + suffix,
+			ChannelDisplayName: "Hype Batch " + suffix,
+			ChannelPublicURL:   "https://kick.com/hype-batch-" + suffix,
+			SenderKickID:       321,
+			SenderUsername:     "batch_user_" + suffix,
+			SenderSlug:         "batch-user-" + suffix,
+			SenderPublicURL:    "https://kick.com/batch-user-" + suffix,
+			MessageType:        "message",
+			Content:            "batch needle 2 " + suffix,
+			RawPayloadJSON:     `{"type":"ChatMessageEvent"}`,
+			MessageCreatedAt:   baseTime.Add(6 * time.Minute),
+		},
+	}
+	if err := messageRepo.InsertMessagesBatch(ctx, batchMessages); err != nil {
+		t.Fatalf("messageRepo.InsertMessagesBatch() error = %v", err)
+	}
+	batchFound, err := messageRepo.Search(ctx, domain.MessageSearchFilter{
+		Sender: batchMessages[0].SenderUsername,
+		Query:  "batch needle",
+		Limit:  10,
+	})
+	if err != nil {
+		t.Fatalf("messageRepo.Search(batch) error = %v", err)
+	}
+	if len(batchFound) != 2 {
+		t.Fatalf("batch messages len = %d", len(batchFound))
+	}
 }

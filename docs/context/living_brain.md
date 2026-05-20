@@ -5,8 +5,9 @@ implementation details, or working assumptions change.
 
 ## Current State
 
-- Branch: `feat/go-clickhouse-rewrite`.
-- Active plan status: no active feature plan. Completed plans are archived under `docs/archive/`.
+- Branch: `feat/issue-9-ingestion-batching`.
+- Active plan: GitHub issue #9, stabilize high-volume Kick chat ingestion. Plan lives in
+  `docs/implementation_plan.md`; phase task files live under `docs/tasks/issue_09_*`.
 - Default runtime is:
   - `clickhouse`
   - `api` built from `apps/api-go`
@@ -34,6 +35,7 @@ implementation details, or working assumptions change.
   - sender profile cache
   - retention settings
   - worker heartbeats
+  - raw-event work queue (`raw_event_queue`)
   - schema/data migration metadata
 - ClickHouse stores data-plane rows:
   - chat messages
@@ -96,11 +98,36 @@ admin/super-admin role.
 - The listener loads enabled channels from SQLite.
 - It resolves missing Kick metadata before subscription.
 - It subscribes to `chatrooms.{chatroom_id}.v2` plus channel-level streams.
-- Once a Kick websocket chat event reaches the process, persist the raw event to ClickHouse before
-  normalization, sender enrichment, or visible message insertion.
+- Once a Kick websocket chat event reaches the process, submit it to the in-memory buffered
+  writer. The writer flushes batches to ClickHouse archive using `InsertEventsBatch` and then
+  enqueues the same batch into SQLite `raw_event_queue` in one logical step before treating
+  the batch as acknowledged. Buffered writes flush on `LISTENER_RAW_EVENT_WRITE_BATCH_SIZE`
+  events or `LISTENER_RAW_EVENT_WRITE_FLUSH_INTERVAL_MS` whichever first. Phase 1 moved the
+  work queue out of ClickHouse so the worker hot path no longer runs heavy
+  `raw_event_attempts` JOIN queries.
+- Workers list pending rows and claim them from SQLite, then load each raw payload from
+  ClickHouse by id, normalize in memory, and write the entire tick's chat messages and
+  raw-event attempts as one batch each. ClickHouse insert failure releases every claim back to
+  pending and the next tick retries.
+- A single `CircuitBreaker` is shared by the buffered writer and the worker loop. Consecutive
+  ClickHouse failures open the breaker; while open, every listener goroutine that calls
+  `Wait` sleeps for the current backoff window before the next attempt. Successful operations
+  close the breaker and reset the backoff.
+- Listener heartbeat metadata JSON carries buffered-writer stats and circuit-breaker state so
+  the admin operations summary can surface ingestion health (queue backlog, oldest pending
+  age, writer buffer depth, drops, flushes, ClickHouse insert failures, breaker state) without
+  any cross-process call into the listener.
+- Synthetic ingestion load harness lives at `apps/api-go/cmd/loadgen`. It seeds channels with
+  slugs `loadgen-*`, emits configurable events-per-second through the real listener service,
+  and reports buffered-writer stats plus emitted counts. The procedure is documented in
+  `docs/operations/load_test.md`. External durable queues are deferred until a live load run
+  shows the in-process pipeline is insufficient.
 - Raw-event processing is at-least-once and idempotent; visible messages dedupe by
   `kick_message_id`.
 - Listener heartbeat state is stored in SQLite `worker_heartbeats`.
+- At startup the listener backfills any unprocessed ClickHouse raw events into the queue and
+  resets stale `claimed` rows older than `RawEventProcessingTimeout` back to `pending`; a
+  background loop repeats the stale-claim sweep.
 - Channel changes should take effect through periodic reconnect/resync without manual restart.
 
 ## Search Behavior

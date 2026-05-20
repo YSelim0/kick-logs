@@ -83,6 +83,58 @@ describe("OperationsDashboard", () => {
 
     expect(await screen.findByText("API kapalı")).toBeInTheDocument();
   });
+
+  it("renders ingestion cards including queue backlog and breaker state", async () => {
+    operationsApiMocks.getOperationsSummary.mockResolvedValue(
+      summaryFixture({
+        ingestion: {
+          queue_depth: 1234,
+          oldest_pending_age_seconds: 90,
+          write_queue_depth: 50,
+          write_queue_high_water_mark: 500,
+          write_drop_count: 0,
+          write_flush_count: 12,
+          last_flush_size: 200,
+          last_flush_millis: 35,
+          clickhouse_insert_failures: 0,
+          queue_enqueue_failures: 0,
+          breaker_state: "closed",
+          breaker_current_delay_ms: 0
+        }
+      })
+    );
+
+    render(<OperationsDashboard />);
+
+    expect(await screen.findByText("1.234")).toBeInTheDocument();
+    expect(screen.getByText("Kapalı")).toBeInTheDocument();
+  });
+
+  it("warns when ClickHouse circuit breaker is open", async () => {
+    operationsApiMocks.getOperationsSummary.mockResolvedValue(
+      summaryFixture({
+        ingestion: {
+          queue_depth: 4000,
+          oldest_pending_age_seconds: 300,
+          write_queue_depth: 100,
+          write_queue_high_water_mark: 1000,
+          write_drop_count: 12,
+          write_flush_count: 50,
+          last_flush_size: 0,
+          last_flush_millis: 0,
+          clickhouse_insert_failures: 6,
+          queue_enqueue_failures: 0,
+          breaker_state: "open",
+          breaker_current_delay_ms: 5000
+        }
+      })
+    );
+
+    render(<OperationsDashboard />);
+
+    expect(await screen.findByText(/circuit breaker açık/i)).toBeInTheDocument();
+    expect(screen.getByText(/event düşürdü/i)).toBeInTheDocument();
+  });
 });
 
 function summaryFixture(overrides: Partial<OperationsSummary> = {}): OperationsSummary {
@@ -126,6 +178,20 @@ function summaryFixture(overrides: Partial<OperationsSummary> = {}): OperationsS
       is_fresh: true,
       stale_after_seconds: 45,
       seconds_since_last_seen: 5
+    },
+    ingestion: {
+      queue_depth: 0,
+      oldest_pending_age_seconds: 0,
+      write_queue_depth: 0,
+      write_queue_high_water_mark: 0,
+      write_drop_count: 0,
+      write_flush_count: 0,
+      last_flush_size: 0,
+      last_flush_millis: 0,
+      clickhouse_insert_failures: 0,
+      queue_enqueue_failures: 0,
+      breaker_state: "closed",
+      breaker_current_delay_ms: 0
     },
     ...overrides
   };

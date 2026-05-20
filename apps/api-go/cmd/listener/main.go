@@ -53,7 +53,7 @@ func main() {
 	service := listenerusecase.NewService(listenerusecase.Dependencies{
 		Channels:        sqliteinfra.NewFollowedChannelRepository(sqliteDB),
 		RawEvents:       clickhouseinfra.NewRawEventRepository(clickHouseConn),
-		RawEventClaims:  sqliteinfra.NewRawEventClaimRepository(sqliteDB),
+		Queue:           sqliteinfra.NewRawEventQueueRepository(sqliteDB),
 		Messages:        clickhouseinfra.NewMessageRepository(clickHouseConn),
 		Senders:         sqliteinfra.NewSenderProfileRepository(sqliteDB),
 		Heartbeats:      sqliteinfra.NewWorkerHeartbeatRepository(sqliteDB),
@@ -73,6 +73,14 @@ func main() {
 			ReconnectMaxDelay:         durationFromSeconds(cfg.ListenerReconnectMaxDelaySeconds),
 			ReconnectMultiplier:       cfg.ListenerReconnectMultiplier,
 			HeartbeatServiceName:      "listener",
+			WriteBatchSize:            cfg.ListenerRawEventWriteBatchSize,
+			WriteFlushInterval:        time.Duration(cfg.ListenerRawEventWriteFlushIntervalMS) * time.Millisecond,
+			WriteQueueSize:            cfg.ListenerRawEventWriteQueueSize,
+			WriteMaxRetries:           cfg.ListenerRawEventWriteMaxRetries,
+			ClickHouseBackoffInitial:  time.Duration(cfg.ListenerClickHouseBackoffInitialMS) * time.Millisecond,
+			ClickHouseBackoffMax:      time.Duration(cfg.ListenerClickHouseBackoffMaxMS) * time.Millisecond,
+			ClickHouseBackoffFactor:   cfg.ListenerClickHouseBackoffMultiplier,
+			ClickHouseBreakerThresh:   cfg.ListenerClickHouseBreakerThreshold,
 		},
 	})
 

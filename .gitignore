@@ -26,6 +26,7 @@ apps/api-go/coverage.out
 Thumbs.db
 .idea/
 .vscode/
+.claude/
 
 *.sqlite
 *.sqlite3

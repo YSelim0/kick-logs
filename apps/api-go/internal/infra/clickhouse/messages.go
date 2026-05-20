@@ -19,7 +19,13 @@ func NewMessageRepository(conn driver.Conn) *MessageRepository {
 }
 
 func (repo *MessageRepository) Insert(ctx context.Context, message domain.ChatMessage) error {
-	normalizeMessage(&message)
+	return repo.InsertMessagesBatch(ctx, []domain.ChatMessage{message})
+}
+
+func (repo *MessageRepository) InsertMessagesBatch(ctx context.Context, messages []domain.ChatMessage) error {
+	if len(messages) == 0 {
+		return nil
+	}
 
 	batch, err := repo.conn.PrepareBatch(ctx, `INSERT INTO chat_messages (
 		id, kick_message_id, channel_id, channel_kick_id, channel_chatroom_id, channel_slug,
@@ -36,49 +42,53 @@ func (repo *MessageRepository) Insert(ctx context.Context, message domain.ChatMe
 		return fmt.Errorf("prepare chat message insert: %w", err)
 	}
 
-	emoteIDs, emoteNames, emoteTokens, emoteImageURLs := splitEmotes(message.Emotes)
-	if err := batch.Append(
-		message.ID,
-		message.KickMessageID,
-		nullableInt64(message.ChannelID),
-		nullableInt64(message.ChannelKickID),
-		nullableInt64(message.ChannelChatroomID),
-		message.ChannelSlug,
-		strings.ToLower(message.ChannelSlug),
-		message.ChannelDisplayName,
-		strings.ToLower(message.ChannelDisplayName),
-		nullableString(message.ChannelProfileImageURL),
-		nullableString(message.ChannelBannerImageURL),
-		message.ChannelPublicURL,
-		nullableInt64(message.SenderID),
-		nullableInt64(message.SenderKickID),
-		message.SenderUsername,
-		strings.ToLower(message.SenderUsername),
-		message.SenderSlug,
-		strings.ToLower(message.SenderSlug),
-		nullableString(message.SenderDisplayColor),
-		nullableString(message.SenderProfileImageURL),
-		message.SenderPublicURL,
-		message.SenderBadgesJSON,
-		message.MessageType,
-		message.Content,
-		strings.ToLower(message.Content),
-		uint16(len(message.Emotes)),
-		emoteIDs,
-		emoteNames,
-		emoteTokens,
-		emoteImageURLs,
-		nullableString(message.ReplyToSender),
-		nullableString(strings.ToLower(message.ReplyToSender)),
-		nullableString(message.ReplyToContent),
-		nullableString(message.ReplyToMessageID),
-		nullableString(message.ThreadParentID),
-		message.ReplyMetadataJSON,
-		message.RawPayloadJSON,
-		message.MessageCreatedAt,
-		message.IngestedAt,
-	); err != nil {
-		return fmt.Errorf("append chat message insert: %w", err)
+	for index := range messages {
+		message := messages[index]
+		normalizeMessage(&message)
+		emoteIDs, emoteNames, emoteTokens, emoteImageURLs := splitEmotes(message.Emotes)
+		if err := batch.Append(
+			message.ID,
+			message.KickMessageID,
+			nullableInt64(message.ChannelID),
+			nullableInt64(message.ChannelKickID),
+			nullableInt64(message.ChannelChatroomID),
+			message.ChannelSlug,
+			strings.ToLower(message.ChannelSlug),
+			message.ChannelDisplayName,
+			strings.ToLower(message.ChannelDisplayName),
+			nullableString(message.ChannelProfileImageURL),
+			nullableString(message.ChannelBannerImageURL),
+			message.ChannelPublicURL,
+			nullableInt64(message.SenderID),
+			nullableInt64(message.SenderKickID),
+			message.SenderUsername,
+			strings.ToLower(message.SenderUsername),
+			message.SenderSlug,
+			strings.ToLower(message.SenderSlug),
+			nullableString(message.SenderDisplayColor),
+			nullableString(message.SenderProfileImageURL),
+			message.SenderPublicURL,
+			message.SenderBadgesJSON,
+			message.MessageType,
+			message.Content,
+			strings.ToLower(message.Content),
+			uint16(len(message.Emotes)),
+			emoteIDs,
+			emoteNames,
+			emoteTokens,
+			emoteImageURLs,
+			nullableString(message.ReplyToSender),
+			nullableString(strings.ToLower(message.ReplyToSender)),
+			nullableString(message.ReplyToContent),
+			nullableString(message.ReplyToMessageID),
+			nullableString(message.ThreadParentID),
+			message.ReplyMetadataJSON,
+			message.RawPayloadJSON,
+			message.MessageCreatedAt,
+			message.IngestedAt,
+		); err != nil {
+			return fmt.Errorf("append chat message insert: %w", err)
+		}
 	}
 	if err := batch.Send(); err != nil {
 		return fmt.Errorf("send chat message insert: %w", err)

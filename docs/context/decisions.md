@@ -113,6 +113,73 @@
   underscores, but profile routes convert `_` to `-`; backend profile/search lookups accept both
   forms so existing underscore-stored data keeps working.
 
+## 2026-05-20
+
+- Issue #9 phase 7 ships the synthetic ingestion load harness at `apps/api-go/cmd/loadgen` and
+  a runbook at `docs/operations/load_test.md`. The harness reuses the production listener
+  service wired against the real SQLite/ClickHouse stack, but replaces the Pusher client with a
+  deterministic emitter, so it exercises buffered writer + worker batch + breaker on the live
+  ingestion path. External durable queues (RabbitMQ/NATS/Kafka) remain explicitly deferred
+  until the live load run confirms in-process changes are insufficient.
+- Issue #9 phase 6 surfaces ingestion health on the admin operations summary. The listener
+  heartbeat now embeds buffered-writer stats and circuit-breaker state in its metadata JSON; the
+  API operations repository reads SQLite `raw_event_queue` for live queue depth and oldest
+  pending age, and parses the heartbeat metadata to populate the new `ingestion` block on
+  `GET /admin/operations/summary`. The `/admin` operations dashboard renders queue backlog,
+  writer buffer, ClickHouse breaker state, and last flush cards plus warnings for an open
+  breaker or non-zero writer drop count.
+- Issue #9 phase 5 wraps ClickHouse access in the listener with bounded exponential backoff and
+  a single shared `CircuitBreaker`. The breaker opens after a configurable consecutive failure
+  threshold and holds the open state for the current backoff delay before allowing a probe call.
+  All listener goroutines (buffered writer flush, worker batch insert) share the same breaker
+  so opening it in one path pauses the others.
+- Backoff defaults: 1s initial, 30s max, multiplier 2, full jitter (`d/2` to `3d/2`). Threshold
+  default: 5 consecutive failures. Env knobs: `LISTENER_CLICKHOUSE_BACKOFF_INITIAL_MS`,
+  `LISTENER_CLICKHOUSE_BACKOFF_MAX_MS`, `LISTENER_CLICKHOUSE_BACKOFF_MULTIPLIER`,
+  `LISTENER_CLICKHOUSE_BREAKER_FAILURE_THRESHOLD`.
+- Workers and the buffered writer call `breaker.Wait(ctx)` before each ClickHouse operation and
+  call `RecordSuccess`/`RecordFailure` after. The worker also calls `Wait` before claiming and
+  reading the queue, so the entire worker loop honors the breaker delay during an outage.
+- Issue #9 phase 4 batches worker output writes. A single worker tick now claims pending queue
+  rows, loads raw payloads through `RawEventRepository.GetByID`, normalizes them in memory, then
+  writes one `InsertMessagesBatch` and one `InsertAttemptsBatch` per tick. Successful items are
+  marked processed in the SQLite queue; failing items are marked failed with the cause.
+- Tick-internal dedupe keeps a `seenKickMessageIDs` set so two queue rows carrying the same
+  `kick_message_id` do not both insert a visible message in the same batch. ClickHouse
+  `ExistsByKickMessageID` continues to dedupe across ticks.
+- ClickHouse `InsertMessagesBatch` failure during a tick releases every claimed queue row back
+  to pending so the next tick retries the same set. The attempt batch insert is best-effort; a
+  failure logs an error but does not roll back the message batch because audit attempts are
+  recoverable on the next attempt.
+- Issue #9 phase 3 introduces a buffered websocket writer. The websocket callback now submits
+  raw events to an in-memory channel; a dedicated goroutine flushes batches to ClickHouse using
+  the phase 2 batch insert and then enqueues the same batch into the SQLite work queue. Batch
+  size, flush interval, in-memory queue size, and max retries are env-tunable via
+  `LISTENER_RAW_EVENT_WRITE_BATCH_SIZE` (default 500),
+  `LISTENER_RAW_EVENT_WRITE_FLUSH_INTERVAL_MS` (default 500),
+  `LISTENER_RAW_EVENT_WRITE_QUEUE_SIZE` (default 50000), and
+  `LISTENER_RAW_EVENT_WRITE_MAX_RETRIES` (default 10).
+- When the in-memory buffer is full the writer drops the oldest event, increments a counter,
+  and logs a warning. Phase 6 will surface drop counters through the operations dashboard.
+- ClickHouse batch failures retry with bounded exponential delay up to `MaxRetries`; the batch
+  is dropped with a metric counter only after all retries fail. SQLite enqueue failures after a
+  successful ClickHouse archive retry indefinitely until the SQLite queue accepts the rows so
+  archived events do not silently fall out of the work queue.
+- Issue #9 work moves the listener raw-event work queue out of ClickHouse into a new SQLite
+  `raw_event_queue` table. ClickHouse keeps the archive role for `raw_kick_events`,
+  `chat_messages`, and `raw_event_attempts`; SQLite owns pending list, attempts, claim
+  ownership, and last error.
+- Worker pending count and listing are read from SQLite, removing the heavy
+  `raw_event_attempts` GROUP BY + LEFT JOIN query from the hot path.
+- The websocket callback enqueues into SQLite in the same logical unit as the ClickHouse archive
+  insert; failure to enqueue is treated as a callback error so the websocket does not silently
+  drop the event.
+- Workers fetch raw payloads from ClickHouse by id via `RawEventRepository.GetByID` and keep
+  using the existing `markRawEventProcessed`/`markRawEventFailed` helpers for per-row CH attempt
+  audit; batching of those writes is deferred to phase 4 of the issue #9 plan.
+- Stale `claimed` rows older than `RawEventProcessingTimeout` are reset to `pending` at startup
+  and on a periodic background loop, so workers that die mid-claim do not block the queue.
+
 ## 2026-05-16
 
 - Go rewrite work lives under `apps/api-go`; after cutover the Go API/listener is the default

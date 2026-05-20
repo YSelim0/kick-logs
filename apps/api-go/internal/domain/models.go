@@ -228,6 +228,28 @@ type RawEventClaim struct {
 	UpdatedAt      time.Time
 }
 
+const (
+	RawEventQueueStatusPending   = "pending"
+	RawEventQueueStatusClaimed   = "claimed"
+	RawEventQueueStatusProcessed = "processed"
+	RawEventQueueStatusFailed    = "failed"
+)
+
+type RawEventQueueItem struct {
+	RawEventID    string
+	ChannelID     int64
+	ChatroomID    int64
+	ChannelSlug   string
+	KickMessageID string
+	Status        string
+	Attempts      uint16
+	ClaimedBy     string
+	ClaimedAt     time.Time
+	EnqueuedAt    time.Time
+	LastError     string
+	UpdatedAt     time.Time
+}
+
 type TableSize struct {
 	Name        string
 	Rows        int64
@@ -265,6 +287,22 @@ type OperationsSummary struct {
 	StorageTables        []TableSize
 	Timestamps           OperationsTimestamps
 	Listener             ListenerHeartbeat
+	Ingestion            IngestionHealth
+}
+
+type IngestionHealth struct {
+	QueueDepth              int64
+	OldestPendingAgeSeconds int64
+	WriteQueueDepth         int64
+	WriteQueueHighWater     int64
+	WriteDropCount          int64
+	WriteFlushCount         int64
+	LastFlushSize           int64
+	LastFlushMillis         int64
+	ClickHouseFailures      int64
+	QueueEnqueueFailures    int64
+	BreakerState            string
+	BreakerCurrentDelayMS   int64
 }
 
 type RetentionSettings struct {

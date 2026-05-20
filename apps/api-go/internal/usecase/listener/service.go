@@ -18,7 +18,7 @@ import (
 type Service struct {
 	channels        ports.FollowedChannelRepository
 	rawEvents       ports.RawEventRepository
-	rawEventClaims  ports.RawEventClaimRepository
+	queue           ports.RawEventQueueRepository
 	messages        ports.MessageRepository
 	senders         ports.SenderProfileRepository
 	heartbeats      ports.WorkerHeartbeatRepository
@@ -28,6 +28,8 @@ type Service struct {
 	parser          EventParser
 	logger          *slog.Logger
 	config          ServiceConfig
+	writer          *bufferedRawWriter
+	breaker         *CircuitBreaker
 }
 
 type ServiceConfig struct {
@@ -42,12 +44,20 @@ type ServiceConfig struct {
 	ReconnectMaxDelay         time.Duration
 	ReconnectMultiplier       float64
 	HeartbeatServiceName      string
+	WriteBatchSize            int
+	WriteFlushInterval        time.Duration
+	WriteQueueSize            int
+	WriteMaxRetries           int
+	ClickHouseBackoffInitial  time.Duration
+	ClickHouseBackoffMax      time.Duration
+	ClickHouseBackoffFactor   float64
+	ClickHouseBreakerThresh   int
 }
 
 type Dependencies struct {
 	Channels        ports.FollowedChannelRepository
 	RawEvents       ports.RawEventRepository
-	RawEventClaims  ports.RawEventClaimRepository
+	Queue           ports.RawEventQueueRepository
 	Messages        ports.MessageRepository
 	Senders         ports.SenderProfileRepository
 	Heartbeats      ports.WorkerHeartbeatRepository
@@ -73,10 +83,16 @@ func NewService(deps Dependencies) *Service {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &Service{
+	breaker := NewCircuitBreaker(
+		"clickhouse",
+		cfg.ClickHouseBreakerThresh,
+		NewBackoff(cfg.ClickHouseBackoffInitial, cfg.ClickHouseBackoffMax, cfg.ClickHouseBackoffFactor),
+		logger,
+	)
+	service := &Service{
 		channels:        deps.Channels,
 		rawEvents:       deps.RawEvents,
-		rawEventClaims:  deps.RawEventClaims,
+		queue:           deps.Queue,
 		messages:        deps.Messages,
 		senders:         deps.Senders,
 		heartbeats:      deps.Heartbeats,
@@ -86,14 +102,40 @@ func NewService(deps Dependencies) *Service {
 		parser:          NewEventParser(),
 		logger:          logger,
 		config:          cfg,
+		breaker:         breaker,
 	}
+	if deps.RawEvents != nil && deps.Queue != nil {
+		service.writer = newBufferedRawWriter(BufferedWriterConfig{
+			BatchSize:     cfg.WriteBatchSize,
+			FlushInterval: cfg.WriteFlushInterval,
+			QueueSize:     cfg.WriteQueueSize,
+			MaxRetries:    cfg.WriteMaxRetries,
+		}, deps.RawEvents, deps.Queue, logger)
+		service.writer.breaker = breaker
+	}
+	return service
 }
 
 func (service *Service) RunForever(ctx context.Context) error {
+	if service.writer != nil {
+		go service.writer.Run(ctx)
+	}
+	if err := service.bootstrapQueue(ctx); err != nil && !errors.Is(err, context.Canceled) {
+		service.logger.Error("raw event queue bootstrap failed", "error", err)
+	}
+	if service.queue != nil {
+		if recovered, err := service.queue.RecoverStaleClaims(ctx, service.config.RawEventProcessingTimeout); err != nil {
+			service.logger.Error("raw event stale claim recovery failed", "error", err)
+		} else if recovered > 0 {
+			service.logger.Info("recovered stale raw event claims at startup", "count", recovered)
+		}
+	}
+
 	for workerID := 1; workerID <= service.config.WorkerCount; workerID++ {
 		go service.processRawEventsForever(ctx, workerID)
 	}
 	go service.recordHeartbeatForever(ctx)
+	go service.recoverStaleClaimsForever(ctx)
 
 	attempt := 1
 	for ctx.Err() == nil {
@@ -177,8 +219,24 @@ func (service *Service) RunOnce(ctx context.Context) (int, error) {
 			Status:        "pending",
 			ReceivedAt:    time.Now().UTC(),
 		}
-		if err := service.rawEvents.InsertEvent(ctx, rawEvent); err != nil {
-			return err
+		if service.writer != nil {
+			service.writer.Submit(rawEvent)
+		} else {
+			if err := service.rawEvents.InsertEvent(ctx, rawEvent); err != nil {
+				return err
+			}
+			if service.queue != nil {
+				if err := service.queue.Enqueue(ctx, domain.RawEventQueueItem{
+					RawEventID:    rawEvent.ID,
+					ChannelID:     rawEvent.ChannelID,
+					ChatroomID:    rawEvent.ChatroomID,
+					ChannelSlug:   rawEvent.ChannelSlug,
+					KickMessageID: rawEvent.KickMessageID,
+					EnqueuedAt:    rawEvent.ReceivedAt,
+				}); err != nil {
+					return fmt.Errorf("enqueue raw event: %w", err)
+				}
+			}
 		}
 		storedCount++
 		return nil
@@ -193,11 +251,19 @@ func (service *Service) ProcessRawEventsOnce(ctx context.Context) (RawEventProce
 	return service.processRawEventsOnce(ctx, 0)
 }
 
+type rawEventOutcome struct {
+	item       domain.RawEventQueueItem
+	processed  bool
+	message    domain.ChatMessage
+	hasMessage bool
+	failure    error
+}
+
 func (service *Service) processRawEventsOnce(ctx context.Context, workerID int) (RawEventProcessingResult, error) {
-	if service.rawEventClaims == nil {
-		return RawEventProcessingResult{}, errors.New("raw event claim repository is not configured")
+	if service.queue == nil {
+		return RawEventProcessingResult{}, errors.New("raw event queue repository is not configured")
 	}
-	events, err := service.rawEvents.ListUnprocessed(
+	items, err := service.queue.ListPending(
 		ctx,
 		uint64(service.config.RawEventBatchSize),
 		service.config.RawEventMaxAttempts,
@@ -207,49 +273,114 @@ func (service *Service) processRawEventsOnce(ctx context.Context, workerID int) 
 	}
 
 	result := RawEventProcessingResult{}
-	seenRawEventIDs := make(map[string]bool, len(events))
-	for _, rawEvent := range events {
-		if seenRawEventIDs[rawEvent.ID] {
-			continue
-		}
-		seenRawEventIDs[rawEvent.ID] = true
-		if rawEvent.Attempts >= service.config.RawEventMaxAttempts {
-			continue
-		}
-		claimWorkerID := service.rawEventClaimWorkerID(workerID)
-		claimed, err := service.rawEventClaims.TryClaim(
-			ctx,
-			rawEvent.ID,
-			claimWorkerID,
-			service.config.RawEventProcessingTimeout,
-		)
+	claimWorkerID := service.rawEventClaimWorkerID(workerID)
+
+	claimed := make([]domain.RawEventQueueItem, 0, len(items))
+	for _, item := range items {
+		ok, err := service.queue.Claim(ctx, item.RawEventID, claimWorkerID)
 		if err != nil {
+			service.releaseClaims(ctx, claimed, claimWorkerID)
 			return RawEventProcessingResult{}, err
 		}
-		if !claimed {
+		if !ok {
 			continue
 		}
-		result.Claimed++
-		if err := service.processRawEvent(ctx, rawEvent); err != nil {
-			result.Failed++
-			if releaseErr := service.rawEventClaims.Release(ctx, rawEvent.ID, claimWorkerID); releaseErr != nil {
-				service.logger.Error("failed to release raw Kick event claim", "raw_event_id", rawEvent.ID, "error", releaseErr)
-			}
-			service.logger.Error("Raw Kick event processing failed", "raw_event_id", rawEvent.ID, "error", err)
+		claimed = append(claimed, item)
+	}
+	result.Claimed = len(claimed)
+
+	outcomes := make([]rawEventOutcome, 0, len(claimed))
+	messages := make([]domain.ChatMessage, 0, len(claimed))
+	attempts := make([]domain.RawEventAttempt, 0, len(claimed))
+	seenKickMessageIDs := make(map[string]bool, len(claimed))
+	for _, item := range claimed {
+		outcome := rawEventOutcome{item: item}
+		rawEvent, err := service.rawEvents.GetByID(ctx, item.RawEventID)
+		if err != nil {
+			outcome.failure = fmt.Errorf("load raw event: %w", err)
+			outcomes = append(outcomes, outcome)
+			attempts = append(attempts, buildAttempt(item, "failed", outcome.failure))
 			continue
 		}
-		if err := service.rawEventClaims.MarkCompleted(ctx, rawEvent.ID, claimWorkerID); err != nil {
-			return RawEventProcessingResult{}, err
+		message, alreadyExists, normErr := service.prepareMessage(ctx, rawEvent)
+		if normErr != nil {
+			outcome.failure = normErr
+			outcomes = append(outcomes, outcome)
+			attempts = append(attempts, buildAttempt(item, "failed", normErr))
+			continue
 		}
-		result.Processed++
+		outcome.processed = true
+		if !alreadyExists && !seenKickMessageIDs[message.KickMessageID] {
+			seenKickMessageIDs[message.KickMessageID] = true
+			outcome.message = message
+			outcome.hasMessage = true
+			messages = append(messages, message)
+		}
+		outcomes = append(outcomes, outcome)
+		attempts = append(attempts, buildAttempt(item, "processed", nil))
 	}
 
-	pendingCount, err := service.rawEvents.CountUnprocessed(ctx, service.config.RawEventMaxAttempts)
+	if len(messages) > 0 {
+		if err := service.messages.InsertMessagesBatch(ctx, messages); err != nil {
+			service.releaseClaims(ctx, claimed, claimWorkerID)
+			return RawEventProcessingResult{}, fmt.Errorf("insert chat messages batch: %w", err)
+		}
+	}
+	if len(attempts) > 0 {
+		if err := service.rawEvents.InsertAttemptsBatch(ctx, attempts); err != nil {
+			service.logger.Error("raw event attempts batch insert failed", "batch_size", len(attempts), "error", err)
+		}
+	}
+
+	for _, outcome := range outcomes {
+		if outcome.processed {
+			if err := service.queue.MarkProcessed(ctx, outcome.item.RawEventID); err != nil {
+				service.logger.Error("failed to mark queue item processed", "raw_event_id", outcome.item.RawEventID, "error", err)
+				continue
+			}
+			result.Processed++
+		} else {
+			message := ""
+			if outcome.failure != nil {
+				message = outcome.failure.Error()
+			}
+			if err := service.queue.MarkFailed(ctx, outcome.item.RawEventID, message, service.config.RawEventMaxAttempts); err != nil {
+				service.logger.Error("failed to mark queue item failed", "raw_event_id", outcome.item.RawEventID, "error", err)
+				continue
+			}
+			result.Failed++
+			service.logger.Error("raw Kick event processing failed", "raw_event_id", outcome.item.RawEventID, "error", outcome.failure)
+		}
+	}
+
+	pendingCount, err := service.queue.CountPending(ctx, service.config.RawEventMaxAttempts)
 	if err != nil {
 		return RawEventProcessingResult{}, err
 	}
 	result.PendingCount = pendingCount
 	return result, nil
+}
+
+func (service *Service) releaseClaims(ctx context.Context, items []domain.RawEventQueueItem, workerID string) {
+	for _, item := range items {
+		if err := service.queue.Release(ctx, item.RawEventID, workerID); err != nil {
+			service.logger.Error("failed to release queue claim", "raw_event_id", item.RawEventID, "error", err)
+		}
+	}
+}
+
+func buildAttempt(item domain.RawEventQueueItem, status string, cause error) domain.RawEventAttempt {
+	attempt := domain.RawEventAttempt{
+		RawEventID: item.RawEventID,
+		Attempt:    item.Attempts + 1,
+		Status:     status,
+		StartedAt:  time.Now().UTC(),
+		FinishedAt: time.Now().UTC(),
+	}
+	if cause != nil {
+		attempt.ErrorMessage = fmt.Sprintf("%T: %v", cause, cause)
+	}
+	return attempt
 }
 
 func (service *Service) rawEventClaimWorkerID(workerID int) string {
@@ -265,6 +396,23 @@ func (service *Service) RecordHeartbeat(ctx context.Context) error {
 		"raw_event_batch_size":                service.config.RawEventBatchSize,
 		"channel_resync_interval_seconds":     service.config.ChannelResyncInterval.Seconds(),
 		"raw_event_worker_idle_delay_seconds": service.config.RawEventWorkerIdleDelay.Seconds(),
+	}
+	if service.writer != nil {
+		stats := service.writer.Stats()
+		metadata["write_queue_depth"] = stats.QueueDepth
+		metadata["write_queue_high_water_mark"] = stats.QueueHighWaterMark
+		metadata["write_drop_count"] = stats.DropCount
+		metadata["write_flush_count"] = stats.FlushCount
+		metadata["last_flush_size"] = stats.LastFlushSize
+		metadata["last_flush_millis"] = stats.LastFlushNanos / int64(time.Millisecond)
+		metadata["clickhouse_insert_failures"] = stats.ClickHouseFailures
+		metadata["queue_enqueue_failures"] = stats.QueueEnqueueFails
+	}
+	if service.breaker != nil {
+		state := service.breaker.State()
+		metadata["breaker_state"] = state.State
+		metadata["breaker_current_delay_ms"] = state.CurrentDelay / time.Millisecond
+		metadata["breaker_failures"] = state.Failures
 	}
 	encoded, err := json.Marshal(metadata)
 	if err != nil {
@@ -309,22 +457,22 @@ func (service *Service) loadEnabledChannels(ctx context.Context) ([]domain.Follo
 	return ready, nil
 }
 
-func (service *Service) processRawEvent(ctx context.Context, rawEvent domain.RawKickEvent) error {
+func (service *Service) prepareMessage(ctx context.Context, rawEvent domain.RawKickEvent) (domain.ChatMessage, bool, error) {
 	var payload map[string]any
 	if err := json.Unmarshal([]byte(rawEvent.PayloadJSON), &payload); err != nil {
-		return service.markRawEventFailed(ctx, rawEvent, fmt.Errorf("decode raw payload: %w", err))
+		return domain.ChatMessage{}, false, fmt.Errorf("decode raw payload: %w", err)
 	}
 
 	kickMessageID := cleanText(payload["id"])
 	if kickMessageID == "" {
-		return service.markRawEventFailed(ctx, rawEvent, fmt.Errorf("raw event payload missing message id"))
+		return domain.ChatMessage{}, false, fmt.Errorf("raw event payload missing message id")
 	}
 	exists, err := service.messages.ExistsByKickMessageID(ctx, kickMessageID)
 	if err != nil {
-		return service.markRawEventFailed(ctx, rawEvent, err)
+		return domain.ChatMessage{}, false, err
 	}
 	if exists {
-		return service.markRawEventProcessed(ctx, rawEvent)
+		return domain.ChatMessage{}, true, nil
 	}
 
 	chatroomID := rawEvent.ChatroomID
@@ -336,12 +484,12 @@ func (service *Service) processRawEvent(ctx context.Context, rawEvent domain.Raw
 		if errors.Is(err, sql.ErrNoRows) {
 			err = fmt.Errorf("message channel is not followed")
 		}
-		return service.markRawEventFailed(ctx, rawEvent, err)
+		return domain.ChatMessage{}, false, err
 	}
 
 	sender, err := senderProfileFromPayload(payload)
 	if err != nil {
-		return service.markRawEventFailed(ctx, rawEvent, err)
+		return domain.ChatMessage{}, false, err
 	}
 	if service.senderResolver != nil && sender.Slug != "" {
 		if resolved, err := service.senderResolver.ResolveSender(ctx, sender.Slug); err == nil {
@@ -359,60 +507,43 @@ func (service *Service) processRawEvent(ctx context.Context, rawEvent domain.Raw
 	}
 	sender, err = service.senders.Upsert(ctx, sender)
 	if err != nil {
-		return service.markRawEventFailed(ctx, rawEvent, err)
+		return domain.ChatMessage{}, false, err
 	}
 
 	message, err := normalizeMessagePayload(payload, channel, sender)
 	if err != nil {
-		return service.markRawEventFailed(ctx, rawEvent, err)
+		return domain.ChatMessage{}, false, err
 	}
-	if err := service.messages.Insert(ctx, message); err != nil {
-		return service.markRawEventFailed(ctx, rawEvent, err)
-	}
-	return service.markRawEventProcessed(ctx, rawEvent)
-}
-
-func (service *Service) markRawEventProcessed(ctx context.Context, rawEvent domain.RawKickEvent) error {
-	attempt := rawEvent.Attempts + 1
-	return service.rawEvents.InsertAttempt(ctx, domain.RawEventAttempt{
-		RawEventID: rawEvent.ID,
-		Attempt:    attempt,
-		Status:     "processed",
-		StartedAt:  time.Now().UTC(),
-		FinishedAt: time.Now().UTC(),
-	})
-}
-
-func (service *Service) markRawEventFailed(ctx context.Context, rawEvent domain.RawKickEvent, cause error) error {
-	attempt := rawEvent.Attempts + 1
-	status := "failed"
-	if err := service.rawEvents.InsertAttempt(ctx, domain.RawEventAttempt{
-		RawEventID:   rawEvent.ID,
-		Attempt:      attempt,
-		Status:       status,
-		ErrorMessage: fmt.Sprintf("%T: %v", cause, cause),
-		StartedAt:    time.Now().UTC(),
-		FinishedAt:   time.Now().UTC(),
-	}); err != nil {
-		return err
-	}
-	return cause
+	return message, false, nil
 }
 
 func (service *Service) processRawEventsForever(ctx context.Context, workerID int) {
 	for ctx.Err() == nil {
+		if service.breaker != nil {
+			if err := service.breaker.Wait(ctx); err != nil {
+				return
+			}
+		}
 		result, err := service.processRawEventsOnce(ctx, workerID)
 		if err != nil {
 			service.logger.Error("raw Kick event worker failed", "worker_id", workerID, "error", err)
-		} else if result.Claimed > 0 {
-			service.logger.Info(
-				"raw Kick event worker processed batch",
-				"worker_id", workerID,
-				"claimed", result.Claimed,
-				"processed", result.Processed,
-				"failed", result.Failed,
-				"pending", result.PendingCount,
-			)
+			if service.breaker != nil {
+				service.breaker.RecordFailure()
+			}
+		} else {
+			if service.breaker != nil {
+				service.breaker.RecordSuccess()
+			}
+			if result.Claimed > 0 {
+				service.logger.Info(
+					"raw Kick event worker processed batch",
+					"worker_id", workerID,
+					"claimed", result.Claimed,
+					"processed", result.Processed,
+					"failed", result.Failed,
+					"pending", result.PendingCount,
+				)
+			}
 		}
 		timer := time.NewTimer(service.config.RawEventWorkerIdleDelay)
 		select {
@@ -420,6 +551,65 @@ func (service *Service) processRawEventsForever(ctx context.Context, workerID in
 			timer.Stop()
 			return
 		case <-timer.C:
+		}
+	}
+}
+
+func (service *Service) bootstrapQueue(ctx context.Context) error {
+	if service.queue == nil {
+		return nil
+	}
+	const pageSize = uint64(1000)
+	maxAttempts := service.config.RawEventMaxAttempts
+	for {
+		events, err := service.rawEvents.ListUnprocessed(ctx, pageSize, maxAttempts)
+		if err != nil {
+			return fmt.Errorf("bootstrap list unprocessed: %w", err)
+		}
+		if len(events) == 0 {
+			return nil
+		}
+		items := make([]domain.RawEventQueueItem, 0, len(events))
+		for _, event := range events {
+			items = append(items, domain.RawEventQueueItem{
+				RawEventID:    event.ID,
+				ChannelID:     event.ChannelID,
+				ChatroomID:    event.ChatroomID,
+				ChannelSlug:   event.ChannelSlug,
+				KickMessageID: event.KickMessageID,
+				EnqueuedAt:    event.ReceivedAt,
+			})
+		}
+		if err := service.queue.EnqueueBatch(ctx, items); err != nil {
+			return fmt.Errorf("bootstrap enqueue batch: %w", err)
+		}
+		service.logger.Info("bootstrapped raw event queue page", "count", len(events))
+		if uint64(len(events)) < pageSize {
+			return nil
+		}
+	}
+}
+
+func (service *Service) recoverStaleClaimsForever(ctx context.Context) {
+	if service.queue == nil {
+		return
+	}
+	interval := service.config.RawEventProcessingTimeout / 2
+	if interval < 30*time.Second {
+		interval = 30 * time.Second
+	}
+	for ctx.Err() == nil {
+		timer := time.NewTimer(interval)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return
+		case <-timer.C:
+		}
+		if recovered, err := service.queue.RecoverStaleClaims(ctx, service.config.RawEventProcessingTimeout); err != nil {
+			service.logger.Error("raw event stale claim recovery failed", "error", err)
+		} else if recovered > 0 {
+			service.logger.Info("recovered stale raw event claims", "count", recovered)
 		}
 	}
 }
@@ -451,6 +641,14 @@ func (service *Service) reconnectDelay(attempt int) time.Duration {
 		}
 	}
 	return delay
+}
+
+// WriterStats returns the buffered writer counters or zero when no writer is wired.
+func (service *Service) WriterStats() BufferedWriterStats {
+	if service.writer == nil {
+		return BufferedWriterStats{}
+	}
+	return service.writer.Stats()
 }
 
 func (cfg ServiceConfig) withDefaults() ServiceConfig {
@@ -486,6 +684,18 @@ func (cfg ServiceConfig) withDefaults() ServiceConfig {
 	}
 	if cfg.HeartbeatServiceName == "" {
 		cfg.HeartbeatServiceName = "listener"
+	}
+	if cfg.ClickHouseBackoffInitial <= 0 {
+		cfg.ClickHouseBackoffInitial = time.Second
+	}
+	if cfg.ClickHouseBackoffMax <= 0 {
+		cfg.ClickHouseBackoffMax = 30 * time.Second
+	}
+	if cfg.ClickHouseBackoffFactor < 1 {
+		cfg.ClickHouseBackoffFactor = 2
+	}
+	if cfg.ClickHouseBreakerThresh < 1 {
+		cfg.ClickHouseBreakerThresh = 5
 	}
 	return cfg
 }
