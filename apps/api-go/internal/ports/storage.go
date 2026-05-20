@@ -73,6 +73,20 @@ type RawEventClaimRepository interface {
 	Release(ctx context.Context, rawEventID string, workerID string) error
 }
 
+type RawEventQueueRepository interface {
+	Enqueue(ctx context.Context, item domain.RawEventQueueItem) error
+	EnqueueBatch(ctx context.Context, items []domain.RawEventQueueItem) error
+	ListPending(ctx context.Context, limit uint64, maxAttempts uint16) ([]domain.RawEventQueueItem, error)
+	Claim(ctx context.Context, rawEventID string, workerID string) (bool, error)
+	Release(ctx context.Context, rawEventID string, workerID string) error
+	MarkProcessed(ctx context.Context, rawEventID string) error
+	MarkFailed(ctx context.Context, rawEventID string, errMessage string, maxAttempts uint16) error
+	CountPending(ctx context.Context, maxAttempts uint16) (int64, error)
+	OldestPendingAge(ctx context.Context, maxAttempts uint16) (time.Duration, error)
+	RecoverStaleClaims(ctx context.Context, olderThan time.Duration) (int64, error)
+	GetByID(ctx context.Context, rawEventID string) (domain.RawEventQueueItem, error)
+}
+
 type SenderProfileRepository interface {
 	Upsert(ctx context.Context, sender domain.SenderProfile) (domain.SenderProfile, error)
 	GetByKickUserID(ctx context.Context, kickUserID int64) (domain.SenderProfile, error)

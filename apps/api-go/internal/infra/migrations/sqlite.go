@@ -111,5 +111,27 @@ func SQLiteMigrations() []SQLiteMigration {
 				`CREATE INDEX IF NOT EXISTS idx_raw_event_claims_status_lease ON raw_event_claims (status, lease_expires_at);`,
 			},
 		},
+		{
+			Version: 4,
+			Name:    "create_raw_event_queue",
+			Statements: []string{
+				`CREATE TABLE IF NOT EXISTS raw_event_queue (
+					raw_event_id TEXT PRIMARY KEY,
+					channel_id INTEGER NOT NULL DEFAULT 0,
+					chatroom_id INTEGER NOT NULL DEFAULT 0,
+					channel_slug TEXT NOT NULL DEFAULT '',
+					kick_message_id TEXT NOT NULL DEFAULT '',
+					status TEXT NOT NULL CHECK (status IN ('pending', 'claimed', 'processed', 'failed')),
+					attempts INTEGER NOT NULL DEFAULT 0,
+					claimed_by TEXT NOT NULL DEFAULT '',
+					claimed_at TEXT NOT NULL DEFAULT '',
+					enqueued_at TEXT NOT NULL,
+					last_error TEXT NOT NULL DEFAULT '',
+					updated_at TEXT NOT NULL
+				);`,
+				`CREATE INDEX IF NOT EXISTS idx_raw_event_queue_pending ON raw_event_queue (status, enqueued_at);`,
+				`CREATE INDEX IF NOT EXISTS idx_raw_event_queue_claimed ON raw_event_queue (status, claimed_at);`,
+			},
+		},
 	}
 }

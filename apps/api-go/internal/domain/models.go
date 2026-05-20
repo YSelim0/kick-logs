@@ -228,6 +228,28 @@ type RawEventClaim struct {
 	UpdatedAt      time.Time
 }
 
+const (
+	RawEventQueueStatusPending   = "pending"
+	RawEventQueueStatusClaimed   = "claimed"
+	RawEventQueueStatusProcessed = "processed"
+	RawEventQueueStatusFailed    = "failed"
+)
+
+type RawEventQueueItem struct {
+	RawEventID    string
+	ChannelID     int64
+	ChatroomID    int64
+	ChannelSlug   string
+	KickMessageID string
+	Status        string
+	Attempts      uint16
+	ClaimedBy     string
+	ClaimedAt     time.Time
+	EnqueuedAt    time.Time
+	LastError     string
+	UpdatedAt     time.Time
+}
+
 type TableSize struct {
 	Name        string
 	Rows        int64
