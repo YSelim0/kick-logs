@@ -79,34 +79,39 @@ func TestListenerRunOnceStoresRawEventBeforeNormalization(t *testing.T) {
 		unit.rawEvents.events[0].ChannelID != 1 {
 		t.Fatalf("stored raw event = %#v", unit.rawEvents.events[0])
 	}
+	enqueued, err := unit.queue.ListPending(context.Background(), 10, 5)
+	if err != nil {
+		t.Fatalf("ListPending() error = %v", err)
+	}
+	if len(enqueued) != 1 || enqueued[0].RawEventID != unit.rawEvents.events[0].ID {
+		t.Fatalf("queue did not receive enqueue = %#v", enqueued)
+	}
 }
 
 func TestRawEventProcessorNormalizesAndDeduplicatesMessages(t *testing.T) {
 	unit := newFakeListenerUnit()
 	service := newTestService(unit, fakePusherClient{})
 	payload := buildPayload("message-duplicate")
-	unit.rawEvents.events = append(unit.rawEvents.events,
-		domain.RawKickEvent{
-			ID:            "raw-1",
-			EventName:     chatMessageEventName,
-			KickMessageID: "message-duplicate",
-			ChatroomID:    123,
-			ChannelID:     1,
-			PayloadJSON:   rawPayloadJSON(payload),
-			Status:        "pending",
-			ReceivedAt:    time.Now().UTC(),
-		},
-		domain.RawKickEvent{
-			ID:            "raw-2",
-			EventName:     chatMessageEventName,
-			KickMessageID: "message-duplicate",
-			ChatroomID:    123,
-			ChannelID:     1,
-			PayloadJSON:   rawPayloadJSON(payload),
-			Status:        "pending",
-			ReceivedAt:    time.Now().UTC(),
-		},
-	)
+	enqueueRawEvent(t, unit, domain.RawKickEvent{
+		ID:            "raw-1",
+		EventName:     chatMessageEventName,
+		KickMessageID: "message-duplicate",
+		ChatroomID:    123,
+		ChannelID:     1,
+		PayloadJSON:   rawPayloadJSON(payload),
+		Status:        "pending",
+		ReceivedAt:    time.Now().UTC(),
+	})
+	enqueueRawEvent(t, unit, domain.RawKickEvent{
+		ID:            "raw-2",
+		EventName:     chatMessageEventName,
+		KickMessageID: "message-duplicate",
+		ChatroomID:    123,
+		ChannelID:     1,
+		PayloadJSON:   rawPayloadJSON(payload),
+		Status:        "pending",
+		ReceivedAt:    time.Now().UTC(),
+	})
 
 	result, err := service.ProcessRawEventsOnce(context.Background())
 	if err != nil {
@@ -137,7 +142,7 @@ func TestRawEventProcessorSkipsAlreadyClaimedRawEvents(t *testing.T) {
 	unit := newFakeListenerUnit()
 	service := newTestService(unit, fakePusherClient{})
 	payload := buildPayload("message-claimed")
-	unit.rawEvents.events = append(unit.rawEvents.events, domain.RawKickEvent{
+	enqueueRawEvent(t, unit, domain.RawKickEvent{
 		ID:            "raw-claimed",
 		EventName:     chatMessageEventName,
 		KickMessageID: "message-claimed",
@@ -147,7 +152,9 @@ func TestRawEventProcessorSkipsAlreadyClaimedRawEvents(t *testing.T) {
 		Status:        "pending",
 		ReceivedAt:    time.Now().UTC(),
 	})
-	unit.rawEventClaims.active["raw-claimed"] = "other-worker"
+	if _, err := unit.queue.Claim(context.Background(), "raw-claimed", "other-worker"); err != nil {
+		t.Fatalf("Claim() pre-claim error = %v", err)
+	}
 
 	result, err := service.ProcessRawEventsOnce(context.Background())
 	if err != nil {
@@ -175,7 +182,8 @@ func TestRawEventProcessorClaimsDuplicateRowsOnce(t *testing.T) {
 		Status:        "pending",
 		ReceivedAt:    time.Now().UTC(),
 	}
-	unit.rawEvents.events = append(unit.rawEvents.events, rawEvent, rawEvent)
+	enqueueRawEvent(t, unit, rawEvent)
+	enqueueRawEvent(t, unit, rawEvent)
 
 	result, err := service.ProcessRawEventsOnce(context.Background())
 	if err != nil {
@@ -187,8 +195,12 @@ func TestRawEventProcessorClaimsDuplicateRowsOnce(t *testing.T) {
 	if len(unit.messages.messages) != 1 || len(unit.rawEvents.attempts) != 1 {
 		t.Fatalf("messages=%#v attempts=%#v", unit.messages.messages, unit.rawEvents.attempts)
 	}
-	if status := unit.rawEventClaims.completed["raw-same"]; !status {
-		t.Fatalf("claim was not completed = %#v", unit.rawEventClaims.completed)
+	item, err := unit.queue.GetByID(context.Background(), "raw-same")
+	if err != nil {
+		t.Fatalf("queue GetByID() error = %v", err)
+	}
+	if item.Status != domain.RawEventQueueStatusProcessed {
+		t.Fatalf("queue status = %q, want processed", item.Status)
 	}
 }
 
@@ -206,7 +218,8 @@ func TestRawEventProcessorDoesNotRetryDuplicateRowsInSameBatch(t *testing.T) {
 		Status:        "pending",
 		ReceivedAt:    time.Now().UTC(),
 	}
-	unit.rawEvents.events = append(unit.rawEvents.events, rawEvent, rawEvent)
+	enqueueRawEvent(t, unit, rawEvent)
+	enqueueRawEvent(t, unit, rawEvent)
 
 	result, err := service.ProcessRawEventsOnce(context.Background())
 	if err != nil {
@@ -225,7 +238,7 @@ func TestRawEventProcessorMarksFailuresAndHeartbeat(t *testing.T) {
 	service := newTestService(unit, fakePusherClient{})
 	payload := buildPayload("message-failure")
 	payload["chatroom_id"] = 999
-	unit.rawEvents.events = append(unit.rawEvents.events, domain.RawKickEvent{
+	enqueueRawEvent(t, unit, domain.RawKickEvent{
 		ID:            "raw-fail",
 		EventName:     chatMessageEventName,
 		KickMessageID: "message-failure",
@@ -279,6 +292,23 @@ func TestListenerRunOnceReportsNoEnabledChannels(t *testing.T) {
 	}
 	if stored != 0 {
 		t.Fatalf("stored = %d", stored)
+	}
+}
+
+func enqueueRawEvent(t *testing.T, unit *fakeListenerUnit, event domain.RawKickEvent) {
+	t.Helper()
+	if err := unit.rawEvents.InsertEvent(context.Background(), event); err != nil {
+		t.Fatalf("InsertEvent() error = %v", err)
+	}
+	if err := unit.queue.Enqueue(context.Background(), domain.RawEventQueueItem{
+		RawEventID:    event.ID,
+		ChannelID:     event.ChannelID,
+		ChatroomID:    event.ChatroomID,
+		ChannelSlug:   event.ChannelSlug,
+		KickMessageID: event.KickMessageID,
+		EnqueuedAt:    event.ReceivedAt,
+	}); err != nil {
+		t.Fatalf("queue.Enqueue() error = %v", err)
 	}
 }
 
@@ -337,7 +367,7 @@ func newTestService(unit *fakeListenerUnit, pusher fakePusher) *Service {
 	return NewService(Dependencies{
 		Channels:        unit.channels,
 		RawEvents:       unit.rawEvents,
-		RawEventClaims:  unit.rawEventClaims,
+		Queue:           unit.queue,
 		Messages:        unit.messages,
 		Senders:         unit.senders,
 		Heartbeats:      unit.heartbeats,
@@ -346,16 +376,17 @@ func newTestService(unit *fakeListenerUnit, pusher fakePusher) *Service {
 		Pusher:          pusher,
 		Logger:          slog.New(slog.NewTextHandler(io.Discard, nil)),
 		Config: ServiceConfig{
-			WorkerCount:             0,
-			RawEventBatchSize:       10,
-			RawEventMaxAttempts:     2,
-			ChannelResyncInterval:   time.Second,
-			RawEventWorkerIdleDelay: time.Millisecond,
-			HeartbeatInterval:       time.Millisecond,
-			ReconnectInitialDelay:   time.Millisecond,
-			ReconnectMaxDelay:       time.Millisecond,
-			ReconnectMultiplier:     1,
-			HeartbeatServiceName:    "listener",
+			WorkerCount:               0,
+			RawEventBatchSize:         10,
+			RawEventMaxAttempts:       2,
+			RawEventProcessingTimeout: time.Minute,
+			ChannelResyncInterval:     time.Second,
+			RawEventWorkerIdleDelay:   time.Millisecond,
+			HeartbeatInterval:         time.Millisecond,
+			ReconnectInitialDelay:     time.Millisecond,
+			ReconnectMaxDelay:         time.Millisecond,
+			ReconnectMultiplier:       1,
+			HeartbeatServiceName:      "listener",
 		},
 	})
 }
@@ -385,22 +416,22 @@ func (blockingPusherClient) Listen(ctx context.Context, _ []domain.ListenerChann
 }
 
 type fakeListenerUnit struct {
-	channels       *fakeChannelRepository
-	rawEvents      *fakeRawEventRepository
-	rawEventClaims *fakeRawEventClaimRepository
-	messages       *fakeMessageRepository
-	senders        *fakeSenderRepository
-	heartbeats     *fakeHeartbeatRepository
+	channels   *fakeChannelRepository
+	rawEvents  *fakeRawEventRepository
+	queue      *fakeRawEventQueueRepository
+	messages   *fakeMessageRepository
+	senders    *fakeSenderRepository
+	heartbeats *fakeHeartbeatRepository
 }
 
 func newFakeListenerUnit() *fakeListenerUnit {
 	return &fakeListenerUnit{
-		channels:       &fakeChannelRepository{channels: []domain.FollowedChannel{testChannel()}},
-		rawEvents:      &fakeRawEventRepository{},
-		rawEventClaims: newFakeRawEventClaimRepository(),
-		messages:       &fakeMessageRepository{},
-		senders:        &fakeSenderRepository{},
-		heartbeats:     &fakeHeartbeatRepository{},
+		channels:   &fakeChannelRepository{channels: []domain.FollowedChannel{testChannel()}},
+		rawEvents:  &fakeRawEventRepository{},
+		queue:      newFakeRawEventQueueRepository(),
+		messages:   &fakeMessageRepository{},
+		senders:    &fakeSenderRepository{},
+		heartbeats: &fakeHeartbeatRepository{},
 	}
 }
 
@@ -477,6 +508,16 @@ func (repo *fakeRawEventRepository) InsertEvent(_ context.Context, event domain.
 	return nil
 }
 
+func (repo *fakeRawEventRepository) GetByID(_ context.Context, rawEventID string) (domain.RawKickEvent, error) {
+	for _, event := range repo.events {
+		if event.ID == rawEventID {
+			event.Attempts = repo.attemptsFor(event.ID)
+			return event, nil
+		}
+	}
+	return domain.RawKickEvent{}, sql.ErrNoRows
+}
+
 func (repo *fakeRawEventRepository) InsertAttempt(_ context.Context, attempt domain.RawEventAttempt) error {
 	repo.attempts = append(repo.attempts, attempt)
 	return nil
@@ -531,57 +572,187 @@ func (repo *fakeRawEventRepository) attemptsFor(rawEventID string) uint16 {
 	return count
 }
 
-type fakeRawEventClaimRepository struct {
-	mu        sync.Mutex
-	active    map[string]string
-	completed map[string]bool
+type fakeRawEventQueueRepository struct {
+	mu    sync.Mutex
+	items map[string]*domain.RawEventQueueItem
+	order []string
 }
 
-func newFakeRawEventClaimRepository() *fakeRawEventClaimRepository {
-	return &fakeRawEventClaimRepository{
-		active:    make(map[string]string),
-		completed: make(map[string]bool),
-	}
+func newFakeRawEventQueueRepository() *fakeRawEventQueueRepository {
+	return &fakeRawEventQueueRepository{items: make(map[string]*domain.RawEventQueueItem)}
 }
 
-func (repo *fakeRawEventClaimRepository) TryClaim(
-	_ context.Context,
-	rawEventID string,
-	workerID string,
-	_ time.Duration,
-) (bool, error) {
+func (repo *fakeRawEventQueueRepository) Enqueue(_ context.Context, item domain.RawEventQueueItem) error {
+	return repo.EnqueueBatch(context.Background(), []domain.RawEventQueueItem{item})
+}
+
+func (repo *fakeRawEventQueueRepository) EnqueueBatch(_ context.Context, items []domain.RawEventQueueItem) error {
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
 
-	if repo.completed[rawEventID] {
+	for _, item := range items {
+		if _, exists := repo.items[item.RawEventID]; exists {
+			continue
+		}
+		if item.EnqueuedAt.IsZero() {
+			item.EnqueuedAt = time.Now().UTC()
+		}
+		item.Status = domain.RawEventQueueStatusPending
+		copy := item
+		repo.items[item.RawEventID] = &copy
+		repo.order = append(repo.order, item.RawEventID)
+	}
+	return nil
+}
+
+func (repo *fakeRawEventQueueRepository) ListPending(_ context.Context, limit uint64, maxAttempts uint16) ([]domain.RawEventQueueItem, error) {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
+	out := make([]domain.RawEventQueueItem, 0)
+	for _, id := range repo.order {
+		item := repo.items[id]
+		if item == nil {
+			continue
+		}
+		if item.Status != domain.RawEventQueueStatusPending {
+			continue
+		}
+		if item.Attempts >= maxAttempts {
+			continue
+		}
+		out = append(out, *item)
+		if uint64(len(out)) >= limit {
+			break
+		}
+	}
+	return out, nil
+}
+
+func (repo *fakeRawEventQueueRepository) Claim(_ context.Context, rawEventID string, workerID string) (bool, error) {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
+	item := repo.items[rawEventID]
+	if item == nil || item.Status != domain.RawEventQueueStatusPending {
 		return false, nil
 	}
-	if _, exists := repo.active[rawEventID]; exists {
-		return false, nil
-	}
-	repo.active[rawEventID] = workerID
+	item.Status = domain.RawEventQueueStatusClaimed
+	item.ClaimedBy = workerID
+	item.ClaimedAt = time.Now().UTC()
 	return true, nil
 }
 
-func (repo *fakeRawEventClaimRepository) MarkCompleted(_ context.Context, rawEventID string, workerID string) error {
+func (repo *fakeRawEventQueueRepository) Release(_ context.Context, rawEventID string, workerID string) error {
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
 
-	if repo.active[rawEventID] == workerID {
-		delete(repo.active, rawEventID)
-		repo.completed[rawEventID] = true
+	item := repo.items[rawEventID]
+	if item == nil || item.Status != domain.RawEventQueueStatusClaimed {
+		return nil
+	}
+	if workerID != "" && item.ClaimedBy != workerID {
+		return nil
+	}
+	item.Status = domain.RawEventQueueStatusPending
+	item.ClaimedBy = ""
+	item.ClaimedAt = time.Time{}
+	return nil
+}
+
+func (repo *fakeRawEventQueueRepository) MarkProcessed(_ context.Context, rawEventID string) error {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
+	item := repo.items[rawEventID]
+	if item == nil {
+		return nil
+	}
+	item.Status = domain.RawEventQueueStatusProcessed
+	item.Attempts++
+	item.ClaimedBy = ""
+	item.ClaimedAt = time.Time{}
+	item.LastError = ""
+	return nil
+}
+
+func (repo *fakeRawEventQueueRepository) MarkFailed(_ context.Context, rawEventID string, errMessage string, maxAttempts uint16) error {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
+	item := repo.items[rawEventID]
+	if item == nil {
+		return nil
+	}
+	item.Attempts++
+	item.LastError = errMessage
+	item.ClaimedBy = ""
+	item.ClaimedAt = time.Time{}
+	if item.Attempts >= maxAttempts {
+		item.Status = domain.RawEventQueueStatusFailed
+	} else {
+		item.Status = domain.RawEventQueueStatusPending
 	}
 	return nil
 }
 
-func (repo *fakeRawEventClaimRepository) Release(_ context.Context, rawEventID string, workerID string) error {
+func (repo *fakeRawEventQueueRepository) CountPending(_ context.Context, maxAttempts uint16) (int64, error) {
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
 
-	if repo.active[rawEventID] == workerID {
-		delete(repo.active, rawEventID)
+	var count int64
+	for _, item := range repo.items {
+		if (item.Status == domain.RawEventQueueStatusPending || item.Status == domain.RawEventQueueStatusClaimed) && item.Attempts < maxAttempts {
+			count++
+		}
 	}
-	return nil
+	return count, nil
+}
+
+func (repo *fakeRawEventQueueRepository) OldestPendingAge(_ context.Context, maxAttempts uint16) (time.Duration, error) {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
+	var oldest time.Time
+	for _, item := range repo.items {
+		if (item.Status == domain.RawEventQueueStatusPending || item.Status == domain.RawEventQueueStatusClaimed) && item.Attempts < maxAttempts {
+			if oldest.IsZero() || item.EnqueuedAt.Before(oldest) {
+				oldest = item.EnqueuedAt
+			}
+		}
+	}
+	if oldest.IsZero() {
+		return 0, nil
+	}
+	return time.Since(oldest), nil
+}
+
+func (repo *fakeRawEventQueueRepository) RecoverStaleClaims(_ context.Context, olderThan time.Duration) (int64, error) {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
+	cutoff := time.Now().UTC().Add(-olderThan)
+	var recovered int64
+	for _, item := range repo.items {
+		if item.Status == domain.RawEventQueueStatusClaimed && !item.ClaimedAt.IsZero() && !item.ClaimedAt.After(cutoff) {
+			item.Status = domain.RawEventQueueStatusPending
+			item.ClaimedBy = ""
+			item.ClaimedAt = time.Time{}
+			recovered++
+		}
+	}
+	return recovered, nil
+}
+
+func (repo *fakeRawEventQueueRepository) GetByID(_ context.Context, rawEventID string) (domain.RawEventQueueItem, error) {
+	repo.mu.Lock()
+	defer repo.mu.Unlock()
+
+	item := repo.items[rawEventID]
+	if item == nil {
+		return domain.RawEventQueueItem{}, sql.ErrNoRows
+	}
+	return *item, nil
 }
 
 type fakeMessageRepository struct {

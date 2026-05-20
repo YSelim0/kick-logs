@@ -163,6 +163,33 @@ func (repo *RawEventRepository) AttemptCount(ctx context.Context, rawEventID str
 	return uint16(count), nil
 }
 
+func (repo *RawEventRepository) GetByID(ctx context.Context, rawEventID string) (domain.RawKickEvent, error) {
+	if rawEventID == "" {
+		return domain.RawKickEvent{}, fmt.Errorf("raw event id is required")
+	}
+	row := repo.conn.QueryRow(
+		ctx,
+		`SELECT
+			e.id, e.channel_slug, e.event_type, e.event_name, ifNull(e.kick_message_id, ''),
+			ifNull(e.chatroom_id, 0), ifNull(e.channel_id, 0), e.payload_json, e.metadata_json, e.status,
+			ifNull(a.attempts, 0), e.received_at, e.processed_at, e.error_message
+		 FROM raw_kick_events AS e
+		 LEFT JOIN (
+			SELECT raw_event_id, max(attempt) AS attempts
+			FROM raw_event_attempts
+			GROUP BY raw_event_id
+		 ) AS a ON a.raw_event_id = e.id
+		 WHERE e.id = ?
+		 LIMIT 1`,
+		rawEventID,
+	)
+	event, err := scanRawKickEvent(row)
+	if err != nil {
+		return domain.RawKickEvent{}, fmt.Errorf("get raw event by id: %w", err)
+	}
+	return event, nil
+}
+
 func (repo *RawEventRepository) InsertAttempt(ctx context.Context, attempt domain.RawEventAttempt) error {
 	if attempt.ID == "" {
 		attempt.ID = uuid.NewString()

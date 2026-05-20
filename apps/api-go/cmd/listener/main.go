@@ -53,7 +53,7 @@ func main() {
 	service := listenerusecase.NewService(listenerusecase.Dependencies{
 		Channels:        sqliteinfra.NewFollowedChannelRepository(sqliteDB),
 		RawEvents:       clickhouseinfra.NewRawEventRepository(clickHouseConn),
-		RawEventClaims:  sqliteinfra.NewRawEventClaimRepository(sqliteDB),
+		Queue:           sqliteinfra.NewRawEventQueueRepository(sqliteDB),
 		Messages:        clickhouseinfra.NewMessageRepository(clickHouseConn),
 		Senders:         sqliteinfra.NewSenderProfileRepository(sqliteDB),
 		Heartbeats:      sqliteinfra.NewWorkerHeartbeatRepository(sqliteDB),

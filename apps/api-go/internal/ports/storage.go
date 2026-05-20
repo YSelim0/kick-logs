@@ -65,6 +65,7 @@ type RawEventRepository interface {
 	ListUnprocessed(ctx context.Context, limit uint64, maxAttempts uint16) ([]domain.RawKickEvent, error)
 	CountUnprocessed(ctx context.Context, maxAttempts uint16) (int64, error)
 	AttemptCount(ctx context.Context, rawEventID string) (uint16, error)
+	GetByID(ctx context.Context, rawEventID string) (domain.RawKickEvent, error)
 }
 
 type RawEventClaimRepository interface {
