@@ -41,15 +41,24 @@ Under high-volume Kick streams the listener degraded and the API returned 500s b
 
 ## Phases
 
-1. Phase 1: SQLite raw-event work queue (`docs/tasks/issue_09_01_sqlite_work_queue.md`).
-2. Phase 2: ClickHouse batch insert repositories (`docs/tasks/issue_09_02_clickhouse_batches.md`).
-3. Phase 3: Buffered websocket raw-event writer (`docs/tasks/issue_09_03_buffered_writer.md`).
-4. Phase 4: Worker batch normalization output (`docs/tasks/issue_09_04_worker_batch_output.md`).
+1. Phase 1: SQLite raw-event work queue (`docs/tasks/issue_09_01_sqlite_work_queue.md`) —
+   completed.
+2. Phase 2: ClickHouse batch insert repositories
+   (`docs/tasks/issue_09_02_clickhouse_batches.md`) — completed.
+3. Phase 3: Buffered websocket raw-event writer
+   (`docs/tasks/issue_09_03_buffered_writer.md`) — completed.
+4. Phase 4: Worker batch normalization output
+   (`docs/tasks/issue_09_04_worker_batch_output.md`) — completed.
 5. Phase 5: Exponential backoff and shared circuit breaker
-   (`docs/tasks/issue_09_05_backoff_circuit_breaker.md`).
+   (`docs/tasks/issue_09_05_backoff_circuit_breaker.md`) — completed.
 6. Phase 6: Operational metrics and admin operations summary
-   (`docs/tasks/issue_09_06_operational_metrics.md`).
-7. Phase 7: Load test and final smoke (`docs/tasks/issue_09_07_load_test_smoke.md`).
+   (`docs/tasks/issue_09_06_operational_metrics.md`) — completed.
+7. Phase 7: Load test and final smoke (`docs/tasks/issue_09_07_load_test_smoke.md`) —
+   harness and runbook landed; baseline run and PR pending the user's live execution against
+   the local Docker stack.
+
+External durable queues (RabbitMQ/NATS/Kafka) remain deferred until the live load run confirms
+the in-process pipeline is insufficient under burst.
 
 Each phase is a single commit boundary using `feat(scope): title`. Verification commands run at
 the end of each phase before commit.

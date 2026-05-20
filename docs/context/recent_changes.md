@@ -4,6 +4,24 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Issue #9 phase 7: synthetic ingestion load harness and operator runbook.
+  - new `apps/api-go/cmd/loadgen` command wires the real listener service with a synthetic
+    Pusher emitter that produces configurable events-per-second, supports a burst factor for
+    the second half of the run, seeds `loadgen-*` channels in SQLite, and reports buffered
+    writer stats periodically
+  - flags: `-events-per-second`, `-duration`, `-channels`, `-burst-factor`, `-report-every`
+  - new `docs/operations/load_test.md` documents prerequisites, run commands, observable
+    metrics, pass/fail thresholds, and cleanup queries
+  - README configuration block lists every new `LISTENER_RAW_EVENT_WRITE_*` and
+    `LISTENER_CLICKHOUSE_*` knob and links to the load-test runbook
+  - external durable queues (RabbitMQ/NATS/Kafka) remain deferred pending the live load run
+  - verification: `go build ./...`, `go test ./...`, `go vet ./...`,
+    `pnpm --filter @kick-logs/web test`, `pnpm --filter @kick-logs/web typecheck`,
+    `pnpm --filter @kick-logs/web lint`, `pnpm --filter @kick-logs/web build`,
+    `pnpm exec prettier --check docs/operations/ docs/tasks/`
+
+## Previously Latest
+
 - Issue #9 phase 6: ingestion metrics on admin operations summary.
   - listener heartbeat metadata JSON now embeds buffered writer stats (queue depth,
     high-water mark, drop count, flush count, last flush size + ms, ClickHouse failure count,
@@ -22,7 +40,7 @@ This file is the short handoff summary of the latest project changes. Keep it co
     `pnpm --filter @kick-logs/web test`, `pnpm --filter @kick-logs/web typecheck`,
     `pnpm --filter @kick-logs/web lint`
 
-## Previously Latest
+## Earlier Phase 5 Notes
 
 - Issue #9 phase 5: bounded backoff and shared ClickHouse circuit breaker.
   - new `Backoff` helper produces non-decreasing delays with full jitter, capped at max

@@ -117,6 +117,11 @@ admin/super-admin role.
   the admin operations summary can surface ingestion health (queue backlog, oldest pending
   age, writer buffer depth, drops, flushes, ClickHouse insert failures, breaker state) without
   any cross-process call into the listener.
+- Synthetic ingestion load harness lives at `apps/api-go/cmd/loadgen`. It seeds channels with
+  slugs `loadgen-*`, emits configurable events-per-second through the real listener service,
+  and reports buffered-writer stats plus emitted counts. The procedure is documented in
+  `docs/operations/load_test.md`. External durable queues are deferred until a live load run
+  shows the in-process pipeline is insufficient.
 - Raw-event processing is at-least-once and idempotent; visible messages dedupe by
   `kick_message_id`.
 - Listener heartbeat state is stored in SQLite `worker_heartbeats`.

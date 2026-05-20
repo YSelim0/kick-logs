@@ -504,7 +504,24 @@ KICK_PUSHER_URL=...
 LISTENER_WORKER_COUNT=4
 LISTENER_RAW_EVENT_BATCH_SIZE=100
 LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS=60
+LISTENER_RAW_EVENT_WRITE_BATCH_SIZE=500
+LISTENER_RAW_EVENT_WRITE_FLUSH_INTERVAL_MS=500
+LISTENER_RAW_EVENT_WRITE_QUEUE_SIZE=50000
+LISTENER_RAW_EVENT_WRITE_MAX_RETRIES=10
+LISTENER_CLICKHOUSE_BACKOFF_INITIAL_MS=1000
+LISTENER_CLICKHOUSE_BACKOFF_MAX_MS=30000
+LISTENER_CLICKHOUSE_BACKOFF_MULTIPLIER=2
+LISTENER_CLICKHOUSE_BREAKER_FAILURE_THRESHOLD=5
 ```
+
+The `LISTENER_RAW_EVENT_WRITE_*` knobs control the buffered ClickHouse writer that batches
+incoming Pusher events before insert. The `LISTENER_CLICKHOUSE_*` knobs control the shared
+exponential backoff and circuit breaker that protect ClickHouse during transient outages. The
+admin operations dashboard surfaces the resulting backlog, writer buffer, breaker state, and
+flush metrics under `ingestion` on `GET /admin/operations/summary`.
+
+See [`docs/operations/load_test.md`](docs/operations/load_test.md) for the synthetic load test
+that exercises the ingestion pipeline end to end.
 
 Never commit `.env`, secrets, local database dumps, virtual environments, or
 generated dependency/build folders.

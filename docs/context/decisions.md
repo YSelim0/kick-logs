@@ -115,6 +115,12 @@
 
 ## 2026-05-20
 
+- Issue #9 phase 7 ships the synthetic ingestion load harness at `apps/api-go/cmd/loadgen` and
+  a runbook at `docs/operations/load_test.md`. The harness reuses the production listener
+  service wired against the real SQLite/ClickHouse stack, but replaces the Pusher client with a
+  deterministic emitter, so it exercises buffered writer + worker batch + breaker on the live
+  ingestion path. External durable queues (RabbitMQ/NATS/Kafka) remain explicitly deferred
+  until the live load run confirms in-process changes are insufficient.
 - Issue #9 phase 6 surfaces ingestion health on the admin operations summary. The listener
   heartbeat now embeds buffered-writer stats and circuit-breaker state in its metadata JSON; the
   API operations repository reads SQLite `raw_event_queue` for live queue depth and oldest
