@@ -115,6 +115,18 @@
 
 ## 2026-05-20
 
+- Issue #9 phase 5 wraps ClickHouse access in the listener with bounded exponential backoff and
+  a single shared `CircuitBreaker`. The breaker opens after a configurable consecutive failure
+  threshold and holds the open state for the current backoff delay before allowing a probe call.
+  All listener goroutines (buffered writer flush, worker batch insert) share the same breaker
+  so opening it in one path pauses the others.
+- Backoff defaults: 1s initial, 30s max, multiplier 2, full jitter (`d/2` to `3d/2`). Threshold
+  default: 5 consecutive failures. Env knobs: `LISTENER_CLICKHOUSE_BACKOFF_INITIAL_MS`,
+  `LISTENER_CLICKHOUSE_BACKOFF_MAX_MS`, `LISTENER_CLICKHOUSE_BACKOFF_MULTIPLIER`,
+  `LISTENER_CLICKHOUSE_BREAKER_FAILURE_THRESHOLD`.
+- Workers and the buffered writer call `breaker.Wait(ctx)` before each ClickHouse operation and
+  call `RecordSuccess`/`RecordFailure` after. The worker also calls `Wait` before claiming and
+  reading the queue, so the entire worker loop honors the breaker delay during an outage.
 - Issue #9 phase 4 batches worker output writes. A single worker tick now claims pending queue
   rows, loads raw payloads through `RawEventRepository.GetByID`, normalizes them in memory, then
   writes one `InsertMessagesBatch` and one `InsertAttemptsBatch` per tick. Successful items are

@@ -4,6 +4,26 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Issue #9 phase 5: bounded backoff and shared ClickHouse circuit breaker.
+  - new `Backoff` helper produces non-decreasing delays with full jitter, capped at max
+  - new `CircuitBreaker` opens after a configurable consecutive failure threshold and holds
+    the open window for the current backoff delay; the next caller probes ClickHouse and the
+    breaker closes on success or re-opens with a longer delay on failure
+  - one breaker instance is created in `NewService` and shared by the buffered writer flush
+    and the worker loop so opening it in one path pauses the other
+  - workers call `breaker.Wait(ctx)` before each tick and record success/failure based on the
+    tick outcome; the buffered writer wraps each ClickHouse batch insert attempt
+  - env knobs: `LISTENER_CLICKHOUSE_BACKOFF_INITIAL_MS` (1000),
+    `LISTENER_CLICKHOUSE_BACKOFF_MAX_MS` (30000),
+    `LISTENER_CLICKHOUSE_BACKOFF_MULTIPLIER` (2), and
+    `LISTENER_CLICKHOUSE_BREAKER_FAILURE_THRESHOLD` (5)
+  - added unit tests for backoff growth, reset, breaker open-after-threshold,
+    probe-success-closes, probe-failure-re-opens-with-longer-delay,
+    context-cancellation, and shared-breaker waiting
+  - verification: `go build ./...`, `go test ./...`, `go vet ./...`
+
+## Previously Latest
+
 - Issue #9 phase 4: worker batch normalization output.
   - worker tick claims all pending queue rows, loads each raw payload from ClickHouse by id,
     normalizes the message in memory, then writes the entire tick as one
@@ -20,7 +40,7 @@ This file is the short handoff summary of the latest project changes. Keep it co
     and full claim-release on ClickHouse batch failure
   - verification: `go build ./...`, `go test ./...`, `go vet ./...`
 
-## Previously Latest
+## Earlier Phase Notes
 
 - Issue #9 phase 3: buffered websocket raw-event writer.
   - new `bufferedRawWriter` accepts raw events from the websocket callback through an

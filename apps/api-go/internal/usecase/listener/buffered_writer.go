@@ -36,6 +36,7 @@ type bufferedRawWriter struct {
 	rawEvents ports.RawEventRepository
 	queue     ports.RawEventQueueRepository
 	logger    *slog.Logger
+	breaker   *CircuitBreaker
 
 	events chan domain.RawKickEvent
 	done   chan struct{}
@@ -196,9 +197,20 @@ func (writer *bufferedRawWriter) flush(ctx context.Context, batch []domain.RawKi
 	delay := writer.cfg.RetryInitialDelay
 	var chErr error
 	for attempt := 1; attempt <= writer.cfg.MaxRetries; attempt++ {
+		if writer.breaker != nil {
+			if err := writer.breaker.Wait(ctx); err != nil {
+				return
+			}
+		}
 		chErr = writer.rawEvents.InsertEventsBatch(ctx, batch)
 		if chErr == nil {
+			if writer.breaker != nil {
+				writer.breaker.RecordSuccess()
+			}
 			break
+		}
+		if writer.breaker != nil {
+			writer.breaker.RecordFailure()
 		}
 		writer.stats.chFailures.Add(1)
 		writer.logger.Error(

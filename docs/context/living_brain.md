@@ -109,6 +109,10 @@ admin/super-admin role.
   ClickHouse by id, normalize in memory, and write the entire tick's chat messages and
   raw-event attempts as one batch each. ClickHouse insert failure releases every claim back to
   pending and the next tick retries.
+- A single `CircuitBreaker` is shared by the buffered writer and the worker loop. Consecutive
+  ClickHouse failures open the breaker; while open, every listener goroutine that calls
+  `Wait` sleeps for the current backoff window before the next attempt. Successful operations
+  close the breaker and reset the backoff.
 - Raw-event processing is at-least-once and idempotent; visible messages dedupe by
   `kick_message_id`.
 - Listener heartbeat state is stored in SQLite `worker_heartbeats`.

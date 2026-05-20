@@ -39,6 +39,10 @@ type Config struct {
 	ListenerRawEventWriteFlushIntervalMS int
 	ListenerRawEventWriteQueueSize       int
 	ListenerRawEventWriteMaxRetries      int
+	ListenerClickHouseBackoffInitialMS   int
+	ListenerClickHouseBackoffMaxMS       int
+	ListenerClickHouseBackoffMultiplier  float64
+	ListenerClickHouseBreakerThreshold   int
 	SQLitePath                           string
 	ClickHouseAddr                       string
 	ClickHouseDatabase                   string
@@ -151,6 +155,26 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	clickHouseBackoffInitialMS, err := envInt("LISTENER_CLICKHOUSE_BACKOFF_INITIAL_MS", 1000)
+	if err != nil {
+		return Config{}, err
+	}
+
+	clickHouseBackoffMaxMS, err := envInt("LISTENER_CLICKHOUSE_BACKOFF_MAX_MS", 30000)
+	if err != nil {
+		return Config{}, err
+	}
+
+	clickHouseBackoffMultiplier, err := envFloat("LISTENER_CLICKHOUSE_BACKOFF_MULTIPLIER", 2.0)
+	if err != nil {
+		return Config{}, err
+	}
+
+	clickHouseBreakerThreshold, err := envInt("LISTENER_CLICKHOUSE_BREAKER_FAILURE_THRESHOLD", 5)
+	if err != nil {
+		return Config{}, err
+	}
+
 	clickHouseDebug, err := envBool("CLICKHOUSE_DEBUG", false)
 	if err != nil {
 		return Config{}, err
@@ -187,6 +211,10 @@ func Load() (Config, error) {
 		ListenerRawEventWriteFlushIntervalMS: rawEventWriteFlushIntervalMS,
 		ListenerRawEventWriteQueueSize:       rawEventWriteQueueSize,
 		ListenerRawEventWriteMaxRetries:      rawEventWriteMaxRetries,
+		ListenerClickHouseBackoffInitialMS:   clickHouseBackoffInitialMS,
+		ListenerClickHouseBackoffMaxMS:       clickHouseBackoffMaxMS,
+		ListenerClickHouseBackoffMultiplier:  clickHouseBackoffMultiplier,
+		ListenerClickHouseBreakerThreshold:   clickHouseBreakerThreshold,
 		SQLitePath:                           envString("SQLITE_PATH", "var/kick-logs-go.sqlite3"),
 		ClickHouseAddr:                       envString("CLICKHOUSE_ADDR", "127.0.0.1:9000"),
 		ClickHouseDatabase:                   envString("CLICKHOUSE_DATABASE", "kick_logs"),

@@ -29,6 +29,7 @@ type Service struct {
 	logger          *slog.Logger
 	config          ServiceConfig
 	writer          *bufferedRawWriter
+	breaker         *CircuitBreaker
 }
 
 type ServiceConfig struct {
@@ -47,6 +48,10 @@ type ServiceConfig struct {
 	WriteFlushInterval        time.Duration
 	WriteQueueSize            int
 	WriteMaxRetries           int
+	ClickHouseBackoffInitial  time.Duration
+	ClickHouseBackoffMax      time.Duration
+	ClickHouseBackoffFactor   float64
+	ClickHouseBreakerThresh   int
 }
 
 type Dependencies struct {
@@ -78,6 +83,12 @@ func NewService(deps Dependencies) *Service {
 	if logger == nil {
 		logger = slog.Default()
 	}
+	breaker := NewCircuitBreaker(
+		"clickhouse",
+		cfg.ClickHouseBreakerThresh,
+		NewBackoff(cfg.ClickHouseBackoffInitial, cfg.ClickHouseBackoffMax, cfg.ClickHouseBackoffFactor),
+		logger,
+	)
 	service := &Service{
 		channels:        deps.Channels,
 		rawEvents:       deps.RawEvents,
@@ -91,6 +102,7 @@ func NewService(deps Dependencies) *Service {
 		parser:          NewEventParser(),
 		logger:          logger,
 		config:          cfg,
+		breaker:         breaker,
 	}
 	if deps.RawEvents != nil && deps.Queue != nil {
 		service.writer = newBufferedRawWriter(BufferedWriterConfig{
@@ -99,6 +111,7 @@ func NewService(deps Dependencies) *Service {
 			QueueSize:     cfg.WriteQueueSize,
 			MaxRetries:    cfg.WriteMaxRetries,
 		}, deps.RawEvents, deps.Queue, logger)
+		service.writer.breaker = breaker
 	}
 	return service
 }
@@ -489,18 +502,31 @@ func (service *Service) prepareMessage(ctx context.Context, rawEvent domain.RawK
 
 func (service *Service) processRawEventsForever(ctx context.Context, workerID int) {
 	for ctx.Err() == nil {
+		if service.breaker != nil {
+			if err := service.breaker.Wait(ctx); err != nil {
+				return
+			}
+		}
 		result, err := service.processRawEventsOnce(ctx, workerID)
 		if err != nil {
 			service.logger.Error("raw Kick event worker failed", "worker_id", workerID, "error", err)
-		} else if result.Claimed > 0 {
-			service.logger.Info(
-				"raw Kick event worker processed batch",
-				"worker_id", workerID,
-				"claimed", result.Claimed,
-				"processed", result.Processed,
-				"failed", result.Failed,
-				"pending", result.PendingCount,
-			)
+			if service.breaker != nil {
+				service.breaker.RecordFailure()
+			}
+		} else {
+			if service.breaker != nil {
+				service.breaker.RecordSuccess()
+			}
+			if result.Claimed > 0 {
+				service.logger.Info(
+					"raw Kick event worker processed batch",
+					"worker_id", workerID,
+					"claimed", result.Claimed,
+					"processed", result.Processed,
+					"failed", result.Failed,
+					"pending", result.PendingCount,
+				)
+			}
 		}
 		timer := time.NewTimer(service.config.RawEventWorkerIdleDelay)
 		select {
@@ -641,6 +667,18 @@ func (cfg ServiceConfig) withDefaults() ServiceConfig {
 	}
 	if cfg.HeartbeatServiceName == "" {
 		cfg.HeartbeatServiceName = "listener"
+	}
+	if cfg.ClickHouseBackoffInitial <= 0 {
+		cfg.ClickHouseBackoffInitial = time.Second
+	}
+	if cfg.ClickHouseBackoffMax <= 0 {
+		cfg.ClickHouseBackoffMax = 30 * time.Second
+	}
+	if cfg.ClickHouseBackoffFactor < 1 {
+		cfg.ClickHouseBackoffFactor = 2
+	}
+	if cfg.ClickHouseBreakerThresh < 1 {
+		cfg.ClickHouseBreakerThresh = 5
 	}
 	return cfg
 }

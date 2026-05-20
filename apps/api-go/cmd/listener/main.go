@@ -77,6 +77,10 @@ func main() {
 			WriteFlushInterval:        time.Duration(cfg.ListenerRawEventWriteFlushIntervalMS) * time.Millisecond,
 			WriteQueueSize:            cfg.ListenerRawEventWriteQueueSize,
 			WriteMaxRetries:           cfg.ListenerRawEventWriteMaxRetries,
+			ClickHouseBackoffInitial:  time.Duration(cfg.ListenerClickHouseBackoffInitialMS) * time.Millisecond,
+			ClickHouseBackoffMax:      time.Duration(cfg.ListenerClickHouseBackoffMaxMS) * time.Millisecond,
+			ClickHouseBackoffFactor:   cfg.ListenerClickHouseBackoffMultiplier,
+			ClickHouseBreakerThresh:   cfg.ListenerClickHouseBreakerThreshold,
 		},
 	})
 
