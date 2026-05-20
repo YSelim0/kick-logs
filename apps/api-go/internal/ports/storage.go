@@ -28,6 +28,7 @@ type MessageRepository interface {
 	Insert(ctx context.Context, message domain.ChatMessage) error
 	InsertMessagesBatch(ctx context.Context, messages []domain.ChatMessage) error
 	ExistsByKickMessageID(ctx context.Context, kickMessageID string) (bool, error)
+	ExistingKickMessageIDs(ctx context.Context, kickMessageIDs []string) (map[string]bool, error)
 	Search(ctx context.Context, filter domain.MessageSearchFilter) ([]domain.ChatMessage, error)
 }
 
@@ -69,6 +70,7 @@ type RawEventRepository interface {
 	CountUnprocessed(ctx context.Context, maxAttempts uint16) (int64, error)
 	AttemptCount(ctx context.Context, rawEventID string) (uint16, error)
 	GetByID(ctx context.Context, rawEventID string) (domain.RawKickEvent, error)
+	GetByIDs(ctx context.Context, rawEventIDs []string) (map[string]domain.RawKickEvent, error)
 }
 
 type RawEventClaimRepository interface {

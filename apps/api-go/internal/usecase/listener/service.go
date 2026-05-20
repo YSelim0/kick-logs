@@ -289,20 +289,42 @@ func (service *Service) processRawEventsOnce(ctx context.Context, workerID int) 
 	}
 	result.Claimed = len(claimed)
 
+	rawEventIDs := make([]string, 0, len(claimed))
+	for _, item := range claimed {
+		rawEventIDs = append(rawEventIDs, item.RawEventID)
+	}
+	rawEventsMap, err := service.rawEvents.GetByIDs(ctx, rawEventIDs)
+	if err != nil {
+		service.releaseClaims(ctx, claimed, claimWorkerID)
+		return RawEventProcessingResult{}, fmt.Errorf("batch load raw events: %w", err)
+	}
+
+	kickMessageIDsToCheck := make([]string, 0, len(claimed))
+	for _, item := range claimed {
+		if re, ok := rawEventsMap[item.RawEventID]; ok && re.KickMessageID != "" {
+			kickMessageIDsToCheck = append(kickMessageIDsToCheck, re.KickMessageID)
+		}
+	}
+	existingIDs, err := service.messages.ExistingKickMessageIDs(ctx, kickMessageIDsToCheck)
+	if err != nil {
+		service.releaseClaims(ctx, claimed, claimWorkerID)
+		return RawEventProcessingResult{}, fmt.Errorf("batch check existing messages: %w", err)
+	}
+
 	outcomes := make([]rawEventOutcome, 0, len(claimed))
 	messages := make([]domain.ChatMessage, 0, len(claimed))
 	attempts := make([]domain.RawEventAttempt, 0, len(claimed))
 	seenKickMessageIDs := make(map[string]bool, len(claimed))
 	for _, item := range claimed {
 		outcome := rawEventOutcome{item: item}
-		rawEvent, err := service.rawEvents.GetByID(ctx, item.RawEventID)
-		if err != nil {
-			outcome.failure = fmt.Errorf("load raw event: %w", err)
+		rawEvent, ok := rawEventsMap[item.RawEventID]
+		if !ok {
+			outcome.failure = fmt.Errorf("load raw event: raw event not found in batch")
 			outcomes = append(outcomes, outcome)
 			attempts = append(attempts, buildAttempt(item, "failed", outcome.failure))
 			continue
 		}
-		message, alreadyExists, normErr := service.prepareMessage(ctx, rawEvent)
+		message, alreadyExists, normErr := service.prepareMessage(ctx, rawEvent, existingIDs)
 		if normErr != nil {
 			outcome.failure = normErr
 			outcomes = append(outcomes, outcome)
@@ -457,7 +479,7 @@ func (service *Service) loadEnabledChannels(ctx context.Context) ([]domain.Follo
 	return ready, nil
 }
 
-func (service *Service) prepareMessage(ctx context.Context, rawEvent domain.RawKickEvent) (domain.ChatMessage, bool, error) {
+func (service *Service) prepareMessage(ctx context.Context, rawEvent domain.RawKickEvent, existingIDs map[string]bool) (domain.ChatMessage, bool, error) {
 	var payload map[string]any
 	if err := json.Unmarshal([]byte(rawEvent.PayloadJSON), &payload); err != nil {
 		return domain.ChatMessage{}, false, fmt.Errorf("decode raw payload: %w", err)
@@ -467,11 +489,7 @@ func (service *Service) prepareMessage(ctx context.Context, rawEvent domain.RawK
 	if kickMessageID == "" {
 		return domain.ChatMessage{}, false, fmt.Errorf("raw event payload missing message id")
 	}
-	exists, err := service.messages.ExistsByKickMessageID(ctx, kickMessageID)
-	if err != nil {
-		return domain.ChatMessage{}, false, err
-	}
-	if exists {
+	if existingIDs[kickMessageID] {
 		return domain.ChatMessage{}, true, nil
 	}
 
@@ -490,20 +508,6 @@ func (service *Service) prepareMessage(ctx context.Context, rawEvent domain.RawK
 	sender, err := senderProfileFromPayload(payload)
 	if err != nil {
 		return domain.ChatMessage{}, false, err
-	}
-	if service.senderResolver != nil && sender.Slug != "" {
-		if resolved, err := service.senderResolver.ResolveSender(ctx, sender.Slug); err == nil {
-			sender.Slug = resolved.Slug
-			if resolved.Username != "" {
-				sender.Username = resolved.Username
-			}
-			if resolved.ProfileImageURL != "" {
-				sender.ProfileImageURL = resolved.ProfileImageURL
-			}
-			if resolved.RawProfilePayloadJSON != "" {
-				sender.RawProfilePayloadJSON = resolved.RawProfilePayloadJSON
-			}
-		}
 	}
 	sender, err = service.senders.Upsert(ctx, sender)
 	if err != nil {

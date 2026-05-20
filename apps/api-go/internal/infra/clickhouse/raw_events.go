@@ -199,6 +199,43 @@ func (repo *RawEventRepository) GetByID(ctx context.Context, rawEventID string) 
 	return event, nil
 }
 
+func (repo *RawEventRepository) GetByIDs(ctx context.Context, rawEventIDs []string) (map[string]domain.RawKickEvent, error) {
+	if len(rawEventIDs) == 0 {
+		return map[string]domain.RawKickEvent{}, nil
+	}
+	rows, err := repo.conn.Query(
+		ctx,
+		`SELECT
+			e.id, e.channel_slug, e.event_type, e.event_name, ifNull(e.kick_message_id, ''),
+			ifNull(e.chatroom_id, 0), ifNull(e.channel_id, 0), e.payload_json, e.metadata_json, e.status,
+			ifNull(a.attempts, 0), e.received_at, e.processed_at, e.error_message
+		 FROM raw_kick_events AS e
+		 LEFT JOIN (
+			SELECT raw_event_id, max(attempt) AS attempts
+			FROM raw_event_attempts
+			GROUP BY raw_event_id
+		 ) AS a ON a.raw_event_id = e.id
+		 WHERE e.id IN (?)`,
+		rawEventIDs,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("batch get raw events by ids: %w", err)
+	}
+	defer rows.Close()
+	result := make(map[string]domain.RawKickEvent, len(rawEventIDs))
+	for rows.Next() {
+		event, err := scanRawKickEvent(rows)
+		if err != nil {
+			return nil, err
+		}
+		result[event.ID] = event
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate raw events by ids: %w", err)
+	}
+	return result, nil
+}
+
 func (repo *RawEventRepository) InsertAttempt(ctx context.Context, attempt domain.RawEventAttempt) error {
 	return repo.InsertAttemptsBatch(ctx, []domain.RawEventAttempt{attempt})
 }

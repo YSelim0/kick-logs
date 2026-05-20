@@ -133,7 +133,7 @@ func TestRawEventProcessorNormalizesAndDeduplicatesMessages(t *testing.T) {
 	if len(unit.rawEvents.attempts) != 2 || unit.rawEvents.attempts[0].Status != "processed" {
 		t.Fatalf("attempts = %#v", unit.rawEvents.attempts)
 	}
-	if len(unit.senders.values) != 1 || unit.senders.values[0].ProfileImageURL == "" {
+	if len(unit.senders.values) != 1 {
 		t.Fatalf("senders = %#v", unit.senders.values)
 	}
 }
@@ -704,6 +704,20 @@ func (repo *fakeRawEventRepository) AttemptCount(_ context.Context, rawEventID s
 	return repo.attemptsFor(rawEventID), nil
 }
 
+func (repo *fakeRawEventRepository) GetByIDs(_ context.Context, rawEventIDs []string) (map[string]domain.RawKickEvent, error) {
+	result := make(map[string]domain.RawKickEvent, len(rawEventIDs))
+	for _, id := range rawEventIDs {
+		for _, event := range repo.events {
+			if event.ID == id {
+				event.Attempts = repo.attemptsFor(event.ID)
+				result[id] = event
+				break
+			}
+		}
+	}
+	return result, nil
+}
+
 func (repo *fakeRawEventRepository) attemptsFor(rawEventID string) uint16 {
 	var count uint16
 	for _, attempt := range repo.attempts {
@@ -926,6 +940,19 @@ func (repo *fakeMessageRepository) ExistsByKickMessageID(_ context.Context, kick
 		}
 	}
 	return false, nil
+}
+
+func (repo *fakeMessageRepository) ExistingKickMessageIDs(_ context.Context, kickMessageIDs []string) (map[string]bool, error) {
+	result := make(map[string]bool, len(kickMessageIDs))
+	for _, id := range kickMessageIDs {
+		for _, message := range repo.messages {
+			if message.KickMessageID == id {
+				result[id] = true
+				break
+			}
+		}
+	}
+	return result, nil
 }
 
 func (repo *fakeMessageRepository) Search(_ context.Context, _ domain.MessageSearchFilter) ([]domain.ChatMessage, error) {

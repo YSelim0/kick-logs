@@ -318,6 +318,19 @@ func (repository *fakeMessageRepository) ExistsByKickMessageID(_ context.Context
 	return false, nil
 }
 
+func (repository *fakeMessageRepository) ExistingKickMessageIDs(_ context.Context, kickMessageIDs []string) (map[string]bool, error) {
+	result := make(map[string]bool, len(kickMessageIDs))
+	for _, id := range kickMessageIDs {
+		for _, message := range repository.messages {
+			if message.KickMessageID == id {
+				result[id] = true
+				break
+			}
+		}
+	}
+	return result, nil
+}
+
 func (repository *fakeMessageRepository) Search(
 	_ context.Context,
 	filter domain.MessageSearchFilter,
