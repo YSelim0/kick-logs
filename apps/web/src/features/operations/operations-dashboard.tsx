@@ -19,7 +19,22 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { getOperationsSummary } from "@/features/operations/api";
-import type { OperationsSummary } from "@/types/api";
+import type { IngestionHealth, OperationsSummary } from "@/types/api";
+
+const EMPTY_INGESTION: IngestionHealth = {
+  queue_depth: 0,
+  oldest_pending_age_seconds: 0,
+  write_queue_depth: 0,
+  write_queue_high_water_mark: 0,
+  write_drop_count: 0,
+  write_flush_count: 0,
+  last_flush_size: 0,
+  last_flush_millis: 0,
+  clickhouse_insert_failures: 0,
+  queue_enqueue_failures: 0,
+  breaker_state: "closed",
+  breaker_current_delay_ms: 0
+};
 
 type MetricTone = "default" | "success" | "warning" | "danger";
 
@@ -115,18 +130,18 @@ export function OperationsDashboard() {
             />
           ) : null}
 
-          {summary.ingestion.breaker_state === "open" ? (
+          {(summary.ingestion ?? EMPTY_INGESTION).breaker_state === "open" ? (
             <OperationsNotice
               icon={<AlertTriangle className="h-4 w-4" />}
-              message={`ClickHouse circuit breaker açık. Bekleme ${Math.round(summary.ingestion.breaker_current_delay_ms)} ms.`}
+              message={`ClickHouse circuit breaker açık. Bekleme ${Math.round((summary.ingestion ?? EMPTY_INGESTION).breaker_current_delay_ms)} ms.`}
               tone="danger"
             />
           ) : null}
 
-          {summary.ingestion.write_drop_count > 0 ? (
+          {(summary.ingestion ?? EMPTY_INGESTION).write_drop_count > 0 ? (
             <OperationsNotice
               icon={<AlertTriangle className="h-4 w-4" />}
-              message={`Buffered writer ${formatNumber(summary.ingestion.write_drop_count)} event düşürdü. Pusher trafiği buffer kapasitesini aştı.`}
+              message={`Buffered writer ${formatNumber((summary.ingestion ?? EMPTY_INGESTION).write_drop_count)} event düşürdü. Pusher trafiği buffer kapasitesini aştı.`}
               tone="warning"
             />
           ) : null}
@@ -222,34 +237,34 @@ function buildMetricCards(summary: OperationsSummary) {
     },
     {
       label: "Queue Backlog",
-      value: formatNumber(summary.ingestion.queue_depth),
+      value: formatNumber((summary.ingestion ?? EMPTY_INGESTION).queue_depth),
       detail:
-        summary.ingestion.oldest_pending_age_seconds > 0
-          ? `En eski ${formatDuration(summary.ingestion.oldest_pending_age_seconds)}`
+        (summary.ingestion ?? EMPTY_INGESTION).oldest_pending_age_seconds > 0
+          ? `En eski ${formatDuration((summary.ingestion ?? EMPTY_INGESTION).oldest_pending_age_seconds)}`
           : "Bekleyen yok",
       icon: <Inbox className="h-4 w-4" />,
-      tone: summary.ingestion.queue_depth > 1000 ? "warning" : "default"
+      tone: (summary.ingestion ?? EMPTY_INGESTION).queue_depth > 1000 ? "warning" : "default"
     },
     {
       label: "Writer Buffer",
-      value: formatNumber(summary.ingestion.write_queue_depth),
-      detail: `Tepe ${formatNumber(summary.ingestion.write_queue_high_water_mark)} / Drop ${formatNumber(summary.ingestion.write_drop_count)}`,
+      value: formatNumber((summary.ingestion ?? EMPTY_INGESTION).write_queue_depth),
+      detail: `Tepe ${formatNumber((summary.ingestion ?? EMPTY_INGESTION).write_queue_high_water_mark)} / Drop ${formatNumber((summary.ingestion ?? EMPTY_INGESTION).write_drop_count)}`,
       icon: <Gauge className="h-4 w-4" />,
-      tone: summary.ingestion.write_drop_count > 0 ? "warning" : "default"
+      tone: (summary.ingestion ?? EMPTY_INGESTION).write_drop_count > 0 ? "warning" : "default"
     },
     {
       label: "ClickHouse Breaker",
-      value: summary.ingestion.breaker_state === "open" ? "Açık" : "Kapalı",
-      detail: `${formatNumber(summary.ingestion.clickhouse_insert_failures)} insert hatası`,
+      value: (summary.ingestion ?? EMPTY_INGESTION).breaker_state === "open" ? "Açık" : "Kapalı",
+      detail: `${formatNumber((summary.ingestion ?? EMPTY_INGESTION).clickhouse_insert_failures)} insert hatası`,
       icon: <Zap className="h-4 w-4" />,
-      tone: summary.ingestion.breaker_state === "open" ? "danger" : "success"
+      tone: (summary.ingestion ?? EMPTY_INGESTION).breaker_state === "open" ? "danger" : "success"
     },
     {
       label: "Son Flush",
-      value: formatNumber(summary.ingestion.last_flush_size),
+      value: formatNumber((summary.ingestion ?? EMPTY_INGESTION).last_flush_size),
       detail:
-        summary.ingestion.last_flush_millis > 0
-          ? `${formatNumber(summary.ingestion.last_flush_millis)} ms`
+        (summary.ingestion ?? EMPTY_INGESTION).last_flush_millis > 0
+          ? `${formatNumber((summary.ingestion ?? EMPTY_INGESTION).last_flush_millis)} ms`
           : "Flush yok",
       icon: <Timer className="h-4 w-4" />,
       tone: "default"
