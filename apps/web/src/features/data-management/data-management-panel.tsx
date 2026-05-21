@@ -1,18 +1,9 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import {
-  AlertTriangle,
-  Database,
-  Loader2,
-  RefreshCcw,
-  Save,
-  ShieldAlert,
-  Trash2
-} from "lucide-react";
+import { Loader2, RefreshCcw, Save, ShieldAlert, TriangleAlert, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   confirmDataCleanup,
   getDataManagementSummary,
@@ -129,9 +120,7 @@ export function DataManagementPanel() {
   }
 
   async function submitConfirm() {
-    if (!preview || !canConfirm) {
-      return;
-    }
+    if (!preview || !canConfirm) return;
 
     setIsConfirming(true);
     setError(null);
@@ -153,20 +142,14 @@ export function DataManagementPanel() {
   }
 
   return (
-    <section className="rounded-lg border border-border bg-black p-5">
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4 border-b border-border pb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-kick-background text-primary">
-            <Database className="h-4 w-4" />
-          </div>
-          <div>
-            <h2 className="text-base font-semibold">Veri Yönetimi</h2>
-            <p className="text-xs text-muted-foreground">
-              Retention ayarları ve kontrollü cleanup işlemleri
-            </p>
-          </div>
+    <section className="rounded-lg border border-border bg-panel p-5">
+      <div className="mb-5 flex items-center justify-between">
+        <div className="flex flex-col gap-0.5">
+          <h2 className="text-[14px] font-semibold text-foreground">Veri Yönetimi</h2>
+          <span className="font-mono text-[11px] text-faint">
+            Retention ayarları ve kontrollü cleanup
+          </span>
         </div>
-
         <Button
           disabled={isLoading}
           onClick={() => void loadSummary()}
@@ -175,59 +158,78 @@ export function DataManagementPanel() {
           variant="outline"
         >
           {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin text-accent" />
+            <Loader2 className="h-3 w-3 animate-spin" />
           ) : (
-            <RefreshCcw className="h-4 w-4 text-accent" />
+            <RefreshCcw className="h-3 w-3" />
           )}
           Yenile
         </Button>
       </div>
 
-      {isLoading && !summary ? <StateBox text="Veri yönetimi bilgileri yükleniyor..." /> : null}
+      {isLoading && !summary ? (
+        <div className="rounded-md border border-border bg-elevated px-4 py-8 text-center text-[13px] text-muted-foreground">
+          Veri yönetimi bilgileri yükleniyor...
+        </div>
+      ) : null}
 
       {error ? (
-        <div className="mb-4 rounded-md border border-accent bg-kick-background px-3 py-2 text-sm">
+        <div className="mb-4 rounded-md border border-danger bg-elevated px-3 py-2 text-[13px]">
           {error}
         </div>
       ) : null}
 
       {summary ? (
-        <div className="space-y-5">
+        <div className="flex flex-col gap-5">
+          {/* Stats */}
           <div className="grid gap-3 md:grid-cols-3">
-            <Metric label="Veritabanı" value={formatBytes(summary.database_bytes)} />
-            <Metric label="Mesaj" value={formatNumber(summary.counts.messages)} />
-            <Metric label="Raw Event" value={formatNumber(summary.counts.raw_events)} />
+            <StatCard label="Veritabanı" value={formatBytes(summary.database_bytes)} />
+            <StatCard label="Mesaj" value={formatNumber(summary.counts.messages)} />
+            <StatCard label="Raw Event" value={formatNumber(summary.counts.raw_events)} />
           </div>
 
-          <div className="overflow-hidden rounded-md border border-border">
-            <div className="grid grid-cols-[minmax(0,1fr)_110px_120px] bg-kick-background px-3 py-2 text-xs font-medium text-muted-foreground">
-              <div>Tablo</div>
-              <div>Satır</div>
-              <div>Boyut</div>
+          {/* Tables */}
+          <div className="rounded-lg border border-border">
+            <div className="flex items-center border-b border-border px-3 py-2">
+              <span className="flex-1 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
+                TABLO
+              </span>
+              <span className="w-28 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
+                SATIR
+              </span>
+              <span className="w-24 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
+                BOYUT
+              </span>
             </div>
-            {summary.tables.map((table, index) => (
+            {summary.tables.map((table) => (
               <div
-                className={`grid grid-cols-[minmax(0,1fr)_110px_120px] border-t border-border/70 px-3 py-2 text-sm ${
-                  index % 2 === 1 ? "bg-kick-background" : "bg-black"
-                }`}
+                className="flex items-center border-b border-border px-3 py-2.5 last:border-b-0"
                 key={table.table_name}
               >
-                <div className="truncate">{table.table_name}</div>
-                <div>{formatNumber(table.row_count)}</div>
-                <div>{formatBytes(table.total_bytes)}</div>
+                <span className="flex-1 truncate font-mono text-[12px] text-foreground">
+                  {table.table_name}
+                </span>
+                <span className="w-28 font-mono text-[12px] text-muted-foreground">
+                  {formatNumber(table.row_count)}
+                </span>
+                <span className="w-24 font-mono text-[12px] text-muted-foreground">
+                  {formatBytes(table.total_bytes)}
+                </span>
               </div>
             ))}
           </div>
 
+          {/* Retention settings */}
           <form
-            className="rounded-md border border-border bg-kick-background p-4"
+            className="rounded-lg border border-border bg-elevated p-4"
             onSubmit={saveRetention}
           >
-            <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
-              <Save className="h-4 w-4 text-accent" />
-              Retention Ayarları
+            <div className="mb-4 flex items-center gap-2">
+              <Save className="h-3.5 w-3.5 text-accent" />
+              <span className="font-sans text-[13px] font-semibold text-foreground">
+                Retention Ayarları
+              </span>
             </div>
-            <div className="grid gap-3 md:grid-cols-[1fr_1fr_140px]">
+            <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
               <RetentionSelect
                 label="Mesajlar"
                 onChange={setMessageRetention}
@@ -239,7 +241,7 @@ export function DataManagementPanel() {
                 value={rawEventRetention}
               />
               <div className="flex items-end">
-                <Button className="h-10 w-full" disabled={isSaving} type="submit">
+                <Button disabled={isSaving} type="submit">
                   {isSaving ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
@@ -251,79 +253,85 @@ export function DataManagementPanel() {
             </div>
           </form>
 
+          {/* Cleanup preview form */}
           <form
-            className="rounded-md border border-border bg-kick-background p-4"
+            className="rounded-lg border border-border bg-elevated p-4"
             onSubmit={submitPreview}
           >
-            <div className="mb-4 flex items-center gap-2 text-sm font-semibold">
-              <ShieldAlert className="h-4 w-4 text-accent" />
-              Cleanup Önizleme
+            <div className="mb-4 flex items-center gap-2">
+              <ShieldAlert className="h-3.5 w-3.5 text-accent" />
+              <span className="font-sans text-[13px] font-semibold text-foreground">
+                Cleanup Önizleme
+              </span>
             </div>
-            <div className="grid gap-3 md:grid-cols-[180px_minmax(0,1fr)_150px]">
-              <label className="grid gap-2 text-sm">
-                Hedef
+            <div className="grid gap-3 md:grid-cols-[180px_minmax(0,1fr)_auto]">
+              <div className="flex flex-col gap-1.5">
+                <label
+                  className="font-mono text-[11px] font-medium tracking-[0.5px] text-muted-foreground"
+                  htmlFor="cleanup-target"
+                >
+                  HEDEF
+                </label>
                 <select
-                  className="h-10 rounded-md border border-border bg-black px-3 text-sm text-foreground outline-none focus:border-primary"
-                  onChange={(event) =>
-                    setCleanupForm((current) => ({
-                      ...current,
-                      target: event.target.value as DataCleanupTarget
-                    }))
+                  className="h-[38px] rounded-md border border-border-strong bg-panel px-3 font-sans text-[13px] text-foreground outline-none focus:border-accent"
+                  id="cleanup-target"
+                  onChange={(e) =>
+                    setCleanupForm((c) => ({ ...c, target: e.target.value as DataCleanupTarget }))
                   }
                   value={cleanupForm.target}
                 >
-                  {CLEANUP_TARGETS.map((target) => (
-                    <option key={target.value} value={target.value}>
-                      {target.label}
+                  {CLEANUP_TARGETS.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
                     </option>
                   ))}
                 </select>
-              </label>
+              </div>
 
               {cleanupForm.target === "channel" ? (
-                <label className="grid gap-2 text-sm">
-                  Kanal slug
-                  <Input
-                    onChange={(event) =>
-                      setCleanupForm((current) => ({
-                        ...current,
-                        channel_slug: event.target.value
-                      }))
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    className="font-mono text-[11px] font-medium tracking-[0.5px] text-muted-foreground"
+                    htmlFor="cleanup-channel"
+                  >
+                    KANAL SLUG
+                  </label>
+                  <input
+                    className="h-[38px] rounded-md border border-border-strong bg-panel px-3 font-sans text-[13px] text-foreground outline-none focus:border-accent placeholder:text-faint"
+                    id="cleanup-channel"
+                    onChange={(e) =>
+                      setCleanupForm((c) => ({ ...c, channel_slug: e.target.value }))
                     }
                     placeholder="örn. hype"
                     value={cleanupForm.channel_slug}
                   />
-                </label>
+                </div>
               ) : cleanupForm.target === "sender" ? (
-                <label className="grid gap-2 text-sm">
-                  Gönderen
-                  <Input
-                    onChange={(event) =>
-                      setCleanupForm((current) => ({
-                        ...current,
-                        sender: event.target.value
-                      }))
-                    }
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    className="font-mono text-[11px] font-medium tracking-[0.5px] text-muted-foreground"
+                    htmlFor="cleanup-sender"
+                  >
+                    GÖNDEREN
+                  </label>
+                  <input
+                    className="h-[38px] rounded-md border border-border-strong bg-panel px-3 font-sans text-[13px] text-foreground outline-none focus:border-accent placeholder:text-faint"
+                    id="cleanup-sender"
+                    onChange={(e) => setCleanupForm((c) => ({ ...c, sender: e.target.value }))}
                     placeholder="örn. yavuz"
                     value={cleanupForm.sender}
                   />
-                </label>
+                </div>
               ) : (
-                <div className="rounded-md border border-border bg-black px-3 py-2 text-xs text-muted-foreground">
-                  Bu hedef mevcut retention ayarını kullanır. Sonsuza kadar seçiliyse delete
-                  çalışmaz.
+                <div className="flex items-center rounded-md border border-border bg-panel px-3 py-2 font-sans text-[12px] text-muted-foreground">
+                  Mevcut retention ayarını kullanır. Sonsuza kadar seçiliyse delete çalışmaz.
                 </div>
               )}
 
               <div className="flex items-end">
-                <Button
-                  className="h-10 w-full"
-                  disabled={isPreviewing}
-                  type="submit"
-                  variant="outline"
-                >
+                <Button disabled={isPreviewing} type="submit" variant="outline">
                   {isPreviewing ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-accent" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Trash2 className="h-4 w-4 text-accent" />
                   )}
@@ -333,42 +341,52 @@ export function DataManagementPanel() {
             </div>
           </form>
 
+          {/* Preview result */}
           {preview ? (
-            <div className="rounded-md border border-primary/70 bg-kick-background p-4">
-              <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                <AlertTriangle className="h-4 w-4 text-primary" />
-                Cleanup Önizleme Sonucu
+            <div className="rounded-lg border border-warning bg-elevated p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <TriangleAlert className="h-3.5 w-3.5 text-warning" />
+                <span className="font-sans text-[13px] font-semibold text-foreground">
+                  Cleanup Önizleme Sonucu
+                </span>
               </div>
-              <div className="grid gap-3 text-sm md:grid-cols-3">
-                <Metric label="Mesaj" value={formatNumber(preview.affected.messages)} />
-                <Metric label="Raw Event" value={formatNumber(preview.affected.raw_events)} />
-                <Metric label="Toplam" value={formatNumber(preview.affected.total)} />
+              <div className="mb-4 grid gap-3 md:grid-cols-3">
+                <StatCard label="MESAJ" value={formatNumber(preview.affected.messages)} />
+                <StatCard label="RAW EVENT" value={formatNumber(preview.affected.raw_events)} />
+                <StatCard label="TOPLAM" value={formatNumber(preview.affected.total)} />
               </div>
               {preview.reason ? (
-                <p className="mt-3 text-sm text-muted-foreground">{preview.reason}</p>
+                <p className="mb-4 font-sans text-[12px] text-muted-foreground">{preview.reason}</p>
               ) : null}
-              <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_170px]">
-                <label className="grid gap-2 text-sm">
-                  Onay metni:{" "}
-                  <span className="font-mono text-primary">{preview.confirmation_text}</span>
-                  <Input
-                    onChange={(event) => setConfirmationText(event.target.value)}
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    className="font-mono text-[11px] font-medium tracking-[0.5px] text-muted-foreground"
+                    htmlFor="confirm-text"
+                  >
+                    ONAY METNİ:{" "}
+                    <span className="font-mono text-accent">{preview.confirmation_text}</span>
+                  </label>
+                  <input
+                    className="h-[38px] rounded-md border border-border-strong bg-panel px-3 font-sans text-[13px] text-foreground outline-none focus:border-accent placeholder:text-faint"
+                    id="confirm-text"
+                    onChange={(e) => setConfirmationText(e.target.value)}
                     placeholder={preview.confirmation_text}
                     value={confirmationText}
                   />
-                </label>
+                </div>
                 <div className="flex items-end">
                   <Button
-                    className="h-10 w-full"
+                    className="border-danger text-danger hover:bg-danger/10"
                     disabled={!canConfirm}
                     onClick={() => void submitConfirm()}
                     type="button"
                     variant="outline"
                   >
                     {isConfirming ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-accent" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Trash2 className="h-4 w-4 text-accent" />
+                      <Trash2 className="h-4 w-4" />
                     )}
                     Sil
                   </Button>
@@ -378,7 +396,7 @@ export function DataManagementPanel() {
           ) : null}
 
           {result ? (
-            <div className="rounded-md border border-primary bg-kick-background px-3 py-2 text-sm">
+            <div className="rounded-lg border border-accent bg-elevated px-4 py-3 font-sans text-[13px] text-foreground">
               Cleanup tamamlandı: {formatNumber(result.deleted.messages)} mesaj,{" "}
               {formatNumber(result.deleted.raw_events)} raw event silindi.
             </div>
@@ -386,6 +404,17 @@ export function DataManagementPanel() {
         </div>
       ) : null}
     </section>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-1 rounded-lg border border-border bg-panel px-4 py-3">
+      <span className="font-mono text-[10px] font-medium tracking-[0.8px] text-faint">{label}</span>
+      <span className="truncate font-sans text-[18px] font-semibold text-foreground" title={value}>
+        {value}
+      </span>
+    </div>
   );
 }
 
@@ -398,12 +427,19 @@ function RetentionSelect({
   onChange: (value: RetentionDays) => void;
   value: RetentionDays;
 }) {
+  const id = `retention-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
-    <label className="grid gap-2 text-sm">
-      {label}
+    <div className="flex flex-col gap-1.5">
+      <label
+        className="font-mono text-[11px] font-medium tracking-[0.5px] text-muted-foreground"
+        htmlFor={id}
+      >
+        {label}
+      </label>
       <select
-        className="h-10 rounded-md border border-border bg-black px-3 text-sm text-foreground outline-none focus:border-primary"
-        onChange={(event) => onChange(parseRetentionValue(event.target.value))}
+        className="h-[38px] rounded-md border border-border-strong bg-panel px-3 font-sans text-[13px] text-foreground outline-none focus:border-accent"
+        id={id}
+        onChange={(e) => onChange(parseRetentionValue(e.target.value))}
         value={value ?? "forever"}
       >
         {RETENTION_OPTIONS.map((option) => (
@@ -412,25 +448,6 @@ function RetentionSelect({
           </option>
         ))}
       </select>
-    </label>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-border bg-black px-3 py-2">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="truncate font-semibold text-primary" title={value}>
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function StateBox({ text }: { text: string }) {
-  return (
-    <div className="rounded-md border border-border bg-kick-background px-4 py-8 text-center text-sm text-muted-foreground">
-      {text}
     </div>
   );
 }
@@ -444,14 +461,8 @@ function buildCleanupRequest(form: CleanupFormState) {
 }
 
 function parseRetentionValue(value: string): RetentionDays {
-  if (value === "30") {
-    return 30;
-  }
-
-  if (value === "90") {
-    return 90;
-  }
-
+  if (value === "30") return 30;
+  if (value === "90") return 90;
   return null;
 }
 
@@ -460,22 +471,14 @@ function formatNumber(value: number) {
 }
 
 function formatBytes(value: number) {
-  if (value <= 0) {
-    return "0 B";
-  }
-
+  if (value <= 0) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
   const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
   const amount = value / 1024 ** index;
-  return `${new Intl.NumberFormat("tr-TR", {
-    maximumFractionDigits: index === 0 ? 0 : 2
-  }).format(amount)} ${units[index]}`;
+  return `${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: index === 0 ? 0 : 2 }).format(amount)} ${units[index]}`;
 }
 
 function resolveDataError(error: unknown) {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
+  if (error instanceof Error) return error.message;
   return "Veri yönetimi işlemi tamamlanamadı.";
 }

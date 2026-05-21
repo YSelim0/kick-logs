@@ -26,7 +26,7 @@ describe("UserAdmin", () => {
     render(<UserAdmin />);
 
     expect(await screen.findByText("admin@kicklogs.local")).toBeInTheDocument();
-    expect(screen.getAllByText("super_admin")).toHaveLength(2);
+    expect(screen.getAllByText("super_admin")).toHaveLength(1);
     expect(screen.getByText("Aktif")).toBeInTheDocument();
     expect(screen.queryByText(/password/i)).not.toBeInTheDocument();
   });
@@ -46,10 +46,10 @@ describe("UserAdmin", () => {
 
     expect(await screen.findByText("admin@kicklogs.local")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText("Yeni admin e-postası"), {
+    fireEvent.change(screen.getByLabelText("E-POSTA"), {
       target: { value: " operator@kicklogs.local " }
     });
-    fireEvent.change(screen.getByLabelText("Geçici parola"), {
+    fireEvent.change(screen.getByLabelText("GEÇİCİ PAROLA"), {
       target: { value: "admin1234" }
     });
     fireEvent.click(screen.getByRole("button", { name: /oluştur/i }));

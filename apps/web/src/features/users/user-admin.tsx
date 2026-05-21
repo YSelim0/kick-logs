@@ -1,10 +1,9 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
-import { Loader2, Mail, Plus, ShieldCheck, UsersRound } from "lucide-react";
+import { Loader2, LockKeyhole, Mail, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { createAdminUser, listAdminUsers } from "@/features/users/api";
 import type { AdminUser } from "@/types/api";
 
@@ -38,18 +37,13 @@ export function UserAdmin() {
     event.preventDefault();
 
     const normalizedEmail = email.trim();
-    if (!normalizedEmail || password.length < 8) {
-      return;
-    }
+    if (!normalizedEmail || password.length < 8) return;
 
     setIsCreating(true);
     setError(null);
 
     try {
-      const createdUser = await createAdminUser({
-        email: normalizedEmail,
-        password
-      });
+      const createdUser = await createAdminUser({ email: normalizedEmail, password });
       setEmail("");
       setPassword("");
       setUsers((current) => mergeUser(current, createdUser));
@@ -61,74 +55,65 @@ export function UserAdmin() {
   }
 
   return (
-    <section className="rounded-lg border border-border bg-black p-5">
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4 border-b border-border pb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-kick-background text-primary">
-            <UsersRound className="h-4 w-4" />
-          </div>
-          <div>
-            <h2 className="text-base font-semibold">Admin Kullanıcıları</h2>
-            <p className="text-xs text-muted-foreground">
-              Sadece super admin yeni yönetici hesabı oluşturabilir
-            </p>
-          </div>
-        </div>
-
-        <div className="rounded-md bg-kick-background px-3 py-2 text-xs">
-          <span className="text-muted-foreground">Kullanıcı</span>
-          <span className="ml-2 font-semibold text-primary">{users.length}</span>
-        </div>
+    <section className="rounded-lg border border-border bg-panel p-5">
+      <div className="mb-5 flex flex-col gap-0.5">
+        <span className="text-[14px] font-semibold text-foreground">Admin Kullanıcıları</span>
+        <span className="font-mono text-[11px] text-faint">
+          {users.length} kullanıcı · sadece super admin yönetebilir
+        </span>
       </div>
 
       <form
-        className="mb-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px_150px]"
+        className="mb-5 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
         onSubmit={submitUser}
       >
-        <div>
+        <div className="flex flex-col gap-1.5">
           <label
-            className="mb-2 flex h-5 items-center gap-2 text-sm font-medium"
+            className="font-mono text-[11px] font-medium tracking-[0.5px] text-muted-foreground"
             htmlFor="admin-email"
           >
-            <Mail className="h-4 w-4 text-accent" />
-            Yeni admin e-postası
+            E-POSTA
           </label>
-          <Input
-            autoComplete="off"
-            id="admin-email"
-            maxLength={320}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="operator@example.com"
-            type="email"
-            value={email}
-          />
+          <div className="flex h-[38px] items-center gap-2 rounded-md border border-border-strong bg-elevated px-3">
+            <Mail className="h-3.5 w-3.5 shrink-0 text-faint" />
+            <input
+              autoComplete="off"
+              className="flex-1 bg-transparent text-[13px] text-foreground outline-none placeholder:text-faint"
+              id="admin-email"
+              maxLength={320}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="operator@example.com"
+              type="email"
+              value={email}
+            />
+          </div>
         </div>
 
-        <div>
+        <div className="flex flex-col gap-1.5">
           <label
-            className="mb-2 flex h-5 items-center gap-2 text-sm font-medium"
+            className="font-mono text-[11px] font-medium tracking-[0.5px] text-muted-foreground"
             htmlFor="admin-password"
           >
-            <ShieldCheck className="h-4 w-4 text-accent" />
-            Geçici parola
+            GEÇİCİ PAROLA
           </label>
-          <Input
-            autoComplete="new-password"
-            id="admin-password"
-            maxLength={256}
-            minLength={8}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="en az 8 karakter"
-            type="password"
-            value={password}
-          />
+          <div className="flex h-[38px] items-center gap-2 rounded-md border border-border-strong bg-elevated px-3">
+            <LockKeyhole className="h-3.5 w-3.5 shrink-0 text-faint" />
+            <input
+              autoComplete="new-password"
+              className="flex-1 bg-transparent text-[13px] text-foreground outline-none placeholder:text-faint"
+              id="admin-password"
+              maxLength={256}
+              minLength={8}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="en az 8 karakter"
+              type="password"
+              value={password}
+            />
+          </div>
         </div>
 
         <div className="flex items-end">
-          <Button
-            className="h-11 w-full"
-            disabled={isCreating || !email.trim() || password.length < 8}
-          >
+          <Button disabled={isCreating || !email.trim() || password.length < 8} type="submit">
             {isCreating ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
@@ -140,26 +125,32 @@ export function UserAdmin() {
       </form>
 
       {error ? (
-        <div className="mb-4 rounded-md border border-accent bg-kick-background px-3 py-2 text-sm">
+        <div className="mb-4 rounded-md border border-danger bg-elevated px-3 py-2 text-[13px]">
           {error}
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-md border border-border">
-        <div className="hidden grid-cols-[minmax(220px,1fr)_140px_100px] bg-kick-background px-3 py-2 text-xs font-medium text-muted-foreground md:grid">
-          <div>E-posta</div>
-          <div>Rol</div>
-          <div>Durum</div>
+      <div className="rounded-lg border border-border">
+        <div className="flex items-center border-b border-border px-3 py-2">
+          <span className="flex-1 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
+            E-POSTA
+          </span>
+          <span className="w-36 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
+            ROL
+          </span>
+          <span className="w-20 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
+            DURUM
+          </span>
         </div>
 
         {isLoading ? (
-          <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+          <div className="px-4 py-10 text-center text-[13px] text-muted-foreground">
             Admin kullanıcıları yükleniyor...
           </div>
         ) : users.length ? (
-          users.map((user, index) => <UserRow isAlt={index % 2 === 1} key={user.id} user={user} />)
+          users.map((user) => <UserRow key={user.id} user={user} />)
         ) : (
-          <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+          <div className="px-4 py-10 text-center text-[13px] text-muted-foreground">
             Admin kullanıcısı bulunamadı.
           </div>
         )}
@@ -168,28 +159,22 @@ export function UserAdmin() {
   );
 }
 
-function UserRow({ isAlt, user }: { isAlt: boolean; user: AdminUser }) {
+function UserRow({ user }: { user: AdminUser }) {
   return (
-    <div
-      className={
-        isAlt
-          ? "grid gap-3 border-t border-border/70 bg-kick-background px-3 py-3 text-sm md:grid-cols-[minmax(220px,1fr)_140px_100px] md:items-center"
-          : "grid gap-3 border-t border-border/70 bg-black px-3 py-3 text-sm md:grid-cols-[minmax(220px,1fr)_140px_100px] md:items-center"
-      }
-    >
-      <div className="min-w-0">
-        <div className="truncate font-medium text-foreground">{user.email}</div>
-        <div className="text-xs text-muted-foreground md:hidden">{user.role}</div>
+    <div className="flex items-center border-b border-border px-3 py-2.5 last:border-b-0">
+      <div className="min-w-0 flex-1">
+        <span className="truncate font-sans text-[13px] text-foreground">{user.email}</span>
       </div>
-      <div className="hidden text-foreground md:block">{user.role}</div>
-      <div>
+      <div className="w-36">
+        <span className="font-mono text-[12px] text-muted-foreground">{user.role}</span>
+      </div>
+      <div className="w-20">
         <span
-          className={
-            user.is_active
-              ? "inline-flex rounded-md bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground"
-              : "inline-flex rounded-md bg-kick-background px-2 py-1 text-xs text-muted-foreground"
-          }
+          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-medium ${
+            user.is_active ? "bg-accent-muted text-accent" : "bg-elevated text-faint"
+          }`}
         >
+          <span className={`h-1 w-1 rounded-full ${user.is_active ? "bg-accent" : "bg-faint"}`} />
           {user.is_active ? "Aktif" : "Pasif"}
         </span>
       </div>
@@ -199,13 +184,10 @@ function UserRow({ isAlt, user }: { isAlt: boolean; user: AdminUser }) {
 
 function mergeUser(current: AdminUser[], user: AdminUser) {
   const next = current.filter((item) => item.id !== user.id);
-  return [...next, user].sort((first, second) => first.email.localeCompare(second.email));
+  return [...next, user].sort((a, b) => a.email.localeCompare(b.email));
 }
 
 function resolveUserAdminError(error: unknown) {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
+  if (error instanceof Error) return error.message;
   return "Kullanıcı işlemi tamamlanırken hata oluştu.";
 }
