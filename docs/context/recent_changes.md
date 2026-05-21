@@ -4,6 +4,21 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Frontend v2 re-skin: `/users/[slug]` and `/channels/[slug]` now match the v2 profile designs
+  (`User Profile / v2`, `ksyyS`; `Channel Profile / v2`, `WGYFT`).
+  - both routes use the shared `SiteHeader` with the `Search` pill, v2 breadcrumbs, `bg-panel`
+    identity panels, single 4-cell stats bars, three equal analytics panels, and dense latest
+    message lists
+  - user profiles render the circular sender avatar, `Mesajlarda ara` CTA, top channels, top
+    emotes, inline emotes, reply context chips, and channel links in accent green
+  - channel profiles render the rounded-square channel image, `LOGGING` pill, `Kanalda ara` CTA,
+    top users, top emotes, sender-color latest rows, and Kick channel/chatroom metadata
+  - user profile reply previews now reuse the `/search` reply chip styling, including the `↳`
+    marker and higher-contrast replied-to sender link color
+  - `docs/design/screens/` is ignored so exported design/reference PNGs do not get committed
+  - verification: `pnpm --filter @kick-logs/web typecheck` and `test` (16/70) passed; lint was
+    fixed by removing unused chart summary plumbing and should be rerun before commit
+
 - Frontend v2 re-skin: `/search` is now on the v2 design (`Search Screen / v2`, `zKUtf`).
   - `apps/web/src/features/search/search-screen.tsx` switched to the shared `SiteHeader`,
     a `Search` title + mono `Tüm kanallar · Yeni → Eski` strip, single `bg-panel` form card,
@@ -35,8 +50,8 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - new shared `apps/web/src/components/site-header.tsx` powers the v2 chrome (brand + active
     `Search` pill + GitHub icon + Admin outline); landing consumes it
   - landing test rewritten for the new strings, links, and empty hints; `Support` link removed
-  - other routes (`/search`, `/admin`, `/login`, profiles) still render their pre-v2 layouts;
-    they will pick up the new tokens visually until their own v2 passes land
+  - after later v2 passes, `/search` and profile routes are also on v2; `/admin` and `/login`
+    remain to be re-skinned
   - verification: pnpm typecheck/lint/test/build green; `go build/test/vet ./...` green;
     Prettier check passed on touched files
 

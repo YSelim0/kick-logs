@@ -2,22 +2,12 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import {
-  Activity,
-  AlertTriangle,
-  ArrowLeft,
-  BarChart3,
-  CalendarClock,
-  MessageSquareText,
-  Search,
-  Smile,
-  UserRound
-} from "lucide-react";
-import Image from "next/image";
+import { Search } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
+import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { getChannelProfile } from "@/features/channel-profile/api";
 import { MessageContent } from "@/features/search/message-content";
@@ -70,165 +60,148 @@ export function ChannelProfilePage({ slug }: { slug: string }) {
   }, [slug]);
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <ProfileHeader />
+    <main className="min-h-screen bg-page text-foreground">
+      <SiteHeader activeRoute="search" />
 
-      <div className="mx-auto max-w-[1240px] px-4 py-6 md:px-8">
-        {status === "loading" ? <ProfileState message="Kanal profili yükleniyor..." /> : null}
-        {status === "not-found" ? (
-          <ProfileState
-            actionHref="/search"
-            actionLabel="Search'e dön"
-            message="Kanal bulunamadı."
-            tone="warning"
-          />
-        ) : null}
-        {status === "error" ? (
-          <ProfileState
-            actionHref={`/search?channel=${encodeURIComponent(slug)}`}
-            actionLabel="Search'te ara"
-            message="Kanal profili şu anda alınamadı."
-            tone="danger"
-          />
-        ) : null}
-        {status === "ready" && profile ? <ProfileContent profile={profile} /> : null}
+      <div className="mx-auto max-w-[1280px] px-6 py-6">
+        <Breadcrumb slug={slug} />
+
+        <div className="mt-5 space-y-5">
+          {status === "loading" ? <ProfileState message="Kanal profili yükleniyor..." /> : null}
+          {status === "not-found" ? (
+            <ProfileState
+              actionHref="/search"
+              actionLabel="Search'e dön"
+              message="Kanal bulunamadı."
+              tone="warning"
+            />
+          ) : null}
+          {status === "error" ? (
+            <ProfileState
+              actionHref={`/search?channel=${encodeURIComponent(slug)}`}
+              actionLabel="Search'te ara"
+              message="Kanal profili şu anda alınamadı."
+              tone="danger"
+            />
+          ) : null}
+          {status === "ready" && profile ? <ProfileContent profile={profile} /> : null}
+        </div>
       </div>
     </main>
   );
 }
 
-function ProfileHeader() {
+function Breadcrumb({ slug }: { slug: string }) {
   return (
-    <header className="border-b border-border bg-kick-background">
-      <nav className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm md:px-8">
-        <Link className="flex items-center gap-3 font-semibold" href="/">
-          <Image
-            alt="Kick Logs"
-            className="h-8 w-8 rounded-md object-contain"
-            height={32}
-            src="/app-logo.png"
-            width={32}
-          />
-          Kick Logs
-        </Link>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <NavLink href="/search">Search</NavLink>
-          <NavLink href="/admin">Admin</NavLink>
-        </div>
-      </nav>
-    </header>
+    <nav aria-label="Breadcrumb">
+      <p className="font-mono text-[12px] uppercase tracking-wider text-muted-foreground">
+        <Link className="hover:text-foreground" href="/">
+          channels
+        </Link>{" "}
+        <span className="text-faint">/</span> <span className="text-foreground">{slug}</span>
+      </p>
+    </nav>
   );
 }
 
 function ProfileContent({ profile }: { profile: ChannelProfile }) {
   const searchHref = `/search?channel=${encodeURIComponent(profile.channel.slug)}`;
-  const volumeSummary = useMemo(
-    () => summarizeVolume(profile.message_volume),
-    [profile.message_volume]
-  );
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-lg border border-border bg-black p-5 md:p-6">
-        <div className="flex flex-wrap items-start justify-between gap-5">
+    <div className="space-y-5">
+      {/* Identity panel */}
+      <section className="rounded-lg border border-border bg-panel px-6 py-5">
+        <div className="flex flex-wrap items-center justify-between gap-5">
           <div className="flex min-w-0 items-center gap-4">
             <ChannelAvatar profile={profile} />
             <div className="min-w-0">
-              <div className="mb-2 inline-flex items-center gap-2 rounded-md border border-border bg-kick-background px-3 py-1 text-xs text-primary">
-                <Activity className="h-3.5 w-3.5" />
-                Public channel profile
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-[22px] font-semibold leading-none text-foreground">
+                  {profile.channel.display_name}
+                </h1>
+                <LoggingPill />
               </div>
-              <h1 className="truncate text-2xl font-semibold md:text-3xl">
-                {profile.channel.display_name}
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">#{profile.channel.slug}</p>
-              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                <span>Kick ID: {profile.channel.kick_channel_id ?? "-"}</span>
-                <span>Chatroom: {profile.channel.kick_chatroom_id ?? "-"}</span>
-                <span>İlk kayıt: {formatDateTime(profile.overview.first_message_at)}</span>
-              </div>
+              <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+                channel id{" "}
+                <span className="text-secondary">{profile.channel.kick_channel_id ?? "—"}</span> ·
+                chatroom id{" "}
+                <span className="text-secondary">{profile.channel.kick_chatroom_id ?? "—"}</span> ·
+                ilk log{" "}
+                <span className="text-secondary">
+                  {formatShortDate(profile.overview.first_message_at)}
+                </span>{" "}
+                · son aktivite{" "}
+                <span className="text-secondary">
+                  {formatRelativeTime(profile.overview.latest_message_at)}
+                </span>
+              </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <Button asChild>
-              <Link href={searchHref}>
-                <Search className="h-4 w-4" />
-                Mesajlarda ara
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/search">
-                <ArrowLeft className="h-4 w-4 text-accent" />
-                Search
-              </Link>
-            </Button>
+          <Button asChild>
+            <Link href={searchHref}>
+              <Search className="h-4 w-4" />
+              Kanalda ara
+            </Link>
+          </Button>
+        </div>
+      </section>
+
+      {/* Stats bar */}
+      <ProfileStatsBar
+        cells={[
+          { label: "MESAJ", value: formatCompactNumber(profile.overview.total_messages) },
+          { label: "KULLANICI", value: formatCompactNumber(profile.overview.total_senders) },
+          { label: "EMOTE", value: formatCompactNumber(profile.overview.total_emote_usages) },
+          { label: "İLK LOG", value: formatShortDate(profile.overview.first_message_at) }
+        ]}
+      />
+
+      {/* 3-column analytics grid */}
+      <section
+        aria-label="Kanal analitiği"
+        className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:[&>*]:min-h-0"
+        style={{ alignItems: "stretch" }}
+      >
+        <AnalyticsPanel title="Mesaj hacmi" subtitle="son 14 gün">
+          <VolumeChart points={profile.message_volume} />
+        </AnalyticsPanel>
+
+        <AnalyticsPanel title="Top kullanıcılar" subtitle="mesaj sayısı">
+          <TopSenders senders={profile.top_senders} />
+        </AnalyticsPanel>
+
+        <AnalyticsPanel title="Top emoteler" subtitle="kullanım">
+          <TopEmotes emotes={profile.top_emotes} />
+        </AnalyticsPanel>
+      </section>
+
+      {/* Latest messages */}
+      <section className="rounded-lg border border-border bg-panel p-5">
+        <header className="mb-4 flex items-baseline justify-between gap-3">
+          <div>
+            <h2 className="text-[15px] font-semibold leading-none text-foreground">Son mesajlar</h2>
+            <p className="mt-0.5 font-mono text-2xs uppercase text-muted-foreground">en son 20</p>
           </div>
-        </div>
-      </section>
-
-      <section aria-label="Kanal metrikleri" className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          icon={<MessageSquareText className="h-4 w-4" />}
-          label="Toplam Mesaj"
-          value={formatNumber(profile.overview.total_messages)}
-        />
-        <MetricCard
-          icon={<UserRound className="h-4 w-4" />}
-          label="Aktif Gönderen"
-          value={formatNumber(profile.overview.total_senders)}
-        />
-        <MetricCard
-          icon={<Smile className="h-4 w-4" />}
-          label="Emote Kullanımı"
-          value={formatNumber(profile.overview.total_emote_usages)}
-        />
-        <MetricCard
-          icon={<CalendarClock className="h-4 w-4" />}
-          label="Son Aktivite"
-          value={formatDateTime(profile.overview.latest_message_at)}
-          valueClassName="text-base"
-        />
-      </section>
-
-      <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-6">
-          <Panel
-            description="Gün bazında kanalın loglanan mesaj hacmi."
-            icon={<BarChart3 className="h-4 w-4" />}
-            title="Mesaj Hacmi"
+          <Link
+            className="font-mono text-[12px] text-accent hover:text-accent-hover"
+            href={`/search?channel=${encodeURIComponent(profile.channel.slug)}`}
           >
-            <VolumeList points={profile.message_volume} summary={volumeSummary} />
-          </Panel>
-
-          <Panel
-            description="Bu kanalda loglanan en yeni mesajlar."
-            icon={<MessageSquareText className="h-4 w-4" />}
-            title="Son Mesajlar"
-          >
-            <LatestMessages messages={profile.latest_messages} />
-          </Panel>
-        </div>
-
-        <div className="space-y-6">
-          <Panel
-            description="Bu kanalda en çok mesaj atan kullanıcılar."
-            icon={<UserRound className="h-4 w-4" />}
-            title="Top Kullanıcılar"
-          >
-            <TopSenders senders={profile.top_senders} />
-          </Panel>
-          <Panel
-            description="Bu kanalda mesajlarda en çok görünen emote'lar."
-            icon={<Smile className="h-4 w-4" />}
-            title="Top Emoteler"
-          >
-            <TopEmotes emotes={profile.top_emotes} />
-          </Panel>
-        </div>
+            tümünü ara →
+          </Link>
+        </header>
+        <LatestMessages messages={profile.latest_messages} />
       </section>
     </div>
+  );
+}
+
+function LoggingPill() {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-elevated px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-accent">
+      <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />
+      LOGGING
+    </span>
   );
 }
 
@@ -241,17 +214,17 @@ function ChannelAvatar({ profile }: { profile: ChannelProfile }) {
     return (
       <img
         alt={`${profile.channel.display_name} kanal`}
-        className="h-16 w-16 rounded-full border border-border object-cover md:h-20 md:w-20"
-        height={80}
+        className="h-[72px] w-[72px] rounded-md border border-border object-cover"
+        height={72}
         onError={() => setFailed(true)}
         src={imageUrl}
-        width={80}
+        width={72}
       />
     );
   }
 
   return (
-    <div className="flex h-16 w-16 items-center justify-center rounded-full border border-border bg-secondary text-xl font-semibold text-secondary-foreground md:h-20 md:w-20">
+    <div className="flex h-[72px] w-[72px] items-center justify-center rounded-md border border-border bg-elevated font-mono text-xl font-semibold text-muted-foreground">
       {initial || "#"}
     </div>
   );
@@ -268,25 +241,21 @@ function ProfileState({
   message: string;
   tone?: "default" | "warning" | "danger";
 }) {
+  const toneClass =
+    tone === "danger"
+      ? "text-danger"
+      : tone === "warning"
+        ? "text-warning"
+        : "text-muted-foreground";
+
   return (
-    <section className="rounded-lg border border-border bg-black p-6">
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-md bg-kick-background text-primary">
-          {tone === "default" ? (
-            <Activity className="h-4 w-4" />
-          ) : (
-            <AlertTriangle className="h-4 w-4 text-accent" />
-          )}
-        </div>
-        <div>
-          <div className="text-sm font-medium">{message}</div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Public kanal profilleri loglanan mesaj verileriyle oluşur.
-          </p>
-        </div>
-      </div>
+    <section className="rounded-lg border border-border bg-panel p-6">
+      <p className={`text-sm font-medium ${toneClass}`}>{message}</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Public kanal profilleri loglanan mesaj verileriyle oluşur.
+      </p>
       {actionHref && actionLabel ? (
-        <Button asChild className="mt-5" size="sm">
+        <Button asChild className="mt-4" size="sm">
           <Link href={actionHref}>{actionLabel}</Link>
         </Button>
       ) : null}
@@ -294,98 +263,87 @@ function ProfileState({
   );
 }
 
-function NavLink({ children, href }: { children: React.ReactNode; href: string }) {
+type StatCell = { label: string; value: string };
+
+function ProfileStatsBar({ cells }: { cells: StatCell[] }) {
   return (
-    <Link
-      className="inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-muted-foreground transition-colors hover:bg-secondary/40 hover:text-foreground"
-      href={href}
+    <section
+      aria-label="Kanal metrikleri"
+      className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-4"
     >
-      {children}
-    </Link>
-  );
-}
-
-function MetricCard({
-  icon,
-  label,
-  value,
-  valueClassName = "text-2xl"
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  valueClassName?: string;
-}) {
-  return (
-    <article className="rounded-lg border border-border bg-black p-4">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span className="text-accent">{icon}</span>
-        {label}
-      </div>
-      <div className={`mt-3 font-semibold text-primary ${valueClassName}`}>{value}</div>
-    </article>
-  );
-}
-
-function Panel({
-  children,
-  description,
-  icon,
-  title
-}: {
-  children: React.ReactNode;
-  description: string;
-  icon: React.ReactNode;
-  title: string;
-}) {
-  return (
-    <section className="rounded-lg border border-border bg-black p-4">
-      <div className="mb-4 flex items-start gap-3 border-b border-border pb-3">
-        <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-md bg-kick-background text-accent">
-          {icon}
+      {cells.map((cell) => (
+        <div key={cell.label} className="bg-panel px-5 py-4">
+          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            {cell.label}
+          </div>
+          <div className="mt-2 font-sans text-[24px] font-semibold leading-none tracking-tight text-foreground">
+            {cell.value}
+          </div>
         </div>
-        <div>
-          <h2 className="text-base font-semibold">{title}</h2>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </div>
-      </div>
-      {children}
+      ))}
     </section>
   );
 }
 
-function VolumeList({
-  points,
-  summary
+function AnalyticsPanel({
+  title,
+  subtitle,
+  children
 }: {
-  points: MessageVolumePoint[];
-  summary: { max: number; total: number };
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
 }) {
+  return (
+    <section className="flex flex-col rounded-lg border border-border bg-panel p-5">
+      <header className="mb-4 flex flex-col gap-0.5">
+        <h2 className="text-[14px] font-semibold leading-none text-foreground">{title}</h2>
+        <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          {subtitle}
+        </p>
+      </header>
+      <div className="flex-1">{children}</div>
+    </section>
+  );
+}
+
+function VolumeChart({ points }: { points: MessageVolumePoint[] }) {
   if (points.length === 0) {
     return <SmallEmpty text="Mesaj hacmi verisi henüz yok." />;
   }
 
+  const max = points.reduce((acc, p) => Math.max(acc, p.message_count), 0);
+
   return (
-    <div className="space-y-3">
-      <div className="text-sm text-muted-foreground">
-        Toplam hacim: <span className="text-primary">{formatNumber(summary.total)}</span>
-      </div>
-      <div className="grid gap-2">
-        {points.map((point) => {
-          const width = Math.max((point.message_count / summary.max) * 100, 4);
-          return (
-            <div className="grid gap-1" key={point.bucket_start}>
-              <div className="flex items-center justify-between gap-3 text-xs">
-                <span className="text-muted-foreground">{formatDate(point.bucket_start)}</span>
-                <span className="text-primary">{formatNumber(point.message_count)}</span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-sm bg-kick-background">
-                <div className="h-full bg-primary" style={{ width: `${width}%` }} />
-              </div>
+    <div className="relative flex h-36 items-end gap-1">
+      {points.map((point) => {
+        const ratio = max > 0 ? point.message_count / max : 0;
+        const heightPct = max > 0 ? Math.max(ratio * 100, 4) : 4;
+        return (
+          <div
+            key={point.bucket_start}
+            className="group relative flex h-full flex-1 flex-col justify-end"
+          >
+            <div
+              aria-hidden
+              className="pointer-events-none absolute left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-0.5 whitespace-nowrap rounded-md border border-border bg-elevated px-2 py-1.5 opacity-0 shadow-lg transition-opacity duration-100 group-hover:opacity-100"
+              style={{ bottom: `calc(${heightPct}% + 8px)` }}
+            >
+              <span className="font-mono text-[11px] font-semibold text-foreground">
+                {formatCompactNumber(point.message_count)}
+              </span>
+              <span className="font-mono text-[10px] uppercase text-muted-foreground">
+                {formatShortDate(point.bucket_start)}
+              </span>
             </div>
-          );
-        })}
-      </div>
+            <div
+              aria-label={`${formatShortDate(point.bucket_start)} · ${formatCompactNumber(point.message_count)} mesaj`}
+              className="rounded-t-sm bg-accent transition-opacity duration-100 group-hover:opacity-80"
+              style={{ height: `${heightPct}%` }}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -396,34 +354,40 @@ function TopSenders({ senders }: { senders: TopSenderAnalytics[] }) {
   }
 
   return (
-    <div className="grid gap-2">
-      {senders.map((sender) => {
+    <ol className="flex flex-col gap-2">
+      {senders.map((sender, index) => {
         const href = buildUserProfileHref(sender.slug);
-        const content = (
+        const inner = (
           <>
-            <span className="truncate">@{sender.username}</span>
-            <span className="shrink-0 text-primary">{formatNumber(sender.message_count)}</span>
+            <span className="w-5 shrink-0 font-mono text-[10px] text-faint">
+              {(index + 1).toString().padStart(2, "0")}
+            </span>
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-sm bg-elevated font-mono text-[10px] font-semibold uppercase text-muted-foreground">
+              {sender.username.charAt(0).toUpperCase()}
+            </span>
+            <span className="flex-1 truncate text-[13px] text-foreground">@{sender.username}</span>
+            <span className="shrink-0 font-mono text-[13px] text-muted-foreground">
+              {formatCompactNumber(sender.message_count)}
+            </span>
           </>
         );
 
-        return href ? (
-          <Link
-            className="flex items-center justify-between gap-3 rounded-md border border-border bg-kick-background px-3 py-2 text-sm hover:border-primary"
-            href={href}
-            key={sender.sender_id}
-          >
-            {content}
-          </Link>
-        ) : (
-          <div
-            className="flex items-center justify-between gap-3 rounded-md border border-border bg-kick-background px-3 py-2 text-sm"
-            key={sender.sender_id}
-          >
-            {content}
-          </div>
+        return (
+          <li key={sender.sender_id}>
+            {href ? (
+              <Link
+                className="flex items-center gap-2.5 rounded-sm px-1 py-1 -mx-1 transition-colors hover:bg-elevated"
+                href={href}
+              >
+                {inner}
+              </Link>
+            ) : (
+              <div className="flex items-center gap-2.5 px-1 py-1 -mx-1">{inner}</div>
+            )}
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }
 
@@ -433,24 +397,24 @@ function TopEmotes({ emotes }: { emotes: TopEmoteAnalytics[] }) {
   }
 
   return (
-    <div className="grid gap-2">
-      {emotes.map((emote) => (
-        <div
-          className="flex items-center justify-between gap-3 rounded-md border border-border bg-kick-background px-3 py-2 text-sm"
-          key={emote.id}
-        >
-          <span className="flex min-w-0 items-center gap-2">
-            <img
-              alt={emote.name}
-              className="h-5 w-5 shrink-0 object-contain"
-              src={emote.image_url}
-            />
-            <span className="truncate">{emote.name}</span>
+    <ol className="flex flex-col gap-2">
+      {emotes.map((emote, index) => (
+        <li className="flex items-center gap-2.5 px-1 py-1 -mx-1" key={emote.id}>
+          <span className="w-5 shrink-0 font-mono text-[10px] text-faint">
+            {(index + 1).toString().padStart(2, "0")}
           </span>
-          <span className="shrink-0 text-primary">{formatNumber(emote.usage_count)}</span>
-        </div>
+          <img
+            alt={emote.name}
+            className="h-5 w-5 shrink-0 rounded-sm object-contain"
+            src={emote.image_url}
+          />
+          <span className="flex-1 truncate text-[13px] text-foreground">{emote.name}</span>
+          <span className="shrink-0 font-mono text-[13px] text-muted-foreground">
+            {formatCompactNumber(emote.usage_count)}
+          </span>
+        </li>
       ))}
-    </div>
+    </ol>
   );
 }
 
@@ -460,34 +424,40 @@ function LatestMessages({ messages }: { messages: Message[] }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-md border border-border">
-      {messages.map((message, index) => {
+    <div className="divide-y divide-border overflow-hidden rounded-md border border-border">
+      {messages.map((message) => {
         const senderHref = buildUserProfileHref(message.sender.slug);
         const senderNameStyle = senderColorStyle(message.sender_color_snapshot);
+
         return (
-          <div
-            className={`grid gap-2 border-t border-border/70 px-3 py-3 text-sm first:border-t-0 ${
-              index % 2 === 1 ? "bg-kick-background" : "bg-black"
-            }`}
-            key={message.id}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-              {senderHref ? (
-                <Link
-                  className="text-accent hover:text-primary"
-                  href={senderHref}
-                  style={senderNameStyle}
-                >
-                  @{message.sender.username}
-                </Link>
-              ) : (
-                <span className="text-accent" style={senderNameStyle}>
-                  @{message.sender.username}
-                </span>
-              )}
-              <span>{formatMessageDate(message.message_created_at)}</span>
+          <div className="flex items-start gap-3 px-3 py-2.5 text-sm" key={message.id}>
+            {/* sender username */}
+            {senderHref ? (
+              <Link
+                className="mt-0.5 shrink-0 text-[13px] font-medium text-foreground hover:underline"
+                href={senderHref}
+                style={senderNameStyle}
+              >
+                {message.sender.username}
+              </Link>
+            ) : (
+              <span
+                className="mt-0.5 shrink-0 text-[13px] font-medium text-foreground"
+                style={senderNameStyle}
+              >
+                {message.sender.username}
+              </span>
+            )}
+
+            {/* message content */}
+            <div className="min-w-0 flex-1">
+              <MessageContent content={message.content} emotes={message.emotes} />
             </div>
-            <MessageContent content={message.content} emotes={message.emotes} />
+
+            {/* timestamp */}
+            <span className="mt-0.5 shrink-0 font-mono text-[11px] text-muted-foreground">
+              {formatMessageDate(message.message_created_at)}
+            </span>
           </div>
         );
       })}
@@ -496,43 +466,43 @@ function LatestMessages({ messages }: { messages: Message[] }) {
 }
 
 function SmallEmpty({ text }: { text: string }) {
-  return <div className="text-sm text-muted-foreground">{text}</div>;
+  return <p className="text-[13px] text-muted-foreground">{text}</p>;
 }
 
 function senderColorStyle(color: string | null): CSSProperties | undefined {
   if (!color || !/^#[0-9a-fA-F]{3,8}$/.test(color)) {
     return undefined;
   }
-
   return { color };
 }
 
-function summarizeVolume(points: MessageVolumePoint[]) {
-  return {
-    max: Math.max(...points.map((point) => point.message_count), 1),
-    total: points.reduce((sum, point) => sum + point.message_count, 0)
-  };
+const COMPACT_FORMATTER = new Intl.NumberFormat("tr-TR", {
+  notation: "compact",
+  maximumFractionDigits: 1
+});
+
+function formatCompactNumber(value: number) {
+  return COMPACT_FORMATTER.format(value);
 }
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat("tr-TR").format(value);
-}
-
-function formatDateTime(value: string | null) {
-  if (!value) {
-    return "Henüz yok";
-  }
-
-  return new Intl.DateTimeFormat("tr-TR", {
-    dateStyle: "medium",
-    timeStyle: "short"
-  }).format(new Date(value));
-}
-
-function formatDate(value: string) {
+function formatShortDate(value: string | null) {
+  if (!value) return "—";
   return new Intl.DateTimeFormat("tr-TR", {
     day: "2-digit",
     month: "short",
     year: "numeric"
   }).format(new Date(value));
+}
+
+function formatRelativeTime(value: string | null) {
+  if (!value) return "—";
+  const diff = Date.now() - new Date(value).getTime();
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return `${seconds}s önce`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m önce`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}s önce`;
+  const days = Math.floor(hours / 24);
+  return `${days}g önce`;
 }

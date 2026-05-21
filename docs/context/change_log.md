@@ -4,6 +4,27 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-21
 
+- Frontend v2 re-skin: user and channel profiles migrated to the v2 designs.
+  - rebuilt `apps/web/src/features/user-profile/user-profile-page.tsx` against `ksyyS`
+    (`User Profile / v2`) with shared v2 chrome, breadcrumb, identity panel, stats bar,
+    3-column analytics grid, top channels/emotes, and dense latest-message rows with inline
+    emotes and reply context chips
+  - rebuilt `apps/web/src/features/channel-profile/channel-profile-page.tsx` against `WGYFT`
+    (`Channel Profile / v2`) with shared v2 chrome, channel identity panel, `LOGGING` pill,
+    stats bar, top users/emotes, and sender-color latest-message rows
+  - aligned user-profile reply preview chips with `/search` so the `↳` marker appears and
+    replied-to sender links stay readable without hover
+  - updated profile tests for the v2 labels, CTAs, and link expectations
+  - ignored `docs/design/screens/` so exported design/reference screenshots stay out of commits
+  - updated implementation progress and living context for the completed `/search`, `/users/[slug]`,
+    and `/channels/[slug]` v2 passes; `/admin` and `/login` remain
+- Verification:
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web test`: 16 files, 70 tests passed
+  - `git diff --check`: passed
+  - `pnpm --filter @kick-logs/web lint`: initially failed on unused chart summary plumbing, fixed
+    in the working tree
+
 - Frontend v2 re-skin: landing page (`/`) migrated to the v2 design.
   - replaced the legacy magenta palette in `apps/web/src/app/globals.css` and
     `apps/web/tailwind.config.ts` with the v2 token set (Kick green `#00e701`, dark neutrals,

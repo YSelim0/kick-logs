@@ -46,10 +46,10 @@ update against existing APIs.
 
 - [x] Step 1 (design tokens) — v2 tokens + Geist wired (2026-05-21)
 - [x] Step 2 (shared chrome) — `SiteHeader` component landed; consumed by landing
-- [ ] Step 3 (search)
+- [x] Step 3 (search) — `zKUtf` re-skin shipped (2026-05-21)
 - [x] Step 4 (landing) — `mRzu8` re-skin shipped (2026-05-21)
-- [ ] Step 5 (user profile)
-- [ ] Step 6 (channel profile)
+- [x] Step 5 (user profile) — `ksyyS` re-skin shipped (2026-05-21)
+- [x] Step 6 (channel profile) — `WGYFT` re-skin shipped (2026-05-21)
 - [ ] Step 7 (admin)
 - [ ] Step 8 (login)
 
