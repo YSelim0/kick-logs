@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { Github, Search } from "lucide-react";
+import { Copyright, Github, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -107,7 +107,21 @@ export function LandingPage() {
           />
         </div>
       </div>
+      <Footer />
     </main>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="border-t border-border py-3">
+      <div className="mx-auto max-w-[1280px] px-6 md:px-20">
+        <p className="flex items-center gap-1.5 font-mono text-2xs uppercase text-muted-foreground">
+          <Copyright className="h-3 w-3 shrink-0" aria-hidden />
+          {new Date().getFullYear()} kick-logs · Tüm hakları saklıdır.
+        </p>
+      </div>
+    </footer>
   );
 }
 
