@@ -19,7 +19,7 @@ func adminUserResponse(user domain.AdminUser) schemas.AdminUserResponse {
 	}
 }
 
-func channelResponse(channel domain.FollowedChannel) schemas.ChannelResponse {
+func channelResponse(channel domain.FollowedChannel, messageCount int64) schemas.ChannelResponse {
 	return schemas.ChannelResponse{
 		ID:              channel.ID,
 		KickChannelID:   nullableInt64(channel.KickChannelID),
@@ -29,6 +29,8 @@ func channelResponse(channel domain.FollowedChannel) schemas.ChannelResponse {
 		ProfileImageURL: nullableString(channel.ProfileImageURL),
 		BannerImageURL:  nullableString(channel.BannerImageURL),
 		IsEnabled:       channel.IsEnabled,
+		MessageCount:    messageCount,
+		LastMessageAt:   nullableTime(channel.LastMessageAt),
 	}
 }
 
@@ -81,6 +83,24 @@ func operationsSummaryResponse(summary domain.OperationsSummary) schemas.Operati
 			BreakerState:            summary.Ingestion.BreakerState,
 			BreakerCurrentDelayMS:   summary.Ingestion.BreakerCurrentDelayMS,
 		},
+	}
+}
+
+func failedRawEventsResponse(events []domain.FailedRawEvent) schemas.FailedRawEventsResponse {
+	items := make([]schemas.FailedRawEventResponse, 0, len(events))
+	for _, ev := range events {
+		items = append(items, schemas.FailedRawEventResponse{
+			RawEventID:   ev.RawEventID,
+			ChannelSlug:  ev.ChannelSlug,
+			ErrorMessage: ev.ErrorMessage,
+			Attempts:     ev.Attempts,
+			ReceivedAt:   ev.ReceivedAt.Format(time.RFC3339),
+			FailedAt:     ev.FailedAt.Format(time.RFC3339),
+		})
+	}
+	return schemas.FailedRawEventsResponse{
+		Events: items,
+		Total:  len(items),
 	}
 }
 

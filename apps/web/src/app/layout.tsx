@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { GeistMono } from "geist/font/mono";
+import { GeistSans } from "geist/font/sans";
 import { Suspense } from "react";
 
 import "./globals.css";
@@ -20,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr" className="dark">
+    <html lang="tr" className={`dark ${GeistSans.variable} ${GeistMono.variable}`}>
       <body>
         <Suspense>
           <NavigationProgress />

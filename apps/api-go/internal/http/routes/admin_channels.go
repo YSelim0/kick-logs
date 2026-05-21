@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/domain"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/http/schemas"
 	channelsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/channels"
 )
@@ -32,9 +33,21 @@ func listChannels(response http.ResponseWriter, request *http.Request, deps Depe
 		return
 	}
 
+	// Fetch per-channel message counts from ClickHouse analytics.
+	// If analytics is unavailable, counts default to zero without failing the request.
+	counts := map[string]int64{}
+	if deps.Analytics != nil {
+		topChannels, err := deps.Analytics.TopChannels(request.Context(), domain.AnalyticsFilter{}, 10000)
+		if err == nil {
+			for _, ch := range topChannels {
+				counts[ch.Slug] = ch.MessageCount
+			}
+		}
+	}
+
 	payload := make([]schemas.ChannelResponse, 0, len(channels))
 	for _, channel := range channels {
-		payload = append(payload, channelResponse(channel))
+		payload = append(payload, channelResponse(channel, counts[channel.Slug]))
 	}
 	writeJSON(response, http.StatusOK, payload)
 }
@@ -63,7 +76,7 @@ func addChannel(response http.ResponseWriter, request *http.Request, deps Depend
 		return
 	}
 
-	writeJSON(response, http.StatusCreated, channelResponse(channel))
+	writeJSON(response, http.StatusCreated, channelResponse(channel, 0))
 }
 
 func disableChannel(response http.ResponseWriter, request *http.Request, deps Dependencies) {
@@ -87,5 +100,5 @@ func disableChannel(response http.ResponseWriter, request *http.Request, deps De
 		return
 	}
 
-	writeJSON(response, http.StatusOK, channelResponse(channel))
+	writeJSON(response, http.StatusOK, channelResponse(channel, 0))
 }

@@ -287,6 +287,109 @@ func (repo *Repository) fillClickHouseSummary(ctx context.Context, summary *doma
 	return nil
 }
 
+func (repo *Repository) ListFailedEvents(ctx context.Context, limit int) ([]domain.FailedRawEvent, error) {
+	if repo.clickHouse == nil {
+		return nil, nil
+	}
+	if limit <= 0 {
+		limit = 50
+	}
+	rows, err := repo.clickHouse.Query(
+		ctx,
+		`SELECT
+			a.raw_event_id,
+			ifNull(e.channel_slug, ''),
+			ifNull(toString(a.error_message), ''),
+			toUInt16(count()),
+			min(e.received_at),
+			max(a.finished_at)
+		 FROM raw_event_attempts AS a
+		 LEFT JOIN raw_kick_events AS e ON e.id = a.raw_event_id
+		 WHERE a.status = 'failed'
+		   AND a.raw_event_id NOT IN (
+			SELECT raw_event_id FROM raw_event_attempts WHERE status = 'processed'
+		   )
+		 GROUP BY a.raw_event_id, e.channel_slug, a.error_message
+		 ORDER BY max(a.finished_at) DESC
+		 LIMIT ?`,
+		limit,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list failed raw events: %w", err)
+	}
+	defer rows.Close()
+	events := make([]domain.FailedRawEvent, 0)
+	for rows.Next() {
+		var ev domain.FailedRawEvent
+		if err := rows.Scan(
+			&ev.RawEventID,
+			&ev.ChannelSlug,
+			&ev.ErrorMessage,
+			&ev.Attempts,
+			&ev.ReceivedAt,
+			&ev.FailedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan failed raw event: %w", err)
+		}
+		ev.ReceivedAt = ev.ReceivedAt.UTC()
+		ev.FailedAt = ev.FailedAt.UTC()
+		events = append(events, ev)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate failed raw events: %w", err)
+	}
+	return events, nil
+}
+
+func (repo *Repository) RetryFailedEvents(ctx context.Context) (int64, error) {
+	if repo.sqliteDB == nil {
+		return 0, nil
+	}
+	result, err := repo.sqliteDB.ExecContext(
+		ctx,
+		`UPDATE raw_event_queue
+		 SET status = 'pending', attempts = 0, last_error = '', updated_at = datetime('now')
+		 WHERE status = 'failed'`,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("retry failed events: %w", err)
+	}
+	n, _ := result.RowsAffected()
+	return n, nil
+}
+
+func (repo *Repository) ClearFailedEvents(ctx context.Context) (int64, error) {
+	if repo.clickHouse == nil {
+		return 0, nil
+	}
+	var count uint64
+	if err := repo.clickHouse.QueryRow(
+		ctx,
+		`SELECT uniqExact(raw_event_id)
+		 FROM raw_event_attempts
+		 WHERE status = 'failed'
+		   AND raw_event_id NOT IN (
+			SELECT raw_event_id FROM raw_event_attempts WHERE status = 'processed'
+		   )`,
+	).Scan(&count); err != nil {
+		return 0, fmt.Errorf("count failed events before clear: %w", err)
+	}
+	if count == 0 {
+		return 0, nil
+	}
+	if err := repo.clickHouse.Exec(
+		ctx,
+		`ALTER TABLE raw_event_attempts DELETE
+		 WHERE status = 'failed'
+		   AND raw_event_id NOT IN (
+			SELECT raw_event_id FROM raw_event_attempts WHERE status = 'processed'
+		   )`,
+	); err != nil {
+		return 0, fmt.Errorf("clear failed events: %w", err)
+	}
+	return int64(count), nil
+}
+
 func countSQLiteRows(ctx context.Context, db *sql.DB, table string, suffix string) (int64, error) {
 	var count int64
 	if err := db.QueryRowContext(ctx, fmt.Sprintf("SELECT COUNT(*) FROM %s %s", table, suffix)).Scan(&count); err != nil {

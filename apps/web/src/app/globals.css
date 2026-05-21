@@ -7,13 +7,13 @@
   pointer-events: none;
 }
 #nprogress .bar {
-  background: #22c55e;
+  background: #00e701;
   position: fixed;
   z-index: 9999;
   top: 0;
   left: 0;
   width: 100%;
-  height: 3px;
+  height: 2px;
 }
 #nprogress .peg {
   display: block;
@@ -22,39 +22,51 @@
   width: 100px;
   height: 100%;
   box-shadow:
-    0 0 10px #22c55e,
-    0 0 5px #22c55e;
+    0 0 10px #00e701,
+    0 0 5px #00e701;
   opacity: 1;
   transform: rotate(3deg) translate(0px, -4px);
 }
 
 @layer base {
   :root {
-    --kick-background: #26001b;
-    --kick-surface: #810034;
-    --kick-border: #810034;
-    --kick-accent: #ff005c;
-    --kick-action: #fff600;
-    --kick-black: #000000;
-    --kick-white: #ffffff;
+    /* v2 palette tokens (raw hex / rgba). Kept as CSS vars so any consumer can read them. */
+    --color-bg-page: #0b0e0f;
+    --color-bg-panel: #191b1f;
+    --color-bg-elevated: #24272c;
+    --color-bg-deep: #000000;
+    --color-border-subtle: #24272c;
+    --color-border-strong: #474f54;
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #9ca3af;
+    --color-text-muted: #474f54;
+    --color-text-on-accent: #0b0e0f;
+    --color-accent: #00e701;
+    --color-accent-hover: #00c701;
+    --color-accent-muted: rgba(0, 231, 1, 0.2);
+    --color-danger: #ff4d4f;
+    --color-warning: #facc15;
 
-    --background: 317 100% 7%;
-    --foreground: 0 0% 100%;
-    --card: 0 0% 0%;
+    /* shadcn/ui HSL aliases, repointed to v2. */
+    --background: 200 11% 5%; /* #0b0e0f */
+    --foreground: 0 0% 100%; /* #ffffff */
+    --card: 220 8% 11%; /* #191b1f */
     --card-foreground: 0 0% 100%;
-    --primary: 58 100% 50%;
-    --primary-foreground: 0 0% 0%;
-    --secondary: 336 100% 25%;
+    --popover: 220 8% 11%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 120 100% 45%; /* #00e701 */
+    --primary-foreground: 200 11% 5%; /* #0b0e0f */
+    --secondary: 218 7% 16%; /* #24272c */
     --secondary-foreground: 0 0% 100%;
-    --muted: 336 100% 16%;
-    --muted-foreground: 0 0% 74%;
-    --accent: 338 100% 50%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 338 100% 50%;
+    --muted: 218 7% 16%;
+    --muted-foreground: 220 9% 64%; /* #9ca3af */
+    --accent: 120 100% 45%; /* #00e701 */
+    --accent-foreground: 200 11% 5%;
+    --destructive: 359 100% 65%; /* #ff4d4f */
     --destructive-foreground: 0 0% 100%;
-    --border: 336 100% 25%;
-    --input: 336 100% 25%;
-    --ring: 58 100% 50%;
+    --border: 218 7% 16%; /* #24272c */
+    --input: 218 7% 16%;
+    --ring: 120 100% 45%;
     --radius: 0.375rem;
   }
 
@@ -64,9 +76,10 @@
 
   html {
     color-scheme: dark;
+    background-color: var(--color-bg-page);
   }
 
   body {
-    @apply min-h-screen bg-background text-foreground antialiased;
+    @apply min-h-screen bg-page text-foreground antialiased font-sans;
   }
 }

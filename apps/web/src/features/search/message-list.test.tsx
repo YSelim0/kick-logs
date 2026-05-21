@@ -44,34 +44,21 @@ describe("MessageList", () => {
     expect(screen.getByText("hello")).toBeInTheDocument();
   });
 
-  it("links sender name and avatar to the public user profile", () => {
-    renderMessageList([
-      {
-        ...messageFixture(),
-        sender: {
-          ...messageFixture().sender,
-          profile_image_url: "https://example.com/yavuz.png"
-        }
-      }
-    ]);
+  it("links sender name to the public user profile", () => {
+    renderMessageList([messageFixture()]);
 
     expect(screen.getByRole("link", { name: "yavuz" })).toHaveAttribute(
       "href",
       "/users/yavuz-user"
     );
-    expect(screen.getByRole("link", { name: "yavuz profil" })).toHaveAttribute(
-      "href",
-      "/users/yavuz-user"
-    );
+    expect(screen.queryByRole("link", { name: "yavuz profil" })).not.toBeInTheDocument();
   });
 
   it("links channel labels to the public channel profile", () => {
     renderMessageList([messageFixture()]);
 
-    const channelLinks = screen.getAllByRole("link", { name: "#hype" });
-    expect(channelLinks).toHaveLength(2);
-    expect(channelLinks[0]).toHaveAttribute("href", "/channels/hype");
-    expect(channelLinks[1]).toHaveAttribute("href", "/channels/hype");
+    const channelLink = screen.getByRole("link", { name: "#hype" });
+    expect(channelLink).toHaveAttribute("href", "/channels/hype");
   });
 });
 

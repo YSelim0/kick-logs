@@ -30,6 +30,8 @@ type ChannelResponse struct {
 	ProfileImageURL *string `json:"profile_image_url"`
 	BannerImageURL  *string `json:"banner_image_url"`
 	IsEnabled       bool    `json:"is_enabled"`
+	MessageCount    int64   `json:"message_count"`
+	LastMessageAt   *string `json:"last_message_at"`
 }
 
 type AddChannelRequest struct {
@@ -91,6 +93,25 @@ type IngestionHealthResponse struct {
 	QueueEnqueueFailures    int64  `json:"queue_enqueue_failures"`
 	BreakerState            string `json:"breaker_state"`
 	BreakerCurrentDelayMS   int64  `json:"breaker_current_delay_ms"`
+}
+
+type FailedRawEventResponse struct {
+	RawEventID   string `json:"raw_event_id"`
+	ChannelSlug  string `json:"channel_slug"`
+	ErrorMessage string `json:"error_message"`
+	Attempts     uint16 `json:"attempts"`
+	ReceivedAt   string `json:"received_at"`
+	FailedAt     string `json:"failed_at"`
+}
+
+type FailedRawEventsResponse struct {
+	Events []FailedRawEventResponse `json:"events"`
+	Total  int                      `json:"total"`
+}
+
+type FailedEventsActionResponse struct {
+	Affected int64  `json:"affected"`
+	Message  string `json:"message"`
 }
 
 type MessageEmoteResponse struct {

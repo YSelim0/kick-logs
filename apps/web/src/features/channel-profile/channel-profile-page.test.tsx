@@ -26,17 +26,16 @@ describe("ChannelProfilePage", () => {
 
     await waitFor(() => expect(profileMocks.getChannelProfile).toHaveBeenCalledWith("hype"));
     expect(await screen.findByRole("heading", { name: "Hype" })).toBeInTheDocument();
-    expect(screen.getByText("#hype")).toBeInTheDocument();
-    expect(screen.getByText("Toplam Mesaj")).toBeInTheDocument();
-    expect(screen.getByText("Aktif Gönderen")).toBeInTheDocument();
-    expect(screen.getAllByText("@alpha")).toHaveLength(2);
+    expect(screen.getByText("MESAJ")).toBeInTheDocument();
+    expect(screen.getByText("KULLANICI")).toBeInTheDocument();
+    expect(screen.getByText("@alpha")).toBeInTheDocument();
     expect(screen.getByText("KEKW")).toBeInTheDocument();
     expect(screen.getByText("latest channel message")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /mesajlarda ara/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /kanalda ara/i })).toHaveAttribute(
       "href",
       "/search?channel=hype"
     );
-    expect(screen.getByRole("link", { name: "@alpha" })).toHaveAttribute("href", "/users/alpha");
+    expect(screen.getByRole("link", { name: /@alpha/ })).toHaveAttribute("href", "/users/alpha");
   });
 
   it("renders loading state", () => {

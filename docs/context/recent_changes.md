@@ -4,6 +4,106 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Landing page minimal footer added (`apps/web/src/features/landing/landing-page.tsx`): single-row
+  footer with `Copyright` lucide icon, year, and "Tüm hakları saklıdır." in mono uppercase.
+  Max height ~44px. Landing-page only.
+- Frontend v2 re-skin plan archived to `docs/archive/redesign/frontend_v2_reskin_plan.md`.
+  `docs/implementation_plan.md` now reflects no active plan.
+- verification: pnpm typecheck/lint/test (70/70)/build green.
+
+## Previously Latest
+
+- Admin panel refactor (4 commits):
+  - **Backend:** `/admin/channels` now returns `message_count` (ClickHouse TopChannels) and
+    `last_message_at` (SQLite field). If ClickHouse is unavailable, counts default to 0.
+  - **Layout:** New `apps/web/src/app/admin/layout.tsx` — sticky header (app-logo.png, breadcrumb,
+    email, SUPER ADMIN badge, Çıkış) + fixed 220px sidebar with real Next.js links. Sub-pages:
+    `/admin/operations`, `/admin/channels`, `/admin/users`, `/admin/data`. `/admin` redirects to
+    `/admin/operations`. `admin-dashboard.tsx` deleted; auth logic now lives in layout.
+  - **Channel table:** shows `profile_image_url` via `<Image>` (files.kick.com already allowed in
+    next.config.mjs), formatted message count and last activity date; fallback to `—` when zero/null.
+  - **UserAdmin v2:** v2 tokens, E-POSTA / GEÇİCİ PAROLA mono labels, inline input row, status pill.
+  - **DataManagementPanel v2:** v2 tokens, `<h2>` heading, table rows with mono values, styled
+    retention selects, warning-bordered preview card, danger-styled confirm button.
+  - Tests: admin layout test rewritten; user-admin label + count assertions updated;
+    data-management heading + label assertions preserved with proper `<label htmlFor>`.
+  - verification: go build/test/vet green; pnpm typecheck/lint/test (70/70)/build green.
+
+## Previously Latest
+
+- Frontend v2 re-skin: `/admin` and `/login` now match the v2 designs (`Admin / v2`, `L9oE7`;
+  `Login / v2`, `vlFSq`). All six routes are now on v2.
+  - admin: new sidebar layout (Operations, Channels, Users, Data, Settings nav); top chrome
+    brand + `/ admin` mono breadcrumb + user email + `SUPER ADMIN` pill + `Çıkış` button; all
+    existing sections (OperationsDashboard, ChannelAdmin, UserAdmin, DataManagementPanel)
+    rendered stacked in the main column; `bg-kick-background` and legacy tokens removed
+  - operations dashboard: 4-card metric row (MESAJ, RAW EVENT, BAŞARISIZ RAW, DB BOYUTU) with
+    mono labels and large values; status banner with Canlı/Bayat indicator; Ingestion panel
+    with 6-cell strip (Queue depth, Write queue, Drop count, Flush count, Son flush, CH
+    failures) and Kapalı/Açık breaker pill; all warning notices preserved
+  - channel admin: new v2 table (KANAL, DURUM, MESAJ, SON AKTİVİTE columns); inline add form
+    with sr-only label; direct Devre dışı bırak button in action column
+  - login: centered 380px card on bg-page; brand square + `kick logs` + subtitle; E-POSTA /
+    ŞİFRE uppercase mono labels; full-width accent `Giriş yap` button; muted footer link
+  - tests updated: login label `Parola` → `ŞİFRE`, admin email count 2 → 1, channel admin
+    kick ID assertions removed, button label `kanal ekle` → `ekle`
+  - verification: pnpm typecheck/lint/test (70/70)/build all green; prettier clean
+
+## Previously Latest
+
+- Frontend v2 re-skin: `/users/[slug]` and `/channels/[slug]` now match the v2 profile designs
+  (`User Profile / v2`, `ksyyS`; `Channel Profile / v2`, `WGYFT`).
+  - both routes use the shared `SiteHeader` with the `Search` pill, v2 breadcrumbs, `bg-panel`
+    identity panels, single 4-cell stats bars, three equal analytics panels, and dense latest
+    message lists
+  - user profiles render the circular sender avatar, `Mesajlarda ara` CTA, top channels, top
+    emotes, inline emotes, reply context chips, and channel links in accent green
+  - channel profiles render the rounded-square channel image, `LOGGING` pill, `Kanalda ara` CTA,
+    top users, top emotes, sender-color latest rows, and Kick channel/chatroom metadata
+  - user profile reply previews now reuse the `/search` reply chip styling, including the `↳`
+    marker and higher-contrast replied-to sender link color
+  - `docs/design/screens/` is ignored so exported design/reference PNGs do not get committed
+  - verification: `pnpm --filter @kick-logs/web typecheck` and `test` (16/70) passed; lint was
+    fixed by removing unused chart summary plumbing and should be rerun before commit
+
+- Frontend v2 re-skin: `/search` is now on the v2 design (`Search Screen / v2`, `zKUtf`).
+  - `apps/web/src/features/search/search-screen.tsx` switched to the shared `SiteHeader`,
+    a `Search` title + mono `Tüm kanallar · Yeni → Eski` strip, single `bg-panel` form card,
+    and a new results header row (`Sonuçlar` + count + `son eşleşme` timer caption)
+  - `search-form.tsx` rebuilt: row 1 `Kullanıcı Adı / Kanal Adı / İçerik`, row 2
+    `Başlangıç / Bitiş / Hızlı aralık`, row 3 `Sadece yanıtlar` + `Sadece emote` toggle
+    pills on the left and a square export icon + `Sıfırla` outline + `Ara` accent
+    primary on the right; uppercase mono field labels, `bg-elevated` inputs
+  - `message-list.tsx` rebuilt without avatars: `meta` column (sender username in
+    Kick sender color + `#channel` mono accent below) | message content | mono muted
+    right-aligned timestamp; reply chip rendered as a muted `bg-elevated` mini-chip
+  - inline `accent dot + daha eski mesajlar yükleniyor…` mono loader below the
+    results card; previous `SearchSummary` aside removed
+  - `apps/web/src/components/ui/input.tsx` migrated off the dropped
+    `bg-kick-background` token onto v2 `bg-elevated` + `border-strong` focus
+  - tests updated: `message-list.test.tsx` no longer asserts avatar links and
+    expects a single `#channel` link per row
+  - verification: `pnpm --filter @kick-logs/web typecheck`, `lint`, `test` (16/70),
+    and `build` all green; `pnpm exec prettier --check` clean for touched files
+    (pre-existing warnings in unrelated docs/admin/profile files remain)
+
+- Frontend v2 re-skin: landing page (`/`) is now on the v2 design.
+  - v2 tokens replace legacy magenta repo-wide in `apps/web/src/app/globals.css` and
+    `apps/web/tailwind.config.ts`; `kick-*` color names removed
+  - Geist Sans + Geist Mono wired through the `geist` npm package and `RootLayout`
+  - `apps/web/src/features/landing/landing-page.tsx` rebuilt to match `Landing / v2`
+    (`mRzu8`): compact hero, 4-cell stats bar, 2×2 analytics grid (volume bars, top
+    channels/users/emotes), accent-green primary CTAs
+  - new shared `apps/web/src/components/site-header.tsx` powers the v2 chrome (brand + active
+    `Search` pill + GitHub icon + Admin outline); landing consumes it
+  - landing test rewritten for the new strings, links, and empty hints; `Support` link removed
+  - after later v2 passes, `/search` and profile routes are also on v2; `/admin` and `/login`
+    remain to be re-skinned
+  - verification: pnpm typecheck/lint/test/build green; `go build/test/vet ./...` green;
+    Prettier check passed on touched files
+
+## Previously Latest
+
 - Issue #9 phase 7: live load test completed and all acceptance criteria met.
   - baseline run: 163,473 events at 2000 events/s over 60s (burst-factor 2, 5 channels)
   - peak writer queue depth 24,356; all 302 flushes at batch size 500; peak flush latency 392ms

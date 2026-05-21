@@ -40,6 +40,8 @@ export type Channel = {
   profile_image_url: string | null;
   banner_image_url: string | null;
   is_enabled: boolean;
+  message_count: number;
+  last_message_at: string | null;
 };
 
 export type AddChannelRequest = {
@@ -103,6 +105,25 @@ export type OperationsSummary = {
   timestamps: OperationsTimestamps;
   listener: ListenerHeartbeat;
   ingestion: IngestionHealth;
+};
+
+export type FailedRawEvent = {
+  raw_event_id: string;
+  channel_slug: string;
+  error_message: string;
+  attempts: number;
+  received_at: string;
+  failed_at: string;
+};
+
+export type FailedRawEventsResponse = {
+  events: FailedRawEvent[];
+  total: number;
+};
+
+export type FailedEventsActionResponse = {
+  affected: number;
+  message: string;
 };
 
 export type RetentionDays = 30 | 90 | null;

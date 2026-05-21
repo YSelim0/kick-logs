@@ -1,11 +1,12 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AdminDashboard } from "@/features/admin/admin-dashboard";
+import AdminLayout from "@/app/admin/layout";
 import type { AdminUser } from "@/types/api";
 
 const navigationMocks = vi.hoisted(() => ({
-  replace: vi.fn()
+  replace: vi.fn(),
+  pathname: "/admin/operations"
 }));
 
 const authMocks = vi.hoisted(() => ({
@@ -20,7 +21,9 @@ const authMocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ replace: navigationMocks.replace })
+  useRouter: () => ({ replace: navigationMocks.replace }),
+  usePathname: () => navigationMocks.pathname,
+  redirect: vi.fn()
 }));
 
 vi.mock("next/image", () => ({
@@ -35,23 +38,7 @@ vi.mock("@/features/auth/use-auth", () => ({
   useCurrentUser: () => authMocks.state
 }));
 
-vi.mock("@/features/channels/channel-admin", () => ({
-  ChannelAdmin: () => <section>Channel admin</section>
-}));
-
-vi.mock("@/features/data-management/data-management-panel", () => ({
-  DataManagementPanel: () => <section>Data management</section>
-}));
-
-vi.mock("@/features/operations/operations-dashboard", () => ({
-  OperationsDashboard: () => <section>Operations dashboard</section>
-}));
-
-vi.mock("@/features/users/user-admin", () => ({
-  UserAdmin: () => <section>Admin users</section>
-}));
-
-describe("AdminDashboard", () => {
+describe("AdminLayout", () => {
   beforeEach(() => {
     navigationMocks.replace.mockReset();
     authMocks.logout.mockReset();
@@ -70,13 +57,12 @@ describe("AdminDashboard", () => {
       status: "unauthenticated"
     };
 
-    render(<AdminDashboard />);
+    render(<AdminLayout>content</AdminLayout>);
 
     await waitFor(() => expect(navigationMocks.replace).toHaveBeenCalledWith("/login?next=/admin"));
   });
 
-  it("shows the current admin session and logs out", async () => {
-    authMocks.logout.mockResolvedValue({ status: "ok" });
+  it("shows the admin header with user email and logout", () => {
     authMocks.state = {
       ...authMocks.state,
       status: "authenticated",
@@ -88,20 +74,16 @@ describe("AdminDashboard", () => {
       }
     };
 
-    render(<AdminDashboard />);
+    render(<AdminLayout>page content</AdminLayout>);
 
-    expect(screen.getAllByText("admin@kicklogs.local")).toHaveLength(2);
+    expect(screen.getByText("admin@kicklogs.local")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /kick logs/i })).toHaveAttribute("href", "/");
-    expect(screen.getByText("Operations dashboard")).toBeInTheDocument();
-    expect(screen.getByText("Data management")).toBeInTheDocument();
-    expect(screen.getByText("Admin users")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /çıkış/i }));
-
-    await waitFor(() => expect(authMocks.logout).toHaveBeenCalledTimes(1));
-    expect(navigationMocks.replace).toHaveBeenCalledWith("/login");
+    expect(screen.getByRole("button", { name: /çıkış/i })).toBeInTheDocument();
+    expect(screen.getByText("SUPER ADMIN")).toBeInTheDocument();
+    expect(screen.getByText("page content")).toBeInTheDocument();
   });
 
-  it("hides user management from regular admins", () => {
+  it("hides Users nav item from regular admins", () => {
     authMocks.state = {
       ...authMocks.state,
       status: "authenticated",
@@ -113,9 +95,11 @@ describe("AdminDashboard", () => {
       }
     };
 
-    render(<AdminDashboard />);
+    render(<AdminLayout>content</AdminLayout>);
 
-    expect(screen.getByText("Channel admin")).toBeInTheDocument();
-    expect(screen.queryByText("Admin users")).not.toBeInTheDocument();
+    expect(screen.getByText("Operations")).toBeInTheDocument();
+    expect(screen.getByText("Channels")).toBeInTheDocument();
+    expect(screen.queryByText("Users")).not.toBeInTheDocument();
+    expect(screen.getByText("Data")).toBeInTheDocument();
   });
 });

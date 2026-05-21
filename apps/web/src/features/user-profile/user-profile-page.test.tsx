@@ -27,9 +27,10 @@ describe("UserProfilePage", () => {
     await waitFor(() => expect(profileMocks.getUserProfile).toHaveBeenCalledWith("yavuz"));
     expect(await screen.findByRole("heading", { name: "Yavuz" })).toBeInTheDocument();
     expect(screen.getByText("@yavuz")).toBeInTheDocument();
-    expect(screen.getByText("Toplam Mesaj")).toBeInTheDocument();
-    expect(screen.getAllByText("#hype")).toHaveLength(2);
+    expect(screen.getByText("MESAJ")).toBeInTheDocument();
+    expect(screen.getByText("#hype")).toBeInTheDocument();
     expect(screen.getByText("KEKW")).toBeInTheDocument();
+    expect(screen.getByText("↳")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "@reply_user:" })).toHaveAttribute(
       "href",
       "/users/reply-user"
