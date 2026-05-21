@@ -33,23 +33,23 @@ typography, no decorative cards, no blur/glow.
 
 Tokenized as Tailwind / CSS variables. Hex values:
 
-| Token              | Hex       | Usage                                       |
-| ------------------ | --------- | ------------------------------------------- |
-| `accent`           | `#00e701` | Kick green. Primary buttons, key accents.   |
-| `accent-hover`     | `#00c701` | Hover state for primary buttons.            |
-| `accent-muted`     | `#00e70133` | Translucent green for soft accent fills.  |
-| `bg-page`          | `#0b0e0f` | Page background.                            |
-| `bg-panel`         | `#191b1f` | Cards, panels, banners.                     |
-| `bg-elevated`      | `#24272c` | Inputs, table cells, badges, emote chips.   |
-| `bg-deep`          | `#000000` | Reserved for deepest surfaces if needed.    |
-| `border-subtle`    | `#24272c` | Default hairline borders.                   |
-| `border-strong`    | `#474f54` | Active/focused inputs, secondary buttons.   |
-| `text-primary`     | `#ffffff` | Primary text.                               |
-| `text-secondary`   | `#9ca3af` | Secondary text, descriptions.               |
-| `text-muted`       | `#474f54` | Labels, timestamps, low-emphasis text.      |
-| `text-on-accent`   | `#0b0e0f` | Text/icons on green buttons.                |
-| `danger`           | `#ff4d4f` | Error states, "İnceleme gerekli", failures. |
-| `warning`          | `#facc15` | Reserved for soft warnings (not buttons).   |
+| Token            | Hex         | Usage                                       |
+| ---------------- | ----------- | ------------------------------------------- |
+| `accent`         | `#00e701`   | Kick green. Primary buttons, key accents.   |
+| `accent-hover`   | `#00c701`   | Hover state for primary buttons.            |
+| `accent-muted`   | `#00e70133` | Translucent green for soft accent fills.    |
+| `bg-page`        | `#0b0e0f`   | Page background.                            |
+| `bg-panel`       | `#191b1f`   | Cards, panels, banners.                     |
+| `bg-elevated`    | `#24272c`   | Inputs, table cells, badges, emote chips.   |
+| `bg-deep`        | `#000000`   | Reserved for deepest surfaces if needed.    |
+| `border-subtle`  | `#24272c`   | Default hairline borders.                   |
+| `border-strong`  | `#474f54`   | Active/focused inputs, secondary buttons.   |
+| `text-primary`   | `#ffffff`   | Primary text.                               |
+| `text-secondary` | `#9ca3af`   | Secondary text, descriptions.               |
+| `text-muted`     | `#474f54`   | Labels, timestamps, low-emphasis text.      |
+| `text-on-accent` | `#0b0e0f`   | Text/icons on green buttons.                |
+| `danger`         | `#ff4d4f`   | Error states, "İnceleme gerekli", failures. |
+| `warning`        | `#facc15`   | Reserved for soft warnings (not buttons).   |
 
 The legacy magenta palette (`#26001B`, `#810034`, `#FF005C`, `#FFF600`) is fully replaced. No
 backward compatibility, no theme switcher. Dark-only.
@@ -62,15 +62,15 @@ backward compatibility, no theme switcher. Dark-only.
 
 Type scale (Tailwind):
 
-| Use                       | Size  | Weight |
-| ------------------------- | ----- | ------ |
-| Page title                | 22-24 | 600    |
-| Section title             | 13-14 | 600    |
-| Body                      | 13    | 400    |
-| Body emphasis             | 13    | 500    |
-| Metric value (big)        | 24-28 | 600    |
+| Use                       | Size  | Weight                          |
+| ------------------------- | ----- | ------------------------------- |
+| Page title                | 22-24 | 600                             |
+| Section title             | 13-14 | 600                             |
+| Body                      | 13    | 400                             |
+| Body emphasis             | 13    | 500                             |
+| Metric value (big)        | 24-28 | 600                             |
 | Stat label / column label | 10-11 | 500 (mono, letter-spacing ~0.8) |
-| Caption / sub             | 11-12 | 400    |
+| Caption / sub             | 11-12 | 400                             |
 
 ### Radii & Spacing
 
@@ -111,7 +111,7 @@ Type scale (Tailwind):
 - Stats bar: 4 cells in one row (`TOPLAM MESAJ`, `KANAL`, `KULLANICI`, `EMOTE`). Cells share a single
   rounded border, separated by 1px hairlines.
 - Two analytics rows of 2 columns each: `Mesaj hacmi` bar chart (14 days, accent green bars), `Top
-  kanallar`, `Top kullanıcılar`, `Top emoteler`. Each as a panel with title + mono sub.
+kanallar`, `Top kullanıcılar`, `Top emoteler`. Each as a panel with title + mono sub.
 - Data sources: `/analytics/overview`, `/analytics/message-volume?bucket=day`,
   `/analytics/top-channels`, `/analytics/top-emotes`, `/analytics/top-senders`.
 
