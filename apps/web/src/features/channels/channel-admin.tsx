@@ -1,8 +1,9 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
-import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { addChannel, listChannels, removeChannel } from "@/features/channels/api";
@@ -121,13 +122,13 @@ export function ChannelAdmin() {
           <span className="w-24 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
             DURUM
           </span>
-          <span className="w-24 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
+          <span className="w-28 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
             MESAJ
           </span>
-          <span className="w-36 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
+          <span className="w-40 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
             SON AKTİVİTE
           </span>
-          <span className="w-14" />
+          <span className="w-36" />
         </div>
 
         {isLoading ? (
@@ -164,24 +165,25 @@ function ChannelRow({
 }) {
   const profileHref = buildChannelProfileHref(channel.slug);
 
+  const nameContent = (
+    <div className="min-w-0">
+      <div className="truncate font-sans text-[13px] font-medium text-foreground">
+        {channel.display_name}
+      </div>
+      <div className="font-mono text-[11px] text-accent">#{channel.slug}</div>
+    </div>
+  );
+
   return (
     <div className="flex items-center border-b border-border px-3 py-2.5 last:border-b-0">
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <div className="h-6 w-6 shrink-0 rounded bg-elevated" />
+        <ChannelImage channel={channel} />
         {profileHref ? (
           <Link className="min-w-0 hover:opacity-80" href={profileHref}>
-            <div className="truncate font-sans text-[13px] font-medium text-foreground">
-              {channel.display_name}
-            </div>
-            <div className="font-mono text-[11px] text-accent">#{channel.slug}</div>
+            {nameContent}
           </Link>
         ) : (
-          <div className="min-w-0">
-            <div className="truncate font-sans text-[13px] font-medium text-foreground">
-              {channel.display_name}
-            </div>
-            <div className="font-mono text-[11px] text-accent">#{channel.slug}</div>
-          </div>
+          nameContent
         )}
       </div>
 
@@ -196,15 +198,19 @@ function ChannelRow({
         </span>
       </div>
 
-      <div className="w-24">
-        <span className="font-mono text-[12px] text-muted-foreground">—</span>
+      <div className="w-28">
+        <span className="font-mono text-[12px] text-muted-foreground">
+          {channel.message_count > 0 ? formatNumber(channel.message_count) : "—"}
+        </span>
       </div>
 
-      <div className="w-36">
-        <span className="font-mono text-[11px] text-faint">—</span>
+      <div className="w-40">
+        <span className="font-mono text-[11px] text-faint">
+          {channel.last_message_at ? formatDate(channel.last_message_at) : "—"}
+        </span>
       </div>
 
-      <div className="flex w-14 justify-end">
+      <div className="flex w-36 justify-end">
         <Button
           disabled={!channel.is_enabled || isRemoving}
           onClick={onDisable}
@@ -224,9 +230,38 @@ function ChannelRow({
   );
 }
 
+function ChannelImage({ channel }: { channel: Channel }) {
+  if (channel.profile_image_url) {
+    return (
+      <Image
+        alt={channel.display_name}
+        className="shrink-0 rounded object-cover"
+        height={24}
+        src={channel.profile_image_url}
+        width={24}
+      />
+    );
+  }
+  return <div className="h-6 w-6 shrink-0 rounded bg-elevated" />;
+}
+
 function mergeChannel(current: Channel[], channel: Channel) {
   const next = current.filter((item) => item.id !== channel.id);
   return [...next, channel].sort((a, b) => a.slug.localeCompare(b.slug));
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("tr-TR").format(value);
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("tr-TR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
 }
 
 function resolveAdminError(error: unknown) {

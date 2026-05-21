@@ -81,6 +81,8 @@ function channelFixture(): Channel {
     display_name: "hype",
     profile_image_url: null,
     banner_image_url: null,
-    is_enabled: true
+    is_enabled: true,
+    message_count: 0,
+    last_message_at: null
   };
 }

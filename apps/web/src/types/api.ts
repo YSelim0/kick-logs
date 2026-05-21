@@ -40,6 +40,8 @@ export type Channel = {
   profile_image_url: string | null;
   banner_image_url: string | null;
   is_enabled: boolean;
+  message_count: number;
+  last_message_at: string | null;
 };
 
 export type AddChannelRequest = {
