@@ -30,6 +30,8 @@ type ChannelResponse struct {
 	ProfileImageURL *string `json:"profile_image_url"`
 	BannerImageURL  *string `json:"banner_image_url"`
 	IsEnabled       bool    `json:"is_enabled"`
+	MessageCount    int64   `json:"message_count"`
+	LastMessageAt   *string `json:"last_message_at"`
 }
 
 type AddChannelRequest struct {

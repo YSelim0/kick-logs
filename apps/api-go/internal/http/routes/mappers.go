@@ -19,7 +19,7 @@ func adminUserResponse(user domain.AdminUser) schemas.AdminUserResponse {
 	}
 }
 
-func channelResponse(channel domain.FollowedChannel) schemas.ChannelResponse {
+func channelResponse(channel domain.FollowedChannel, messageCount int64) schemas.ChannelResponse {
 	return schemas.ChannelResponse{
 		ID:              channel.ID,
 		KickChannelID:   nullableInt64(channel.KickChannelID),
@@ -29,6 +29,8 @@ func channelResponse(channel domain.FollowedChannel) schemas.ChannelResponse {
 		ProfileImageURL: nullableString(channel.ProfileImageURL),
 		BannerImageURL:  nullableString(channel.BannerImageURL),
 		IsEnabled:       channel.IsEnabled,
+		MessageCount:    messageCount,
+		LastMessageAt:   nullableTime(channel.LastMessageAt),
 	}
 }
 
