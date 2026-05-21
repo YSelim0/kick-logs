@@ -1,20 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
-  Activity,
-  AlertTriangle,
-  Clock3,
   Database,
-  Gauge,
   HardDrive,
-  Inbox,
   Loader2,
   MessageSquareText,
   RefreshCcw,
-  Timer,
-  Zap
+  TriangleAlert
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -36,8 +30,6 @@ const EMPTY_INGESTION: IngestionHealth = {
   breaker_state: "closed",
   breaker_current_delay_ms: 0
 };
-
-type MetricTone = "default" | "success" | "warning" | "danger";
 
 export function OperationsDashboard() {
   const [summary, setSummary] = useState<OperationsSummary | null>(null);
@@ -68,25 +60,20 @@ export function OperationsDashboard() {
     void loadSummary("initial");
   }, [loadSummary]);
 
-  const cards = useMemo(() => (summary ? buildMetricCards(summary) : []), [summary]);
+  const ingestion = summary?.ingestion ?? EMPTY_INGESTION;
   const failedRawEvents = summary ? getStatusCount(summary, "failed") : 0;
-  const hasFailedEvents = failedRawEvents > 0;
+  const pendingRawEvents = summary ? getStatusCount(summary, "pending") : 0;
+  const isBreakerOpen = ingestion.breaker_state === "open";
 
   return (
-    <section className="rounded-lg border border-border bg-black p-5">
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4 border-b border-border pb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-kick-background text-primary">
-            <Activity className="h-4 w-4" />
-          </div>
-          <div>
-            <h2 className="text-base font-semibold">Operasyon Durumu</h2>
-            <p className="text-xs text-muted-foreground">
-              Listener, depolama ve raw event işleme sağlığı
-            </p>
-          </div>
+    <section className="rounded-lg border border-border bg-panel p-5">
+      <div className="mb-5 flex items-end justify-between">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-[22px] font-semibold tracking-tight text-foreground">Operations</h2>
+          <p className="font-sans text-[13px] text-muted-foreground">
+            Listener sağlığı, ingestion durumu, depolama özeti
+          </p>
         </div>
-
         <Button
           disabled={isLoading || isRefreshing}
           onClick={() => void loadSummary("refresh")}
@@ -95,87 +82,155 @@ export function OperationsDashboard() {
           variant="outline"
         >
           {isRefreshing ? (
-            <Loader2 className="h-4 w-4 animate-spin text-accent" />
+            <Loader2 className="h-3 w-3 animate-spin" />
           ) : (
-            <RefreshCcw className="h-4 w-4 text-accent" />
+            <RefreshCcw className="h-3 w-3" />
           )}
           Yenile
         </Button>
       </div>
 
-      {isLoading && summary === null ? (
-        <div className="rounded-md border border-border bg-kick-background px-4 py-8 text-center text-sm text-muted-foreground">
+      {isLoading && !summary ? (
+        <div className="rounded-md border border-border bg-elevated px-4 py-8 text-center text-[13px] text-muted-foreground">
           Operasyon metrikleri yükleniyor...
         </div>
       ) : null}
 
       {error ? (
-        <div className="mb-4 rounded-md border border-accent bg-kick-background px-3 py-2 text-sm">
+        <div className="mb-4 rounded-md border border-danger bg-elevated px-3 py-2 text-[13px]">
           {error}
         </div>
       ) : null}
 
       {summary ? (
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           {!summary.listener.is_fresh ? (
             <OperationsNotice
-              icon={<AlertTriangle className="h-4 w-4" />}
+              icon={<TriangleAlert className="h-4 w-4" />}
               message="Listener heartbeat bayat. Listener çalışmıyor olabilir veya DB'ye yazamıyor olabilir."
               tone="warning"
             />
           ) : null}
-
           {failedRawEvents > 0 ? (
             <OperationsNotice
-              icon={<AlertTriangle className="h-4 w-4" />}
+              icon={<TriangleAlert className="h-4 w-4" />}
               message="Başarısız raw event var. İşleme hatalarını backend loglarıyla incelemek gerekebilir."
               tone="danger"
             />
           ) : null}
-
-          {(summary.ingestion ?? EMPTY_INGESTION).breaker_state === "open" ? (
+          {isBreakerOpen ? (
             <OperationsNotice
-              icon={<AlertTriangle className="h-4 w-4" />}
-              message={`ClickHouse circuit breaker açık. Bekleme ${Math.round((summary.ingestion ?? EMPTY_INGESTION).breaker_current_delay_ms)} ms.`}
+              icon={<TriangleAlert className="h-4 w-4" />}
+              message={`ClickHouse circuit breaker açık. Bekleme ${Math.round(ingestion.breaker_current_delay_ms)} ms.`}
               tone="danger"
             />
           ) : null}
-
-          {(summary.ingestion ?? EMPTY_INGESTION).write_drop_count > 0 ? (
+          {ingestion.write_drop_count > 0 ? (
             <OperationsNotice
-              icon={<AlertTriangle className="h-4 w-4" />}
-              message={`Buffered writer ${formatNumber((summary.ingestion ?? EMPTY_INGESTION).write_drop_count)} event düşürdü. Pusher trafiği buffer kapasitesini aştı.`}
+              icon={<TriangleAlert className="h-4 w-4" />}
+              message={`Buffered writer ${formatNumber(ingestion.write_drop_count)} event düşürdü. Pusher trafiği buffer kapasitesini aştı.`}
               tone="warning"
             />
           ) : null}
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {cards.map((card) => (
-              <MetricCard
-                key={card.label}
-                {...card}
-                onDetailClick={
-                  card.label === "Failed Raw" && hasFailedEvents
-                    ? () => setFailedModalOpen(true)
-                    : undefined
-                }
-              />
-            ))}
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-panel px-4 py-3">
+            <span
+              className={`h-2 w-2 shrink-0 rounded-full ${summary.listener.is_fresh ? "bg-accent" : "bg-warning"}`}
+            />
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="text-[13px] font-medium text-foreground">
+                <span>{summary.listener.is_fresh ? "Canlı" : "Bayat"}</span>
+                {" · son sinyal "}
+                {summary.listener.seconds_since_last_seen !== null
+                  ? `${summary.listener.seconds_since_last_seen}s`
+                  : "yok"}
+                {" önce"}
+              </span>
+              {failedRawEvents > 0 ? (
+                <span className="text-[12px] text-danger">
+                  {formatNumber(failedRawEvents)} başarısız raw event — İnceleme gerekli
+                </span>
+              ) : null}
+            </div>
+            <span className="shrink-0 font-mono text-[11px] text-faint">
+              {new Date().toISOString().slice(11, 19)} UTC
+            </span>
           </div>
 
-          <div className="grid gap-3 text-xs text-muted-foreground md:grid-cols-3">
-            <OperationsFact
-              label="Son raw event"
-              value={formatDate(summary.timestamps.latest_raw_event_received_at)}
+          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            <MetricCard
+              detail={`${formatNumber(summary.counts.senders)} gönderici`}
+              icon={<MessageSquareText className="h-3.5 w-3.5" />}
+              iconTone="accent"
+              label="MESAJ"
+              value={formatNumber(summary.counts.messages)}
             />
-            <OperationsFact
-              label="Son işlenen raw event"
-              value={formatDate(summary.timestamps.latest_raw_event_processed_at)}
+            <MetricCard
+              detail={`pending ${formatNumber(pendingRawEvents)}`}
+              icon={<HardDrive className="h-3.5 w-3.5" />}
+              iconTone="muted"
+              label="RAW EVENT"
+              value={formatNumber(summary.counts.raw_events)}
             />
-            <OperationsFact
-              label="En eski pending raw event"
-              value={formatDate(summary.timestamps.oldest_pending_raw_event_received_at)}
+            <MetricCard
+              detail={failedRawEvents > 0 ? "İnceleme gerekli" : "Temiz"}
+              detailTone={failedRawEvents > 0 ? "danger" : "muted"}
+              icon={<TriangleAlert className="h-3.5 w-3.5" />}
+              iconTone={failedRawEvents > 0 ? "danger" : "muted"}
+              label="BAŞARISIZ RAW"
+              onDetailClick={failedRawEvents > 0 ? () => setFailedModalOpen(true) : undefined}
+              value={formatNumber(failedRawEvents)}
             />
+            <MetricCard
+              detail={`${summary.storage.tables.length} tablo`}
+              icon={<Database className="h-3.5 w-3.5" />}
+              iconTone="muted"
+              label="DB BOYUTU"
+              value={formatBytes(summary.storage.database_bytes)}
+            />
+          </div>
+
+          <div className="rounded-lg border border-border bg-panel p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[14px] font-semibold text-foreground">Ingestion</span>
+                <span className="font-mono text-[11px] text-faint">queue, breaker, flush</span>
+              </div>
+              <div
+                className={`flex items-center gap-1.5 rounded-full bg-elevated px-2.5 py-1 font-mono text-[10px] font-semibold tracking-[0.8px] ${
+                  isBreakerOpen ? "text-danger" : "text-accent"
+                }`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${isBreakerOpen ? "bg-danger" : "bg-accent"}`}
+                />
+                {isBreakerOpen ? "Açık" : "Kapalı"}
+              </div>
+            </div>
+            <div className="flex divide-x divide-border overflow-hidden rounded-md border border-border">
+              <IngestionCell label="Queue depth" value={formatNumber(ingestion.queue_depth)} />
+              <IngestionCell
+                label="Write queue"
+                value={formatNumber(ingestion.write_queue_depth)}
+              />
+              <IngestionCell label="Drop count" value={formatNumber(ingestion.write_drop_count)} />
+              <IngestionCell
+                label="Flush count"
+                value={formatNumber(ingestion.write_flush_count)}
+              />
+              <IngestionCell
+                label="Son flush"
+                value={
+                  ingestion.last_flush_millis > 0
+                    ? `${formatNumber(ingestion.last_flush_millis)}ms`
+                    : "—"
+                }
+              />
+              <IngestionCell
+                label="CH failures"
+                value={formatNumber(ingestion.clickhouse_insert_failures)}
+              />
+            </div>
           </div>
         </div>
       ) : null}
@@ -189,149 +244,62 @@ export function OperationsDashboard() {
   );
 }
 
-function buildMetricCards(summary: OperationsSummary) {
-  const failedRawEvents = getStatusCount(summary, "failed");
-  const pendingRawEvents = getStatusCount(summary, "pending");
-  const lastIngestAt =
-    summary.timestamps.latest_message_at ??
-    summary.timestamps.latest_raw_event_processed_at ??
-    summary.timestamps.latest_raw_event_received_at;
-
-  return [
-    {
-      label: "Listener",
-      value: summary.listener.is_fresh ? "Canlı" : "Bayat",
-      detail:
-        summary.listener.seconds_since_last_seen === null
-          ? "Heartbeat yok"
-          : `${summary.listener.seconds_since_last_seen} sn önce`,
-      icon: <Activity className="h-4 w-4" />,
-      tone: summary.listener.is_fresh ? "success" : "warning"
-    },
-    {
-      label: "Veritabanı",
-      value: formatBytes(summary.storage.database_bytes),
-      detail: `chat ${formatBytes(tableSize(summary, "chat_messages"))} / raw ${formatBytes(
-        tableSize(summary, "raw_kick_events")
-      )}`,
-      icon: <Database className="h-4 w-4" />,
-      tone: "default"
-    },
-    {
-      label: "Mesaj",
-      value: formatNumber(summary.counts.messages),
-      detail: `${formatNumber(summary.counts.senders)} gönderici`,
-      icon: <MessageSquareText className="h-4 w-4" />,
-      tone: "default"
-    },
-    {
-      label: "Raw Event",
-      value: formatNumber(summary.counts.raw_events),
-      detail: `${formatNumber(getStatusCount(summary, "processed"))} işlendi`,
-      icon: <HardDrive className="h-4 w-4" />,
-      tone: "default"
-    },
-    {
-      label: "Failed Raw",
-      value: formatNumber(failedRawEvents),
-      detail: failedRawEvents > 0 ? "İnceleme gerekli" : "Temiz",
-      icon: <AlertTriangle className="h-4 w-4" />,
-      tone: failedRawEvents > 0 ? "danger" : "success"
-    },
-    {
-      label: "Pending Raw",
-      value: formatNumber(pendingRawEvents),
-      detail: pendingRawEvents > 0 ? "Kuyrukta bekliyor" : "Bekleyen yok",
-      icon: <Inbox className="h-4 w-4" />,
-      tone: pendingRawEvents > 0 ? "warning" : "success"
-    },
-    {
-      label: "Son Ingest",
-      value: formatDate(lastIngestAt),
-      detail: "En güncel mesaj/işleme",
-      icon: <Clock3 className="h-4 w-4" />,
-      tone: "default"
-    },
-    {
-      label: "Queue Backlog",
-      value: formatNumber((summary.ingestion ?? EMPTY_INGESTION).queue_depth),
-      detail:
-        (summary.ingestion ?? EMPTY_INGESTION).oldest_pending_age_seconds > 0
-          ? `En eski ${formatDuration((summary.ingestion ?? EMPTY_INGESTION).oldest_pending_age_seconds)}`
-          : "Bekleyen yok",
-      icon: <Inbox className="h-4 w-4" />,
-      tone: (summary.ingestion ?? EMPTY_INGESTION).queue_depth > 1000 ? "warning" : "default"
-    },
-    {
-      label: "Writer Buffer",
-      value: formatNumber((summary.ingestion ?? EMPTY_INGESTION).write_queue_depth),
-      detail: `Tepe ${formatNumber((summary.ingestion ?? EMPTY_INGESTION).write_queue_high_water_mark)} / Drop ${formatNumber((summary.ingestion ?? EMPTY_INGESTION).write_drop_count)}`,
-      icon: <Gauge className="h-4 w-4" />,
-      tone: (summary.ingestion ?? EMPTY_INGESTION).write_drop_count > 0 ? "warning" : "default"
-    },
-    {
-      label: "ClickHouse Breaker",
-      value: (summary.ingestion ?? EMPTY_INGESTION).breaker_state === "open" ? "Açık" : "Kapalı",
-      detail: `${formatNumber((summary.ingestion ?? EMPTY_INGESTION).clickhouse_insert_failures)} insert hatası`,
-      icon: <Zap className="h-4 w-4" />,
-      tone: (summary.ingestion ?? EMPTY_INGESTION).breaker_state === "open" ? "danger" : "success"
-    },
-    {
-      label: "Son Flush",
-      value: formatNumber((summary.ingestion ?? EMPTY_INGESTION).last_flush_size),
-      detail:
-        (summary.ingestion ?? EMPTY_INGESTION).last_flush_millis > 0
-          ? `${formatNumber((summary.ingestion ?? EMPTY_INGESTION).last_flush_millis)} ms`
-          : "Flush yok",
-      icon: <Timer className="h-4 w-4" />,
-      tone: "default"
-    }
-  ] satisfies Array<{
-    label: string;
-    value: string;
-    detail: string;
-    icon: ReactNode;
-    tone: MetricTone;
-  }>;
-}
-
 function MetricCard({
   detail,
+  detailTone = "muted",
   icon,
+  iconTone = "muted",
   label,
   onDetailClick,
-  tone,
   value
 }: {
   detail: string;
+  detailTone?: "muted" | "danger";
   icon: ReactNode;
+  iconTone?: "accent" | "muted" | "danger";
   label: string;
   onDetailClick?: () => void;
-  tone: MetricTone;
   value: string;
 }) {
+  const iconClass =
+    iconTone === "accent"
+      ? "text-accent"
+      : iconTone === "danger"
+        ? "text-danger"
+        : "text-muted-foreground";
+  const detailClass = detailTone === "danger" ? "text-danger" : "text-muted-foreground";
+
   return (
-    <div className={`rounded-lg border bg-kick-background p-4 ${toneClass(tone)}`}>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="text-xs font-medium text-muted-foreground">{label}</div>
-        <div className="text-accent">{icon}</div>
+    <div className="flex flex-col gap-2.5 rounded-lg border border-border bg-panel p-4">
+      <div className="flex items-center justify-between">
+        <span className="font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
+          {label}
+        </span>
+        <span className={iconClass}>{icon}</span>
       </div>
-      <div className="truncate text-xl font-semibold text-foreground" title={value}>
+      <span className="text-[26px] font-semibold leading-none tracking-tight text-foreground">
         {value}
-      </div>
+      </span>
       {onDetailClick ? (
         <button
-          className="mt-1 truncate text-xs text-muted-foreground underline-offset-2 hover:cursor-pointer hover:underline"
+          className={`text-left text-[11px] underline-offset-2 hover:underline ${detailClass}`}
           onClick={onDetailClick}
           type="button"
         >
           {detail}
         </button>
       ) : (
-        <div className="mt-1 truncate text-xs text-muted-foreground" title={detail}>
-          {detail}
-        </div>
+        <span className={`text-[11px] ${detailClass}`}>{detail}</span>
       )}
+    </div>
+  );
+}
+
+function IngestionCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-1 flex-col gap-1 bg-panel px-3.5 py-3">
+      <span className="font-mono text-[10px] tracking-[0.5px] text-faint">{label}</span>
+      <span className="text-[18px] font-semibold text-foreground">{value}</span>
     </div>
   );
 }
@@ -347,25 +315,12 @@ function OperationsNotice({
 }) {
   return (
     <div
-      className={
-        tone === "danger"
-          ? "flex items-center gap-2 rounded-md border border-accent bg-kick-background px-3 py-2 text-sm"
-          : "flex items-center gap-2 rounded-md border border-primary/70 bg-kick-background px-3 py-2 text-sm"
-      }
+      className={`flex items-center gap-2 rounded-md border bg-elevated px-3 py-2 text-[13px] ${
+        tone === "danger" ? "border-danger text-danger" : "border-warning text-warning"
+      }`}
     >
-      <span className={tone === "danger" ? "text-accent" : "text-primary"}>{icon}</span>
-      <span>{message}</span>
-    </div>
-  );
-}
-
-function OperationsFact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0 rounded-md border border-border bg-kick-background px-3 py-2">
-      <div>{label}</div>
-      <div className="truncate font-medium text-foreground" title={value}>
-        {value}
-      </div>
+      {icon}
+      <span className="text-foreground">{message}</span>
     </div>
   );
 }
@@ -374,77 +329,19 @@ function getStatusCount(summary: OperationsSummary, status: string) {
   return summary.raw_event_status_counts[status] ?? 0;
 }
 
-function tableSize(summary: OperationsSummary, tableName: string) {
-  return summary.storage.tables.find((table) => table.table_name === tableName)?.total_bytes ?? 0;
-}
-
-function toneClass(tone: MetricTone) {
-  if (tone === "success") {
-    return "border-primary/60";
-  }
-
-  if (tone === "warning") {
-    return "border-primary";
-  }
-
-  if (tone === "danger") {
-    return "border-accent";
-  }
-
-  return "border-border";
-}
-
 function formatNumber(value: number) {
   return new Intl.NumberFormat("tr-TR").format(value);
 }
 
 function formatBytes(value: number) {
-  if (value <= 0) {
-    return "0 B";
-  }
-
+  if (value <= 0) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
   const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
   const amount = value / 1024 ** index;
-  return `${new Intl.NumberFormat("tr-TR", {
-    maximumFractionDigits: index === 0 ? 0 : 2
-  }).format(amount)} ${units[index]}`;
-}
-
-function formatDuration(seconds: number) {
-  if (seconds <= 0) {
-    return "0 sn";
-  }
-  if (seconds < 60) {
-    return `${seconds} sn`;
-  }
-  if (seconds < 3600) {
-    return `${Math.floor(seconds / 60)} dk`;
-  }
-  if (seconds < 86400) {
-    return `${Math.floor(seconds / 3600)} sa`;
-  }
-  return `${Math.floor(seconds / 86400)} gün`;
-}
-
-function formatDate(value: string | null) {
-  if (!value) {
-    return "-";
-  }
-
-  return new Intl.DateTimeFormat("tr-TR", {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "2-digit",
-    year: "numeric"
-  }).format(new Date(value));
+  return `${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: index === 0 ? 0 : 2 }).format(amount)} ${units[index]}`;
 }
 
 function resolveOperationsError(error: unknown) {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
+  if (error instanceof Error) return error.message;
   return "Operasyon metrikleri alınamadı.";
 }

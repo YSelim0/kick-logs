@@ -34,8 +34,6 @@ describe("ChannelAdmin", () => {
       "href",
       "/channels/hype"
     );
-    expect(screen.getByText("100")).toBeInTheDocument();
-    expect(screen.getByText("200")).toBeInTheDocument();
     expect(screen.getByText("Aktif")).toBeInTheDocument();
   });
 
@@ -51,7 +49,7 @@ describe("ChannelAdmin", () => {
     fireEvent.change(screen.getByLabelText("Kanal slug/nickname"), {
       target: { value: " hype " }
     });
-    fireEvent.click(screen.getByRole("button", { name: /kanal ekle/i }));
+    fireEvent.click(screen.getByRole("button", { name: /ekle/i }));
 
     await waitFor(() => expect(channelApiMocks.addChannel).toHaveBeenCalledWith({ slug: "hype" }));
     expect(await screen.findByText("#hype")).toBeInTheDocument();

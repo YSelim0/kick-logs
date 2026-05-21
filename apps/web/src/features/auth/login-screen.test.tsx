@@ -45,7 +45,7 @@ describe("LoginScreen", () => {
 
     render(<LoginScreen />);
 
-    fireEvent.change(screen.getByLabelText("Parola"), {
+    fireEvent.change(screen.getByLabelText("ŞİFRE"), {
       target: { value: "admin123" }
     });
     fireEvent.click(screen.getByRole("button", { name: /giriş yap/i }));
@@ -72,7 +72,7 @@ describe("LoginScreen", () => {
 
     render(<LoginScreen />);
 
-    fireEvent.change(screen.getByLabelText("Parola"), {
+    fireEvent.change(screen.getByLabelText("ŞİFRE"), {
       target: { value: "admin123" }
     });
     fireEvent.click(screen.getByRole("button", { name: /giriş yap/i }));
@@ -85,7 +85,7 @@ describe("LoginScreen", () => {
 
     render(<LoginScreen />);
 
-    fireEvent.change(screen.getByLabelText("Parola"), {
+    fireEvent.change(screen.getByLabelText("ŞİFRE"), {
       target: { value: "wrong" }
     });
     fireEvent.click(screen.getByRole("button", { name: /giriş yap/i }));

@@ -1,10 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LogOut, ShieldCheck } from "lucide-react";
+import { Activity, Database, LogOut, Radio, Settings, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { logout } from "@/features/auth/api";
@@ -47,102 +46,96 @@ export function AdminDashboard() {
     return <AdminState message={error ?? "Oturum bilgisi alınamadı."} />;
   }
 
+  const isSuperAdmin = user.role === "super_admin";
+
   return (
-    <main className="min-h-screen bg-background px-4 py-4 text-foreground md:px-8 md:py-6">
-      <div className="mx-auto flex max-w-[1440px] flex-col gap-6">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-black px-4 py-4 md:px-6">
-          <Link className="flex min-w-0 items-center gap-4" href="/">
-            <Image
-              alt="Kick Logs"
-              className="h-11 w-11 shrink-0 rounded-md object-contain"
-              height={44}
-              priority
-              src="/app-logo.png"
-              width={44}
-            />
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-lg font-semibold">Kick Logs</h1>
-                <span className="rounded-md bg-kick-background px-2 py-1 text-xs text-primary">
-                  /admin
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground">Backend yönetim paneli</p>
-            </div>
+    <div className="flex min-h-screen flex-col bg-page text-foreground">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border px-6">
+        <div className="flex items-center gap-6">
+          <Link className="flex items-center gap-2" href="/">
+            <div aria-hidden="true" className="h-6 w-6 rounded-md bg-accent" />
+            <span className="font-sans text-[15px] font-semibold">kick logs</span>
           </Link>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="rounded-md border border-border bg-kick-background px-3 py-2 text-xs">
-              <div className="text-muted-foreground">Oturum</div>
-              <div className="font-medium text-primary">{user.email}</div>
-            </div>
-            <Button asChild variant="outline">
-              <Link href="/search">Search</Link>
-            </Button>
-            <Button
-              disabled={isLoggingOut}
-              onClick={() => void submitLogout()}
-              type="button"
-              variant="outline"
-            >
-              <LogOut className="h-4 w-4 text-accent" />
-              Çıkış
-            </Button>
+          <div className="flex items-center gap-2 font-mono text-[13px]">
+            <span className="text-faint">/</span>
+            <span className="font-medium text-foreground">admin</span>
           </div>
-        </header>
-
-        {logoutError ? (
-          <div className="rounded-md border border-accent bg-black px-4 py-3 text-sm">
-            {logoutError}
-          </div>
-        ) : null}
-
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="flex flex-col gap-6">
-            <OperationsDashboard />
-            <DataManagementPanel />
-            <ChannelAdmin />
-            {user.role === "super_admin" ? <UserAdmin /> : null}
-          </div>
-
-          <aside className="rounded-lg border border-border bg-black p-5">
-            <div className="mb-5 flex items-center gap-3 border-b border-border pb-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-kick-background text-primary">
-                <ShieldCheck className="h-4 w-4" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold">Admin Oturumu</h2>
-                <p className="text-xs text-muted-foreground">Aktif kullanıcı ve yetki durumu</p>
-              </div>
-            </div>
-
-            <div className="space-y-3 text-sm">
-              <SessionLine label="E-posta" value={user.email} />
-              <SessionLine label="Rol" value={user.role} />
-              <SessionLine label="Durum" value={user.is_active ? "Aktif" : "Pasif"} />
-            </div>
-          </aside>
         </div>
+
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[12px] text-muted-foreground">{user.email}</span>
+          {isSuperAdmin && (
+            <span className="rounded border border-border bg-panel px-2 py-0.5 font-mono text-[10px] font-semibold tracking-widest text-accent">
+              SUPER ADMIN
+            </span>
+          )}
+          <Button
+            disabled={isLoggingOut}
+            onClick={() => void submitLogout()}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <LogOut className="h-4 w-4" />
+            Çıkış
+          </Button>
+        </div>
+      </header>
+
+      <div className="flex flex-1 gap-6 p-6">
+        <aside className="flex w-[220px] shrink-0 flex-col gap-1 pt-2">
+          <SidebarItem icon={<Activity className="h-3.5 w-3.5" />} label="Operations" active />
+          <SidebarItem icon={<Radio className="h-3.5 w-3.5" />} label="Channels" />
+          {isSuperAdmin && <SidebarItem icon={<Users className="h-3.5 w-3.5" />} label="Users" />}
+          <SidebarItem icon={<Database className="h-3.5 w-3.5" />} label="Data" />
+          <SidebarItem icon={<Settings className="h-3.5 w-3.5" />} label="Settings" />
+        </aside>
+
+        <main className="flex min-w-0 flex-1 flex-col gap-6">
+          {logoutError ? (
+            <div className="rounded-md border border-danger bg-elevated px-4 py-3 text-sm">
+              {logoutError}
+            </div>
+          ) : null}
+          <OperationsDashboard />
+          <ChannelAdmin />
+          {isSuperAdmin ? <UserAdmin /> : null}
+          <DataManagementPanel />
+        </main>
       </div>
-    </main>
+    </div>
   );
 }
 
-function SessionLine({ label, value }: { label: string; value: string }) {
+function SidebarItem({
+  active = false,
+  icon,
+  label
+}: {
+  active?: boolean;
+  icon: React.ReactNode;
+  label: string;
+}) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-border pb-3 last:border-b-0 last:pb-0">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="truncate text-right text-foreground">{value}</span>
+    <div
+      className={`flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 font-sans text-[13px] transition-colors ${
+        active
+          ? "border border-border bg-panel font-medium text-foreground"
+          : "text-muted-foreground hover:bg-panel hover:text-foreground"
+      }`}
+    >
+      <span className={active ? "text-accent" : "text-muted-foreground"}>{icon}</span>
+      {label}
     </div>
   );
 }
 
 function AdminState({ message }: { message: string }) {
   return (
-    <main className="min-h-screen bg-background px-6 py-6 text-foreground">
-      <div className="mx-auto max-w-[1440px] rounded-lg border border-border bg-black p-6 text-sm text-muted-foreground">
+    <div className="flex min-h-screen items-center justify-center bg-page">
+      <div className="rounded-lg border border-border bg-panel px-6 py-4 text-[13px] text-muted-foreground">
         {message}
       </div>
-    </main>
+    </div>
   );
 }

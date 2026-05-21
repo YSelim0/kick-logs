@@ -90,7 +90,7 @@ describe("AdminDashboard", () => {
 
     render(<AdminDashboard />);
 
-    expect(screen.getAllByText("admin@kicklogs.local")).toHaveLength(2);
+    expect(screen.getAllByText("admin@kicklogs.local")).toHaveLength(1);
     expect(screen.getByRole("link", { name: /kick logs/i })).toHaveAttribute("href", "/");
     expect(screen.getByText("Operations dashboard")).toBeInTheDocument();
     expect(screen.getByText("Data management")).toBeInTheDocument();
