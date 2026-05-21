@@ -4,6 +4,15 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Landing page minimal footer added (`apps/web/src/features/landing/landing-page.tsx`): single-row
+  footer with `Copyright` lucide icon, year, and "Tüm hakları saklıdır." in mono uppercase.
+  Max height ~44px. Landing-page only.
+- Frontend v2 re-skin plan archived to `docs/archive/redesign/frontend_v2_reskin_plan.md`.
+  `docs/implementation_plan.md` now reflects no active plan.
+- verification: pnpm typecheck/lint/test (70/70)/build green.
+
+## Previously Latest
+
 - Admin panel refactor (4 commits):
   - **Backend:** `/admin/channels` now returns `message_count` (ClickHouse TopChannels) and
     `last_message_at` (SQLite field). If ClickHouse is unavailable, counts default to 0.
