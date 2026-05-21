@@ -4,6 +4,24 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Admin panel refactor (4 commits):
+  - **Backend:** `/admin/channels` now returns `message_count` (ClickHouse TopChannels) and
+    `last_message_at` (SQLite field). If ClickHouse is unavailable, counts default to 0.
+  - **Layout:** New `apps/web/src/app/admin/layout.tsx` — sticky header (app-logo.png, breadcrumb,
+    email, SUPER ADMIN badge, Çıkış) + fixed 220px sidebar with real Next.js links. Sub-pages:
+    `/admin/operations`, `/admin/channels`, `/admin/users`, `/admin/data`. `/admin` redirects to
+    `/admin/operations`. `admin-dashboard.tsx` deleted; auth logic now lives in layout.
+  - **Channel table:** shows `profile_image_url` via `<Image>` (files.kick.com already allowed in
+    next.config.mjs), formatted message count and last activity date; fallback to `—` when zero/null.
+  - **UserAdmin v2:** v2 tokens, E-POSTA / GEÇİCİ PAROLA mono labels, inline input row, status pill.
+  - **DataManagementPanel v2:** v2 tokens, `<h2>` heading, table rows with mono values, styled
+    retention selects, warning-bordered preview card, danger-styled confirm button.
+  - Tests: admin layout test rewritten; user-admin label + count assertions updated;
+    data-management heading + label assertions preserved with proper `<label htmlFor>`.
+  - verification: go build/test/vet green; pnpm typecheck/lint/test (70/70)/build green.
+
+## Previously Latest
+
 - Frontend v2 re-skin: `/admin` and `/login` now match the v2 designs (`Admin / v2`, `L9oE7`;
   `Login / v2`, `vlFSq`). All six routes are now on v2.
   - admin: new sidebar layout (Operations, Channels, Users, Data, Settings nav); top chrome
