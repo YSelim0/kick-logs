@@ -1,18 +1,6 @@
 "use client";
 
-import {
-  CalendarDays,
-  Clock3,
-  Download,
-  FileJson,
-  FileText,
-  Hash,
-  MessageSquareReply,
-  RotateCcw,
-  Search,
-  Smile,
-  UserRound
-} from "lucide-react";
+import { CalendarDays, Download, FileJson, FileText } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -23,6 +11,7 @@ import {
   type DatePresetKey,
   type SearchFormState
 } from "@/features/search/search-params";
+import { cn } from "@/lib/utils";
 import type { MessageExportFormat } from "@/types/api";
 
 type SearchFormProps = {
@@ -78,65 +67,44 @@ export function SearchForm({
 
   return (
     <form
-      className="rounded-lg border border-border bg-black p-4"
+      className="flex flex-col gap-3.5 rounded-lg border border-border bg-panel p-5"
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit();
       }}
     >
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-kick-background text-primary">
-            <Search className="h-4 w-4" />
-          </div>
-          <div>
-            <h2 className="text-base font-semibold">Arama Filtreleri</h2>
-            <p className="text-xs text-muted-foreground">
-              Gönderen, kanal, kelime ve tarih aralığı
-            </p>
-          </div>
-        </div>
-        <div className="rounded-md bg-kick-background px-3 py-1.5 text-xs text-primary">
-          7 filtre
-        </div>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-[minmax(280px,390px)_1fr]">
-        <Field icon={<Search className="h-4 w-4" />} id="q" label="Aramak istediğiniz Kelime">
+      <div className="grid gap-3 md:grid-cols-3">
+        <Field id="sender" label="Kullanıcı Adı">
+          <Input
+            id="sender"
+            maxLength={160}
+            onChange={(event) => onChange({ ...value, sender: event.target.value })}
+            placeholder="yavuz"
+            value={value.sender}
+          />
+        </Field>
+        <Field id="channel" label="Kanal Adı">
+          <Input
+            id="channel"
+            maxLength={160}
+            onChange={(event) => onChange({ ...value, channel: event.target.value })}
+            placeholder="exampleChannel"
+            value={value.channel}
+          />
+        </Field>
+        <Field id="q" label="İçerik">
           <Input
             id="q"
             maxLength={500}
             onChange={(event) => onChange({ ...value, q: event.target.value })}
-            placeholder="örn. selam, KEKW, duyuru"
+            placeholder="selam"
             value={value.q}
           />
         </Field>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field icon={<UserRound className="h-4 w-4" />} id="sender" label="Kullanıcı Adı">
-            <Input
-              id="sender"
-              maxLength={160}
-              onChange={(event) => onChange({ ...value, sender: event.target.value })}
-              placeholder="tüm kullanıcılar"
-              value={value.sender}
-            />
-          </Field>
-
-          <Field icon={<Hash className="h-4 w-4" />} id="channel" label="Kanal Adı">
-            <Input
-              id="channel"
-              maxLength={160}
-              onChange={(event) => onChange({ ...value, channel: event.target.value })}
-              placeholder="tüm kanallar"
-              value={value.channel}
-            />
-          </Field>
-        </div>
       </div>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_160px]">
-        <Field icon={<CalendarDays className="h-4 w-4" />} id="start" label="Başlangıç">
+      <div className="grid gap-3 md:grid-cols-3">
+        <Field id="start" label="Başlangıç" icon={<CalendarDays className="h-3.5 w-3.5" />}>
           <Input
             id="start"
             onChange={(event) => onChange({ ...value, start: event.target.value })}
@@ -144,8 +112,7 @@ export function SearchForm({
             value={value.start}
           />
         </Field>
-
-        <Field icon={<CalendarDays className="h-4 w-4" />} id="end" label="Bitiş">
+        <Field id="end" label="Bitiş" icon={<CalendarDays className="h-3.5 w-3.5" />}>
           <Input
             id="end"
             onChange={(event) => onChange({ ...value, end: event.target.value })}
@@ -153,10 +120,9 @@ export function SearchForm({
             value={value.end}
           />
         </Field>
-
-        <Field icon={<Clock3 className="h-4 w-4" />} id="datePreset" label="Hızlı aralık">
+        <Field id="datePreset" label="Hızlı aralık">
           <select
-            className="flex h-11 w-full rounded-md border border-border bg-kick-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/25"
+            className="flex h-10 w-full rounded-md border border-border bg-elevated px-3 py-2 text-[13px] text-foreground outline-none transition-colors focus:border-border-strong"
             defaultValue=""
             id="datePreset"
             onChange={(event) => {
@@ -178,113 +144,104 @@ export function SearchForm({
         </Field>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(280px,1fr)_minmax(280px,420px)]">
-        <div>
-          <div className="mb-2 flex h-5 items-center gap-2 text-sm font-medium">
-            <MessageSquareReply className="h-4 w-4 text-accent" />
-            Sonuç Türü
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <ToggleCheck
-              checked={value.replyOnly}
-              icon={<MessageSquareReply className="h-4 w-4" />}
-              label="Sadece yanıtlar"
-              onChange={(checked) => onChange({ ...value, replyOnly: checked })}
-            />
-            <ToggleCheck
-              checked={value.emoteOnly}
-              icon={<Smile className="h-4 w-4" />}
-              label="Sadece emote"
-              onChange={(checked) => onChange({ ...value, emoteOnly: checked })}
-            />
-          </div>
-        </div>
-
-        <div>
-          <div className="mb-2 flex h-5 items-center gap-2 text-sm font-medium">
-            <Search className="h-4 w-4 text-accent" />
-            İşlem
-          </div>
-          <div className="grid gap-3 sm:grid-cols-[96px_1fr_44px]">
-            <Button
-              className="h-11"
-              disabled={isLoading}
-              onClick={onReset}
+      <div className="flex flex-wrap items-center gap-3">
+        <TogglePill
+          checked={value.replyOnly}
+          label="Sadece yanıtlar"
+          onChange={(checked) => onChange({ ...value, replyOnly: checked })}
+        />
+        <TogglePill
+          checked={value.emoteOnly}
+          label="Sadece emote"
+          onChange={(checked) => onChange({ ...value, emoteOnly: checked })}
+        />
+        <div className="flex flex-1 justify-end gap-2">
+          <div className="relative" ref={exportMenuRef}>
+            <button
+              aria-expanded={isExportMenuOpen}
+              aria-label="Dışa aktar"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-elevated text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isLoading || !canExport}
+              onClick={() => setIsExportMenuOpen((current) => !current)}
+              title="Dışa aktar"
               type="button"
-              variant="outline"
             >
-              <RotateCcw className="h-4 w-4 text-accent" />
-              Sıfırla
-            </Button>
-            <Button className="h-11" disabled={isLoading} type="submit">
-              <Search className="h-4 w-4" />
-              Ara
-            </Button>
-            <div className="relative" ref={exportMenuRef}>
-              <Button
-                aria-expanded={isExportMenuOpen}
-                aria-label="Dışa aktar"
-                className="h-11 w-full px-0"
-                disabled={isLoading || !canExport}
-                onClick={() => setIsExportMenuOpen((current) => !current)}
-                title="Dışa aktar"
-                type="button"
-                variant="outline"
-              >
-                <Download className="h-4 w-4 text-accent" />
-              </Button>
+              <Download className="h-4 w-4" />
+            </button>
 
-              {isExportMenuOpen ? (
-                <div className="absolute right-0 z-20 mt-2 grid min-w-[150px] gap-2 rounded-md border border-border bg-black p-2 shadow-xl">
-                  <Button
-                    className="h-9 justify-start px-3 text-xs"
-                    onClick={() => handleExport("json")}
-                    type="button"
-                    variant="ghost"
-                  >
-                    <FileJson className="h-4 w-4 text-accent" />
-                    JSON indir
-                  </Button>
-                  <Button
-                    className="h-9 justify-start px-3 text-xs"
-                    onClick={() => handleExport("csv")}
-                    type="button"
-                    variant="ghost"
-                  >
-                    <FileText className="h-4 w-4 text-accent" />
-                    CSV indir
-                  </Button>
-                </div>
-              ) : null}
-            </div>
+            {isExportMenuOpen ? (
+              <div className="absolute right-0 z-20 mt-2 grid min-w-[160px] gap-1 rounded-md border border-border bg-panel p-1.5 shadow-lg">
+                <button
+                  className="inline-flex h-8 items-center gap-2 rounded-sm px-2 text-[13px] text-foreground hover:bg-elevated"
+                  onClick={() => handleExport("json")}
+                  type="button"
+                >
+                  <FileJson className="h-4 w-4 text-muted-foreground" />
+                  JSON indir
+                </button>
+                <button
+                  className="inline-flex h-8 items-center gap-2 rounded-sm px-2 text-[13px] text-foreground hover:bg-elevated"
+                  onClick={() => handleExport("csv")}
+                  type="button"
+                >
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  CSV indir
+                </button>
+              </div>
+            ) : null}
           </div>
+          <Button
+            className="h-9 border-border-strong"
+            disabled={isLoading}
+            onClick={onReset}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            Sıfırla
+          </Button>
+          <Button
+            className="h-9 bg-accent px-4 text-accent-foreground hover:bg-accent-hover"
+            disabled={isLoading}
+            size="sm"
+            type="submit"
+          >
+            Ara
+          </Button>
         </div>
       </div>
     </form>
   );
 }
 
-function ToggleCheck({
+function TogglePill({
   checked,
-  icon,
   label,
   onChange
 }: {
   checked: boolean;
-  icon: ReactNode;
   label: string;
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="flex h-11 cursor-pointer items-center gap-3 rounded-md border border-border bg-kick-background px-3 text-sm text-foreground transition-colors hover:border-primary">
+    <label
+      className={cn(
+        "inline-flex h-9 cursor-pointer items-center gap-2 rounded-md px-3 text-[13px] text-foreground transition-colors",
+        checked
+          ? "border border-accent bg-elevated"
+          : "border border-border bg-transparent hover:border-border-strong"
+      )}
+    >
       <input
         checked={checked}
-        className="h-4 w-4 accent-primary"
+        className={cn(
+          "h-3.5 w-3.5 cursor-pointer appearance-none rounded-sm border transition-colors",
+          checked ? "border-accent bg-accent" : "border-border-strong bg-transparent"
+        )}
         onChange={(event) => onChange(event.target.checked)}
         type="checkbox"
       />
-      <span className="text-accent">{icon}</span>
-      <span className="truncate">{label}</span>
+      {label}
     </label>
   );
 }
@@ -296,14 +253,17 @@ function Field({
   label
 }: {
   children: ReactNode;
-  icon: ReactNode;
+  icon?: ReactNode;
   id: string;
   label: string;
 }) {
   return (
-    <div>
-      <label className="mb-2 flex h-5 items-center gap-2 text-sm font-medium" htmlFor={id}>
-        <span className="text-accent">{icon}</span>
+    <div className="flex flex-col gap-1.5">
+      <label
+        className="flex items-center gap-1.5 font-mono text-2xs uppercase text-muted-foreground"
+        htmlFor={id}
+      >
+        {icon ? <span className="text-faint">{icon}</span> : null}
         {label}
       </label>
       {children}

@@ -1,18 +1,14 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
-
-import { ChevronDown, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { useState } from "react";
 
 import { MessageContent } from "@/features/search/message-content";
 import { getReplyContext } from "@/features/search/reply-metadata";
 import { formatMessageDate } from "@/features/search/search-params";
 import { buildUserProfileHref } from "@/lib/kick-profile-slugs";
 import { buildChannelProfileHref } from "@/lib/channel-profile-slugs";
-import { cn } from "@/lib/utils";
 import type { Message } from "@/types/api";
 
 type MessageListProps = {
@@ -38,53 +34,28 @@ export function MessageList({
   sentinelRef,
   onRetry
 }: MessageListProps) {
-  return (
-    <section className="rounded-lg border border-border bg-black p-4">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-border pb-3">
-        <div>
-          <div className="flex items-center gap-2 text-base font-semibold">
-            <span className="h-2 w-2 rounded-full bg-primary" />
-            Sonuçlar
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {hasSearched
-              ? `${messages.length} mesaj - en yeni kayıtlar önce - kaydırdıkça eski mesajlar yüklenir`
-              : "Arama yaptıktan sonra sonuçlar burada listelenir"}
-          </p>
-        </div>
-      </div>
+  const emptyShell = !hasSearched && !isInitialLoading && !error;
 
-      <div className="overflow-hidden rounded-md border border-border">
-        {!hasSearched && !isInitialLoading && !error ? (
-          <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 bg-kick-background px-4 py-12 text-center">
-            <div className="flex h-11 w-11 items-center justify-center rounded-md border border-border bg-black text-primary">
-              <Search className="h-5 w-5" />
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="overflow-hidden rounded-lg border border-border bg-panel">
+        {emptyShell ? (
+          <div className="flex min-h-[180px] flex-col items-center justify-center gap-3 px-4 py-12 text-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-elevated text-muted-foreground">
+              <Search className="h-4 w-4" />
             </div>
-            <p className="text-sm font-medium text-foreground">
+            <p className="text-[13px] text-muted-foreground">
               Arama yapmak için yukarıdaki formu kullanın.
             </p>
           </div>
         ) : (
           <>
-            <div className="hidden grid-cols-[46px_142px_130px_minmax(0,1fr)_154px] bg-kick-background px-3 py-2 text-xs font-medium text-muted-foreground md:grid">
-              <div />
-              <div>Gönderen</div>
-              <div>Kanal</div>
-              <div>Mesaj</div>
-              <div>Tarih</div>
-            </div>
-
-            {messages.map((message, index) => (
-              <MessageRow
-                highlightQuery={highlightQuery}
-                isAlt={index % 2 === 1}
-                key={message.id}
-                message={message}
-              />
+            {messages.map((message) => (
+              <MessageRow highlightQuery={highlightQuery} key={message.id} message={message} />
             ))}
 
             {!isInitialLoading && !error && messages.length === 0 ? (
-              <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+              <div className="px-4 py-10 text-center text-[13px] text-muted-foreground">
                 Bu filtrelerle mesaj bulunamadı.
               </div>
             ) : null}
@@ -92,16 +63,16 @@ export function MessageList({
         )}
 
         {isInitialLoading ? (
-          <div className="px-4 py-10 text-center text-sm text-muted-foreground">
-            Mesajlar yükleniyor...
+          <div className="px-4 py-10 text-center text-[13px] text-muted-foreground">
+            Mesajlar yükleniyor…
           </div>
         ) : null}
 
         {error ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-4 text-[13px] text-muted-foreground">
             <span>{error}</span>
             <button
-              className="rounded-md border border-border px-3 py-2 text-xs text-primary hover:border-primary"
+              className="rounded-md border border-border-strong px-3 py-1.5 text-xs text-foreground hover:bg-elevated"
               onClick={onRetry}
               type="button"
             >
@@ -111,33 +82,25 @@ export function MessageList({
         ) : null}
       </div>
 
-      <div className="mt-3 flex justify-center" ref={sentinelRef}>
+      <div className="flex justify-center" ref={sentinelRef}>
         {isLoadingMore ? (
-          <div className="inline-flex h-8 items-center gap-2 rounded-md bg-kick-background px-3 text-xs text-muted-foreground">
-            <ChevronDown className="h-4 w-4 text-primary" />
-            Daha eski mesajlar yükleniyor
+          <div className="inline-flex items-center gap-2 px-3 py-2 font-mono text-[11px] text-muted-foreground">
+            <span className="h-2 w-2 rounded-full bg-accent" />
+            daha eski mesajlar yükleniyor…
           </div>
         ) : null}
 
         {!isLoadingMore && !hasMore && messages.length > 0 ? (
-          <div className="inline-flex h-8 items-center rounded-md bg-kick-background px-3 text-xs text-muted-foreground">
-            Sonuçların sonuna ulaşıldı
+          <div className="inline-flex items-center px-3 py-2 font-mono text-[11px] text-muted-foreground">
+            sonuçların sonuna ulaşıldı
           </div>
         ) : null}
       </div>
-    </section>
+    </div>
   );
 }
 
-function MessageRow({
-  message,
-  isAlt,
-  highlightQuery
-}: {
-  message: Message;
-  isAlt: boolean;
-  highlightQuery: string;
-}) {
+function MessageRow({ message, highlightQuery }: { message: Message; highlightQuery: string }) {
   const replyContext = getReplyContext(message);
   const replyTitle = replyContext
     ? `@${replyContext.senderUsername}: ${replyContext.content}`
@@ -147,79 +110,56 @@ function MessageRow({
   const channelProfileHref = buildChannelProfileHref(message.channel.slug);
   const senderName = message.sender.username || message.sender_username_snapshot;
   const senderNameStyle = senderColorStyle(message.sender_color_snapshot);
+  const channelLabel = `#${message.channel.slug}`;
 
   return (
-    <div
-      className={cn(
-        "grid min-h-[54px] grid-cols-[40px_minmax(0,1fr)] gap-3 border-t border-border/70 px-3 py-3 text-sm md:grid-cols-[46px_142px_130px_minmax(0,1fr)_154px] md:items-center md:gap-0 md:py-2",
-        isAlt ? "bg-kick-background" : "bg-black"
-      )}
-    >
-      <div className="flex items-start md:items-center">
-        {senderProfileHref ? (
-          <Link href={senderProfileHref}>
-            <SenderAvatar message={message} />
-          </Link>
-        ) : (
-          <SenderAvatar message={message} />
-        )}
-      </div>
-
-      <div className="min-w-0 md:pr-3">
+    <div className="grid grid-cols-1 gap-2 border-b border-border px-4 py-3 text-[13px] last:border-b-0 md:grid-cols-[140px_minmax(0,1fr)_auto] md:items-start md:gap-4">
+      <div className="flex min-w-0 flex-col gap-0.5">
         {senderProfileHref ? (
           <Link
-            className="block truncate font-medium text-foreground hover:text-primary"
+            className="truncate font-medium text-foreground hover:underline"
             href={senderProfileHref}
             style={senderNameStyle}
           >
             {senderName}
           </Link>
         ) : (
-          <div className="truncate font-medium text-foreground" style={senderNameStyle}>
+          <span className="truncate font-medium text-foreground" style={senderNameStyle}>
             {senderName}
-          </div>
+          </span>
         )}
-        <div className="truncate text-xs text-muted-foreground md:hidden">
-          {channelProfileHref ? (
-            <Link className="text-accent hover:text-primary" href={channelProfileHref}>
-              #{message.channel.slug}
-            </Link>
-          ) : (
-            <span className="text-accent">#{message.channel.slug}</span>
-          )}{" "}
-          - {formatMessageDate(message.message_created_at)}
-        </div>
-      </div>
-
-      <div className="hidden min-w-0 pr-3 text-accent md:block">
         {channelProfileHref ? (
-          <Link className="block truncate hover:text-primary" href={channelProfileHref}>
-            #{message.channel.slug}
+          <Link
+            className="truncate font-mono text-[11px] text-accent hover:underline"
+            href={channelProfileHref}
+          >
+            {channelLabel}
           </Link>
         ) : (
-          <span className="truncate">#{message.channel.slug}</span>
+          <span className="truncate font-mono text-[11px] text-accent">{channelLabel}</span>
         )}
       </div>
 
-      <div className="col-span-2 min-w-0 text-foreground md:col-span-1 md:pr-4">
+      <div className="min-w-0 text-foreground">
         {replyContext ? (
           <div
-            className="mb-1 min-w-0 truncate text-xs leading-5 text-muted-foreground/70"
+            className="mb-1 flex w-fit max-w-full items-center gap-1.5 rounded-md bg-elevated px-2 py-1 text-[12px] text-muted-foreground"
             title={replyTitle}
           >
+            <span className="text-faint">↳</span>
             {replySenderProfileHref ? (
               <Link
-                className="font-medium text-muted-foreground/80 hover:text-primary"
+                className="font-medium text-foreground/80 hover:underline"
                 href={replySenderProfileHref}
               >
                 @{replyContext.senderUsername}:
               </Link>
             ) : (
-              <span className="font-medium text-muted-foreground/80">
+              <span className="font-medium text-foreground/80">
                 @{replyContext.senderUsername}:
               </span>
-            )}{" "}
-            {replyContext.content}
+            )}
+            <span className="truncate">{replyContext.content}</span>
           </div>
         ) : null}
         <MessageContent
@@ -229,7 +169,7 @@ function MessageRow({
         />
       </div>
 
-      <div className="hidden text-xs text-muted-foreground md:block">
+      <div className="text-right font-mono text-[11px] text-faint md:whitespace-nowrap">
         {formatMessageDate(message.message_created_at)}
       </div>
     </div>
@@ -242,32 +182,4 @@ function senderColorStyle(color: string | null): CSSProperties | undefined {
   }
 
   return { color };
-}
-
-function SenderAvatar({ message }: { message: Message }) {
-  const [failed, setFailed] = useState(false);
-  const imageUrl = message.sender.profile_image_url;
-  const initial = (message.sender.username || message.sender_username_snapshot || "?")
-    .slice(0, 1)
-    .toUpperCase();
-
-  if (imageUrl && !failed) {
-    return (
-      <img
-        alt={`${message.sender.username} profil`}
-        className="h-8 w-8 rounded-full border border-border object-cover"
-        height={32}
-        loading="lazy"
-        onError={() => setFailed(true)}
-        src={imageUrl}
-        width={32}
-      />
-    );
-  }
-
-  return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
-      {initial}
-    </div>
-  );
 }

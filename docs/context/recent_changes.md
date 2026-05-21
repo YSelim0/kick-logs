@@ -4,6 +4,27 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Frontend v2 re-skin: `/search` is now on the v2 design (`Search Screen / v2`, `zKUtf`).
+  - `apps/web/src/features/search/search-screen.tsx` switched to the shared `SiteHeader`,
+    a `Search` title + mono `Tüm kanallar · Yeni → Eski` strip, single `bg-panel` form card,
+    and a new results header row (`Sonuçlar` + count + `son eşleşme` timer caption)
+  - `search-form.tsx` rebuilt: row 1 `Kullanıcı Adı / Kanal Adı / İçerik`, row 2
+    `Başlangıç / Bitiş / Hızlı aralık`, row 3 `Sadece yanıtlar` + `Sadece emote` toggle
+    pills on the left and a square export icon + `Sıfırla` outline + `Ara` accent
+    primary on the right; uppercase mono field labels, `bg-elevated` inputs
+  - `message-list.tsx` rebuilt without avatars: `meta` column (sender username in
+    Kick sender color + `#channel` mono accent below) | message content | mono muted
+    right-aligned timestamp; reply chip rendered as a muted `bg-elevated` mini-chip
+  - inline `accent dot + daha eski mesajlar yükleniyor…` mono loader below the
+    results card; previous `SearchSummary` aside removed
+  - `apps/web/src/components/ui/input.tsx` migrated off the dropped
+    `bg-kick-background` token onto v2 `bg-elevated` + `border-strong` focus
+  - tests updated: `message-list.test.tsx` no longer asserts avatar links and
+    expects a single `#channel` link per row
+  - verification: `pnpm --filter @kick-logs/web typecheck`, `lint`, `test` (16/70),
+    and `build` all green; `pnpm exec prettier --check` clean for touched files
+    (pre-existing warnings in unrelated docs/admin/profile files remain)
+
 - Frontend v2 re-skin: landing page (`/`) is now on the v2 design.
   - v2 tokens replace legacy magenta repo-wide in `apps/web/src/app/globals.css` and
     `apps/web/tailwind.config.ts`; `kick-*` color names removed
