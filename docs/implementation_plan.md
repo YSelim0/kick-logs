@@ -42,6 +42,17 @@ update against existing APIs.
    super-admin-only user management).
 8. **Login.** Centered v2 card with Geist headings and the existing email/password form.
 
+### Progress
+
+- [x] Step 1 (design tokens) — v2 tokens + Geist wired (2026-05-21)
+- [x] Step 2 (shared chrome) — `SiteHeader` component landed; consumed by landing
+- [ ] Step 3 (search)
+- [x] Step 4 (landing) — `mRzu8` re-skin shipped (2026-05-21)
+- [ ] Step 5 (user profile)
+- [ ] Step 6 (channel profile)
+- [ ] Step 7 (admin)
+- [ ] Step 8 (login)
+
 ### Out of Scope (Now)
 
 - `/channels` and `/users` index/listing pages. Header links stay removed until these exist.

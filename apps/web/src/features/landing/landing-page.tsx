@@ -2,22 +2,9 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import {
-  Activity,
-  BarChart3,
-  Coffee,
-  Database,
-  Github,
-  Hash,
-  MessageSquareText,
-  Search,
-  Shield,
-  Smile,
-  Users
-} from "lucide-react";
-import Image from "next/image";
+import { Github, Search } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   getAnalyticsOverview,
@@ -27,6 +14,8 @@ import {
   getTopSenders
 } from "@/features/analytics/api";
 import { Button } from "@/components/ui/button";
+import { SiteHeader } from "@/components/site-header";
+import { cn } from "@/lib/utils";
 import type {
   AnalyticsOverview,
   MessageVolumePoint,
@@ -63,7 +52,7 @@ export function LandingPage() {
       setStatus("loading");
 
       try {
-        const recentRange = getRecentActivityRange();
+        const recentRange = getRecentVolumeRange();
         const [overview, volume, topChannels, topEmotes, topSenders] = await Promise.all([
           getAnalyticsOverview(),
           getMessageVolume({ bucket: "day", end: recentRange.end, start: recentRange.start }),
@@ -100,375 +89,300 @@ export function LandingPage() {
   }, []);
 
   const overview = analytics?.overview ?? EMPTY_OVERVIEW;
-  const hasMessages = overview.total_messages > 0;
-  const recentActivity = useMemo(
-    () => summarizeRecentActivity(analytics?.volume ?? []),
-    [analytics]
-  );
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
-      <LandingHeader />
+    <main className="min-h-screen bg-page text-foreground">
+      <SiteHeader activeRoute="search" />
 
-      <section className="border-b border-border bg-black">
-        <div className="mx-auto grid max-w-[1240px] gap-8 px-4 py-8 md:px-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
-          <div className="max-w-3xl">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-md border border-border bg-kick-background px-3 py-1.5 text-xs text-primary">
-              <Database className="h-3.5 w-3.5" />
-              Self-hosted Kick chat archive
-            </div>
-            <h1 className="text-2xl font-semibold tracking-normal md:text-3xl">Kick Logs</h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
-              Kendi sunucunda çalışan, takip ettiğin Kick kanallarındaki sohbet mesajlarını
-              arşivleyen ve geçmiş mesajlarda hızlı arama yapmanı sağlayan açık kaynak log sistemi.
-            </p>
-
-            <div className="mt-5 flex flex-wrap gap-3">
-              <Button asChild>
-                <Link href="/search">
-                  <Search className="h-4 w-4" />
-                  Mesajlarda ara
-                </Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href="/admin">
-                  <Shield className="h-4 w-4 text-accent" />
-                  Admin
-                </Link>
-              </Button>
-              <Button asChild variant="ghost">
-                <a
-                  href="https://github.com/YSelim0/kick-logs"
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  <Github className="h-4 w-4 text-accent" />
-                  GitHub
-                </a>
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 border-t border-border pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
-            <Image
-              alt="Kick Logs"
-              className="h-20 w-20 rounded-lg object-contain"
-              height={80}
-              priority
-              src="/app-logo.png"
-              width={80}
-            />
-            <div className="min-w-0">
-              <div className="text-sm text-muted-foreground">Canlı özet</div>
-              <div className="mt-1 text-xl font-semibold">
-                {formatNumber(overview.total_messages)}
-              </div>
-              <div className="text-xs text-muted-foreground">loglanmış mesaj</div>
-              <div className="mt-3 text-xs text-muted-foreground">
-                Son aktivite: {formatDateTime(overview.latest_message_at)}
-              </div>
-            </div>
-          </div>
+      <div className="mx-auto max-w-[1280px] px-6 py-16 md:px-20 md:pt-16 md:pb-20">
+        <div className="flex flex-col gap-12">
+          <Hero />
+          <StatsBar overview={overview} />
+          <StatusBanner status={status} />
+          <AnalyticsGrid
+            volume={analytics?.volume ?? []}
+            topChannels={analytics?.topChannels ?? []}
+            topSenders={analytics?.topSenders ?? []}
+            topEmotes={analytics?.topEmotes ?? []}
+          />
         </div>
-      </section>
-
-      <div className="mx-auto max-w-[1240px] px-4 py-6 md:px-8">
-        <AnalyticsStatus status={status} />
-
-        <section aria-label="Genel metrikler" className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <MetricCard
-            icon={<MessageSquareText className="h-4 w-4" />}
-            label="Loglanan Mesaj"
-            value={formatNumber(overview.total_messages)}
-          />
-          <MetricCard
-            icon={<Hash className="h-4 w-4" />}
-            label="Takip Edilen Kanal"
-            value={formatNumber(overview.total_channels)}
-          />
-          <MetricCard
-            icon={<Users className="h-4 w-4" />}
-            label="Aktif Kullanıcı"
-            value={formatNumber(overview.total_senders)}
-          />
-          <MetricCard
-            icon={<Smile className="h-4 w-4" />}
-            label="Emote Kullanımı"
-            value={formatNumber(overview.total_emote_usages)}
-          />
-        </section>
-
-        <section className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div>
-            <SectionHeading
-              description="Gün bazında mesaj hacmi ve en hareketli kanallar."
-              icon={<Activity className="h-4 w-4" />}
-              title="Sohbet Aktivitesi"
-            />
-            {hasMessages ? (
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <ActivitySummary summary={recentActivity} />
-                <TopChannelsList channels={analytics?.topChannels ?? []} />
-              </div>
-            ) : (
-              <EmptyState />
-            )}
-          </div>
-
-          <div>
-            <SectionHeading
-              description="Mesajlarda en çok görünen emote ve kullanıcılar."
-              icon={<BarChart3 className="h-4 w-4" />}
-              title="Öne Çıkanlar"
-            />
-            <div className="mt-3 grid gap-3">
-              <TopEmotesList emotes={analytics?.topEmotes ?? []} />
-              <TopSendersList senders={analytics?.topSenders ?? []} />
-            </div>
-          </div>
-        </section>
       </div>
     </main>
   );
 }
 
-function LandingHeader() {
+function Hero() {
   return (
-    <header className="border-b border-border bg-kick-background">
-      <nav className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm md:px-8">
-        <Link className="flex items-center gap-3 font-semibold" href="/">
-          <Image
-            alt="Kick Logs"
-            className="h-8 w-8 rounded-md object-contain"
-            height={32}
-            src="/app-logo.png"
-            width={32}
-          />
-          Kick Logs
-        </Link>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <NavLink href="/search">Search</NavLink>
-          <NavLink href="/admin">Admin</NavLink>
-          <NavLink href="https://github.com/YSelim0/kick-logs">GitHub</NavLink>
-          <NavLink href="https://buymeacoffee.com/yavuzselim">
-            <Coffee className="h-3.5 w-3.5" />
-            Support
-          </NavLink>
-        </div>
-      </nav>
-    </header>
+    <section className="flex flex-col gap-5">
+      <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-border bg-panel px-2.5 py-1 font-mono text-2xs uppercase tracking-wider text-muted-foreground">
+        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />
+        Self-hosted · Açık kaynak
+      </span>
+      <h1 className="max-w-3xl text-4xl font-semibold leading-[1.1] tracking-[-0.02em] text-foreground md:text-[48px]">
+        Kick chat için kalıcı log.
+      </h1>
+      <p className="max-w-[720px] text-base leading-relaxed text-muted-foreground">
+        Takip ettiğin Kick kanallarındaki tüm mesajları kaydet, ara, analiz et. Veri sende kalır.
+      </p>
+      <div className="mt-1 flex flex-wrap items-center gap-2.5">
+        <Button asChild>
+          <Link href="/search">
+            <Search className="h-4 w-4" />
+            Arama başlat
+          </Link>
+        </Button>
+        <Button asChild variant="outline">
+          <a href="https://github.com/YSelim0/kick-logs" rel="noopener noreferrer" target="_blank">
+            <Github className="h-4 w-4" />
+            GitHub
+          </a>
+        </Button>
+      </div>
+    </section>
   );
 }
 
-function NavLink({ children, href }: { children: React.ReactNode; href: string }) {
-  const isExternal = href.startsWith("http");
+function StatsBar({ overview }: { overview: AnalyticsOverview }) {
+  const cells: { label: string; value: string }[] = [
+    { label: "TOPLAM MESAJ", value: formatCompactNumber(overview.total_messages) },
+    { label: "KANAL", value: formatCompactNumber(overview.total_channels) },
+    { label: "KULLANICI", value: formatCompactNumber(overview.total_senders) },
+    { label: "EMOTE", value: formatCompactNumber(overview.total_emote_usages) }
+  ];
 
-  if (isExternal) {
-    return (
-      <a
-        className="inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-muted-foreground transition-colors hover:bg-secondary/40 hover:text-foreground"
-        href={href}
-        rel="noopener noreferrer"
-        target="_blank"
-      >
-        {children}
-      </a>
-    );
+  return (
+    <section
+      aria-label="Genel metrikler"
+      className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-4"
+    >
+      {cells.map((cell) => (
+        <div key={cell.label} className="bg-panel px-6 py-5">
+          <div className="font-mono text-2xs uppercase text-muted-foreground">{cell.label}</div>
+          <div className="mt-2 text-[26px] font-semibold leading-none text-foreground">
+            {cell.value}
+          </div>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function AnalyticsGrid({
+  volume,
+  topChannels,
+  topSenders,
+  topEmotes
+}: {
+  volume: MessageVolumePoint[];
+  topChannels: TopChannelAnalytics[];
+  topSenders: TopSenderAnalytics[];
+  topEmotes: TopEmoteAnalytics[];
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+      <Panel title="Mesaj hacmi" subtitle="son 14 gün">
+        <MessageVolumeChart points={volume} />
+      </Panel>
+      <Panel title="Top kanallar" subtitle="mesaj sayısı">
+        <TopList
+          rows={topChannels.map((channel) => ({
+            key: String(channel.channel_id),
+            label: channel.display_name,
+            value: formatCompactNumber(channel.message_count),
+            href: `/channels/${encodeURIComponent(channel.slug)}`,
+            image: channel.profile_image_url ?? undefined,
+            initial: getInitial(channel.display_name)
+          }))}
+          emptyText="Kanal verisi henüz yok."
+        />
+      </Panel>
+      <Panel title="Top kullanıcılar" subtitle="mesaj sayısı">
+        <TopList
+          rows={topSenders.map((sender) => ({
+            key: String(sender.sender_id),
+            label: sender.username,
+            value: formatCompactNumber(sender.message_count),
+            href: `/users/${encodeURIComponent(sender.slug)}`,
+            image: sender.profile_image_url ?? undefined,
+            initial: getInitial(sender.username)
+          }))}
+          emptyText="Kullanıcı verisi henüz yok."
+        />
+      </Panel>
+      <Panel title="Top emoteler" subtitle="kullanım">
+        <TopList
+          rows={topEmotes.map((emote) => ({
+            key: emote.id,
+            label: emote.name,
+            value: formatCompactNumber(emote.usage_count),
+            image: emote.image_url
+          }))}
+          emptyText="Emote verisi henüz yok."
+        />
+      </Panel>
+    </div>
+  );
+}
+
+function Panel({
+  title,
+  subtitle,
+  children
+}: {
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border border-border bg-panel p-5">
+      <header className="mb-4 flex flex-col gap-0.5">
+        <h2 className="text-[15px] font-semibold leading-none text-foreground">{title}</h2>
+        <p className="font-mono text-2xs uppercase text-muted-foreground">{subtitle}</p>
+      </header>
+      {children}
+    </section>
+  );
+}
+
+function MessageVolumeChart({ points }: { points: MessageVolumePoint[] }) {
+  if (!points.length) {
+    return <EmptyHint text="Henüz veri yok." />;
+  }
+
+  const max = points.reduce((acc, point) => Math.max(acc, point.message_count), 0);
+
+  return (
+    <div className="relative flex h-44 items-end gap-1.5">
+      {points.map((point) => {
+        const ratio = max > 0 ? point.message_count / max : 0;
+        const heightPct = max > 0 ? Math.max(ratio * 100, 4) : 4;
+        return (
+          <div
+            key={point.bucket_start}
+            className="group relative flex h-full flex-1 flex-col justify-end"
+          >
+            <div
+              className="pointer-events-none absolute left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-0.5 whitespace-nowrap rounded-md border border-border bg-elevated px-2.5 py-1.5 opacity-0 shadow-lg transition-opacity duration-100 group-hover:opacity-100"
+              style={{ bottom: `calc(${heightPct}% + 8px)` }}
+              aria-hidden
+            >
+              <span className="font-mono text-[11px] font-semibold text-foreground">
+                {formatCompactNumber(point.message_count)} mesaj
+              </span>
+              <span className="font-mono text-2xs uppercase text-muted-foreground">
+                {formatShortDate(point.bucket_start)}
+              </span>
+            </div>
+            <div
+              aria-label={`${formatShortDate(point.bucket_start)} · ${formatCompactNumber(point.message_count)} mesaj`}
+              className="rounded-sm bg-accent transition-opacity duration-100 group-hover:opacity-80"
+              style={{ height: `${heightPct}%` }}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function getInitial(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "?";
+  }
+  return trimmed.charAt(0).toUpperCase();
+}
+
+type TopRow = {
+  key: string;
+  label: string;
+  value: string;
+  href?: string;
+  image?: string;
+  initial?: string;
+};
+
+function TopList({ rows, emptyText }: { rows: TopRow[]; emptyText: string }) {
+  if (!rows.length) {
+    return <EmptyHint text={emptyText} />;
   }
 
   return (
-    <Link
-      className="inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-muted-foreground transition-colors hover:bg-secondary/40 hover:text-foreground"
-      href={href}
-    >
-      {children}
-    </Link>
+    <ol className="flex flex-col gap-2.5">
+      {rows.map((row, index) => {
+        const content = (
+          <>
+            <span className="w-6 shrink-0 font-mono text-2xs uppercase text-faint">
+              {(index + 1).toString().padStart(2, "0")}
+            </span>
+            {row.image ? (
+              <img
+                alt={row.label}
+                className="h-5 w-5 shrink-0 rounded-sm bg-elevated object-cover"
+                src={row.image}
+              />
+            ) : row.initial ? (
+              <span
+                aria-hidden
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-sm bg-elevated font-mono text-[10px] font-semibold uppercase text-muted-foreground"
+              >
+                {row.initial}
+              </span>
+            ) : (
+              <span aria-hidden className="h-5 w-5 shrink-0 rounded-sm bg-elevated" />
+            )}
+            <span className="flex-1 truncate text-[13px] text-foreground">{row.label}</span>
+            <span className="shrink-0 font-mono text-[13px] text-muted-foreground">
+              {row.value}
+            </span>
+          </>
+        );
+
+        return (
+          <li key={row.key}>
+            {row.href ? (
+              <Link
+                href={row.href}
+                className={cn(
+                  "flex items-center gap-3 rounded-sm px-1 py-1 -mx-1",
+                  "transition-colors hover:bg-elevated"
+                )}
+              >
+                {content}
+              </Link>
+            ) : (
+              <div className="flex items-center gap-3 px-1 py-1 -mx-1">{content}</div>
+            )}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
-function AnalyticsStatus({ status }: { status: "loading" | "ready" | "error" }) {
+function StatusBanner({ status }: { status: "loading" | "ready" | "error" }) {
   if (status === "ready") {
     return null;
   }
 
   return (
-    <div className="mb-4 rounded-md border border-border bg-black px-4 py-3 text-sm text-muted-foreground">
+    <div className="rounded-md border border-border bg-panel px-4 py-3 text-sm text-muted-foreground">
       {status === "loading"
-        ? "Analytics verileri yükleniyor..."
+        ? "Analytics verileri yükleniyor…"
         : "Analytics verileri şu anda alınamadı. Arama ve admin bağlantıları kullanılabilir."}
     </div>
   );
 }
 
-function MetricCard({
-  icon,
-  label,
-  value
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <article className="rounded-lg border border-border bg-black p-4">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span className="text-accent">{icon}</span>
-        {label}
-      </div>
-      <div className="mt-3 text-2xl font-semibold text-primary">{value}</div>
-    </article>
-  );
+function EmptyHint({ text }: { text: string }) {
+  return <p className="text-[13px] text-muted-foreground">{text}</p>;
 }
 
-function SectionHeading({
-  description,
-  icon,
-  title
-}: {
-  description: string;
-  icon: React.ReactNode;
-  title: string;
-}) {
-  return (
-    <div className="flex items-start gap-3">
-      <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-md border border-border bg-black text-accent">
-        {icon}
-      </div>
-      <div>
-        <h2 className="text-base font-semibold">{title}</h2>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </div>
-    </div>
-  );
-}
-
-function ActivitySummary({ summary }: { summary: { total: number; latestLabel: string } }) {
-  return (
-    <article className="rounded-lg border border-border bg-black p-4">
-      <div className="text-sm text-muted-foreground">Son hacim</div>
-      <div className="mt-2 text-2xl font-semibold text-primary">{formatNumber(summary.total)}</div>
-      <div className="mt-1 text-xs text-muted-foreground">Son bucket: {summary.latestLabel}</div>
-    </article>
-  );
-}
-
-function TopChannelsList({ channels }: { channels: TopChannelAnalytics[] }) {
-  return (
-    <article className="rounded-lg border border-border bg-black p-4">
-      <div className="mb-3 text-sm font-medium">Top Kanallar</div>
-      {channels.length ? (
-        <div className="grid gap-2">
-          {channels.map((channel) => (
-            <Link
-              className="flex items-center justify-between gap-3 rounded-md border border-border bg-kick-background px-3 py-2 text-sm hover:border-primary"
-              href={`/search?channel=${encodeURIComponent(channel.slug)}`}
-              key={channel.channel_id}
-            >
-              <span className="truncate">{channel.display_name}</span>
-              <span className="shrink-0 text-primary">{formatNumber(channel.message_count)}</span>
-            </Link>
-          ))}
-        </div>
-      ) : (
-        <SmallEmpty text="Kanal aktivitesi henüz yok." />
-      )}
-    </article>
-  );
-}
-
-function TopEmotesList({ emotes }: { emotes: TopEmoteAnalytics[] }) {
-  return (
-    <article className="rounded-lg border border-border bg-black p-4">
-      <div className="mb-3 text-sm font-medium">Top Emoteler</div>
-      {emotes.length ? (
-        <div className="grid gap-2">
-          {emotes.map((emote) => (
-            <div
-              className="flex items-center justify-between gap-3 rounded-md border border-border bg-kick-background px-3 py-2 text-sm"
-              key={emote.id}
-            >
-              <span className="flex min-w-0 items-center gap-2">
-                <img
-                  alt={emote.name}
-                  className="h-5 w-5 shrink-0 object-contain"
-                  src={emote.image_url}
-                />
-                <span className="truncate">{emote.name}</span>
-              </span>
-              <span className="shrink-0 text-primary">{formatNumber(emote.usage_count)}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <SmallEmpty text="Emote verisi henüz yok." />
-      )}
-    </article>
-  );
-}
-
-function TopSendersList({ senders }: { senders: TopSenderAnalytics[] }) {
-  return (
-    <article className="rounded-lg border border-border bg-black p-4">
-      <div className="mb-3 text-sm font-medium">Aktif Kullanıcılar</div>
-      {senders.length ? (
-        <div className="grid gap-2">
-          {senders.map((sender) => (
-            <Link
-              className="flex items-center justify-between gap-3 rounded-md border border-border bg-kick-background px-3 py-2 text-sm hover:border-primary"
-              href={`/search?sender=${encodeURIComponent(sender.slug)}`}
-              key={sender.sender_id}
-            >
-              <span className="truncate">{sender.username}</span>
-              <span className="shrink-0 text-primary">{formatNumber(sender.message_count)}</span>
-            </Link>
-          ))}
-        </div>
-      ) : (
-        <SmallEmpty text="Kullanıcı aktivitesi henüz yok." />
-      )}
-    </article>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="mt-3 rounded-lg border border-border bg-black p-5">
-      <div className="text-sm font-medium">Henüz log yok</div>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        Bir kanal ekleyip listener çalışmaya başladığında bu alan canlı analytics verileriyle
-        dolacak. Bu sırada search ekranına veya admin paneline geçebilirsin.
-      </p>
-      <div className="mt-4 flex flex-wrap gap-3">
-        <Button asChild size="sm">
-          <Link href="/search">Search</Link>
-        </Button>
-        <Button asChild size="sm" variant="outline">
-          <Link href="/admin">Admin</Link>
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function SmallEmpty({ text }: { text: string }) {
-  return <div className="text-sm text-muted-foreground">{text}</div>;
-}
-
-function summarizeRecentActivity(points: MessageVolumePoint[]) {
-  const total = points.reduce((sum, point) => sum + point.message_count, 0);
-  const latest = points.at(-1);
-
-  return {
-    total,
-    latestLabel: latest ? formatDate(latest.bucket_start) : "Veri yok"
-  };
-}
-
-function getRecentActivityRange() {
+function getRecentVolumeRange() {
   const end = new Date();
   const start = new Date(end);
-  start.setDate(start.getDate() - 7);
+  start.setDate(start.getDate() - 13);
+  start.setHours(0, 0, 0, 0);
 
   return {
     end: end.toISOString(),
@@ -476,22 +390,16 @@ function getRecentActivityRange() {
   };
 }
 
-function formatNumber(value: number) {
-  return new Intl.NumberFormat("tr-TR").format(value);
+const COMPACT_FORMATTER = new Intl.NumberFormat("tr-TR", {
+  notation: "compact",
+  maximumFractionDigits: 1
+});
+
+function formatCompactNumber(value: number) {
+  return COMPACT_FORMATTER.format(value);
 }
 
-function formatDateTime(value: string | null) {
-  if (!value) {
-    return "Henüz yok";
-  }
-
-  return new Intl.DateTimeFormat("tr-TR", {
-    dateStyle: "medium",
-    timeStyle: "short"
-  }).format(new Date(value));
-}
-
-function formatDate(value: string) {
+function formatShortDate(value: string) {
   return new Intl.DateTimeFormat("tr-TR", {
     day: "2-digit",
     month: "short"

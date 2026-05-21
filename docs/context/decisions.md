@@ -1,5 +1,17 @@
 # Decisions
 
+## 2026-05-21
+
+- Frontend v2 design tokens replace the legacy magenta palette repo-wide. The new tokens (Kick
+  green accent `#00e701` on dark neutrals, Geist Sans + Geist Mono) live in
+  `apps/web/src/app/globals.css` and `apps/web/tailwind.config.ts` and are wired through shadcn
+  HSL aliases plus dedicated `bg-page`, `bg-panel`, `bg-elevated`, `border-strong`, `text-faint`,
+  `accent`, `accent-hover`, `accent-muted`, `danger`, and `warning` utilities. Legacy `kick-*`
+  color tokens are removed; routes not yet re-skinned will pick up the new colors until they get
+  their own v2 layout pass.
+- Geist fonts ship via the official `geist` npm package; `RootLayout` applies `GeistSans.variable`
+  and `GeistMono.variable` so Tailwind `font-sans` / `font-mono` resolve through CSS variables.
+
 ## 2026-05-09
 
 - Use a monorepo in `kick-logs`.

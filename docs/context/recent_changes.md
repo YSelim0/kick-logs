@@ -4,6 +4,23 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Frontend v2 re-skin: landing page (`/`) is now on the v2 design.
+  - v2 tokens replace legacy magenta repo-wide in `apps/web/src/app/globals.css` and
+    `apps/web/tailwind.config.ts`; `kick-*` color names removed
+  - Geist Sans + Geist Mono wired through the `geist` npm package and `RootLayout`
+  - `apps/web/src/features/landing/landing-page.tsx` rebuilt to match `Landing / v2`
+    (`mRzu8`): compact hero, 4-cell stats bar, 2×2 analytics grid (volume bars, top
+    channels/users/emotes), accent-green primary CTAs
+  - new shared `apps/web/src/components/site-header.tsx` powers the v2 chrome (brand + active
+    `Search` pill + GitHub icon + Admin outline); landing consumes it
+  - landing test rewritten for the new strings, links, and empty hints; `Support` link removed
+  - other routes (`/search`, `/admin`, `/login`, profiles) still render their pre-v2 layouts;
+    they will pick up the new tokens visually until their own v2 passes land
+  - verification: pnpm typecheck/lint/test/build green; `go build/test/vet ./...` green;
+    Prettier check passed on touched files
+
+## Previously Latest
+
 - Issue #9 phase 7: live load test completed and all acceptance criteria met.
   - baseline run: 163,473 events at 2000 events/s over 60s (burst-factor 2, 5 channels)
   - peak writer queue depth 24,356; all 302 flushes at batch size 500; peak flush latency 392ms

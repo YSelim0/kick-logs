@@ -5,9 +5,10 @@ implementation details, or working assumptions change.
 
 ## Current State
 
-- Branch: `feat/issue-9-ingestion-batching`.
-- Active plan: GitHub issue #9, stabilize high-volume Kick chat ingestion. Plan lives in
-  `docs/implementation_plan.md`; phase task files live under `docs/tasks/issue_09_*`.
+- Branch: `dev`.
+- Active plan: Frontend v2 re-skin (see `docs/implementation_plan.md`). Landing page (`/`)
+  shipped on v2 (2026-05-21); remaining routes (`/search`, `/admin`, `/login`, profiles) still
+  use their pre-v2 layouts on top of the new tokens until they get their own v2 passes.
 - Default runtime is:
   - `clickhouse`
   - `api` built from `apps/api-go`
@@ -147,15 +148,18 @@ admin/super-admin role.
 
 ## UI Direction
 
-- UI design source: `docs/design/design.md`.
-- Dark-only palette:
-  - `#26001B`
-  - `#810034`
-  - `#FF005C`
-  - `#FFF600`
-  - black
-  - white
-- Primary buttons should prefer `#FFF600`.
+- UI design source: `docs/design/design.md` (v2). `docs/design/design.pen` holds the approved
+  v2 screen set.
+- Dark-only palette (v2 tokens; legacy magenta is fully replaced):
+  - accent `#00e701` (hover `#00c701`, muted `rgba(0,231,1,0.2)`)
+  - `bg-page #0b0e0f`, `bg-panel #191b1f`, `bg-elevated #24272c`, `bg-deep #000000`
+  - `border-subtle #24272c`, `border-strong #474f54`
+  - `text-primary #ffffff`, `text-secondary #9ca3af`, `text-muted #474f54`,
+    `text-on-accent #0b0e0f`
+  - `danger #ff4d4f`, `warning #facc15`
+- Primary buttons fill `accent` with `text-on-accent` foreground.
+- Typography: Geist Sans for UI, Geist Mono for labels/timestamps/metric values, wired via the
+  `geist` package and Tailwind `font-sans` / `font-mono`.
 - Do not use blur, glow, colored lighting, or atmospheric background effects.
 - Search results render dense rows inside one shared outer list container, not per-message modal or
   card components.

@@ -11,10 +11,6 @@ const analyticsMocks = vi.hoisted(() => ({
   getTopSenders: vi.fn()
 }));
 
-vi.mock("next/image", () => ({
-  default: ({ alt }: { alt: string }) => <span aria-label={alt} role="img" />
-}));
-
 vi.mock("@/features/analytics/api", () => analyticsMocks);
 
 describe("LandingPage", () => {
@@ -39,11 +35,11 @@ describe("LandingPage", () => {
     analyticsMocks.getTopSenders.mockResolvedValue({ items: [] });
   });
 
-  it("renders public analytics after loading", async () => {
+  it("renders the v2 hero, stats bar, and analytics panels", async () => {
     analyticsMocks.getAnalyticsOverview.mockResolvedValue({
-      total_messages: 1240,
-      total_senders: 82,
-      total_channels: 7,
+      total_messages: 482,
+      total_senders: 76,
+      total_channels: 5,
       total_emote_usages: 314,
       first_message_at: "2026-05-01T10:00:00Z",
       latest_message_at: "2026-05-14T09:30:00Z"
@@ -97,31 +93,45 @@ describe("LandingPage", () => {
 
     render(<LandingPage />);
 
-    expect(await screen.findAllByText("1.240")).toHaveLength(2);
-    expect(screen.getByText("Top Kanallar")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: /kick chat için kalıcı log\./i })
+    ).toBeInTheDocument();
+
+    expect(screen.getByText("TOPLAM MESAJ")).toBeInTheDocument();
+    expect(screen.getByText("KANAL")).toBeInTheDocument();
+    expect(screen.getByText("KULLANICI")).toBeInTheDocument();
+    expect(screen.getByText("EMOTE")).toBeInTheDocument();
+
+    expect(screen.getByRole("heading", { name: "Mesaj hacmi" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Top kanallar" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Top kullanıcılar" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Top emoteler" })).toBeInTheDocument();
+
     expect(screen.getByText("Hype")).toBeInTheDocument();
     expect(screen.getByText("KEKW")).toBeInTheDocument();
     expect(screen.getByText("Yavuz")).toBeInTheDocument();
-    expect(screen.getByText("100")).toBeInTheDocument();
   });
 
-  it("shows a useful empty state on a fresh install", async () => {
+  it("shows panel-level empty hints on a fresh install", async () => {
     render(<LandingPage />);
 
-    expect(await screen.findByText("Henüz log yok")).toBeInTheDocument();
+    expect(await screen.findByText("Kanal verisi henüz yok.")).toBeInTheDocument();
+    expect(screen.getByText("Kullanıcı verisi henüz yok.")).toBeInTheDocument();
     expect(screen.getByText("Emote verisi henüz yok.")).toBeInTheDocument();
-    expect(screen.getByText("Kullanıcı aktivitesi henüz yok.")).toBeInTheDocument();
+    expect(screen.getByText("Henüz veri yok.")).toBeInTheDocument();
   });
 
-  it("renders navigation links", async () => {
+  it("renders v2 header and CTA links", async () => {
     render(<LandingPage />);
 
     await waitFor(() => expect(analyticsMocks.getAnalyticsOverview).toHaveBeenCalledTimes(1));
 
-    expect(linkExists(/search/i, "/search")).toBe(true);
-    expect(linkExists(/admin/i, "/admin")).toBe(true);
+    expect(linkExists(/^search$/i, "/search")).toBe(true);
+    expect(linkExists(/^admin$/i, "/admin")).toBe(true);
+    expect(linkExists(/arama başlat/i, "/search")).toBe(true);
     expect(linkExists(/github/i, "https://github.com/YSelim0/kick-logs")).toBe(true);
-    expect(linkExists(/support/i, "https://buymeacoffee.com/yavuzselim")).toBe(true);
+
+    expect(screen.queryByRole("link", { name: /support/i })).toBeNull();
   });
 });
 
