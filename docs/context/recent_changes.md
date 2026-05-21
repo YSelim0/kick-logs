@@ -4,6 +4,26 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Frontend v2 re-skin: `/admin` and `/login` now match the v2 designs (`Admin / v2`, `L9oE7`;
+  `Login / v2`, `vlFSq`). All six routes are now on v2.
+  - admin: new sidebar layout (Operations, Channels, Users, Data, Settings nav); top chrome
+    brand + `/ admin` mono breadcrumb + user email + `SUPER ADMIN` pill + `Çıkış` button; all
+    existing sections (OperationsDashboard, ChannelAdmin, UserAdmin, DataManagementPanel)
+    rendered stacked in the main column; `bg-kick-background` and legacy tokens removed
+  - operations dashboard: 4-card metric row (MESAJ, RAW EVENT, BAŞARISIZ RAW, DB BOYUTU) with
+    mono labels and large values; status banner with Canlı/Bayat indicator; Ingestion panel
+    with 6-cell strip (Queue depth, Write queue, Drop count, Flush count, Son flush, CH
+    failures) and Kapalı/Açık breaker pill; all warning notices preserved
+  - channel admin: new v2 table (KANAL, DURUM, MESAJ, SON AKTİVİTE columns); inline add form
+    with sr-only label; direct Devre dışı bırak button in action column
+  - login: centered 380px card on bg-page; brand square + `kick logs` + subtitle; E-POSTA /
+    ŞİFRE uppercase mono labels; full-width accent `Giriş yap` button; muted footer link
+  - tests updated: login label `Parola` → `ŞİFRE`, admin email count 2 → 1, channel admin
+    kick ID assertions removed, button label `kanal ekle` → `ekle`
+  - verification: pnpm typecheck/lint/test (70/70)/build all green; prettier clean
+
+## Previously Latest
+
 - Frontend v2 re-skin: `/users/[slug]` and `/channels/[slug]` now match the v2 profile designs
   (`User Profile / v2`, `ksyyS`; `Channel Profile / v2`, `WGYFT`).
   - both routes use the shared `SiteHeader` with the `Search` pill, v2 breadcrumbs, `bg-panel`

@@ -50,8 +50,8 @@ update against existing APIs.
 - [x] Step 4 (landing) — `mRzu8` re-skin shipped (2026-05-21)
 - [x] Step 5 (user profile) — `ksyyS` re-skin shipped (2026-05-21)
 - [x] Step 6 (channel profile) — `WGYFT` re-skin shipped (2026-05-21)
-- [ ] Step 7 (admin)
-- [ ] Step 8 (login)
+- [x] Step 7 (admin) — `L9oE7` sidebar layout + Operations/Channels re-skin shipped (2026-05-21)
+- [x] Step 8 (login) — `vlFSq` centered card shipped (2026-05-21)
 
 ### Out of Scope (Now)
 

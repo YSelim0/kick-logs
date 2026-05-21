@@ -6,9 +6,8 @@ implementation details, or working assumptions change.
 ## Current State
 
 - Branch: `dev`.
-- Active plan: Frontend v2 re-skin (see `docs/implementation_plan.md`). Landing (`/`), search
-  (`/search`), user profiles (`/users/[slug]`), and channel profiles (`/channels/[slug]`) are on
-  v2 (2026-05-21). Remaining routes are `/admin` and `/login`.
+- Active plan: Frontend v2 re-skin (see `docs/implementation_plan.md`). All six routes complete
+  as of 2026-05-21: `/`, `/search`, `/users/[slug]`, `/channels/[slug]`, `/admin`, `/login`.
 - Default runtime is:
   - `clickhouse`
   - `api` built from `apps/api-go`
