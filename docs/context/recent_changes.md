@@ -4,6 +4,22 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Responsive mobile polish follow-up:
+  - `ProfileAvatar` now keeps both the real profile image and fallback initials at
+    `h-[72px] w-[72px] min-w-[72px]`, so user profile photos do not collapse inside narrow
+    mobile flex rows.
+  - Channel/user admin tests now account for the responsive desktop + mobile DOM variants that
+    intentionally render the same row data twice behind breakpoint classes.
+  - Context docs were refreshed after the recent responsive pass covering profile message rows,
+    the admin hamburger drawer, channel/user admin mobile rows, and operations/data-management
+    panels.
+- Verification:
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web test`: 16 files, 70 tests passed
+
+## Previously Latest
+
 - Landing page minimal footer added (`apps/web/src/features/landing/landing-page.tsx`): single-row
   footer with `Copyright` lucide icon, year, and "Tüm hakları saklıdır." in mono uppercase.
   Max height ~44px. Landing-page only.

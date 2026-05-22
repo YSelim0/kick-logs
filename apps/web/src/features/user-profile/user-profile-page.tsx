@@ -202,7 +202,7 @@ function ProfileAvatar({ profile }: { profile: UserProfile }) {
     return (
       <img
         alt={`${profile.sender.username} profil`}
-        className="h-[72px] w-[72px] rounded-full border border-border object-cover"
+        className="h-[72px] w-[72px] min-w-[72px] rounded-full border border-border object-cover"
         height={72}
         onError={() => setFailed(true)}
         src={imageUrl}
@@ -212,7 +212,7 @@ function ProfileAvatar({ profile }: { profile: UserProfile }) {
   }
 
   return (
-    <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full border border-border bg-elevated font-mono text-xl font-semibold text-muted-foreground">
+    <div className="flex h-[72px] w-[72px] min-w-[72px] items-center justify-center rounded-full border border-border bg-elevated font-mono text-xl font-semibold text-muted-foreground">
       {initial}
     </div>
   );

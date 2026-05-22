@@ -2,6 +2,27 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-22
+
+- Responsive mobile polish follow-up:
+  - added `min-w-[72px]` to the user profile image path as well as the fallback initials avatar
+    so the circular profile photo keeps its intended 72px width on mobile flex layouts
+  - kept the fallback initials avatar at the same fixed/min-width dimensions for parity with
+    image-backed profiles
+  - updated channel/user admin tests to expect the responsive desktop + mobile row variants that
+    intentionally duplicate visible labels in the DOM behind breakpoint classes
+  - refreshed context docs after recent responsive commits:
+    - profile latest-message rows were tightened for mobile wrapping
+    - admin sidebar now collapses into a mobile hamburger drawer
+    - channel admin uses a mobile card layout
+    - user admin uses mobile stacked rows
+    - operations dashboard and data-management panels now wrap controls/metrics for smaller
+      screens
+- Verification:
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web test`: 16 files, 70 tests passed
+
 ## 2026-05-21
 
 - Frontend v2 re-skin: user and channel profiles migrated to the v2 designs.

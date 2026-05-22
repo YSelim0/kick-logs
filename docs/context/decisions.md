@@ -1,5 +1,16 @@
 # Decisions
 
+## 2026-05-22
+
+- User profile identity avatars keep fixed 72px dimensions plus `min-w-[72px]` on both image and
+  fallback initials paths. Mobile flex rows must wrap text around the avatar rather than shrink
+  the profile photo.
+- Admin responsive views intentionally keep desktop and mobile row variants in the DOM behind
+  breakpoint classes. Tests should query repeated labels with plural queries when asserting shared
+  row data.
+- Admin mobile UX uses a hamburger drawer for section navigation, card-style channel rows, stacked
+  user rows, and wrapped operations/data-management panels instead of horizontal overflow.
+
 ## 2026-05-21
 
 - Frontend v2 design tokens replace the legacy magenta palette repo-wide. The new tokens (Kick

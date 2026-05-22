@@ -8,6 +8,9 @@ implementation details, or working assumptions change.
 - Branch: `dev`.
 - Active plan: Frontend v2 re-skin (see `docs/implementation_plan.md`). All six routes complete
   as of 2026-05-21: `/`, `/search`, `/users/[slug]`, `/channels/[slug]`, `/admin`, `/login`.
+- Responsive polish pass is current through 2026-05-22: profile rows, admin navigation, admin
+  channel/user tables, operations dashboard, and data-management panels have mobile-specific
+  layouts.
 - Default runtime is:
   - `clickhouse`
   - `api` built from `apps/api-go`
@@ -166,6 +169,11 @@ admin/super-admin role.
 - Emotes render inline where they appear in message content.
 - Reply rows show replied-to sender/content above the current message in muted gray text.
 - Public profile links convert `_` to `-` in route slugs while keeping visible usernames unchanged.
+- User profile identity avatars are fixed 72px circles and must keep `min-w-[72px]` on both image
+  and fallback initials paths so mobile flex rows cannot squeeze the profile photo.
+- Admin mobile layout uses a hamburger drawer for section navigation. Channel admin rows collapse
+  into mobile cards, user admin rows stack role/status under email, and operations/data-management
+  sections wrap controls instead of relying on desktop table widths.
 
 ## Locked Product Decisions
 
