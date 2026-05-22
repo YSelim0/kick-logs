@@ -143,7 +143,7 @@ export function DataManagementPanel() {
 
   return (
     <section className="rounded-lg border border-border bg-panel p-5">
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-0.5">
           <h2 className="text-[14px] font-semibold text-foreground">Veri Yönetimi</h2>
           <span className="font-mono text-[11px] text-faint">
@@ -188,34 +188,36 @@ export function DataManagementPanel() {
           </div>
 
           {/* Tables */}
-          <div className="rounded-lg border border-border">
-            <div className="flex items-center border-b border-border px-3 py-2">
-              <span className="flex-1 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
-                TABLO
-              </span>
-              <span className="w-28 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
-                SATIR
-              </span>
-              <span className="w-24 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
-                BOYUT
-              </span>
-            </div>
-            {summary.tables.map((table) => (
-              <div
-                className="flex items-center border-b border-border px-3 py-2.5 last:border-b-0"
-                key={table.table_name}
-              >
-                <span className="flex-1 truncate font-mono text-[12px] text-foreground">
-                  {table.table_name}
+          <div className="overflow-x-auto rounded-lg border border-border">
+            <div className="min-w-[360px]">
+              <div className="flex items-center border-b border-border px-3 py-2">
+                <span className="flex-1 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
+                  TABLO
                 </span>
-                <span className="w-28 font-mono text-[12px] text-muted-foreground">
-                  {formatNumber(table.row_count)}
+                <span className="w-28 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
+                  SATIR
                 </span>
-                <span className="w-24 font-mono text-[12px] text-muted-foreground">
-                  {formatBytes(table.total_bytes)}
+                <span className="w-24 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
+                  BOYUT
                 </span>
               </div>
-            ))}
+              {summary.tables.map((table) => (
+                <div
+                  className="flex items-center border-b border-border px-3 py-2.5 last:border-b-0"
+                  key={table.table_name}
+                >
+                  <span className="flex-1 truncate font-mono text-[12px] text-foreground">
+                    {table.table_name}
+                  </span>
+                  <span className="w-28 font-mono text-[12px] text-muted-foreground">
+                    {formatNumber(table.row_count)}
+                  </span>
+                  <span className="w-24 font-mono text-[12px] text-muted-foreground">
+                    {formatBytes(table.total_bytes)}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Retention settings */}
@@ -264,7 +266,7 @@ export function DataManagementPanel() {
                 Cleanup Önizleme
               </span>
             </div>
-            <div className="grid gap-3 md:grid-cols-[180px_minmax(0,1fr)_auto]">
+            <div className="grid gap-3 md:grid-cols-[minmax(140px,180px)_minmax(0,1fr)_auto]">
               <div className="flex flex-col gap-1.5">
                 <label
                   className="font-mono text-[11px] font-medium tracking-[0.5px] text-muted-foreground"

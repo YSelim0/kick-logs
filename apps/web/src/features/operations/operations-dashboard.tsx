@@ -67,7 +67,7 @@ export function OperationsDashboard() {
 
   return (
     <section className="rounded-lg border border-border bg-panel p-5">
-      <div className="mb-5 flex items-end justify-between">
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h2 className="text-[22px] font-semibold tracking-tight text-foreground">Operations</h2>
           <p className="font-sans text-[13px] text-muted-foreground">
@@ -207,29 +207,31 @@ export function OperationsDashboard() {
                 {isBreakerOpen ? "Açık" : "Kapalı"}
               </div>
             </div>
-            <div className="flex divide-x divide-border overflow-hidden rounded-md border border-border">
-              <IngestionCell label="Queue depth" value={formatNumber(ingestion.queue_depth)} />
-              <IngestionCell
-                label="Write queue"
-                value={formatNumber(ingestion.write_queue_depth)}
-              />
-              <IngestionCell label="Drop count" value={formatNumber(ingestion.write_drop_count)} />
-              <IngestionCell
-                label="Flush count"
-                value={formatNumber(ingestion.write_flush_count)}
-              />
-              <IngestionCell
-                label="Son flush"
-                value={
-                  ingestion.last_flush_millis > 0
-                    ? `${formatNumber(ingestion.last_flush_millis)}ms`
-                    : "—"
-                }
-              />
-              <IngestionCell
-                label="CH failures"
-                value={formatNumber(ingestion.clickhouse_insert_failures)}
-              />
+            <div className="overflow-x-auto rounded-md border border-border">
+              <div className="flex min-w-[480px] divide-x divide-border">
+                <IngestionCell label="Queue depth" value={formatNumber(ingestion.queue_depth)} />
+                <IngestionCell
+                  label="Write queue"
+                  value={formatNumber(ingestion.write_queue_depth)}
+                />
+                <IngestionCell label="Drop count" value={formatNumber(ingestion.write_drop_count)} />
+                <IngestionCell
+                  label="Flush count"
+                  value={formatNumber(ingestion.write_flush_count)}
+                />
+                <IngestionCell
+                  label="Son flush"
+                  value={
+                    ingestion.last_flush_millis > 0
+                      ? `${formatNumber(ingestion.last_flush_millis)}ms`
+                      : "—"
+                  }
+                />
+                <IngestionCell
+                  label="CH failures"
+                  value={formatNumber(ingestion.clickhouse_insert_failures)}
+                />
+              </div>
             </div>
           </div>
         </div>
