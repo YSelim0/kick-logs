@@ -214,7 +214,10 @@ export function OperationsDashboard() {
                   label="Write queue"
                   value={formatNumber(ingestion.write_queue_depth)}
                 />
-                <IngestionCell label="Drop count" value={formatNumber(ingestion.write_drop_count)} />
+                <IngestionCell
+                  label="Drop count"
+                  value={formatNumber(ingestion.write_drop_count)}
+                />
                 <IngestionCell
                   label="Flush count"
                   value={formatNumber(ingestion.write_flush_count)}

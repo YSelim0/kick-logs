@@ -80,7 +80,10 @@ export function ChannelAdmin() {
           <span className="font-mono text-[11px] text-faint">{enabledCount} aktif</span>
         </div>
 
-        <form className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center" onSubmit={submitChannel}>
+        <form
+          className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center"
+          onSubmit={submitChannel}
+        >
           <label className="sr-only" htmlFor="channel-slug">
             Kanal slug/nickname
           </label>
@@ -175,9 +178,7 @@ function ChannelRow({
   );
 
   const statusDot = (
-    <span
-      className={`h-1.5 w-1.5 rounded-full ${channel.is_enabled ? "bg-accent" : "bg-faint"}`}
-    />
+    <span className={`h-1.5 w-1.5 rounded-full ${channel.is_enabled ? "bg-accent" : "bg-faint"}`} />
   );
   const disableButton = (
     <Button
