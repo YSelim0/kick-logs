@@ -135,10 +135,10 @@ export function UserAdmin() {
           <span className="flex-1 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
             E-POSTA
           </span>
-          <span className="w-36 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
+          <span className="hidden w-36 font-mono text-[10px] font-medium tracking-[0.8px] text-faint sm:block">
             ROL
           </span>
-          <span className="w-20 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
+          <span className="hidden w-20 font-mono text-[10px] font-medium tracking-[0.8px] text-faint sm:block">
             DURUM
           </span>
         </div>
@@ -160,24 +160,30 @@ export function UserAdmin() {
 }
 
 function UserRow({ user }: { user: AdminUser }) {
+  const statusBadge = (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-medium ${
+        user.is_active ? "bg-accent-muted text-accent" : "bg-elevated text-faint"
+      }`}
+    >
+      <span className={`h-1 w-1 rounded-full ${user.is_active ? "bg-accent" : "bg-faint"}`} />
+      {user.is_active ? "Aktif" : "Pasif"}
+    </span>
+  );
+
   return (
-    <div className="flex items-center border-b border-border px-3 py-2.5 last:border-b-0">
+    <div className="border-b border-border px-3 py-2.5 last:border-b-0 sm:flex sm:items-center">
       <div className="min-w-0 flex-1">
         <span className="truncate font-sans text-[13px] text-foreground">{user.email}</span>
+        <div className="mt-1 flex items-center gap-2 sm:hidden">
+          <span className="font-mono text-[11px] text-muted-foreground">{user.role}</span>
+          {statusBadge}
+        </div>
       </div>
-      <div className="w-36">
+      <div className="hidden w-36 sm:block">
         <span className="font-mono text-[12px] text-muted-foreground">{user.role}</span>
       </div>
-      <div className="w-20">
-        <span
-          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-medium ${
-            user.is_active ? "bg-accent-muted text-accent" : "bg-elevated text-faint"
-          }`}
-        >
-          <span className={`h-1 w-1 rounded-full ${user.is_active ? "bg-accent" : "bg-faint"}`} />
-          {user.is_active ? "Aktif" : "Pasif"}
-        </span>
-      </div>
+      <div className="hidden w-20 sm:block">{statusBadge}</div>
     </div>
   );
 }
