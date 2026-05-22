@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, LockKeyhole, Mail } from "lucide-react";
@@ -46,7 +47,14 @@ function LoginScreenInner() {
       <div className="flex w-[380px] flex-col gap-5 rounded-[10px] border border-border bg-panel p-8">
         <div className="flex flex-col items-center gap-2">
           <div className="flex items-center gap-2">
-            <div aria-hidden="true" className="h-6 w-6 rounded-md bg-accent" />
+            <Image
+                alt="Kick Logs"
+                className="h-6 w-6 rounded-md object-contain"
+                height={24}
+                priority
+                src="/app-logo.png"
+                width={24}
+              />
             <span className="font-sans text-lg font-semibold text-foreground">kick logs</span>
           </div>
           <p className="font-sans text-[13px] text-muted-foreground">
