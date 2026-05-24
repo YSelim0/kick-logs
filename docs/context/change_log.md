@@ -11,6 +11,13 @@ This is a living implementation log. Add new entries for each meaningful project
   - Added `mem_limit: 1536m` to the `clickhouse` service in `compose.yaml`.
   - Validated with `docker compose config --quiet`.
 
+- Added memory limits and a restart policy to every long-running service in `compose.yaml`:
+  - `restart: unless-stopped` on `clickhouse`, `api`, `listener`, `web` so a service that
+    exceeds its limit is OOM-killed and restarted instead of taking down the host.
+  - `mem_limit`: `clickhouse 1536m`, `web 768m`, `listener 512m`, `api 384m` (total < 4 GB with
+    OS headroom). `migrate-go` (one-shot tools profile, run with `--rm`) is left unchanged.
+  - Validated with `docker compose config --quiet`.
+
 ## 2026-05-24
 
 - Channels/users index pages switched from debounced auto-search to explicit submit:
