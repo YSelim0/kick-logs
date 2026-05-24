@@ -18,6 +18,21 @@ This is a living implementation log. Add new entries for each meaningful project
     OS headroom). `migrate-go` (one-shot tools profile, run with `--rm`) is left unchanged.
   - Validated with `docker compose config --quiet`.
 
+- Switched the `web` service from Next.js dev mode to a production build:
+  - `apps/web/Dockerfile` is now multi-stage: a build stage installs the full toolchain and runs
+    `pnpm build`; a runtime stage installs production-only dependencies and copies the compiled
+    `.next`, `public`, and `next.config.mjs`, then runs `pnpm start` (`next start`).
+  - `NEXT_PUBLIC_API_BASE_URL` is passed as a build `ARG`/`ENV` (and wired through
+    `web.build.args` in `compose.yaml`) because `NEXT_PUBLIC_*` values are inlined into the client
+    bundle at build time.
+  - Removed the dev bind mounts (`./apps/web`, `web_node_modules`, `web_app_node_modules`,
+    `web_next`) and dropped the now-unused volume definitions; removed the redundant runtime
+    `NEXT_PUBLIC_API_BASE_URL` env.
+  - Standalone output was evaluated but not adopted: `output: "standalone"` fails to build on the
+    Windows dev host (EPERM on the symlink step). `next start` already removes the heavy
+    `next dev` HMR/recompilation memory growth that was the actual fix.
+  - Verified with `pnpm --filter @kick-logs/web build` and `docker compose build web`.
+
 ## 2026-05-24
 
 - Channels/users index pages switched from debounced auto-search to explicit submit:

@@ -102,20 +102,18 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        # NEXT_PUBLIC_* is inlined into the client bundle at build time, so the
+        # API base URL must be passed as a build arg, not only as runtime env.
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
     restart: unless-stopped
     mem_limit: 768m
     environment:
-      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
       NEXT_TELEMETRY_DISABLED: 1
     depends_on:
       - api
     ports:
       - "${WEB_PORT:-3000}:3000"
-    volumes:
-      - ./apps/web:/repo/apps/web
-      - web_node_modules:/repo/node_modules
-      - web_app_node_modules:/repo/apps/web/node_modules
-      - web_next:/repo/apps/web/.next
 
   migrate-go:
     profiles:
@@ -146,6 +144,3 @@ services:
 volumes:
   clickhouse_data:
   api_go_data:
-  web_node_modules:
-  web_app_node_modules:
-  web_next:

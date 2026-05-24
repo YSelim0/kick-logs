@@ -13,6 +13,15 @@
 - Memory budget split for the 4 GB host (leaves OS headroom): `clickhouse 1.5G`, `web 768M`,
   `listener 512M`, `api 384M`. The ClickHouse `max_server_memory_usage` stays below its container
   `mem_limit` so caches and query memory fit inside the container.
+- The `web` service runs a production build (`next start`) instead of `next dev`. `next dev` keeps
+  HMR + continuous recompilation resident and grows memory over time, which is a significant
+  standalone consumer on a 4 GB box. The Dockerfile is multi-stage (build then production-only
+  runtime) and the dev bind mounts are removed so the built artifacts are not shadowed.
+- `output: "standalone"` was rejected for now: it fails to build on the Windows dev host (EPERM on
+  the symlink step that assembles `.next/standalone`), so it would break the local
+  build-before-commit gate. `next start` already eliminates the `next dev` memory growth that
+  causes the lockup; standalone is only an image-slimming optimization and can be revisited if the
+  build runs on Linux/CI.
 
 ## 2026-05-24
 
