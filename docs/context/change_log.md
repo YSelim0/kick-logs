@@ -41,6 +41,19 @@ This is a living implementation log. Add new entries for each meaningful project
     because the value is coupled to each service's `mem_limit`.
   - Validated with `docker compose config --quiet`.
 
+- Tuned ingestion batching to reduce ClickHouse part pressure (env defaults in `compose.yaml`
+  listener + `.env.example`):
+  - Stage 1 raw writer: `LISTENER_RAW_EVENT_WRITE_BATCH_SIZE` 500 → 1000 and
+    `LISTENER_RAW_EVENT_WRITE_FLUSH_INTERVAL_MS` 500 → 1500. Larger/less-frequent
+    `raw_kick_events` inserts create fewer small parts → fewer background merges → less merge RAM.
+    Flush kept at 1.5s (not higher) so the crash-loss window stays small with the 50k in-memory
+    queue.
+  - Stage 2 normalize: `LISTENER_RAW_EVENT_BATCH_SIZE` 100 → 500 so each worker tick inserts more
+    `chat_messages` rows per batch → fewer parts there too.
+  - `LISTENER_WORKER_COUNT` left at 4; reducing it would slow normalize and risk SQLite queue
+    backlog. The durable SQLite queue means delayed normalization loses no data.
+  - Validated with `docker compose config --quiet`.
+
 ## 2026-05-24
 
 - Channels/users index pages switched from debounced auto-search to explicit submit:
