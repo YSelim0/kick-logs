@@ -4,6 +4,18 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-24 (issue #15 memory stability)
 
+- Fixed `/messages` search under the new ClickHouse memory cap:
+  - The old query selected wide response columns, including `raw_payload_json`, inside the same
+    windowed `row_number()` subquery used for deduplication. With the 1.2 GiB ClickHouse cap,
+    channel/date searches over a large week could hit `MEMORY_LIMIT_EXCEEDED` while reading
+    `raw_payload_json` before the final `LIMIT 50`.
+  - `MessageRepository.Search` now performs a narrow first query that applies filters and ranks only
+    `id`, `kick_message_id`, timestamps, and deletion state, then fetches the full response columns
+    only for the selected page of IDs.
+  - Verified `go test ./...` from `apps/api-go`.
+  - Rebuilt the local API container and verified the failing request now returns 200:
+    `GET /messages?limit=50&channel=eray&start=2026-05-17T20:28:00.000Z&end=2026-05-24T20:28:59.999Z`.
+
 - Capped ClickHouse server memory for the 4 GB production VPS:
   - Added `clickhouse/config.d/memory.xml` mounted read-only at
     `/etc/clickhouse-server/config.d/`: `max_server_memory_usage` 1288490188 (~1.2 GiB),

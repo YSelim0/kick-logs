@@ -145,7 +145,7 @@ func (repo *MessageRepository) Search(ctx context.Context, filter domain.Message
 		limit = 50
 	}
 
-	where := []string{"is_deleted = 0"}
+	where := make([]string, 0, 8)
 	args := make([]any, 0, 5)
 	if filter.Sender != "" {
 		sender := strings.ToLower(strings.TrimSpace(filter.Sender))
@@ -175,12 +175,56 @@ func (repo *MessageRepository) Search(ctx context.Context, filter domain.Message
 	if filter.EmoteOnly {
 		where = append(where, "emote_count > 0")
 	}
+
+	candidateWhere := ""
+	if len(where) > 0 {
+		candidateWhere = "WHERE " + strings.Join(where, " AND ")
+	}
+
+	rankedWhere := []string{"is_deleted = 0", "message_rank = 1"}
 	if filter.Cursor != nil {
-		where = append(where, "(message_created_at < ? OR (message_created_at = ? AND id < ?))")
+		rankedWhere = append(rankedWhere, "(message_created_at < ? OR (message_created_at = ? AND id < ?))")
 		args = append(args, filter.Cursor.MessageCreatedAt.UTC(), filter.Cursor.MessageCreatedAt.UTC(), filter.Cursor.MessageID)
 	}
 
-	query := fmt.Sprintf(`SELECT
+	idQuery := fmt.Sprintf(`SELECT id
+		FROM (
+			SELECT
+				id, kick_message_id, message_created_at, ingested_at, is_deleted,
+				row_number() OVER (
+					PARTITION BY kick_message_id
+					ORDER BY ingested_at DESC, message_created_at DESC, id DESC
+				) AS message_rank
+			FROM chat_messages
+			%s
+		)
+		WHERE %s
+		ORDER BY message_created_at DESC, id DESC
+		LIMIT ?`, candidateWhere, strings.Join(rankedWhere, " AND "))
+	args = append(args, limit)
+
+	idRows, err := repo.conn.Query(ctx, idQuery, args...)
+	if err != nil {
+		return nil, fmt.Errorf("search chat message ids: %w", err)
+	}
+	defer idRows.Close()
+
+	messageIDs := make([]int64, 0, limit)
+	for idRows.Next() {
+		var id int64
+		if err := idRows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan chat message id: %w", err)
+		}
+		messageIDs = append(messageIDs, id)
+	}
+	if err := idRows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate chat message ids: %w", err)
+	}
+	if len(messageIDs) == 0 {
+		return []domain.ChatMessage{}, nil
+	}
+
+	query := `SELECT
 		id, kick_message_id, ifNull(channel_id, 0), ifNull(channel_kick_id, 0), ifNull(channel_chatroom_id, 0),
 		channel_slug, channel_display_name, ifNull(channel_profile_image_url, ''),
 		ifNull(channel_banner_image_url, ''), channel_public_url,
@@ -193,12 +237,12 @@ func (repo *MessageRepository) Search(ctx context.Context, filter domain.Message
 		FROM (
 			SELECT
 				id, kick_message_id, channel_id, channel_kick_id, channel_chatroom_id,
-				channel_slug, channel_slug_lower, channel_display_name, channel_display_name_lower,
-				channel_profile_image_url, channel_banner_image_url, channel_public_url,
-				sender_id, sender_kick_id, sender_username, sender_username_lower, sender_slug,
-				sender_slug_lower, sender_display_color, sender_profile_image_url, sender_public_url,
-				sender_badges_json, message_type, content, emote_count, emote_ids, emote_names,
-				emote_tokens, emote_image_urls, reply_to_sender, reply_to_content, reply_to_message_id,
+				channel_slug, channel_display_name, channel_profile_image_url,
+				channel_banner_image_url, channel_public_url,
+				sender_id, sender_kick_id, sender_username, sender_slug,
+				sender_display_color, sender_profile_image_url, sender_public_url,
+				sender_badges_json, message_type, content, emote_ids, emote_names, emote_tokens,
+				emote_image_urls, reply_to_sender, reply_to_content, reply_to_message_id,
 				thread_parent_id, reply_metadata_json, raw_payload_json, message_created_at, ingested_at,
 				is_deleted,
 				row_number() OVER (
@@ -206,29 +250,33 @@ func (repo *MessageRepository) Search(ctx context.Context, filter domain.Message
 					ORDER BY ingested_at DESC, message_created_at DESC, id DESC
 				) AS message_rank
 			FROM chat_messages
+			WHERE id IN (?)
 		)
-		WHERE %s
-			AND message_rank = 1
-		ORDER BY message_created_at DESC, id DESC
-		LIMIT ?`, strings.Join(where, " AND "))
-	args = append(args, limit)
+		WHERE is_deleted = 0 AND message_rank = 1
+		ORDER BY message_created_at DESC, id DESC`
 
-	rows, err := repo.conn.Query(ctx, query, args...)
+	rows, err := repo.conn.Query(ctx, query, messageIDs)
 	if err != nil {
 		return nil, fmt.Errorf("search chat messages: %w", err)
 	}
 	defer rows.Close()
 
-	messages := make([]domain.ChatMessage, 0)
+	messagesByID := make(map[int64]domain.ChatMessage, len(messageIDs))
 	for rows.Next() {
 		message, err := scanMessage(rows)
 		if err != nil {
 			return nil, err
 		}
-		messages = append(messages, message)
+		messagesByID[message.ID] = message
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterate chat messages: %w", err)
+	}
+	messages := make([]domain.ChatMessage, 0, len(messageIDs))
+	for _, id := range messageIDs {
+		if message, ok := messagesByID[id]; ok {
+			messages = append(messages, message)
+		}
 	}
 	return messages, nil
 }

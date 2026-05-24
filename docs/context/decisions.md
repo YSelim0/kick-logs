@@ -2,6 +2,11 @@
 
 ## 2026-05-24 (issue #15 memory stability)
 
+- `/messages` search must keep ClickHouse wide columns out of the ranking/filtering phase. The
+  repository first finds the page of deduped message IDs using narrow columns, then fetches
+  `raw_payload_json`, emote arrays, and reply JSON only for those IDs. This keeps public search
+  compatible with the 1.2 GiB ClickHouse cap; otherwise channel/date searches can exceed the cap
+  before `LIMIT` is applied.
 - Production VPS (4 GB RAM) locks up ~24h after boot from host RAM exhaustion → swap thrash, not
   disk. A full reboot restores it; disk-backed Docker volumes survive reboot, so the resettable
   cause is RAM. Remediation is bounding per-process memory, not adding disk.

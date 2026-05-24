@@ -19,12 +19,20 @@ unless-stopped` + `mem_limit` on all four (clickhouse 1536m, web 768m, listener 
   5. `feat(listener): tune ingestion batching to reduce clickhouse part pressure` — raw write
      batch 500→1000 / flush 500→1500ms, normalize batch 100→500.
   - Plus `docs/operations/vps_memory.md` runbook (budget table, swap safety net, verify steps).
+- Follow-up fix on the same branch: `/messages` search now runs as a two-step ClickHouse read.
+  First it ranks/filters only narrow columns to find the page of message IDs, then it fetches the
+  wide response columns (`raw_payload_json`, emote arrays, reply JSON) only for those IDs. This
+  prevents channel/date searches from reading wide JSON columns across the whole filtered week and
+  tripping the new 1.2 GiB ClickHouse memory cap. Verified the previously failing local URL
+  `GET /messages?limit=50&channel=eray&start=2026-05-17T20:28:00.000Z&end=2026-05-24T20:28:59.999Z`
+  now returns 200.
 - Deferred (not in this branch, to discuss): P1 SQLite `raw_event_queue` pruning
   (`MarkProcessed` still does `UPDATE`, never `DELETE`) and the host swap setup (operator does it
   manually per the runbook).
-- Verification: `pnpm --filter @kick-logs/web build` green; `docker compose build web` green + web
-  container smoke (`next start`, HTTP 200, ready ~650ms); `docker compose config --quiet` green
-  after every commit; `pnpm format:check` green.
+- Verification: `go test ./...` in `apps/api-go` green; previously failing `/messages` URL green;
+  `pnpm --filter @kick-logs/web build` green; `docker compose build web` green + web container
+  smoke (`next start`, HTTP 200, ready ~650ms); `docker compose config --quiet` green after every
+  commit; `pnpm format:check` green.
 
 ## Previously Latest
 
