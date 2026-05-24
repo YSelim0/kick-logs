@@ -1,5 +1,33 @@
 # Decisions
 
+## 2026-05-24 (issue #15 memory stability)
+
+- `/messages` search must keep ClickHouse wide columns out of the ranking/filtering phase. The
+  repository first finds the page of deduped message IDs using narrow columns, then fetches
+  `raw_payload_json`, emote arrays, and reply JSON only for those IDs. This keeps public search
+  compatible with the 1.2 GiB ClickHouse cap; otherwise channel/date searches can exceed the cap
+  before `LIMIT` is applied.
+- Production VPS (4 GB RAM) locks up ~24h after boot from host RAM exhaustion → swap thrash, not
+  disk. A full reboot restores it; disk-backed Docker volumes survive reboot, so the resettable
+  cause is RAM. Remediation is bounding per-process memory, not adding disk.
+- ClickHouse is capped with a mounted `clickhouse/config.d/memory.xml` override:
+  `max_server_memory_usage` ~1.2 GiB (`1288490188`), `mark_cache_size` 256 MiB, and
+  `uncompressed_cache_size` 0. Default `max_server_memory_usage` is ~90% of host RAM (~3.6 GB on a
+  4 GB box), which assumes ClickHouse owns the whole machine and starves the Go api, Go listener,
+  Next.js web, and the OS. `mark_cache` defaults to 5 GiB and is the largest idle consumer.
+- Memory budget split for the 4 GB host (leaves OS headroom): `clickhouse 1.5G`, `web 768M`,
+  `listener 512M`, `api 384M`. The ClickHouse `max_server_memory_usage` stays below its container
+  `mem_limit` so caches and query memory fit inside the container.
+- The `web` service runs a production build (`next start`) instead of `next dev`. `next dev` keeps
+  HMR + continuous recompilation resident and grows memory over time, which is a significant
+  standalone consumer on a 4 GB box. The Dockerfile is multi-stage (build then production-only
+  runtime) and the dev bind mounts are removed so the built artifacts are not shadowed.
+- `output: "standalone"` was rejected for now: it fails to build on the Windows dev host (EPERM on
+  the symlink step that assembles `.next/standalone`), so it would break the local
+  build-before-commit gate. `next start` already eliminates the `next dev` memory growth that
+  causes the lockup; standalone is only an image-slimming optimization and can be revisited if the
+  build runs on Linux/CI.
+
 ## 2026-05-24
 
 - `/channels` and `/users` are search-first index pages with explicit submit. Initial load shows

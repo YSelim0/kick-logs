@@ -2,6 +2,85 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-24 (issue #15 memory stability)
+
+- Fixed `/messages` search under the new ClickHouse memory cap:
+  - The old query selected wide response columns, including `raw_payload_json`, inside the same
+    windowed `row_number()` subquery used for deduplication. With the 1.2 GiB ClickHouse cap,
+    channel/date searches over a large week could hit `MEMORY_LIMIT_EXCEEDED` while reading
+    `raw_payload_json` before the final `LIMIT 50`.
+  - `MessageRepository.Search` now performs a narrow first query that applies filters and ranks only
+    `id`, `kick_message_id`, timestamps, and deletion state, then fetches the full response columns
+    only for the selected page of IDs.
+  - Verified `go test ./...` from `apps/api-go`.
+  - Rebuilt the local API container and verified the failing request now returns 200:
+    `GET /messages?limit=50&channel=eray&start=2026-05-17T20:28:00.000Z&end=2026-05-24T20:28:59.999Z`.
+
+- Capped ClickHouse server memory for the 4 GB production VPS:
+  - Added `clickhouse/config.d/memory.xml` mounted read-only at
+    `/etc/clickhouse-server/config.d/`: `max_server_memory_usage` 1288490188 (~1.2 GiB),
+    `mark_cache_size` 268435456 (256 MiB), `uncompressed_cache_size` 0.
+  - Added `mem_limit: 1536m` to the `clickhouse` service in `compose.yaml`.
+  - Validated with `docker compose config --quiet`.
+  - Fix: mount the override as a single file
+    (`./clickhouse/config.d/memory.xml:/etc/clickhouse-server/config.d/memory.xml:ro`), not the
+    whole `config.d` directory. A directory bind mount shadowed the image's own config.d files
+    (including the one that sets `listen_host 0.0.0.0`), so ClickHouse only bound localhost — the
+    healthcheck (local client) still passed, but the `api` and `listener` containers got
+    `connection refused` on `clickhouse:9000` (listener crash-looped, analytics returned 500).
+    Verified after the fix: listener connects and processes batches, `GET /health` and
+    `GET /analytics/overview` return 200.
+
+- Added memory limits and a restart policy to every long-running service in `compose.yaml`:
+  - `restart: unless-stopped` on `clickhouse`, `api`, `listener`, `web` so a service that
+    exceeds its limit is OOM-killed and restarted instead of taking down the host.
+  - `mem_limit`: `clickhouse 1536m`, `web 768m`, `listener 512m`, `api 384m` (total < 4 GB with
+    OS headroom). `migrate-go` (one-shot tools profile, run with `--rm`) is left unchanged.
+  - Validated with `docker compose config --quiet`.
+
+- Switched the `web` service from Next.js dev mode to a production build:
+  - `apps/web/Dockerfile` is now multi-stage: a build stage installs the full toolchain and runs
+    `pnpm build`; a runtime stage installs production-only dependencies and copies the compiled
+    `.next`, `public`, and `next.config.mjs`, then runs `pnpm start` (`next start`).
+  - `NEXT_PUBLIC_API_BASE_URL` is passed as a build `ARG`/`ENV` (and wired through
+    `web.build.args` in `compose.yaml`) because `NEXT_PUBLIC_*` values are inlined into the client
+    bundle at build time.
+  - Removed the dev bind mounts (`./apps/web`, `web_node_modules`, `web_app_node_modules`,
+    `web_next`) and dropped the now-unused volume definitions; removed the redundant runtime
+    `NEXT_PUBLIC_API_BASE_URL` env.
+  - Standalone output was evaluated but not adopted: `output: "standalone"` fails to build on the
+    Windows dev host (EPERM on the symlink step). `next start` already removes the heavy
+    `next dev` HMR/recompilation memory growth that was the actual fix.
+  - Verified with `pnpm --filter @kick-logs/web build` and `docker compose build web`.
+
+- Set `GOMEMLIMIT` on the Go services in `compose.yaml`:
+  - `api`: `GOMEMLIMIT=307MiB` (~80% of its 384m `mem_limit`).
+  - `listener`: `GOMEMLIMIT=410MiB` (~80% of its 512m `mem_limit`).
+  - The Go runtime reads `GOMEMLIMIT` directly, so this disciplines the GC to reclaim before the
+    container hits its hard limit, bounding heap spikes. Hardcoded (not an overridable env var)
+    because the value is coupled to each service's `mem_limit`.
+  - Validated with `docker compose config --quiet`.
+
+- Tuned ingestion batching to reduce ClickHouse part pressure (env defaults in `compose.yaml`
+  listener + `.env.example`):
+  - Stage 1 raw writer: `LISTENER_RAW_EVENT_WRITE_BATCH_SIZE` 500 → 1000 and
+    `LISTENER_RAW_EVENT_WRITE_FLUSH_INTERVAL_MS` 500 → 1500. Larger/less-frequent
+    `raw_kick_events` inserts create fewer small parts → fewer background merges → less merge RAM.
+    Flush kept at 1.5s (not higher) so the crash-loss window stays small with the 50k in-memory
+    queue.
+  - Stage 2 normalize: `LISTENER_RAW_EVENT_BATCH_SIZE` 100 → 500 so each worker tick inserts more
+    `chat_messages` rows per batch → fewer parts there too.
+  - `LISTENER_WORKER_COUNT` left at 4; reducing it would slow normalize and risk SQLite queue
+    backlog. The durable SQLite queue means delayed normalization loses no data.
+  - Validated with `docker compose config --quiet`.
+
+- Added `docs/operations/vps_memory.md`: 4 GB memory budget table, the swap safety-net commands
+  (P2 backstop), and a post-deploy verification checklist (`docker stats`, `free -m`, ClickHouse
+  `system.metrics`/`parts`/`merges`).
+
+Note: issue #15 P1 SQLite `raw_event_queue` pruning (delete-on-processed vs periodic cleanup) is
+intentionally deferred and tracked separately for a later discussion; not part of this branch.
+
 ## 2026-05-24
 
 - Channels/users index pages switched from debounced auto-search to explicit submit:
