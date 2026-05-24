@@ -4,6 +4,26 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-05-24
 
+- Channels/users index pages switched from debounced auto-search to explicit submit:
+  - Removed debounce `useEffect` and `setTimeout` plumbing from `ChannelsIndexPage` and
+    `UsersIndexPage`.
+  - Added `<form onSubmit>` wrapping the input + a primary `Ara` submit button (accent green,
+    `text-on-accent`). Button text becomes `Aranıyor…` while a request is in flight.
+  - Added `submittedQuery` state so the empty-results message quotes the last submitted query
+    rather than the current input value.
+  - Added `MIN_QUERY_LENGTH = 2` validation; submit button is disabled below threshold.
+  - Updated idle prompt copy: `Kanal/Kullanıcı adı veya slug girin ve Ara butonuna basın.`
+  - Updated tests for both pages (11 channels + 12 users tests).
+  - Updated `docs/design/design.md`, `docs/context/living_brain.md`, `docs/context/decisions.md`,
+    `docs/context/recent_changes.md` to reflect the submit-only UX and the rationale
+    (ClickHouse `LIKE '%…%'` cost under live ingestion load).
+- Verification:
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web test`: 18 files, 89 tests passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `pnpm format:check`: passed
+
 - Channels and users search index pages:
   - Added `Query string` field to `domain.AnalyticsFilter`.
   - Added `topSendersWhere` and `topChannelsWhere` helpers in ClickHouse analytics repository;

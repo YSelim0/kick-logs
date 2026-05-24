@@ -31,9 +31,13 @@ Landing must stay product-focused and must not turn into a marketing site.
 ### Index Page UX Rules (`/users`, `/channels`)
 
 - Search-first: initial load shows an empty state with a centered icon and a prompt string.
-- Debounced API call (~300ms) fires as the user types; no submit button.
+- Explicit submit only: typing does NOT fire requests. User clicks the `Ara` button or presses
+  Enter to send the query. Debounce-while-typing is intentionally avoided so high-traffic
+  ingestion is not put under additional ClickHouse `LIKE` pressure on every keystroke.
+- Submit button is disabled until the trimmed query is at least 2 characters long.
+- Submit button text switches to `Aranıyor…` and is disabled while a request is in flight.
 - Results are ordered by message count (backend default).
-- Empty query clears results and returns to the idle prompt.
+- Empty-results state quotes the last submitted query, not the current input value.
 - Loading, empty-results, and error states are all handled.
 - Each result row links to the corresponding profile page.
 

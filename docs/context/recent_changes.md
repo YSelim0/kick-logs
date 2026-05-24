@@ -4,6 +4,28 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Switched channels/users index pages from debounced auto-search to explicit submit:
+  - `ChannelsIndexPage` and `UsersIndexPage` now wrap the input in a `<form onSubmit>` with an
+    `Ara` button. Typing alone never triggers a request; submit fires on click or Enter.
+  - Submit button is disabled until the trimmed query is at least 2 characters, and while a
+    request is in flight (label switches to `Aranıyor…`).
+  - Empty-state message quotes the last submitted query (`submittedQuery` state) instead of the
+    current input value.
+  - Idle prompt updated: `Kanal/Kullanıcı adı veya slug girin ve Ara butonuna basın.`
+  - Decision: ClickHouse `LIKE '%…%'` over denormalized columns is too expensive under live
+    ingestion load to fire on every debounced keystroke.
+  - Tests rewritten: 11 channels-index tests + 12 users-index tests (89 total frontend tests
+    passing).
+  - Docs updated.
+- Verification:
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web test`: 18 files, 89 tests passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `pnpm format:check`: passed
+
+## Previously Latest
+
 - Channels and users search index pages:
   - Backend: `AnalyticsFilter.Query` field added; `topSendersWhere` and `topChannelsWhere` apply
     a LIKE `%…%` filter on denormalized username/slug/display-name columns when `q=` is set.

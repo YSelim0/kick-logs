@@ -2,8 +2,13 @@
 
 ## 2026-05-24
 
-- `/channels` and `/users` are search-first index pages: initial load shows an idle prompt, results
-  appear as the user types (debounced ~300ms). No submit button; no data until a query is entered.
+- `/channels` and `/users` are search-first index pages with explicit submit. Initial load shows
+  an idle prompt; the user types a query and clicks `Ara` or presses Enter to fire the request.
+  Auto-search-while-typing was rejected because ClickHouse `LIKE '%…%'` over denormalized columns
+  is expensive under heavy live ingestion; firing on every debounced keystroke would degrade the
+  whole API under load.
+- Submit button requires minimum 2-character trimmed query and is disabled while loading.
+- Empty-results message quotes the last submitted query, not the current input value.
 - Backend `q=` text search parameter added to `GET /analytics/top-senders` and
   `GET /analytics/top-channels`. The filter applies a LIKE `%…%` WHERE clause on
   `sender_username_lower / sender_slug_lower` (senders) and
