@@ -152,6 +152,9 @@ func parseAnalyticsFilter(request *http.Request) (domain.AnalyticsFilter, error)
 	if filter.Sender, err = optionalText(query.Get("sender"), 160); err != nil {
 		return domain.AnalyticsFilter{}, err
 	}
+	if filter.Query, err = optionalText(query.Get("q"), 200); err != nil {
+		return domain.AnalyticsFilter{}, err
+	}
 	if !filter.Start.IsZero() && !filter.End.IsZero() && filter.Start.After(filter.End) {
 		return domain.AnalyticsFilter{}, analyticsusecase.ErrInvalidRange
 	}

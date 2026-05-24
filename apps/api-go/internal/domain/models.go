@@ -125,6 +125,7 @@ type AnalyticsFilter struct {
 	End     time.Time
 	Channel string
 	Sender  string
+	Query   string
 }
 
 type AnalyticsOverview struct {
