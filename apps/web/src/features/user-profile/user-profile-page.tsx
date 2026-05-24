@@ -202,7 +202,7 @@ function ProfileAvatar({ profile }: { profile: UserProfile }) {
     return (
       <img
         alt={`${profile.sender.username} profil`}
-        className="h-[72px] w-[72px] rounded-full border border-border object-cover"
+        className="h-[72px] w-[72px] min-w-[72px] rounded-full border border-border object-cover"
         height={72}
         onError={() => setFailed(true)}
         src={imageUrl}
@@ -212,7 +212,7 @@ function ProfileAvatar({ profile }: { profile: UserProfile }) {
   }
 
   return (
-    <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full border border-border bg-elevated font-mono text-xl font-semibold text-muted-foreground">
+    <div className="flex h-[72px] w-[72px] min-w-[72px] items-center justify-center rounded-full border border-border bg-elevated font-mono text-xl font-semibold text-muted-foreground">
       {initial}
     </div>
   );
@@ -413,7 +413,7 @@ function LatestMessages({ messages }: { messages: Message[] }) {
   }
 
   return (
-    <div className="divide-y divide-border overflow-hidden rounded-md border border-border">
+    <div className="overflow-hidden rounded-md border border-border">
       {messages.map((message) => {
         const replyContext = getReplyContext(message);
         const replyTitle = replyContext
@@ -422,17 +422,22 @@ function LatestMessages({ messages }: { messages: Message[] }) {
         const replySenderProfileHref = buildUserProfileHref(replyContext?.senderSlug);
 
         return (
-          <div className="flex items-start gap-3 px-3 py-2.5 text-sm" key={message.id}>
+          <div
+            className="grid grid-cols-1 gap-2 border-b border-border px-3 py-2.5 text-[13px] last:border-b-0 md:grid-cols-[120px_minmax(0,1fr)_auto] md:items-start md:gap-4"
+            key={message.id}
+          >
             {/* channel label */}
-            <Link
-              className="mt-0.5 shrink-0 font-mono text-[11px] text-accent hover:text-accent-hover"
-              href={`/channels/${encodeURIComponent(message.channel.slug)}`}
-            >
-              #{message.channel.slug}
-            </Link>
+            <div className="flex min-w-0 flex-col">
+              <Link
+                className="truncate font-mono text-[11px] text-accent hover:text-accent-hover"
+                href={`/channels/${encodeURIComponent(message.channel.slug)}`}
+              >
+                #{message.channel.slug}
+              </Link>
+            </div>
 
             {/* message content */}
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 text-foreground">
               {replyContext ? (
                 <div
                   className="mb-1 flex w-fit max-w-full items-center gap-1.5 rounded-md bg-elevated px-2 py-1 text-[12px] text-muted-foreground"
@@ -458,9 +463,9 @@ function LatestMessages({ messages }: { messages: Message[] }) {
             </div>
 
             {/* timestamp */}
-            <span className="mt-0.5 shrink-0 font-mono text-[11px] text-muted-foreground">
+            <div className="text-right font-mono text-[11px] text-muted-foreground md:whitespace-nowrap">
               {formatMessageDate(message.message_created_at)}
-            </span>
+            </div>
           </div>
         );
       })}

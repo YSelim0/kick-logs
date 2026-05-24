@@ -109,7 +109,7 @@ func (repo *AnalyticsRepository) TopSenders(
 	filter domain.AnalyticsFilter,
 	limit uint64,
 ) ([]domain.TopSenderAnalytics, error) {
-	where, args := analyticsWhere(filter)
+	where, args := topSendersWhere(filter)
 	query := fmt.Sprintf(`SELECT
 		ifNull(sender_id, 0) AS sender_id,
 		ifNull(sender_kick_id, 0) AS kick_user_id,
@@ -164,7 +164,7 @@ func (repo *AnalyticsRepository) TopChannels(
 	filter domain.AnalyticsFilter,
 	limit uint64,
 ) ([]domain.TopChannelAnalytics, error) {
-	where, args := analyticsWhere(filter)
+	where, args := topChannelsWhere(filter)
 	query := fmt.Sprintf(`SELECT
 		ifNull(channel_id, 0) AS channel_id,
 		argMax(channel_slug, message_created_at) AS slug,
@@ -346,6 +346,30 @@ func analyticsWhere(filter domain.AnalyticsFilter) (string, []any) {
 		}
 	}
 	return strings.Join(where, " AND "), args
+}
+
+// topSendersWhere builds a WHERE clause for top-senders queries, additionally
+// applying a free-text LIKE search on sender username/slug when filter.Query is set.
+func topSendersWhere(filter domain.AnalyticsFilter) (string, []any) {
+	clause, args := analyticsWhere(filter)
+	if q := strings.TrimSpace(filter.Query); q != "" {
+		like := "%" + strings.ToLower(q) + "%"
+		clause += " AND (sender_username_lower LIKE ? OR sender_slug_lower LIKE ?)"
+		args = append(args, like, like)
+	}
+	return clause, args
+}
+
+// topChannelsWhere builds a WHERE clause for top-channels queries, additionally
+// applying a free-text LIKE search on channel slug/display name when filter.Query is set.
+func topChannelsWhere(filter domain.AnalyticsFilter) (string, []any) {
+	clause, args := analyticsWhere(filter)
+	if q := strings.TrimSpace(filter.Query); q != "" {
+		like := "%" + strings.ToLower(q) + "%"
+		clause += " AND (channel_slug_lower LIKE ? OR channel_display_name_lower LIKE ?)"
+		args = append(args, like, like)
+	}
+	return clause, args
 }
 
 func senderLookupTerms(value string) []string {

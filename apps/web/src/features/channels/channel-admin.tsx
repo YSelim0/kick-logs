@@ -80,11 +80,14 @@ export function ChannelAdmin() {
           <span className="font-mono text-[11px] text-faint">{enabledCount} aktif</span>
         </div>
 
-        <form className="flex items-center gap-2" onSubmit={submitChannel}>
+        <form
+          className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center"
+          onSubmit={submitChannel}
+        >
           <label className="sr-only" htmlFor="channel-slug">
             Kanal slug/nickname
           </label>
-          <div className="flex h-8 w-60 items-center gap-1.5 rounded-md border border-border bg-elevated px-2.5">
+          <div className="flex h-8 w-full items-center gap-1.5 rounded-md border border-border bg-elevated px-2.5 sm:w-60">
             <Plus className="h-3 w-3 shrink-0 text-faint" />
             <input
               className="flex-1 bg-transparent font-sans text-[12px] text-foreground outline-none placeholder:text-faint"
@@ -115,7 +118,7 @@ export function ChannelAdmin() {
       ) : null}
 
       <div className="rounded-lg border border-border">
-        <div className="flex items-center border-b border-border px-3 py-2">
+        <div className="hidden items-center border-b border-border px-3 py-2 sm:flex">
           <span className="flex-1 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
             KANAL
           </span>
@@ -174,57 +177,88 @@ function ChannelRow({
     </div>
   );
 
+  const statusDot = (
+    <span className={`h-1.5 w-1.5 rounded-full ${channel.is_enabled ? "bg-accent" : "bg-faint"}`} />
+  );
+  const disableButton = (
+    <Button
+      disabled={!channel.is_enabled || isRemoving}
+      onClick={onDisable}
+      size="sm"
+      type="button"
+      variant="outline"
+    >
+      {isRemoving ? (
+        <Loader2 className="h-3 w-3 animate-spin" />
+      ) : (
+        <Trash2 className="h-3 w-3 text-danger" />
+      )}
+      <span className="hidden sm:inline">Devre dışı bırak</span>
+    </Button>
+  );
+
   return (
-    <div className="flex items-center border-b border-border px-3 py-2.5 last:border-b-0">
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        <ChannelImage channel={channel} />
-        {profileHref ? (
-          <Link className="min-w-0 hover:opacity-80" href={profileHref}>
-            {nameContent}
-          </Link>
-        ) : (
-          nameContent
-        )}
-      </div>
-
-      <div className="flex w-24 items-center gap-1.5">
-        <span
-          className={`h-1.5 w-1.5 rounded-full ${channel.is_enabled ? "bg-accent" : "bg-faint"}`}
-        />
-        <span
-          className={`font-mono text-[11px] ${channel.is_enabled ? "text-foreground" : "text-faint"}`}
-        >
-          {channel.is_enabled ? "Aktif" : "Pasif"}
-        </span>
-      </div>
-
-      <div className="w-28">
-        <span className="font-mono text-[12px] text-muted-foreground">
-          {channel.message_count > 0 ? formatNumber(channel.message_count) : "—"}
-        </span>
-      </div>
-
-      <div className="w-40">
-        <span className="font-mono text-[11px] text-faint">
-          {channel.last_message_at ? formatDate(channel.last_message_at) : "—"}
-        </span>
-      </div>
-
-      <div className="flex w-36 justify-end">
-        <Button
-          disabled={!channel.is_enabled || isRemoving}
-          onClick={onDisable}
-          size="sm"
-          type="button"
-          variant="outline"
-        >
-          {isRemoving ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
+    <div className="border-b border-border px-3 py-2.5 last:border-b-0">
+      {/* Desktop layout */}
+      <div className="hidden items-center sm:flex">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <ChannelImage channel={channel} />
+          {profileHref ? (
+            <Link className="min-w-0 hover:opacity-80" href={profileHref}>
+              {nameContent}
+            </Link>
           ) : (
-            <Trash2 className="h-3 w-3 text-danger" />
+            nameContent
           )}
-          Devre dışı bırak
-        </Button>
+        </div>
+        <div className="flex w-24 items-center gap-1.5">
+          {statusDot}
+          <span
+            className={`font-mono text-[11px] ${channel.is_enabled ? "text-foreground" : "text-faint"}`}
+          >
+            {channel.is_enabled ? "Aktif" : "Pasif"}
+          </span>
+        </div>
+        <div className="w-28">
+          <span className="font-mono text-[12px] text-muted-foreground">
+            {channel.message_count > 0 ? formatNumber(channel.message_count) : "—"}
+          </span>
+        </div>
+        <div className="w-40">
+          <span className="font-mono text-[11px] text-faint">
+            {channel.last_message_at ? formatDate(channel.last_message_at) : "—"}
+          </span>
+        </div>
+        <div className="flex w-36 justify-end">{disableButton}</div>
+      </div>
+
+      {/* Mobile card layout */}
+      <div className="sm:hidden">
+        <div className="flex items-center gap-2">
+          <ChannelImage channel={channel} />
+          <div className="min-w-0 flex-1">
+            {profileHref ? (
+              <Link className="min-w-0 hover:opacity-80" href={profileHref}>
+                {nameContent}
+              </Link>
+            ) : (
+              nameContent
+            )}
+          </div>
+          <div className="flex items-center gap-1.5">
+            {statusDot}
+            <span
+              className={`font-mono text-[11px] ${channel.is_enabled ? "text-foreground" : "text-faint"}`}
+            >
+              {channel.is_enabled ? "Aktif" : "Pasif"}
+            </span>
+          </div>
+          {disableButton}
+        </div>
+        <div className="mt-1.5 pl-8 font-mono text-[11px] text-faint">
+          {channel.message_count > 0 ? formatNumber(channel.message_count) : "—"} mesaj
+          {channel.last_message_at ? ` · ${formatDate(channel.last_message_at)}` : ""}
+        </div>
       </div>
     </div>
   );

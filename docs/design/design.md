@@ -18,11 +18,28 @@ Do not commit screenshots or exported images unless explicitly requested.
 - `/admin`: authenticated admin dashboard for backend operations.
 - `/login`: login screen.
 - `/`: public compact landing page with project positioning and live analytics.
+- `/users`: public user search index. Search-first — empty prompt on load, results populate as
+  the user types.
 - `/users/[slug]`: public sender profile with identity, analytics, and latest messages.
+- `/channels`: public channel search index. Search-first — empty prompt on load, results populate
+  as the user types.
 - `/channels/[slug]`: public channel profile with stored Kick metadata, analytics, and latest
   messages.
 
 Landing must stay product-focused and must not turn into a marketing site.
+
+### Index Page UX Rules (`/users`, `/channels`)
+
+- Search-first: initial load shows an empty state with a centered icon and a prompt string.
+- Explicit submit only: typing does NOT fire requests. User clicks the `Ara` button or presses
+  Enter to send the query. Debounce-while-typing is intentionally avoided so high-traffic
+  ingestion is not put under additional ClickHouse `LIKE` pressure on every keystroke.
+- Submit button is disabled until the trimmed query is at least 2 characters long.
+- Submit button text switches to `Aranıyor…` and is disabled while a request is in flight.
+- Results are ordered by message count (backend default).
+- Empty-results state quotes the last submitted query, not the current input value.
+- Loading, empty-results, and error states are all handled.
+- Each result row links to the corresponding profile page.
 
 ## Visual Direction
 
@@ -99,7 +116,8 @@ Type scale (Tailwind):
 - Left: small green logo square (`accent`) + `kick logs` wordmark + active route pill
   (e.g. `Search`).
 - Right: GitHub icon link + `Admin` outline button.
-- `Channels` / `Users` nav links are intentionally absent until those index pages exist.
+- `Channels` and `Users` nav links are active and point to `/channels` and `/users` index pages.
+- `ActiveRoute` type supports `"search" | "channels" | "users"` to highlight the current section.
 - Clicking the brand goes to `/`.
 - Admin page uses a different chrome: brand + `/ admin` breadcrumb on the left, user email +
   `SUPER ADMIN` badge + `Çıkış` outline button on the right.

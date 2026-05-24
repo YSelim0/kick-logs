@@ -424,40 +424,42 @@ function LatestMessages({ messages }: { messages: Message[] }) {
   }
 
   return (
-    <div className="divide-y divide-border overflow-hidden rounded-md border border-border">
+    <div className="overflow-hidden rounded-md border border-border">
       {messages.map((message) => {
         const senderHref = buildUserProfileHref(message.sender.slug);
         const senderNameStyle = senderColorStyle(message.sender_color_snapshot);
 
         return (
-          <div className="flex items-start gap-3 px-3 py-2.5 text-sm" key={message.id}>
+          <div
+            className="grid grid-cols-1 gap-2 border-b border-border px-3 py-2.5 text-[13px] last:border-b-0 md:grid-cols-[120px_minmax(0,1fr)_auto] md:items-start md:gap-4"
+            key={message.id}
+          >
             {/* sender username */}
-            {senderHref ? (
-              <Link
-                className="mt-0.5 shrink-0 text-[13px] font-medium text-foreground hover:underline"
-                href={senderHref}
-                style={senderNameStyle}
-              >
-                {message.sender.username}
-              </Link>
-            ) : (
-              <span
-                className="mt-0.5 shrink-0 text-[13px] font-medium text-foreground"
-                style={senderNameStyle}
-              >
-                {message.sender.username}
-              </span>
-            )}
+            <div className="flex min-w-0 flex-col">
+              {senderHref ? (
+                <Link
+                  className="truncate font-medium text-foreground hover:underline"
+                  href={senderHref}
+                  style={senderNameStyle}
+                >
+                  {message.sender.username}
+                </Link>
+              ) : (
+                <span className="truncate font-medium text-foreground" style={senderNameStyle}>
+                  {message.sender.username}
+                </span>
+              )}
+            </div>
 
             {/* message content */}
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 text-foreground">
               <MessageContent content={message.content} emotes={message.emotes} />
             </div>
 
             {/* timestamp */}
-            <span className="mt-0.5 shrink-0 font-mono text-[11px] text-muted-foreground">
+            <div className="text-right font-mono text-[11px] text-muted-foreground md:whitespace-nowrap">
               {formatMessageDate(message.message_created_at)}
-            </span>
+            </div>
           </div>
         );
       })}

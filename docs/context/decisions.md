@@ -1,5 +1,37 @@
 # Decisions
 
+## 2026-05-24
+
+- `/channels` and `/users` are search-first index pages with explicit submit. Initial load shows
+  an idle prompt; the user types a query and clicks `Ara` or presses Enter to fire the request.
+  Auto-search-while-typing was rejected because ClickHouse `LIKE '%…%'` over denormalized columns
+  is expensive under heavy live ingestion; firing on every debounced keystroke would degrade the
+  whole API under load.
+- Submit button requires minimum 2-character trimmed query and is disabled while loading.
+- Empty-results message quotes the last submitted query, not the current input value.
+- Backend `q=` text search parameter added to `GET /analytics/top-senders` and
+  `GET /analytics/top-channels`. The filter applies a LIKE `%…%` WHERE clause on
+  `sender_username_lower / sender_slug_lower` (senders) and
+  `channel_slug_lower / channel_display_name_lower` (channels) before GROUP BY.
+- `AnalyticsFilter.Query` field carries the text search value from route to ClickHouse.
+- `SiteHeader` now includes `Channels` and `Users` nav links; `ActiveRoute` extended with
+  `"channels" | "users"` values.
+- `AnalyticsQueryParams` frontend type now includes `q?: string`; `buildAnalyticsQuery` passes it
+  through to the backend.
+- Index page result rows link to the existing `/channels/[slug]` and `/users/[slug]` profile pages.
+  User slug links convert `_` to `-` (same convention as profile pages).
+
+## 2026-05-22
+
+- User profile identity avatars keep fixed 72px dimensions plus `min-w-[72px]` on both image and
+  fallback initials paths. Mobile flex rows must wrap text around the avatar rather than shrink
+  the profile photo.
+- Admin responsive views intentionally keep desktop and mobile row variants in the DOM behind
+  breakpoint classes. Tests should query repeated labels with plural queries when asserting shared
+  row data.
+- Admin mobile UX uses a hamburger drawer for section navigation, card-style channel rows, stacked
+  user rows, and wrapped operations/data-management panels instead of horizontal overflow.
+
 ## 2026-05-21
 
 - Frontend v2 design tokens replace the legacy magenta palette repo-wide. The new tokens (Kick

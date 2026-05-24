@@ -28,13 +28,12 @@ describe("ChannelAdmin", () => {
 
     render(<ChannelAdmin />);
 
-    expect(await screen.findByText("hype")).toBeInTheDocument();
-    expect(screen.getByText("#hype")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "hype #hype" })).toHaveAttribute(
-      "href",
-      "/channels/hype"
-    );
-    expect(screen.getByText("Aktif")).toBeInTheDocument();
+    expect(await screen.findAllByText("hype")).not.toHaveLength(0);
+    expect(screen.getAllByText("#hype")).not.toHaveLength(0);
+    for (const link of screen.getAllByRole("link", { name: "hype #hype" })) {
+      expect(link).toHaveAttribute("href", "/channels/hype");
+    }
+    expect(screen.getAllByText("Aktif")).not.toHaveLength(0);
   });
 
   it("adds a channel by slug", async () => {
@@ -52,7 +51,7 @@ describe("ChannelAdmin", () => {
     fireEvent.click(screen.getByRole("button", { name: /ekle/i }));
 
     await waitFor(() => expect(channelApiMocks.addChannel).toHaveBeenCalledWith({ slug: "hype" }));
-    expect(await screen.findByText("#hype")).toBeInTheDocument();
+    expect(await screen.findAllByText("#hype")).not.toHaveLength(0);
   });
 
   it("disables a followed channel", async () => {
@@ -64,11 +63,11 @@ describe("ChannelAdmin", () => {
 
     render(<ChannelAdmin />);
 
-    expect(await screen.findByText("#hype")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /devre dışı bırak/i }));
+    expect(await screen.findAllByText("#hype")).not.toHaveLength(0);
+    fireEvent.click(screen.getAllByRole("button", { name: /devre dışı bırak/i })[0]);
 
     await waitFor(() => expect(channelApiMocks.removeChannel).toHaveBeenCalledWith(1));
-    expect(await screen.findByText("Pasif")).toBeInTheDocument();
+    expect(await screen.findAllByText("Pasif")).not.toHaveLength(0);
   });
 });
 

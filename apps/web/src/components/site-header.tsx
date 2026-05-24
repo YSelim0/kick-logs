@@ -5,7 +5,7 @@ import { Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type ActiveRoute = "search" | "admin" | null;
+type ActiveRoute = "search" | "channels" | "users" | "admin" | null;
 
 type SiteHeaderProps = {
   activeRoute?: ActiveRoute;
@@ -27,7 +27,7 @@ export function SiteHeader({ activeRoute = "search" }: SiteHeaderProps) {
             />
             <span className="text-[15px] font-semibold tracking-tight">kick logs</span>
           </Link>
-          <RoutePill activeRoute={activeRoute} />
+          <NavLinks activeRoute={activeRoute} />
         </div>
 
         <div className="flex items-center gap-2">
@@ -49,27 +49,31 @@ export function SiteHeader({ activeRoute = "search" }: SiteHeaderProps) {
   );
 }
 
-function RoutePill({ activeRoute }: { activeRoute: ActiveRoute }) {
-  if (!activeRoute) {
-    return null;
-  }
+type NavItem = { route: NonNullable<ActiveRoute>; label: string; href: string };
 
-  const labels: Record<NonNullable<ActiveRoute>, string> = {
-    search: "Search",
-    admin: "Admin"
-  };
+const NAV_ITEMS: NavItem[] = [
+  { route: "search", label: "Search", href: "/search" },
+  { route: "channels", label: "Channels", href: "/channels" },
+  { route: "users", label: "Users", href: "/users" }
+];
 
-  const href = activeRoute === "search" ? "/search" : "/admin";
-
+function NavLinks({ activeRoute }: { activeRoute: ActiveRoute }) {
   return (
-    <Link
-      className={cn(
-        "inline-flex h-7 items-center rounded-md px-3 text-[13px] font-medium text-foreground transition-colors",
-        "border border-border bg-panel hover:bg-elevated"
-      )}
-      href={href}
-    >
-      {labels[activeRoute]}
-    </Link>
+    <nav aria-label="Main navigation" className="flex items-center gap-1">
+      {NAV_ITEMS.map(({ route, label, href }) => (
+        <Link
+          key={route}
+          className={cn(
+            "inline-flex h-7 items-center rounded-md px-3 text-[13px] font-medium transition-colors",
+            activeRoute === route
+              ? "border border-border bg-panel text-foreground"
+              : "text-muted-foreground hover:bg-elevated hover:text-foreground"
+          )}
+          href={href}
+        >
+          {label}
+        </Link>
+      ))}
+    </nav>
   );
 }

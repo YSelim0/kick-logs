@@ -2,6 +2,76 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-24
+
+- Channels/users index pages switched from debounced auto-search to explicit submit:
+  - Removed debounce `useEffect` and `setTimeout` plumbing from `ChannelsIndexPage` and
+    `UsersIndexPage`.
+  - Added `<form onSubmit>` wrapping the input + a primary `Ara` submit button (accent green,
+    `text-on-accent`). Button text becomes `Aranıyor…` while a request is in flight.
+  - Added `submittedQuery` state so the empty-results message quotes the last submitted query
+    rather than the current input value.
+  - Added `MIN_QUERY_LENGTH = 2` validation; submit button is disabled below threshold.
+  - Updated idle prompt copy: `Kanal/Kullanıcı adı veya slug girin ve Ara butonuna basın.`
+  - Updated tests for both pages (11 channels + 12 users tests).
+  - Updated `docs/design/design.md`, `docs/context/living_brain.md`, `docs/context/decisions.md`,
+    `docs/context/recent_changes.md` to reflect the submit-only UX and the rationale
+    (ClickHouse `LIKE '%…%'` cost under live ingestion load).
+- Verification:
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web test`: 18 files, 89 tests passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `pnpm format:check`: passed
+
+- Channels and users search index pages:
+  - Added `Query string` field to `domain.AnalyticsFilter`.
+  - Added `topSendersWhere` and `topChannelsWhere` helpers in ClickHouse analytics repository;
+    both apply `LIKE '%…%'` WHERE clauses on denormalized lower-cased columns when `filter.Query`
+    is set.
+  - `parseAnalyticsFilter` in the HTTP analytics route reads `q=` query param and assigns it to
+    `filter.Query`.
+  - Added `analytics_q_param_test.go`: four Go HTTP tests verifying `q=` param is parsed and
+    forwarded to the analytics repository for top-senders and top-channels endpoints.
+  - Frontend `AnalyticsQueryParams` type extended with `q?: string`; `buildAnalyticsQuery` passes
+    it to the backend.
+  - New Next.js route pages: `app/channels/page.tsx` and `app/users/page.tsx`.
+  - New feature components: `ChannelsIndexPage` and `UsersIndexPage` — search-first with 300ms
+    debounce, idle/loading/empty/error states, v2 design tokens, profile page links.
+  - `SiteHeader` nav updated: `Channels` and `Users` links added; `ActiveRoute` extended.
+  - Test files committed: `channels-index-page.test.tsx`, `users-index-page.test.tsx`.
+  - `@testing-library/user-event` added as a dev dependency.
+  - Context and design docs updated.
+- Verification:
+  - `go test ./...`: passed
+  - `go vet ./...`: passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web test`: 18 files, 83 tests passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `pnpm format:check`: passed
+
+## 2026-05-22
+
+- Responsive mobile polish follow-up:
+  - added `min-w-[72px]` to the user profile image path as well as the fallback initials avatar
+    so the circular profile photo keeps its intended 72px width on mobile flex layouts
+  - kept the fallback initials avatar at the same fixed/min-width dimensions for parity with
+    image-backed profiles
+  - updated channel/user admin tests to expect the responsive desktop + mobile row variants that
+    intentionally duplicate visible labels in the DOM behind breakpoint classes
+  - refreshed context docs after recent responsive commits:
+    - profile latest-message rows were tightened for mobile wrapping
+    - admin sidebar now collapses into a mobile hamburger drawer
+    - channel admin uses a mobile card layout
+    - user admin uses mobile stacked rows
+    - operations dashboard and data-management panels now wrap controls/metrics for smaller
+      screens
+- Verification:
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web test`: 16 files, 70 tests passed
+
 ## 2026-05-21
 
 - Frontend v2 re-skin: user and channel profiles migrated to the v2 designs.
