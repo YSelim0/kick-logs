@@ -13,6 +13,7 @@ export type AnalyticsQueryParams = {
   end?: string;
   channel?: string;
   sender?: string;
+  q?: string;
   limit?: number;
   bucket?: AnalyticsBucket;
 };
@@ -49,6 +50,7 @@ function buildAnalyticsQuery(params: AnalyticsQueryParams) {
     end: params.end,
     channel: params.channel,
     sender: params.sender,
+    q: params.q,
     limit: params.limit,
     bucket: params.bucket
   };
