@@ -1,6 +1,7 @@
 services:
   clickhouse:
     image: clickhouse/clickhouse-server:24.8-alpine
+    mem_limit: 1536m
     environment:
       CLICKHOUSE_DB: ${CLICKHOUSE_DATABASE:-kick_logs}
       CLICKHOUSE_USER: ${CLICKHOUSE_USERNAME:-kick_logs}
@@ -11,6 +12,7 @@ services:
       - "${CLICKHOUSE_NATIVE_PORT:-9000}:9000"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
+      - ./clickhouse/config.d:/etc/clickhouse-server/config.d:ro
     healthcheck:
       test:
         [

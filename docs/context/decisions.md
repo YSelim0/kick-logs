@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-05-24 (issue #15 memory stability)
+
+- Production VPS (4 GB RAM) locks up ~24h after boot from host RAM exhaustion → swap thrash, not
+  disk. A full reboot restores it; disk-backed Docker volumes survive reboot, so the resettable
+  cause is RAM. Remediation is bounding per-process memory, not adding disk.
+- ClickHouse is capped with a mounted `clickhouse/config.d/memory.xml` override:
+  `max_server_memory_usage` ~1.2 GiB (`1288490188`), `mark_cache_size` 256 MiB, and
+  `uncompressed_cache_size` 0. Default `max_server_memory_usage` is ~90% of host RAM (~3.6 GB on a
+  4 GB box), which assumes ClickHouse owns the whole machine and starves the Go api, Go listener,
+  Next.js web, and the OS. `mark_cache` defaults to 5 GiB and is the largest idle consumer.
+- Memory budget split for the 4 GB host (leaves OS headroom): `clickhouse 1.5G`, `web 768M`,
+  `listener 512M`, `api 384M`. The ClickHouse `max_server_memory_usage` stays below its container
+  `mem_limit` so caches and query memory fit inside the container.
+
 ## 2026-05-24
 
 - `/channels` and `/users` are search-first index pages with explicit submit. Initial load shows

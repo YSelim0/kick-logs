@@ -2,6 +2,15 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-24 (issue #15 memory stability)
+
+- Capped ClickHouse server memory for the 4 GB production VPS:
+  - Added `clickhouse/config.d/memory.xml` mounted read-only at
+    `/etc/clickhouse-server/config.d/`: `max_server_memory_usage` 1288490188 (~1.2 GiB),
+    `mark_cache_size` 268435456 (256 MiB), `uncompressed_cache_size` 0.
+  - Added `mem_limit: 1536m` to the `clickhouse` service in `compose.yaml`.
+  - Validated with `docker compose config --quiet`.
+
 ## 2026-05-24
 
 - Channels/users index pages switched from debounced auto-search to explicit submit:

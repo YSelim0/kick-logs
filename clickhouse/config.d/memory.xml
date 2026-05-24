@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<!--
+  Memory caps for a small (4 GB) single-node VPS.
+
+  ClickHouse otherwise defaults max_server_memory_usage to ~90% of total host
+  RAM (~3.6 GB on a 4 GB box) and assumes it owns the whole machine. On a host
+  shared with the Go api, Go listener, Next.js web, and the OS that leads to
+  swap thrash and a full lockup after ~24h. These overrides bound ClickHouse to
+  a slice that fits alongside the other services and the container mem_limit.
+-->
+<clickhouse>
+    <!-- Hard cap on total server memory (~1.2 GiB). Stays below the
+         clickhouse container mem_limit (1536m) so caches + query memory have
+         headroom inside the container. -->
+    <max_server_memory_usage>1288490188</max_server_memory_usage>
+
+    <!-- Shrink caches from their multi-GB defaults. mark_cache defaults to 5 GiB
+         and is the single largest steady-state consumer on an idle server. -->
+    <mark_cache_size>268435456</mark_cache_size>
+    <uncompressed_cache_size>0</uncompressed_cache_size>
+</clickhouse>
