@@ -4,6 +4,30 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Channels and users search index pages:
+  - Backend: `AnalyticsFilter.Query` field added; `topSendersWhere` and `topChannelsWhere` apply
+    a LIKE `%…%` filter on denormalized username/slug/display-name columns when `q=` is set.
+    `parseAnalyticsFilter` reads `q` from the URL and assigns it to `filter.Query`.
+  - Frontend API: `AnalyticsQueryParams` type gets `q?: string`; `buildAnalyticsQuery` passes it
+    through.
+  - Frontend pages: `app/channels/page.tsx` and `app/users/page.tsx` route handlers with SEO
+    metadata; `ChannelsIndexPage` and `UsersIndexPage` feature components — search-first, 300ms
+    debounced, loading/empty/error states, v2 design tokens.
+  - SiteHeader updated: `Channels` and `Users` nav links added; `ActiveRoute` extended.
+  - Tests: `channels-index-page.test.tsx` and `users-index-page.test.tsx` (18 test files, 83
+    tests total). Go HTTP route tests added for `q=` param in `analytics_q_param_test.go`.
+  - `@testing-library/user-event` added as a dev dependency.
+- Verification:
+  - `go test ./...`: passed
+  - `go vet ./...`: passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web test`: 18 files, 83 tests passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `pnpm format:check`: passed
+
+## Previously Latest
+
 - Responsive mobile polish follow-up:
   - `ProfileAvatar` now keeps both the real profile image and fallback initials at
     `h-[72px] w-[72px] min-w-[72px]`, so user profile photos do not collapse inside narrow

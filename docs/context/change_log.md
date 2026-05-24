@@ -2,6 +2,35 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-24
+
+- Channels and users search index pages:
+  - Added `Query string` field to `domain.AnalyticsFilter`.
+  - Added `topSendersWhere` and `topChannelsWhere` helpers in ClickHouse analytics repository;
+    both apply `LIKE '%…%'` WHERE clauses on denormalized lower-cased columns when `filter.Query`
+    is set.
+  - `parseAnalyticsFilter` in the HTTP analytics route reads `q=` query param and assigns it to
+    `filter.Query`.
+  - Added `analytics_q_param_test.go`: four Go HTTP tests verifying `q=` param is parsed and
+    forwarded to the analytics repository for top-senders and top-channels endpoints.
+  - Frontend `AnalyticsQueryParams` type extended with `q?: string`; `buildAnalyticsQuery` passes
+    it to the backend.
+  - New Next.js route pages: `app/channels/page.tsx` and `app/users/page.tsx`.
+  - New feature components: `ChannelsIndexPage` and `UsersIndexPage` — search-first with 300ms
+    debounce, idle/loading/empty/error states, v2 design tokens, profile page links.
+  - `SiteHeader` nav updated: `Channels` and `Users` links added; `ActiveRoute` extended.
+  - Test files committed: `channels-index-page.test.tsx`, `users-index-page.test.tsx`.
+  - `@testing-library/user-event` added as a dev dependency.
+  - Context and design docs updated.
+- Verification:
+  - `go test ./...`: passed
+  - `go vet ./...`: passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web test`: 18 files, 83 tests passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `pnpm format:check`: passed
+
 ## 2026-05-22
 
 - Responsive mobile polish follow-up:

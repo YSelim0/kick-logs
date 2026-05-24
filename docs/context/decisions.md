@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-05-24
+
+- `/channels` and `/users` are search-first index pages: initial load shows an idle prompt, results
+  appear as the user types (debounced ~300ms). No submit button; no data until a query is entered.
+- Backend `q=` text search parameter added to `GET /analytics/top-senders` and
+  `GET /analytics/top-channels`. The filter applies a LIKE `%…%` WHERE clause on
+  `sender_username_lower / sender_slug_lower` (senders) and
+  `channel_slug_lower / channel_display_name_lower` (channels) before GROUP BY.
+- `AnalyticsFilter.Query` field carries the text search value from route to ClickHouse.
+- `SiteHeader` now includes `Channels` and `Users` nav links; `ActiveRoute` extended with
+  `"channels" | "users"` values.
+- `AnalyticsQueryParams` frontend type now includes `q?: string`; `buildAnalyticsQuery` passes it
+  through to the backend.
+- Index page result rows link to the existing `/channels/[slug]` and `/users/[slug]` profile pages.
+  User slug links convert `_` to `-` (same convention as profile pages).
+
 ## 2026-05-22
 
 - User profile identity avatars keep fixed 72px dimensions plus `min-w-[72px]` on both image and

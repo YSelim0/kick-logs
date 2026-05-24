@@ -6,8 +6,8 @@ implementation details, or working assumptions change.
 ## Current State
 
 - Branch: `dev`.
-- Active plan: Frontend v2 re-skin (see `docs/implementation_plan.md`). All six routes complete
-  as of 2026-05-21: `/`, `/search`, `/users/[slug]`, `/channels/[slug]`, `/admin`, `/login`.
+- Active plan: channels/users index search pages (see `docs/implementation_plan.md`). All routes
+  now complete including `/channels` and `/users` search-first index pages added 2026-05-24.
 - Responsive polish pass is current through 2026-05-22: profile rows, admin navigation, admin
   channel/user tables, operations dashboard, and data-management panels have mobile-specific
   layouts.
@@ -46,6 +46,16 @@ implementation details, or working assumptions change.
   - raw-event processing attempts
 - `chat_messages` is denormalized for search/export/analytics/profile paths. Hot read paths should
   not join back to SQLite.
+
+## Search Index Pages
+
+- `/users` and `/channels` are search-first index pages (no data on initial load).
+- Results call `GET /analytics/top-senders?q=…&limit=20` and
+  `GET /analytics/top-channels?q=…&limit=20` respectively, debounced ~300ms.
+- The `q=` text search parameter is a backend free-text LIKE filter on username/slug (senders)
+  and slug/display-name (channels). It applies before GROUP BY in the ClickHouse query.
+- Clearing the search input returns to the idle prompt without an API call.
+- SiteHeader `ActiveRoute` supports `"channels"` and `"users"` to highlight the current nav pill.
 
 ## API Contract
 
@@ -184,6 +194,8 @@ admin/super-admin role.
 - `/` is the compact public landing page.
 - `/search` is public historical message search.
 - `/admin` is authenticated backend management.
+- `/users` is the public search-first user index (search as you type, debounced 300ms).
+- `/channels` is the public search-first channel index (search as you type, debounced 300ms).
 - `/users/[slug]` and `/channels/[slug]` are public profile/analytics pages.
 - Followed-channel deletion disables the channel and preserves historical data.
 - Store useful normalized fields, parsed emotes, reply metadata, raw payload JSON, sender badges,
