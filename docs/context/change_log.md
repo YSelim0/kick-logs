@@ -10,6 +10,14 @@ This is a living implementation log. Add new entries for each meaningful project
     `mark_cache_size` 268435456 (256 MiB), `uncompressed_cache_size` 0.
   - Added `mem_limit: 1536m` to the `clickhouse` service in `compose.yaml`.
   - Validated with `docker compose config --quiet`.
+  - Fix: mount the override as a single file
+    (`./clickhouse/config.d/memory.xml:/etc/clickhouse-server/config.d/memory.xml:ro`), not the
+    whole `config.d` directory. A directory bind mount shadowed the image's own config.d files
+    (including the one that sets `listen_host 0.0.0.0`), so ClickHouse only bound localhost — the
+    healthcheck (local client) still passed, but the `api` and `listener` containers got
+    `connection refused` on `clickhouse:9000` (listener crash-looped, analytics returned 500).
+    Verified after the fix: listener connects and processes batches, `GET /health` and
+    `GET /analytics/overview` return 200.
 
 - Added memory limits and a restart policy to every long-running service in `compose.yaml`:
   - `restart: unless-stopped` on `clickhouse`, `api`, `listener`, `web` so a service that
