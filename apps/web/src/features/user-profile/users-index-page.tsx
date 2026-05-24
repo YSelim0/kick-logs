@@ -4,7 +4,7 @@
 
 import { Search, User } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { SiteHeader } from "@/components/site-header";
 import { getTopSenders } from "@/features/analytics/api";
@@ -13,25 +13,19 @@ import type { TopSenderAnalytics } from "@/types/api";
 
 type SearchState = "idle" | "loading" | "ready" | "empty" | "error";
 
-const DEBOUNCE_MS = 300;
 const RESULT_LIMIT = 20;
+const MIN_QUERY_LENGTH = 2;
 
 export function UsersIndexPage() {
   const [query, setQuery] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("");
   const [results, setResults] = useState<TopSenderAnalytics[]>([]);
   const [state, setState] = useState<SearchState>("idle");
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const search = useCallback(async (q: string) => {
-    if (q.trim() === "") {
-      setState("idle");
-      setResults([]);
-      return;
-    }
-
     setState("loading");
     try {
-      const data = await getTopSenders({ q: q.trim(), limit: RESULT_LIMIT });
+      const data = await getTopSenders({ q, limit: RESULT_LIMIT });
       const items = data?.items ?? [];
       setResults(items);
       setState(items.length === 0 ? "empty" : "ready");
@@ -41,20 +35,20 @@ export function UsersIndexPage() {
     }
   }, []);
 
-  useEffect(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-    debounceRef.current = setTimeout(() => {
-      void search(query);
-    }, DEBOUNCE_MS);
-
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      const trimmed = query.trim();
+      if (trimmed.length < MIN_QUERY_LENGTH) {
+        return;
       }
-    };
-  }, [query, search]);
+      setSubmittedQuery(trimmed);
+      void search(trimmed);
+    },
+    [query, search]
+  );
+
+  const canSubmit = query.trim().length >= MIN_QUERY_LENGTH && state !== "loading";
 
   return (
     <main className="min-h-screen bg-page text-foreground">
@@ -71,30 +65,40 @@ export function UsersIndexPage() {
           </p>
         </div>
 
-        {/* Search input */}
-        <div className="relative mb-5 max-w-lg">
-          <Search
-            aria-hidden
-            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-          />
-          <input
-            aria-label="Kullanıcı ara"
-            autoComplete="off"
-            className="h-10 w-full rounded-md border border-border bg-elevated pl-9 pr-4 text-[13px] text-foreground placeholder:text-muted-foreground focus:border-border-strong focus:outline-none"
-            id="users-search-input"
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Kullanıcı adı veya slug ile ara…"
-            spellCheck={false}
-            type="search"
-            value={query}
-          />
-        </div>
+        {/* Search form */}
+        <form className="mb-5 flex max-w-lg gap-2" onSubmit={handleSubmit}>
+          <div className="relative flex-1">
+            <Search
+              aria-hidden
+              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <input
+              aria-label="Kullanıcı ara"
+              autoComplete="off"
+              className="h-10 w-full rounded-md border border-border bg-elevated pl-9 pr-4 text-[13px] text-foreground placeholder:text-muted-foreground focus:border-border-strong focus:outline-none"
+              id="users-search-input"
+              minLength={MIN_QUERY_LENGTH}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Kullanıcı adı veya slug ile ara…"
+              spellCheck={false}
+              type="search"
+              value={query}
+            />
+          </div>
+          <button
+            className="h-10 shrink-0 rounded-md bg-accent px-4 text-[13px] font-medium text-text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!canSubmit}
+            type="submit"
+          >
+            {state === "loading" ? "Aranıyor…" : "Ara"}
+          </button>
+        </form>
 
         {/* Content area */}
         {state === "idle" ? <IdlePrompt /> : null}
         {state === "loading" ? <LoadingState /> : null}
         {state === "error" ? <ErrorState /> : null}
-        {state === "empty" ? <EmptyState query={query} /> : null}
+        {state === "empty" ? <EmptyState query={submittedQuery} /> : null}
         {state === "ready" ? <UserList users={results} /> : null}
       </div>
     </main>
@@ -109,7 +113,7 @@ function IdlePrompt() {
       </div>
       <p className="text-[15px] font-medium text-foreground">Kullanıcı bulmak için arama yapın</p>
       <p className="mt-1 text-[13px] text-muted-foreground">
-        Kullanıcı adı veya slug girin — sonuçlar otomatik gelir.
+        Kullanıcı adı veya slug girin ve Ara butonuna basın.
       </p>
     </div>
   );

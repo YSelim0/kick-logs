@@ -28,18 +28,43 @@ describe("UsersIndexPage", () => {
     expect(analyticsMocks.getTopSenders).not.toHaveBeenCalled();
   });
 
-  it("renders search input with correct label", () => {
+  it("renders search input and submit button", () => {
     render(<UsersIndexPage />);
 
     expect(screen.getByRole("searchbox", { name: /kullanıcı ara/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^ara$/i })).toBeInTheDocument();
   });
 
-  it("shows user results after typing a query", async () => {
-    const user = userEvent.setup({ delay: null });
+  it("does not call the API while the user is typing", async () => {
+    const user = userEvent.setup();
+    render(<UsersIndexPage />);
+
+    await user.type(screen.getByRole("searchbox", { name: /kullanıcı ara/i }), "alpha");
+
+    expect(analyticsMocks.getTopSenders).not.toHaveBeenCalled();
+  });
+
+  it("submit button is disabled until query has at least 2 characters", async () => {
+    const user = userEvent.setup();
+    render(<UsersIndexPage />);
+
+    const submit = screen.getByRole("button", { name: /^ara$/i });
+    expect(submit).toBeDisabled();
+
+    await user.type(screen.getByRole("searchbox", { name: /kullanıcı ara/i }), "a");
+    expect(submit).toBeDisabled();
+
+    await user.type(screen.getByRole("searchbox", { name: /kullanıcı ara/i }), "l");
+    expect(submit).not.toBeDisabled();
+  });
+
+  it("shows user results after clicking Ara button", async () => {
+    const user = userEvent.setup();
     render(<UsersIndexPage />);
 
     const input = screen.getByRole("searchbox", { name: /kullanıcı ara/i });
     await user.type(input, "alpha");
+    await user.click(screen.getByRole("button", { name: /^ara$/i }));
 
     await waitFor(() =>
       expect(analyticsMocks.getTopSenders).toHaveBeenCalledWith(
@@ -51,13 +76,28 @@ describe("UsersIndexPage", () => {
     expect(screen.getByText("@beta")).toBeInTheDocument();
   });
 
+  it("triggers search on Enter key in the input", async () => {
+    const user = userEvent.setup();
+    render(<UsersIndexPage />);
+
+    const input = screen.getByRole("searchbox", { name: /kullanıcı ara/i });
+    await user.type(input, "alpha{Enter}");
+
+    await waitFor(() =>
+      expect(analyticsMocks.getTopSenders).toHaveBeenCalledWith(
+        expect.objectContaining({ q: "alpha", limit: 20 })
+      )
+    );
+  });
+
   it("shows empty state when API returns no results", async () => {
     analyticsMocks.getTopSenders.mockResolvedValue({ items: [] });
 
-    const user = userEvent.setup({ delay: null });
+    const user = userEvent.setup();
     render(<UsersIndexPage />);
 
     await user.type(screen.getByRole("searchbox", { name: /kullanıcı ara/i }), "xyz");
+    await user.click(screen.getByRole("button", { name: /^ara$/i }));
 
     await waitFor(() =>
       expect(screen.getByText(/"xyz" için kullanıcı bulunamadı\./)).toBeInTheDocument()
@@ -67,10 +107,11 @@ describe("UsersIndexPage", () => {
   it("shows error state when API fails", async () => {
     analyticsMocks.getTopSenders.mockRejectedValue(new Error("network error"));
 
-    const user = userEvent.setup({ delay: null });
+    const user = userEvent.setup();
     render(<UsersIndexPage />);
 
     await user.type(screen.getByRole("searchbox", { name: /kullanıcı ara/i }), "err");
+    await user.click(screen.getByRole("button", { name: /^ara$/i }));
 
     await waitFor(() => expect(screen.getByText(/sonuçlar alınamadı/i)).toBeInTheDocument());
   });
@@ -91,10 +132,11 @@ describe("UsersIndexPage", () => {
       ]
     });
 
-    const user = userEvent.setup({ delay: null });
+    const user = userEvent.setup();
     render(<UsersIndexPage />);
 
     await user.type(screen.getByRole("searchbox", { name: /kullanıcı ara/i }), "example");
+    await user.click(screen.getByRole("button", { name: /^ara$/i }));
 
     await waitFor(() => expect(screen.getByText("@example_user")).toBeInTheDocument());
 
@@ -120,13 +162,13 @@ describe("UsersIndexPage", () => {
       ]
     });
 
-    const user = userEvent.setup({ delay: null });
+    const user = userEvent.setup();
     render(<UsersIndexPage />);
 
     await user.type(screen.getByRole("searchbox", { name: /kullanıcı ara/i }), "nolink");
+    await user.click(screen.getByRole("button", { name: /^ara$/i }));
 
     await waitFor(() => expect(screen.getByText("@nolink")).toBeInTheDocument());
-    // No user profile link should exist (SiteHeader nav links are present but no /users/* link)
     const links = screen.getAllByRole("link");
     const userProfileLink = links.find((l) => l.getAttribute("href")?.startsWith("/users/"));
     expect(userProfileLink).toBeUndefined();

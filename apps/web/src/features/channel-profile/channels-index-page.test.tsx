@@ -28,18 +28,42 @@ describe("ChannelsIndexPage", () => {
     expect(analyticsMocks.getTopChannels).not.toHaveBeenCalled();
   });
 
-  it("renders search input with correct label", () => {
+  it("renders search input and submit button", () => {
     render(<ChannelsIndexPage />);
 
     expect(screen.getByRole("searchbox", { name: /kanal ara/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^ara$/i })).toBeInTheDocument();
   });
 
-  it("shows channel results after typing a query", async () => {
-    const user = userEvent.setup({ delay: null });
+  it("does not call the API while the user is typing", async () => {
+    const user = userEvent.setup();
     render(<ChannelsIndexPage />);
 
-    const input = screen.getByRole("searchbox", { name: /kanal ara/i });
-    await user.type(input, "hype");
+    await user.type(screen.getByRole("searchbox", { name: /kanal ara/i }), "hype");
+
+    expect(analyticsMocks.getTopChannels).not.toHaveBeenCalled();
+  });
+
+  it("submit button is disabled until query has at least 2 characters", async () => {
+    const user = userEvent.setup();
+    render(<ChannelsIndexPage />);
+
+    const submit = screen.getByRole("button", { name: /^ara$/i });
+    expect(submit).toBeDisabled();
+
+    await user.type(screen.getByRole("searchbox", { name: /kanal ara/i }), "h");
+    expect(submit).toBeDisabled();
+
+    await user.type(screen.getByRole("searchbox", { name: /kanal ara/i }), "y");
+    expect(submit).not.toBeDisabled();
+  });
+
+  it("shows channel results after clicking Ara button", async () => {
+    const user = userEvent.setup();
+    render(<ChannelsIndexPage />);
+
+    await user.type(screen.getByRole("searchbox", { name: /kanal ara/i }), "hype");
+    await user.click(screen.getByRole("button", { name: /^ara$/i }));
 
     await waitFor(() =>
       expect(analyticsMocks.getTopChannels).toHaveBeenCalledWith(
@@ -52,13 +76,28 @@ describe("ChannelsIndexPage", () => {
     expect(screen.getByText("GameZone")).toBeInTheDocument();
   });
 
+  it("triggers search on Enter key in the input", async () => {
+    const user = userEvent.setup();
+    render(<ChannelsIndexPage />);
+
+    const input = screen.getByRole("searchbox", { name: /kanal ara/i });
+    await user.type(input, "hype{Enter}");
+
+    await waitFor(() =>
+      expect(analyticsMocks.getTopChannels).toHaveBeenCalledWith(
+        expect.objectContaining({ q: "hype", limit: 20 })
+      )
+    );
+  });
+
   it("shows empty state when API returns no results", async () => {
     analyticsMocks.getTopChannels.mockResolvedValue({ items: [] });
 
-    const user = userEvent.setup({ delay: null });
+    const user = userEvent.setup();
     render(<ChannelsIndexPage />);
 
     await user.type(screen.getByRole("searchbox", { name: /kanal ara/i }), "xyz");
+    await user.click(screen.getByRole("button", { name: /^ara$/i }));
 
     await waitFor(() =>
       expect(screen.getByText(/"xyz" için kanal bulunamadı\./)).toBeInTheDocument()
@@ -68,19 +107,21 @@ describe("ChannelsIndexPage", () => {
   it("shows error state when API fails", async () => {
     analyticsMocks.getTopChannels.mockRejectedValue(new Error("network error"));
 
-    const user = userEvent.setup({ delay: null });
+    const user = userEvent.setup();
     render(<ChannelsIndexPage />);
 
     await user.type(screen.getByRole("searchbox", { name: /kanal ara/i }), "err");
+    await user.click(screen.getByRole("button", { name: /^ara$/i }));
 
     await waitFor(() => expect(screen.getByText(/sonuçlar alınamadı/i)).toBeInTheDocument());
   });
 
   it("each channel row links to the channel profile page", async () => {
-    const user = userEvent.setup({ delay: null });
+    const user = userEvent.setup();
     render(<ChannelsIndexPage />);
 
     await user.type(screen.getByRole("searchbox", { name: /kanal ara/i }), "hype");
+    await user.click(screen.getByRole("button", { name: /^ara$/i }));
 
     await waitFor(() => expect(screen.getByText("Hype")).toBeInTheDocument());
 
