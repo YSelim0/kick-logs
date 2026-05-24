@@ -54,6 +54,13 @@ This is a living implementation log. Add new entries for each meaningful project
     backlog. The durable SQLite queue means delayed normalization loses no data.
   - Validated with `docker compose config --quiet`.
 
+- Added `docs/operations/vps_memory.md`: 4 GB memory budget table, the swap safety-net commands
+  (P2 backstop), and a post-deploy verification checklist (`docker stats`, `free -m`, ClickHouse
+  `system.metrics`/`parts`/`merges`).
+
+Note: issue #15 P1 SQLite `raw_event_queue` pruning (delete-on-processed vs periodic cleanup) is
+intentionally deferred and tracked separately for a later discussion; not part of this branch.
+
 ## 2026-05-24
 
 - Channels/users index pages switched from debounced auto-search to explicit submit:

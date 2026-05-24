@@ -4,6 +4,30 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Issue #15 memory stability (branch `fix/15-memory-stability`) — fix the ~24h VPS lockup caused
+  by host RAM exhaustion / swap thrash on the 4 GB box. Five commits, each a separate feature:
+  1. `feat(clickhouse): cap server memory on 4GB host` — `clickhouse/config.d/memory.xml`
+     (`max_server_memory_usage` ~1.2 GiB, `mark_cache_size` 256 MiB, `uncompressed_cache_size` 0)
+     mounted read-only + `mem_limit: 1536m`.
+  2. `feat(compose): add memory limits and restart policy to all services` — `restart:
+unless-stopped` + `mem_limit` on all four (clickhouse 1536m, web 768m, listener 512m,
+     api 384m).
+  3. `feat(web): build and run Next.js in production mode` — multi-stage Dockerfile, `next start`,
+     `NEXT_PUBLIC_API_BASE_URL` as build arg, dev bind mounts + `web_*` volumes removed.
+     (`output: "standalone"` rejected: EPERM symlink failure on the Windows dev host.)
+  4. `feat(api): set GOMEMLIMIT on go services` — api 307MiB, listener 410MiB (~80% of mem_limit).
+  5. `feat(listener): tune ingestion batching to reduce clickhouse part pressure` — raw write
+     batch 500→1000 / flush 500→1500ms, normalize batch 100→500.
+  - Plus `docs/operations/vps_memory.md` runbook (budget table, swap safety net, verify steps).
+- Deferred (not in this branch, to discuss): P1 SQLite `raw_event_queue` pruning
+  (`MarkProcessed` still does `UPDATE`, never `DELETE`) and the host swap setup (operator does it
+  manually per the runbook).
+- Verification: `pnpm --filter @kick-logs/web build` green; `docker compose build web` green + web
+  container smoke (`next start`, HTTP 200, ready ~650ms); `docker compose config --quiet` green
+  after every commit; `pnpm format:check` green.
+
+## Previously Latest
+
 - Switched channels/users index pages from debounced auto-search to explicit submit:
   - `ChannelsIndexPage` and `UsersIndexPage` now wrap the input in a `<form onSubmit>` with an
     `Ara` button. Typing alone never triggers a request; submit fires on click or Enter.
