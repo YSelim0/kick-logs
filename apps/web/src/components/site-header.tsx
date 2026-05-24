@@ -77,4 +77,3 @@ function NavLinks({ activeRoute }: { activeRoute: ActiveRoute }) {
     </nav>
   );
 }
-

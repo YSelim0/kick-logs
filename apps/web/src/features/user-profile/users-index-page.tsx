@@ -118,21 +118,14 @@ function IdlePrompt() {
 function LoadingState() {
   return (
     <div className="flex items-center gap-2 py-8 text-[13px] text-muted-foreground">
-      <span
-        aria-hidden
-        className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-accent"
-      />
+      <span aria-hidden className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
       <span className="font-mono">aranıyor…</span>
     </div>
   );
 }
 
 function ErrorState() {
-  return (
-    <p className="py-8 text-[13px] text-danger">
-      Sonuçlar alınamadı. Lütfen tekrar deneyin.
-    </p>
-  );
+  return <p className="py-8 text-[13px] text-danger">Sonuçlar alınamadı. Lütfen tekrar deneyin.</p>;
 }
 
 function EmptyState({ query }: { query: string }) {
@@ -209,9 +202,7 @@ function UserRow({ user }: { user: TopSenderAnalytics }) {
     );
   }
 
-  return (
-    <div className="flex items-center gap-4 px-4 py-3">{inner}</div>
-  );
+  return <div className="flex items-center gap-4 px-4 py-3">{inner}</div>;
 }
 
 const COMPACT_FORMATTER = new Intl.NumberFormat("tr-TR", {
