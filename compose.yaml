@@ -32,6 +32,8 @@ services:
     restart: unless-stopped
     mem_limit: 384m
     environment:
+      # ~80% of mem_limit (384m) so the Go GC reclaims before the container OOMs.
+      GOMEMLIMIT: 307MiB
       APP_NAME: ${APP_NAME:-Kick Logs}
       APP_ENV: ${APP_ENV:-local}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
@@ -71,6 +73,8 @@ services:
     restart: unless-stopped
     mem_limit: 512m
     environment:
+      # ~80% of mem_limit (512m) so the Go GC reclaims before the container OOMs.
+      GOMEMLIMIT: 410MiB
       APP_NAME: ${APP_NAME:-Kick Logs}
       APP_ENV: ${APP_ENV:-local}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}

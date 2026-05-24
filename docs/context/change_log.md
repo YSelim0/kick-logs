@@ -33,6 +33,14 @@ This is a living implementation log. Add new entries for each meaningful project
     `next dev` HMR/recompilation memory growth that was the actual fix.
   - Verified with `pnpm --filter @kick-logs/web build` and `docker compose build web`.
 
+- Set `GOMEMLIMIT` on the Go services in `compose.yaml`:
+  - `api`: `GOMEMLIMIT=307MiB` (~80% of its 384m `mem_limit`).
+  - `listener`: `GOMEMLIMIT=410MiB` (~80% of its 512m `mem_limit`).
+  - The Go runtime reads `GOMEMLIMIT` directly, so this disciplines the GC to reclaim before the
+    container hits its hard limit, bounding heap spikes. Hardcoded (not an overridable env var)
+    because the value is coupled to each service's `mem_limit`.
+  - Validated with `docker compose config --quiet`.
+
 ## 2026-05-24
 
 - Channels/users index pages switched from debounced auto-search to explicit submit:
