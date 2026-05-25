@@ -2,6 +2,30 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-26 (prediction feature)
+
+- Backend: added public `GET /channels/{slug}/prediction`.
+  - `domain.Prediction`/`PredictionOutcome`/`PredictionTopUser`, `ports.PredictionFetcher` with
+    `ErrPredictionNotFound` / `ErrPredictionChannelNotFound` / `ErrPredictionBlocked`.
+  - `infra/kick/prediction_resolver.go` fetches Kick's undocumented
+    `/api/v2/channels/{slug}/predictions/latest` with browser-like headers (user-agent, referer,
+    accept-language, sec-ch-ua, sec-fetch-\*); maps 404 → channel-not-found, non-2xx / top-level
+    `error` body → blocked, null prediction → not-found.
+  - `usecase/predictions` validates the slug and derives total points/votes, per-outcome point
+    share, and the winner flag.
+  - Route maps errors to 404 (no prediction / channel) and 502 (blocked); wired through
+    `routes.Dependencies`, `server.go`, and `cmd/api/main.go` (independent of ClickHouse).
+  - Tests: `usecase/predictions` normalization + `internal/http` route success/404/404/502 cases.
+- Frontend: added `/prediction` (search-first, submit navigates to `/prediction/{slug}`) and
+  `/prediction/{slug}` (live fetch → summary card, `recharts` donut + grouped-bar + horizontal
+  top-users charts, outcome cards with `KAZANAN` winner badge, loading/not-found/error states,
+  refresh button).
+  - Added `recharts` dependency; `Prediction` header nav link; `ActiveRoute` `"prediction"`;
+    `Prediction*` response types; `features/prediction/` api + format helpers + components + tests.
+- Docs: design, architecture, living brain, decisions, change log, recent changes updated.
+- Verification: `go build/vet/test ./...` green; web `typecheck`/`lint`/`test` (20 files, 96 tests)
+  /`build` green; `pnpm format:check` green.
+
 ## 2026-05-24 (issue #15 memory stability)
 
 - Fixed `/messages` search under the new ClickHouse memory cap:

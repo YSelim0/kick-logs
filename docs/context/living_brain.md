@@ -5,9 +5,11 @@ implementation details, or working assumptions change.
 
 ## Current State
 
-- Branch: `dev`.
-- Active plan: channels/users index search pages (see `docs/implementation_plan.md`). All routes
-  now complete including `/channels` and `/users` search-first index pages added 2026-05-24.
+- Branch: `feat/kick-prediction-analysis`.
+- Active plan: Kick prediction feature (see `docs/implementation_plan.md`). Adds `/prediction` search
+  page + `/prediction/{slug}` analysis page backed by a live backend proxy.
+- Earlier: channels/users index search pages — `/channels` and `/users` search-first index pages
+  added 2026-05-24.
 - Responsive polish pass is current through 2026-05-22: profile rows, admin navigation, admin
   channel/user tables, operations dashboard, and data-management panels have mobile-specific
   layouts.
@@ -60,6 +62,26 @@ implementation details, or working assumptions change.
 - Empty-state message quotes the last submitted query.
 - SiteHeader `ActiveRoute` supports `"channels"` and `"users"` to highlight the current nav pill.
 
+## Prediction Feature
+
+- `/prediction` is a search-first page (submit-only, ≥2 chars). Submit navigates to
+  `/prediction/{slug}` (lowercased); it fetches no data itself.
+- `/prediction/{slug}` fetches `GET /channels/{slug}/prediction` and renders summary, donut +
+  grouped-bar charts, outcome cards (winner = `KAZANAN` + accent border), and a horizontal top-users
+  chart. Loading / not-found (404) / error states are handled; a refresh button re-runs the fetch.
+- Backend is a live, stateless proxy: `infra/kick` prediction adapter calls Kick's undocumented
+  `/api/v2/channels/{slug}/predictions/latest` with browser-like headers (avoids CORS + "Request
+  blocked by security policy" that a direct browser fetch would hit). `usecase/predictions` derives
+  total points, total votes, per-outcome point share, and the winner flag. No persistence, no
+  migration.
+- Error mapping: no prediction → 404 "No active prediction found…"; channel 404 → 404 "Channel not
+  found."; Kick block / non-2xx → 502 "…request was blocked…".
+- Charts use `recharts` (the repo's only charting dep). Categorical palette is tokenized (accent,
+  warning, text-secondary, danger, border-strong, accent-hover) because the base palette has no
+  blue/purple. State pills: RESOLVED=accent, LOCKED=warning, ACTIVE=neutral.
+- SiteHeader `ActiveRoute` extended with `"prediction"`; a `Prediction` nav link points to
+  `/prediction`.
+
 ## API Contract
 
 The Go API preserves the existing frontend surface:
@@ -88,6 +110,7 @@ GET  /analytics/top-channels
 GET  /analytics/top-emotes
 GET  /users/{slug}/analytics
 GET  /channels/{slug}/analytics
+GET  /channels/{slug}/prediction
 ```
 
 Public routes remain unauthenticated. Admin routes require the HttpOnly JWT session cookie and an

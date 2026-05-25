@@ -4,6 +4,26 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Prediction feature (branch `feat/kick-prediction-analysis`). Ported the `kick-prediction`
+  prototype into kick-logs as a first-class feature, rebuilt to the project's architecture and
+  design system. Three commits:
+  1. `feat(api): add kick prediction fetch endpoint` — public `GET /channels/{slug}/prediction`.
+     `infra/kick` prediction adapter calls Kick's undocumented latest-prediction endpoint with
+     browser-like headers; `usecase/predictions` derives totals/share/winner; route maps
+     not-found/channel-not-found/blocked. Live + stateless (no storage, no migration). Decided
+     backend proxy over client fetch because a direct browser call hits CORS + Kick's "Request
+     blocked by security policy".
+  2. `feat(web): add prediction search and analysis pages` — `/prediction` (search-first,
+     submit→`/prediction/{slug}`) and `/prediction/{slug}` (summary card, recharts donut +
+     grouped-bar + horizontal top-users charts, outcome cards with `KAZANAN` badge,
+     loading/not-found/error states, refresh). Added `recharts`, `Prediction` header nav, response
+     types. State pills + chart palette use existing tokens (no blue/purple in the v2 palette).
+  3. Docs commit (design/architecture/context).
+- Verification: `apps/api-go` `go build`/`go vet`/`go test ./...` green; web `typecheck`, `lint`,
+  `test` (20 files, 96 tests), `build` green; `pnpm format:check` green.
+
+## Previously Latest
+
 - Issue #15 memory stability (branch `fix/15-memory-stability`) — fix the ~24h VPS lockup caused
   by host RAM exhaustion / swap thrash on the 4 GB box. Five commits, each a separate feature:
   1. `feat(clickhouse): cap server memory on 4GB host` — `clickhouse/config.d/memory.xml`

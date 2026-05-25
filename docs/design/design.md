@@ -25,6 +25,10 @@ Do not commit screenshots or exported images unless explicitly requested.
   as the user types.
 - `/channels/[slug]`: public channel profile with stored Kick metadata, analytics, and latest
   messages.
+- `/prediction`: public channel search page for Kick predictions. Search-first — empty prompt on
+  load. Submitting navigates to `/prediction/{slug}`; it does not render analytics itself.
+- `/prediction/[slug]`: public latest-prediction analysis for the channel (summary, charts, outcome
+  cards, top users), fetched live through the backend.
 
 Landing must stay product-focused and must not turn into a marketing site.
 
@@ -116,8 +120,10 @@ Type scale (Tailwind):
 - Left: small green logo square (`accent`) + `kick logs` wordmark + active route pill
   (e.g. `Search`).
 - Right: GitHub icon link + `Admin` outline button.
-- `Channels` and `Users` nav links are active and point to `/channels` and `/users` index pages.
-- `ActiveRoute` type supports `"search" | "channels" | "users"` to highlight the current section.
+- `Channels`, `Users`, and `Prediction` nav links are active and point to `/channels`, `/users`,
+  and `/prediction`.
+- `ActiveRoute` type supports `"search" | "channels" | "users" | "prediction"` to highlight the
+  current section.
 - Clicking the brand goes to `/`.
 - Admin page uses a different chrome: brand + `/ admin` breadcrumb on the left, user email +
   `SUPER ADMIN` badge + `Çıkış` outline button on the right.
@@ -242,6 +248,59 @@ no card-per-row treatment.
 - `Son mesajlar` panel: username (rendered in sender color) + message + mono timestamp. Same emote
   and user-color rules as search rows.
 - Unknown channel: calm not-found state.
+
+## Prediction (`/prediction`, `/prediction/[slug]`)
+
+Public, no auth. Visualizes a channel's latest Kick prediction game. Data is fetched live through
+the backend (`GET /channels/{slug}/prediction`); nothing is persisted.
+
+### Search page (`/prediction`)
+
+- Search-first, submit-only (same contract as `/users` and `/channels`): typing fires no request.
+- One channel-name input + a `Göster` primary button. Disabled until the trimmed query is ≥ 2
+  characters.
+- Submit trims and lowercases the input, then navigates to `/prediction/{slug}`. No analytics render
+  on this page.
+- Idle prompt: centered icon + `Tahmin verisi için kanal seçin`.
+
+### Analysis page (`/prediction/[slug]`)
+
+- Header strip: back link to `/prediction`, a `kick.com/{slug}` label (`kick.com/` in accent, slug in
+  `text-primary`, mono), and a refresh icon button that re-runs the fetch.
+- States: loading (mono accent-dot line), not-found (calm `warning` panel + `Başka kanal dene`),
+  error (`danger` panel + `Tekrar dene`).
+- Summary card (`bg-panel`): prediction title + state pill; 4-cell metric row (`TOPLAM PUAN`,
+  `TOPLAM OY`, `SÜRE`, `OLUŞTURULMA`). A muted lock timestamp line shows when `lockedAt` is set.
+- Chart row (two panels, stack on narrow): `Puan dağılımı` donut (point share per outcome) and
+  `Oy ve getiri` grouped bar (vote count + return rate per outcome).
+- Outcome detail cards: colored dot + title, `KAZANAN` accent badge + accent border for the winner,
+  three stats (`PUAN` + share %, `OY`, `GETİRİ` as `x` multiplier), and a ranked top-users list.
+- `Top kullanıcılar` panel: horizontal bar chart of the highest bettors across outcomes, bar color
+  by owning outcome, with an outcome legend.
+
+### State Pills
+
+The base palette has no blue/purple/cyan, so prediction states map onto existing tokens (never a new
+hue):
+
+- `RESOLVED` → accent green, `Sonuçlandı`.
+- `LOCKED` → `warning` yellow, `Kilitli`.
+- `ACTIVE` → neutral (`bg-elevated` + `text-secondary`), `Aktif`.
+- unknown → neutral, raw state text.
+
+### Chart Palette
+
+Multi-series prediction charts use `recharts` (the only charting dependency in the repo; landing bars
+remain hand-rolled). Categorical colors come from a fixed sequence rooted in the v2 tokens, cycled by
+outcome index:
+
+```text
+#00e701 (accent) · #facc15 (warning) · #9ca3af (text-secondary) · #ff4d4f (danger) ·
+#474f54 (border-strong) · #00c701 (accent-hover)
+```
+
+Axes, grid, and tooltip chrome use `text-secondary` / `border-subtle` / `bg-elevated`. Charts must
+stay readable without color alone: every chart ships labels or a legend.
 
 ## Admin (`/admin`)
 

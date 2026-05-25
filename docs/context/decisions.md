@@ -1,5 +1,29 @@
 # Decisions
 
+## 2026-05-26 (prediction feature)
+
+- Kick prediction data is fetched through a backend proxy (`GET /channels/{slug}/prediction`), not a
+  direct browser fetch. A client-side request to `kick.com` hits CORS (no `Access-Control-Allow-Origin`
+  for the web origin) and Kick's `Request blocked by security policy`. The backend owns the Kick call,
+  browser-like headers, normalization, and error mapping — consistent with the existing `infra/kick`
+  channel resolver.
+- The prediction endpoint is live and stateless: every `/prediction/{slug}` view fetches the latest
+  prediction on demand. No ClickHouse/SQLite tables, no migration, no write path. Persistence was
+  explicitly deferred (the observed Kick endpoint exposes only top users per outcome, not full
+  voters).
+- Totals (total points, total votes), per-outcome point share, and the winner flag are derived in the
+  `usecase/predictions` service, not trusted from Kick (the endpoint does not return them).
+- `recharts` is adopted as the repo's charting dependency for the donut, grouped-bar, and horizontal
+  top-users charts. Landing-page bars stay hand-rolled CSS; recharts is scoped to the prediction
+  analysis route.
+- Prediction charts use a tokenized categorical palette (accent, warning, text-secondary, danger,
+  border-strong, accent-hover). The base v2 palette has no blue/purple/cyan, so the prototype's
+  multi-hue chart colors and blue `ACTIVE` pill were not carried over. State pills map onto existing
+  tokens: RESOLVED=accent green (`Sonuçlandı`), LOCKED=warning (`Kilitli`), ACTIVE=neutral (`Aktif`).
+- `/prediction` is search-first and submit-only (same rationale as `/users` and `/channels`):
+  submitting navigates to `/prediction/{slug}` rather than rendering analytics in place.
+- `SiteHeader` gains a `Prediction` nav link; `ActiveRoute` extended with `"prediction"`.
+
 ## 2026-05-24 (issue #15 memory stability)
 
 - `/messages` search must keep ClickHouse wide columns out of the ranking/filtering phase. The

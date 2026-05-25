@@ -152,6 +152,8 @@ GET /analytics/top-emotes
 
 GET /users/{slug}/analytics
 GET /channels/{slug}/analytics
+
+GET /channels/{slug}/prediction
 ```
 
 Public routes:
@@ -161,6 +163,13 @@ Public routes:
 - `/analytics/*`
 - `/users/{slug}/analytics`
 - `/channels/{slug}/analytics`
+- `/channels/{slug}/prediction`
+
+`GET /channels/{slug}/prediction` is a live, stateless proxy. The `usecase/predictions` service
+validates the slug and derives totals/point-share/winner; the `infra/kick` prediction adapter fetches
+the undocumented `https://kick.com/api/v2/channels/{slug}/predictions/latest` endpoint with
+browser-like headers and maps blocked/not-found/no-prediction responses to stable errors. No
+prediction data is stored.
 
 Admin routes require the HttpOnly JWT session cookie and an admin/super-admin role.
 
