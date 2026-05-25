@@ -5,7 +5,7 @@ import { Github } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type ActiveRoute = "search" | "channels" | "users" | "admin" | null;
+type ActiveRoute = "search" | "channels" | "users" | "prediction" | "admin" | null;
 
 type SiteHeaderProps = {
   activeRoute?: ActiveRoute;
@@ -54,7 +54,8 @@ type NavItem = { route: NonNullable<ActiveRoute>; label: string; href: string };
 const NAV_ITEMS: NavItem[] = [
   { route: "search", label: "Search", href: "/search" },
   { route: "channels", label: "Channels", href: "/channels" },
-  { route: "users", label: "Users", href: "/users" }
+  { route: "users", label: "Users", href: "/users" },
+  { route: "prediction", label: "Prediction", href: "/prediction" }
 ];
 
 function NavLinks({ activeRoute }: { activeRoute: ActiveRoute }) {

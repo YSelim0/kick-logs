@@ -370,3 +370,35 @@ export type MessageExportResponse = {
 export type ApiErrorBody = {
   detail?: unknown;
 };
+
+export type PredictionTopUser = {
+  id: number;
+  username: string;
+  amount: number;
+};
+
+export type PredictionOutcome = {
+  id: string;
+  title: string;
+  totalVoteAmount: number;
+  voteCount: number;
+  returnRate: number;
+  pointShare: number;
+  isWinner: boolean;
+  topUsers: PredictionTopUser[];
+};
+
+export type Prediction = {
+  id: string;
+  channelId: number;
+  title: string;
+  durationSeconds: number;
+  state: string;
+  winningOutcomeId: string | null;
+  createdAt: string | null;
+  lockedAt: string | null;
+  updatedAt: string | null;
+  totalPoints: number;
+  totalVotes: number;
+  outcomes: PredictionOutcome[];
+};
