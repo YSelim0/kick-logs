@@ -271,10 +271,13 @@ the backend (`GET /channels/{slug}/prediction`); nothing is persisted.
   error (`danger` panel + `Tekrar dene`).
 - Summary card (`bg-panel`): prediction title + state pill; 4-cell metric row (`TOPLAM PUAN`,
   `TOPLAM OY`, `SÜRE`, `OLUŞTURULMA`). A muted lock timestamp line shows when `lockedAt` is set.
+- Outcome detail cards appear directly below the summary card, before charts: colored dot + title,
+  `KAZANAN` accent badge + accent border for the winner, three stats (`PUAN` + share %, `OY`,
+  `GETİRİ` as `x` multiplier), and a ranked top-users list. On tablet/desktop, outcome cards split
+  the full row into two equal columns; do not switch them to a three-column grid for two-outcome
+  predictions.
 - Chart row (two panels, stack on narrow): `Puan dağılımı` donut (point share per outcome) and
   `Oy ve getiri` grouped bar (vote count + return rate per outcome).
-- Outcome detail cards: colored dot + title, `KAZANAN` accent badge + accent border for the winner,
-  three stats (`PUAN` + share %, `OY`, `GETİRİ` as `x` multiplier), and a ranked top-users list.
 - `Top kullanıcılar` panel: horizontal bar chart of the highest bettors across outcomes, bar color
   by owning outcome, with an outcome legend.
 
@@ -291,16 +294,19 @@ hue):
 ### Chart Palette
 
 Multi-series prediction charts use `recharts` (the only charting dependency in the repo; landing bars
-remain hand-rolled). Categorical colors come from a fixed sequence rooted in the v2 tokens, cycled by
-outcome index:
+remain hand-rolled). Categorical colors come from a fixed sequence rooted in the app palette, cycled
+by outcome index. The first two colors are intentionally high-contrast for common two-outcome
+predictions:
 
 ```text
-#00e701 (accent) · #facc15 (warning) · #9ca3af (text-secondary) · #ff4d4f (danger) ·
-#474f54 (border-strong) · #00c701 (accent-hover)
+#22C55E · #C084FC · #FFFFFF · #FF005C · #474f54 · #26001B
 ```
 
-Axes, grid, and tooltip chrome use `text-secondary` / `border-subtle` / `bg-elevated`. Charts must
-stay readable without color alone: every chart ships labels or a legend.
+In `Oy ve getiri`, vote count uses `#22C55E` and return rate uses `#C084FC`, with separate left/right
+Y axes so large vote counts do not hide the return-rate bars. Axes, grid, and tooltip chrome use
+`text-secondary` / `border-subtle` / `bg-elevated`. Charts must stay readable without color alone:
+every chart ships labels or a legend, and legends must sit outside fixed-height chart containers so
+they do not overflow panel borders.
 
 ## Admin (`/admin`)
 

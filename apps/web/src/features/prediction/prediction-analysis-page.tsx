@@ -125,6 +125,12 @@ function PredictionContent({ prediction }: { prediction: Prediction }) {
     <div className="space-y-5">
       <SummaryCard prediction={prediction} />
 
+      <section className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        {prediction.outcomes.map((outcome, index) => (
+          <OutcomeCard color={outcomeColor(index)} key={outcome.id} outcome={outcome} />
+        ))}
+      </section>
+
       <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Panel subtitle="puan payı" title="Puan dağılımı">
           <PredictionDistributionChart outcomes={prediction.outcomes} />
@@ -132,12 +138,6 @@ function PredictionContent({ prediction }: { prediction: Prediction }) {
         <Panel subtitle="oy / getiri" title="Oy ve getiri">
           <PredictionVoteReturnChart outcomes={prediction.outcomes} />
         </Panel>
-      </section>
-
-      <section className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {prediction.outcomes.map((outcome, index) => (
-          <OutcomeCard color={outcomeColor(index)} key={outcome.id} outcome={outcome} />
-        ))}
       </section>
 
       <Panel subtitle="en yüksek bahisler" title="Top kullanıcılar">

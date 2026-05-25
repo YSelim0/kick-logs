@@ -19,43 +19,45 @@ export function PredictionDistributionChart({ outcomes }: { outcomes: Prediction
   }
 
   return (
-    <div className="h-56 w-full">
-      <ResponsiveContainer height="100%" width="100%">
-        <PieChart>
-          <Pie
-            cx="50%"
-            cy="50%"
-            data={data}
-            dataKey="value"
-            innerRadius={50}
-            nameKey="name"
-            outerRadius={80}
-            paddingAngle={2}
-            stroke="#0b0e0f"
-          >
-            {data.map((entry) => (
-              <Cell fill={entry.color} key={entry.name} />
-            ))}
-          </Pie>
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "#24272c",
-              border: "1px solid #474f54",
-              borderRadius: 6,
-              fontSize: 12
-            }}
-            formatter={(value, _name, item) => {
-              const payload = (item as { payload?: { share: number; name: string } }).payload;
-              return [
-                `${formatCompactNumber(Number(value))} puan · ${formatPercent(payload?.share ?? 0)}`,
-                payload?.name ?? ""
-              ];
-            }}
-            itemStyle={{ color: "#ffffff" }}
-            labelStyle={{ color: "#9ca3af" }}
-          />
-        </PieChart>
-      </ResponsiveContainer>
+    <div className="w-full">
+      <div className="h-56 w-full">
+        <ResponsiveContainer height="100%" width="100%">
+          <PieChart>
+            <Pie
+              cx="50%"
+              cy="50%"
+              data={data}
+              dataKey="value"
+              innerRadius={50}
+              nameKey="name"
+              outerRadius={80}
+              paddingAngle={2}
+              stroke="#0b0e0f"
+            >
+              {data.map((entry) => (
+                <Cell fill={entry.color} key={entry.name} />
+              ))}
+            </Pie>
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "#24272c",
+                border: "1px solid #474f54",
+                borderRadius: 6,
+                fontSize: 12
+              }}
+              formatter={(value, _name, item) => {
+                const payload = (item as { payload?: { share: number; name: string } }).payload;
+                return [
+                  `${formatCompactNumber(Number(value))} puan · ${formatPercent(payload?.share ?? 0)}`,
+                  payload?.name ?? ""
+                ];
+              }}
+              itemStyle={{ color: "#ffffff" }}
+              labelStyle={{ color: "#9ca3af" }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
 
       <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
         {data.map((entry) => (

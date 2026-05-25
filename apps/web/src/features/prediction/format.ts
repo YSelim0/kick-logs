@@ -30,16 +30,19 @@ export function formatDateTime(value: string | null): string {
   return DATE_TIME_FORMATTER.format(new Date(value));
 }
 
-// Categorical chart palette rooted in the v2 design tokens (the base palette has no blue/purple).
-// accent, warning, text-secondary, danger, border-strong, accent-hover.
+// Categorical chart palette rooted in the app palette. The first two colors are intentionally
+// high-contrast for two-outcome predictions.
 export const CHART_COLORS = [
-  "#00e701",
-  "#facc15",
-  "#9ca3af",
-  "#ff4d4f",
+  "#22C55E",
+  "#C084FC",
+  "#FFFFFF",
+  "#FF005C",
   "#474f54",
-  "#00c701"
+  "#26001B"
 ] as const;
+
+export const VOTE_COUNT_COLOR = CHART_COLORS[0];
+export const RETURN_RATE_COLOR = CHART_COLORS[1];
 
 export function outcomeColor(index: number): string {
   return CHART_COLORS[index % CHART_COLORS.length];

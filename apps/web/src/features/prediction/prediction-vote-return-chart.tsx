@@ -11,7 +11,12 @@ import {
   YAxis
 } from "recharts";
 
-import { formatCompactNumber, formatMultiplier } from "@/features/prediction/format";
+import {
+  formatCompactNumber,
+  formatMultiplier,
+  RETURN_RATE_COLOR,
+  VOTE_COUNT_COLOR
+} from "@/features/prediction/format";
 import type { PredictionOutcome } from "@/types/api";
 
 export function PredictionVoteReturnChart({ outcomes }: { outcomes: PredictionOutcome[] }) {
@@ -28,7 +33,7 @@ export function PredictionVoteReturnChart({ outcomes }: { outcomes: PredictionOu
   return (
     <div className="h-56 w-full">
       <ResponsiveContainer height="100%" width="100%">
-        <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
+        <BarChart data={data} margin={{ top: 8, right: 0, bottom: 0, left: -16 }}>
           <CartesianGrid stroke="#24272c" vertical={false} />
           <XAxis
             axisLine={{ stroke: "#24272c" }}
@@ -37,7 +42,18 @@ export function PredictionVoteReturnChart({ outcomes }: { outcomes: PredictionOu
             tickLine={false}
           />
           <YAxis
+            yAxisId="votes"
             axisLine={false}
+            tickFormatter={(value) => formatCompactNumber(Number(value))}
+            tick={{ fill: "#9ca3af", fontSize: 11 }}
+            tickLine={false}
+            width={48}
+          />
+          <YAxis
+            yAxisId="return"
+            axisLine={false}
+            orientation="right"
+            tickFormatter={(value) => formatMultiplier(Number(value))}
             tick={{ fill: "#9ca3af", fontSize: 11 }}
             tickLine={false}
             width={48}
@@ -59,8 +75,20 @@ export function PredictionVoteReturnChart({ outcomes }: { outcomes: PredictionOu
             labelStyle={{ color: "#9ca3af" }}
           />
           <Legend wrapperStyle={{ fontSize: 12, color: "#9ca3af" }} />
-          <Bar dataKey="voteCount" fill="#00e701" name="Oy sayısı" radius={[3, 3, 0, 0]} />
-          <Bar dataKey="returnRate" fill="#facc15" name="Getiri oranı" radius={[3, 3, 0, 0]} />
+          <Bar
+            yAxisId="votes"
+            dataKey="voteCount"
+            fill={VOTE_COUNT_COLOR}
+            name="Oy sayısı"
+            radius={[3, 3, 0, 0]}
+          />
+          <Bar
+            yAxisId="return"
+            dataKey="returnRate"
+            fill={RETURN_RATE_COLOR}
+            name="Getiri oranı"
+            radius={[3, 3, 0, 0]}
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>

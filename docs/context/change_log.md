@@ -22,6 +22,10 @@ This is a living implementation log. Add new entries for each meaningful project
   refresh button).
   - Added `recharts` dependency; `Prediction` header nav link; `ActiveRoute` `"prediction"`;
     `Prediction*` response types; `features/prediction/` api + format helpers + components + tests.
+  - Refined the analysis layout so outcome cards render directly after the summary and before the
+    charts, with two equal-width columns on tablet/desktop.
+  - Updated prediction chart colors to `#22C55E` + `#C084FC`, gave vote count and return rate
+    separate Y axes, and moved legends outside fixed-height chart containers to avoid overflow.
 - Docs: design, architecture, living brain, decisions, change log, recent changes updated.
 - Verification: `go build/vet/test ./...` green; web `typecheck`/`lint`/`test` (20 files, 96 tests)
   /`build` green; `pnpm format:check` green.

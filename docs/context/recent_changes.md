@@ -14,10 +14,12 @@ This file is the short handoff summary of the latest project changes. Keep it co
      backend proxy over client fetch because a direct browser call hits CORS + Kick's "Request
      blocked by security policy".
   2. `feat(web): add prediction search and analysis pages` — `/prediction` (search-first,
-     submit→`/prediction/{slug}`) and `/prediction/{slug}` (summary card, recharts donut +
-     grouped-bar + horizontal top-users charts, outcome cards with `KAZANAN` badge,
+     submit→`/prediction/{slug}`) and `/prediction/{slug}` (summary card, outcome cards,
+     recharts donut + grouped-bar + horizontal top-users charts, `KAZANAN` badge,
      loading/not-found/error states, refresh). Added `recharts`, `Prediction` header nav, response
-     types. State pills + chart palette use existing tokens (no blue/purple in the v2 palette).
+     types. Outcome cards are shown before charts and split the row into two equal columns on larger
+     screens. Charts use `#22C55E` + `#C084FC` as the primary two-outcome colors, separate
+     vote/return Y axes, and legends outside fixed-height chart boxes.
   3. Docs commit (design/architecture/context).
 - Verification: `apps/api-go` `go build`/`go vet`/`go test ./...` green; web `typecheck`, `lint`,
   `test` (20 files, 96 tests), `build` green; `pnpm format:check` green.

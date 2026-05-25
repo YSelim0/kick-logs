@@ -16,10 +16,10 @@
 - `recharts` is adopted as the repo's charting dependency for the donut, grouped-bar, and horizontal
   top-users charts. Landing-page bars stay hand-rolled CSS; recharts is scoped to the prediction
   analysis route.
-- Prediction charts use a tokenized categorical palette (accent, warning, text-secondary, danger,
-  border-strong, accent-hover). The base v2 palette has no blue/purple/cyan, so the prototype's
-  multi-hue chart colors and blue `ACTIVE` pill were not carried over. State pills map onto existing
-  tokens: RESOLVED=accent green (`Sonuçlandı`), LOCKED=warning (`Kilitli`), ACTIVE=neutral (`Aktif`).
+- Prediction charts use a green/purple pair for stronger contrast on dark panels. The first two
+  outcome/series colors are `#22C55E` and `#C084FC`; fallback category colors cycle through white,
+  `#FF005C`, `#474f54`, and `#26001B`. State pills map onto existing tokens:
+  RESOLVED=accent green (`Sonuçlandı`), LOCKED=warning (`Kilitli`), ACTIVE=neutral (`Aktif`).
 - `/prediction` is search-first and submit-only (same rationale as `/users` and `/channels`):
   submitting navigates to `/prediction/{slug}` rather than rendering analytics in place.
 - `SiteHeader` gains a `Prediction` nav link; `ActiveRoute` extended with `"prediction"`.
