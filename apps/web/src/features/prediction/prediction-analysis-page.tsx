@@ -168,7 +168,7 @@ function SummaryCard({ prediction }: { prediction: Prediction }) {
 
       {prediction.lockedAt ? (
         <p className="mt-3 font-mono text-[11px] text-muted-foreground">
-          kilitlenme: <span className="text-secondary">{formatDateTime(prediction.lockedAt)}</span>
+          kilitlenme: <span className="text-muted-foreground">{formatDateTime(prediction.lockedAt)}</span>
         </p>
       ) : null}
     </section>
@@ -181,7 +181,7 @@ function StatePill({ badge }: { badge: PredictionStateBadge }) {
       ? "bg-elevated text-accent"
       : badge.tone === "warning"
         ? "bg-elevated text-warning"
-        : "bg-elevated text-secondary";
+        : "bg-elevated text-muted-foreground";
 
   return (
     <span

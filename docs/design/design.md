@@ -117,13 +117,14 @@ Type scale (Tailwind):
 ## Global Header
 
 - 56px high, `bg-page` with bottom `border-subtle`.
-- Left: small green logo square (`accent`) + `kick logs` wordmark + active route pill
-  (e.g. `Search`).
-- Right: GitHub icon link + `Admin` outline button.
+- Desktop: left side has logo square + `kick logs` wordmark + nav links; right side has GitHub icon + `Admin` outline button.
+- Mobile: left side has logo square + `kick logs` wordmark; right side has GitHub icon + hamburger (Menu/X toggle). Nav links hidden.
+- Hamburger opens a fixed dropdown panel below the header (z-40) with a dark backdrop. Panel lists all nav links (Search, Channels, Users, Prediction) plus Admin. Clicking any link closes the menu.
 - `Channels`, `Users`, and `Prediction` nav links are active and point to `/channels`, `/users`,
   and `/prediction`.
 - `ActiveRoute` type supports `"search" | "channels" | "users" | "prediction"` to highlight the
-  current section.
+  current section. Profile pages (`/channels/[slug]`, `/users/[slug]`) use the parent route
+  (`"channels"`, `"users"`) so the nav item stays highlighted when browsing within a section.
 - Clicking the brand goes to `/`.
 - Admin page uses a different chrome: brand + `/ admin` breadcrumb on the left, user email +
   `SUPER ADMIN` badge + `Çıkış` outline button on the right.

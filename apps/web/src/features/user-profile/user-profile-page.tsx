@@ -61,7 +61,7 @@ export function UserProfilePage({ slug }: { slug: string }) {
 
   return (
     <main className="min-h-screen bg-page text-foreground">
-      <SiteHeader activeRoute="search" />
+      <SiteHeader activeRoute="users" />
 
       <div className="mx-auto max-w-[1280px] px-6 py-6">
         <Breadcrumb slug={slug} />
@@ -122,13 +122,13 @@ function ProfileContent({ profile }: { profile: UserProfile }) {
                 @{profile.sender.slug}
               </p>
               <p className="mt-2 font-mono text-[11px] text-muted-foreground">
-                kanal <span className="text-secondary">{profile.overview.total_channels}</span> ·
+                kanal <span className="text-muted-foreground">{profile.overview.total_channels}</span> ·
                 ilk mesaj{" "}
-                <span className="text-secondary">
+                <span className="text-muted-foreground">
                   {formatShortDate(profile.overview.first_message_at)}
                 </span>{" "}
                 · son aktivite{" "}
-                <span className="text-secondary">
+                <span className="text-muted-foreground">
                   {formatRelativeTime(profile.overview.latest_message_at)}
                 </span>
               </p>

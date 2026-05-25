@@ -61,7 +61,7 @@ export function ChannelProfilePage({ slug }: { slug: string }) {
 
   return (
     <main className="min-h-screen bg-page text-foreground">
-      <SiteHeader activeRoute="search" />
+      <SiteHeader activeRoute="channels" />
 
       <div className="mx-auto max-w-[1280px] px-6 py-6">
         <Breadcrumb slug={slug} />
@@ -123,15 +123,15 @@ function ProfileContent({ profile }: { profile: ChannelProfile }) {
               </div>
               <p className="mt-2 font-mono text-[11px] text-muted-foreground">
                 channel id{" "}
-                <span className="text-secondary">{profile.channel.kick_channel_id ?? "—"}</span> ·
+                <span className="text-muted-foreground">{profile.channel.kick_channel_id ?? "—"}</span> ·
                 chatroom id{" "}
-                <span className="text-secondary">{profile.channel.kick_chatroom_id ?? "—"}</span> ·
+                <span className="text-muted-foreground">{profile.channel.kick_chatroom_id ?? "—"}</span> ·
                 ilk log{" "}
-                <span className="text-secondary">
+                <span className="text-muted-foreground">
                   {formatShortDate(profile.overview.first_message_at)}
                 </span>{" "}
                 · son aktivite{" "}
-                <span className="text-secondary">
+                <span className="text-muted-foreground">
                   {formatRelativeTime(profile.overview.latest_message_at)}
                 </span>
               </p>

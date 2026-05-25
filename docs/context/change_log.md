@@ -2,6 +2,15 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-26 (mobile header + active-route + text-visibility fixes)
+
+- `site-header.tsx` → client component with hamburger menu for mobile. All nav links + Admin in dropdown panel below header. Desktop layout unchanged.
+- `channel-profile-page.tsx` `activeRoute` fix: `"search"` → `"channels"`.
+- `user-profile-page.tsx` `activeRoute` fix: `"search"` → `"users"`.
+- Replaced all `text-secondary` usages with `text-muted-foreground` in channel/user profile and prediction analysis pages. Bug: `text-secondary` resolves to `#24272c` (background color) in the Tailwind config, not `#9ca3af` text color.
+- `design.md` and `recent_changes.md` updated.
+- Verification: lint, typecheck, 96 tests, build green.
+
 ## 2026-05-26 (prediction feature)
 
 - Backend: added public `GET /channels/{slug}/prediction`.
