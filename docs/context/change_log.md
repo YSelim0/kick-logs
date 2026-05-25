@@ -2,6 +2,43 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-26 (mobile header + active-route + text-visibility fixes)
+
+- `site-header.tsx` → client component with hamburger menu for mobile. All nav links + Admin in dropdown panel below header. Desktop layout unchanged.
+- `channel-profile-page.tsx` `activeRoute` fix: `"search"` → `"channels"`.
+- `user-profile-page.tsx` `activeRoute` fix: `"search"` → `"users"`.
+- Replaced all `text-secondary` usages with `text-muted-foreground` in channel/user profile and prediction analysis pages. Bug: `text-secondary` resolves to `#24272c` (background color) in the Tailwind config, not `#9ca3af` text color.
+- `design.md` and `recent_changes.md` updated.
+- Verification: lint, typecheck, 96 tests, build green.
+
+## 2026-05-26 (prediction feature)
+
+- Backend: added public `GET /channels/{slug}/prediction`.
+  - `domain.Prediction`/`PredictionOutcome`/`PredictionTopUser`, `ports.PredictionFetcher` with
+    `ErrPredictionNotFound` / `ErrPredictionChannelNotFound` / `ErrPredictionBlocked`.
+  - `infra/kick/prediction_resolver.go` fetches Kick's undocumented
+    `/api/v2/channels/{slug}/predictions/latest` with browser-like headers (user-agent, referer,
+    accept-language, sec-ch-ua, sec-fetch-\*); maps 404 → channel-not-found, non-2xx / top-level
+    `error` body → blocked, null prediction → not-found.
+  - `usecase/predictions` validates the slug and derives total points/votes, per-outcome point
+    share, and the winner flag.
+  - Route maps errors to 404 (no prediction / channel) and 502 (blocked); wired through
+    `routes.Dependencies`, `server.go`, and `cmd/api/main.go` (independent of ClickHouse).
+  - Tests: `usecase/predictions` normalization + `internal/http` route success/404/404/502 cases.
+- Frontend: added `/prediction` (search-first, submit navigates to `/prediction/{slug}`) and
+  `/prediction/{slug}` (live fetch → summary card, `recharts` donut + grouped-bar + horizontal
+  top-users charts, outcome cards with `KAZANAN` winner badge, loading/not-found/error states,
+  refresh button).
+  - Added `recharts` dependency; `Prediction` header nav link; `ActiveRoute` `"prediction"`;
+    `Prediction*` response types; `features/prediction/` api + format helpers + components + tests.
+  - Refined the analysis layout so outcome cards render directly after the summary and before the
+    charts, with two equal-width columns on tablet/desktop.
+  - Updated prediction chart colors to `#22C55E` + `#C084FC`, gave vote count and return rate
+    separate Y axes, and moved legends outside fixed-height chart containers to avoid overflow.
+- Docs: design, architecture, living brain, decisions, change log, recent changes updated.
+- Verification: `go build/vet/test ./...` green; web `typecheck`/`lint`/`test` (20 files, 96 tests)
+  /`build` green; `pnpm format:check` green.
+
 ## 2026-05-24 (issue #15 memory stability)
 
 - Fixed `/messages` search under the new ClickHouse memory cap:

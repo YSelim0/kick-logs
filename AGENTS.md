@@ -29,8 +29,13 @@ For any frontend, UI, visual design, route layout, component styling, or UX work
 - Frontend: Next.js, pnpm, Tailwind, shadcn/ui, lucide-react
 - Runtime: Docker Compose dev stack
 - Commit format: `feat(scope): title`
+- Split commits by feature-sized units. Do not bundle unrelated features into one commit.
+- When following an implementation plan, commit each completed feature-sized unit before moving to the next planned unit when a commit is appropriate.
+- Before committing, run the relevant validation checks for the changed scope and ensure they pass. If checks cannot be run, report why before committing.
+- Commits belong only to the repository owner. Never add collaborator, co-author, generated-by, assisted-by, or similar attribution text to commit messages.
 - Do not push unless explicitly asked.
 - Do not commit secrets, `.env`, virtual environments, logs, caches, or dependency folders.
+- If a blocking error repeats or appears unlikely to be solved with a small number of focused attempts, stop the workflow and report the problem to the user instead of retrying indefinitely.
 
 ## Multi-Agent Work
 

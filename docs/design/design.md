@@ -25,6 +25,10 @@ Do not commit screenshots or exported images unless explicitly requested.
   as the user types.
 - `/channels/[slug]`: public channel profile with stored Kick metadata, analytics, and latest
   messages.
+- `/prediction`: public channel search page for Kick predictions. Search-first — empty prompt on
+  load. Submitting navigates to `/prediction/{slug}`; it does not render analytics itself.
+- `/prediction/[slug]`: public latest-prediction analysis for the channel (summary, charts, outcome
+  cards, top users), fetched live through the backend.
 
 Landing must stay product-focused and must not turn into a marketing site.
 
@@ -113,11 +117,14 @@ Type scale (Tailwind):
 ## Global Header
 
 - 56px high, `bg-page` with bottom `border-subtle`.
-- Left: small green logo square (`accent`) + `kick logs` wordmark + active route pill
-  (e.g. `Search`).
-- Right: GitHub icon link + `Admin` outline button.
-- `Channels` and `Users` nav links are active and point to `/channels` and `/users` index pages.
-- `ActiveRoute` type supports `"search" | "channels" | "users"` to highlight the current section.
+- Desktop: left side has logo square + `kick logs` wordmark + nav links; right side has GitHub icon + `Admin` outline button.
+- Mobile: left side has logo square + `kick logs` wordmark; right side has GitHub icon + hamburger (Menu/X toggle). Nav links hidden.
+- Hamburger opens a fixed dropdown panel below the header (z-40) with a dark backdrop. Panel lists all nav links (Search, Channels, Users, Prediction) plus Admin. Clicking any link closes the menu.
+- `Channels`, `Users`, and `Prediction` nav links are active and point to `/channels`, `/users`,
+  and `/prediction`.
+- `ActiveRoute` type supports `"search" | "channels" | "users" | "prediction"` to highlight the
+  current section. Profile pages (`/channels/[slug]`, `/users/[slug]`) use the parent route
+  (`"channels"`, `"users"`) so the nav item stays highlighted when browsing within a section.
 - Clicking the brand goes to `/`.
 - Admin page uses a different chrome: brand + `/ admin` breadcrumb on the left, user email +
   `SUPER ADMIN` badge + `Çıkış` outline button on the right.
@@ -242,6 +249,65 @@ no card-per-row treatment.
 - `Son mesajlar` panel: username (rendered in sender color) + message + mono timestamp. Same emote
   and user-color rules as search rows.
 - Unknown channel: calm not-found state.
+
+## Prediction (`/prediction`, `/prediction/[slug]`)
+
+Public, no auth. Visualizes a channel's latest Kick prediction game. Data is fetched live through
+the backend (`GET /channels/{slug}/prediction`); nothing is persisted.
+
+### Search page (`/prediction`)
+
+- Search-first, submit-only (same contract as `/users` and `/channels`): typing fires no request.
+- One channel-name input + a `Göster` primary button. Disabled until the trimmed query is ≥ 2
+  characters.
+- Submit trims and lowercases the input, then navigates to `/prediction/{slug}`. No analytics render
+  on this page.
+- Idle prompt: centered icon + `Tahmin verisi için kanal seçin`.
+
+### Analysis page (`/prediction/[slug]`)
+
+- Header strip: back link to `/prediction`, a `kick.com/{slug}` label (`kick.com/` in accent, slug in
+  `text-primary`, mono), and a refresh icon button that re-runs the fetch.
+- States: loading (mono accent-dot line), not-found (calm `warning` panel + `Başka kanal dene`),
+  error (`danger` panel + `Tekrar dene`).
+- Summary card (`bg-panel`): prediction title + state pill; 4-cell metric row (`TOPLAM PUAN`,
+  `TOPLAM OY`, `SÜRE`, `OLUŞTURULMA`). A muted lock timestamp line shows when `lockedAt` is set.
+- Outcome detail cards appear directly below the summary card, before charts: colored dot + title,
+  `KAZANAN` accent badge + accent border for the winner, three stats (`PUAN` + share %, `OY`,
+  `GETİRİ` as `x` multiplier), and a ranked top-users list. On tablet/desktop, outcome cards split
+  the full row into two equal columns; do not switch them to a three-column grid for two-outcome
+  predictions.
+- Chart row (two panels, stack on narrow): `Puan dağılımı` donut (point share per outcome) and
+  `Oy ve getiri` grouped bar (vote count + return rate per outcome).
+- `Top kullanıcılar` panel: horizontal bar chart of the highest bettors across outcomes, bar color
+  by owning outcome, with an outcome legend.
+
+### State Pills
+
+The base palette has no blue/purple/cyan, so prediction states map onto existing tokens (never a new
+hue):
+
+- `RESOLVED` → accent green, `Sonuçlandı`.
+- `LOCKED` → `warning` yellow, `Kilitli`.
+- `ACTIVE` → neutral (`bg-elevated` + `text-secondary`), `Aktif`.
+- unknown → neutral, raw state text.
+
+### Chart Palette
+
+Multi-series prediction charts use `recharts` (the only charting dependency in the repo; landing bars
+remain hand-rolled). Categorical colors come from a fixed sequence rooted in the app palette, cycled
+by outcome index. The first two colors are intentionally high-contrast for common two-outcome
+predictions:
+
+```text
+#22C55E · #C084FC · #FFFFFF · #FF005C · #474f54 · #26001B
+```
+
+In `Oy ve getiri`, vote count uses `#22C55E` and return rate uses `#C084FC`, with separate left/right
+Y axes so large vote counts do not hide the return-rate bars. Axes, grid, and tooltip chrome use
+`text-secondary` / `border-subtle` / `bg-elevated`. Charts must stay readable without color alone:
+every chart ships labels or a legend, and legends must sit outside fixed-height chart containers so
+they do not overflow panel borders.
 
 ## Admin (`/admin`)
 

@@ -4,6 +4,38 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Mobile responsive site header + active-route fixes + text visibility fix (branch `feat/kick-prediction-analysis`):
+  - `site-header.tsx` converted to client component; hamburger (Menu/X toggle) added for mobile. Desktop layout unchanged. Mobile shows logo + wordmark + GitHub + hamburger; clicking hamburger opens a z-40 fixed dropdown panel with all nav links (Search, Channels, Users, Prediction) and Admin. Backdrop closes menu on outside click.
+  - `channel-profile-page.tsx` `activeRoute` corrected from `"search"` to `"channels"` — Channels nav item now stays highlighted on `/channels/[slug]` pages.
+  - `user-profile-page.tsx` `activeRoute` corrected from `"search"` to `"users"` — Users nav item highlighted on `/users/[slug]`.
+  - All `text-secondary` class usages replaced with `text-muted-foreground` in `channel-profile-page.tsx`, `user-profile-page.tsx`, and `prediction-analysis-page.tsx`. Root cause: Tailwind `text-secondary` resolves to `#24272c` (bg-elevated), making text nearly invisible on dark panels; `text-muted-foreground` is `#9ca3af` as intended.
+  - `design.md` Global Header section updated.
+  - Verification: lint, typecheck, test (20 files / 96 tests), build all green.
+
+## Previously Latest (prediction feature)
+
+- Prediction feature (branch `feat/kick-prediction-analysis`). Ported the `kick-prediction`
+  prototype into kick-logs as a first-class feature, rebuilt to the project's architecture and
+  design system. Three commits:
+  1. `feat(api): add kick prediction fetch endpoint` — public `GET /channels/{slug}/prediction`.
+     `infra/kick` prediction adapter calls Kick's undocumented latest-prediction endpoint with
+     browser-like headers; `usecase/predictions` derives totals/share/winner; route maps
+     not-found/channel-not-found/blocked. Live + stateless (no storage, no migration). Decided
+     backend proxy over client fetch because a direct browser call hits CORS + Kick's "Request
+     blocked by security policy".
+  2. `feat(web): add prediction search and analysis pages` — `/prediction` (search-first,
+     submit→`/prediction/{slug}`) and `/prediction/{slug}` (summary card, outcome cards,
+     recharts donut + grouped-bar + horizontal top-users charts, `KAZANAN` badge,
+     loading/not-found/error states, refresh). Added `recharts`, `Prediction` header nav, response
+     types. Outcome cards are shown before charts and split the row into two equal columns on larger
+     screens. Charts use `#22C55E` + `#C084FC` as the primary two-outcome colors, separate
+     vote/return Y axes, and legends outside fixed-height chart boxes.
+  3. Docs commit (design/architecture/context).
+- Verification: `apps/api-go` `go build`/`go vet`/`go test ./...` green; web `typecheck`, `lint`,
+  `test` (20 files, 96 tests), `build` green; `pnpm format:check` green.
+
+## Previously Latest
+
 - Issue #15 memory stability (branch `fix/15-memory-stability`) — fix the ~24h VPS lockup caused
   by host RAM exhaustion / swap thrash on the 4 GB box. Five commits, each a separate feature:
   1. `feat(clickhouse): cap server memory on 4GB host` — `clickhouse/config.d/memory.xml`
