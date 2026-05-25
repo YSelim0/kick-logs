@@ -168,7 +168,8 @@ function SummaryCard({ prediction }: { prediction: Prediction }) {
 
       {prediction.lockedAt ? (
         <p className="mt-3 font-mono text-[11px] text-muted-foreground">
-          kilitlenme: <span className="text-muted-foreground">{formatDateTime(prediction.lockedAt)}</span>
+          kilitlenme:{" "}
+          <span className="text-muted-foreground">{formatDateTime(prediction.lockedAt)}</span>
         </p>
       ) : null}
     </section>
