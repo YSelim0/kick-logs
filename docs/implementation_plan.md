@@ -168,6 +168,9 @@ detail cards, and a top-users chart using the existing v2 design tokens.
 #### [NEW] `prediction-analysis-page.tsx`
 
 - `"use client"`. On mount, fetch `getPrediction(slug)`.
+- After the first successful load, poll `getPrediction(slug)` every 5 seconds as a background
+  refresh while the page remains open, including after `LOCKED`, `CANCELED`/`CANCELLED`, or
+  `RESOLVED`. Keep existing content mounted during the refresh to avoid chart/list flash.
 - Header strip: breadcrumb-style `kick.com/{slug}` (mono; `kick.com/` in accent, slug in
   `text-primary`) + a refresh button that re-runs the fetch (per prototype detail header, design-system
   styled).
@@ -185,6 +188,7 @@ detail cards, and a top-users chart using the existing v2 design tokens.
 - State-pill mapping (no blue/purple — those are not in the palette):
   - `RESOLVED` → accent green pill `Sonuçlandı`.
   - `LOCKED` → `warning` pill `Kilitli`.
+  - `CANCELED` / `CANCELLED` → `warning` pill `İptal`.
   - `ACTIVE` → neutral pill (`bg-elevated` + `text-secondary`) `Aktif`.
   - unknown → `bg-elevated` + `text-muted`, raw state text.
 - Number formatting helper (compact `21.8K`, `2.72x` multiplier, percent share) lives in a small

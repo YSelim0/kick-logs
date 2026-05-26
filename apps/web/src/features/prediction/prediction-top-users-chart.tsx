@@ -6,6 +6,7 @@ import { flattenTopUsers, formatCompactNumber, outcomeColor } from "@/features/p
 import type { PredictionOutcome } from "@/types/api";
 
 const MAX_BARS = 12;
+const CHART_INITIAL_WIDTH = 960;
 
 export function PredictionTopUsersChart({ outcomes }: { outcomes: PredictionOutcome[] }) {
   const bars = flattenTopUsers(outcomes).slice(0, MAX_BARS);
@@ -17,9 +18,14 @@ export function PredictionTopUsersChart({ outcomes }: { outcomes: PredictionOutc
   const height = Math.max(bars.length * 28, 120);
 
   return (
-    <div className="w-full">
-      <div className="w-full" style={{ height }}>
-        <ResponsiveContainer height="100%" width="100%">
+    <div className="min-w-0 w-full">
+      <div className="min-w-0 w-full" style={{ height }}>
+        <ResponsiveContainer
+          height="100%"
+          initialDimension={{ width: CHART_INITIAL_WIDTH, height }}
+          minWidth={0}
+          width="100%"
+        >
           <BarChart
             data={bars}
             layout="vertical"

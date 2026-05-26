@@ -2,7 +2,7 @@
 
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
@@ -23,26 +23,76 @@ import { ApiClientError } from "@/lib/api-client";
 import type { Prediction, PredictionOutcome } from "@/types/api";
 
 type Status = "loading" | "ready" | "not-found" | "error";
+const ACTIVE_PREDICTION_REFRESH_MS = 5000;
+type LoadOptions = { background?: boolean };
 
 export function PredictionAnalysisPage({ slug }: { slug: string }) {
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [status, setStatus] = useState<Status>("loading");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const inFlightSlugRef = useRef<string | null>(null);
+  const latestRequestRef = useRef(0);
 
-  const load = useCallback(async () => {
-    setStatus("loading");
-    try {
-      const next = await getPrediction(slug);
-      setPrediction(next);
-      setStatus("ready");
-    } catch (caught) {
-      setPrediction(null);
-      setStatus(caught instanceof ApiClientError && caught.status === 404 ? "not-found" : "error");
-    }
-  }, [slug]);
+  const load = useCallback(
+    async (options: LoadOptions = {}) => {
+      if (inFlightSlugRef.current === slug) {
+        return;
+      }
+      const requestId = latestRequestRef.current + 1;
+      latestRequestRef.current = requestId;
+      inFlightSlugRef.current = slug;
+
+      if (options.background) {
+        setIsRefreshing(true);
+      } else {
+        setStatus("loading");
+        setIsRefreshing(false);
+      }
+
+      try {
+        const next = await getPrediction(slug);
+        if (latestRequestRef.current !== requestId) {
+          return;
+        }
+        setPrediction((current) => {
+          if (isSamePrediction(current, next)) {
+            return current;
+          }
+          return next;
+        });
+        setStatus("ready");
+      } catch (caught) {
+        if (latestRequestRef.current === requestId && !options.background) {
+          setPrediction(null);
+          setStatus(
+            caught instanceof ApiClientError && caught.status === 404 ? "not-found" : "error"
+          );
+        }
+      } finally {
+        if (inFlightSlugRef.current === slug) {
+          inFlightSlugRef.current = null;
+        }
+        if (latestRequestRef.current === requestId) {
+          setIsRefreshing(false);
+        }
+      }
+    },
+    [slug]
+  );
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (status !== "ready") {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      void load({ background: true });
+    }, ACTIVE_PREDICTION_REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, [load, status]);
 
   return (
     <main className="min-h-screen bg-page text-foreground">
@@ -66,11 +116,13 @@ export function PredictionAnalysisPage({ slug }: { slug: string }) {
           <button
             aria-label="Yenile"
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-elevated hover:text-foreground disabled:opacity-50"
-            disabled={status === "loading"}
-            onClick={() => void load()}
+            disabled={status === "loading" || isRefreshing}
+            onClick={() => void load({ background: status === "ready" })}
             type="button"
           >
-            <RefreshCw className={`h-4 w-4 ${status === "loading" ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`h-4 w-4 ${status === "loading" || isRefreshing ? "animate-spin" : ""}`}
+            />
           </button>
         </header>
 
@@ -81,6 +133,10 @@ export function PredictionAnalysisPage({ slug }: { slug: string }) {
       </div>
     </main>
   );
+}
+
+function isSamePrediction(current: Prediction | null, next: Prediction): boolean {
+  return current !== null && JSON.stringify(current) === JSON.stringify(next);
 }
 
 function LoadingState() {
@@ -121,13 +177,20 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 }
 
 function PredictionContent({ prediction }: { prediction: Prediction }) {
+  const hasWinner = prediction.outcomes.some((outcome) => outcome.isWinner);
+
   return (
     <div className="space-y-5">
       <SummaryCard prediction={prediction} />
 
       <section className="grid grid-cols-1 gap-5 md:grid-cols-2">
         {prediction.outcomes.map((outcome, index) => (
-          <OutcomeCard color={outcomeColor(index)} key={outcome.id} outcome={outcome} />
+          <OutcomeCard
+            color={outcomeColor(index)}
+            hasWinner={hasWinner}
+            key={outcome.id}
+            outcome={outcome}
+          />
         ))}
       </section>
 
@@ -223,17 +286,28 @@ function Panel({
           {subtitle}
         </p>
       </header>
-      <div className="flex-1">{children}</div>
+      <div className="min-w-0 flex-1">{children}</div>
     </section>
   );
 }
 
-function OutcomeCard({ outcome, color }: { outcome: PredictionOutcome; color: string }) {
+function OutcomeCard({
+  outcome,
+  color,
+  hasWinner
+}: {
+  outcome: PredictionOutcome;
+  color: string;
+  hasWinner: boolean;
+}) {
+  const sharePercent = Math.max(0, Math.min(outcome.pointShare * 100, 100));
+  const isLosingOutcome = hasWinner && !outcome.isWinner;
+
   return (
     <article
-      className={`rounded-lg border bg-panel p-4 ${
+      className={`rounded-lg border bg-panel p-4 transition-opacity ${
         outcome.isWinner ? "border-accent" : "border-border"
-      }`}
+      } ${isLosingOutcome ? "opacity-75" : ""}`}
     >
       <header className="mb-3 flex items-center gap-2">
         <span
@@ -249,20 +323,43 @@ function OutcomeCard({ outcome, color }: { outcome: PredictionOutcome; color: st
         ) : null}
       </header>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="flex justify-between gap-4">
         <OutcomeStat
           label="PUAN"
           sub={formatPercent(outcome.pointShare)}
           value={formatCompactNumber(outcome.totalVoteAmount)}
         />
-        <OutcomeStat label="OY" value={formatCompactNumber(outcome.voteCount)} />
+        <OutcomeStat
+          className="text-center"
+          label="OY"
+          value={formatCompactNumber(outcome.voteCount)}
+        />
         <OutcomeStat label="GETİRİ" value={formatMultiplier(outcome.returnRate)} />
+      </div>
+
+      <div className="mt-4">
+        <div className="mb-1 flex items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          <span>Puan payı</span>
+          <span>{formatPercent(outcome.pointShare)}</span>
+        </div>
+        <div
+          aria-label={`${outcome.title} puan payı ${formatPercent(outcome.pointShare)}`}
+          className="h-1.5 overflow-hidden rounded-full bg-elevated"
+        >
+          <div
+            className="h-full rounded-full transition-[width] duration-300"
+            style={{ backgroundColor: color, width: `${sharePercent}%` }}
+          />
+        </div>
       </div>
 
       {outcome.topUsers.length > 0 ? (
         <ol className="mt-3 flex flex-col gap-1.5 border-t border-border pt-3">
           {outcome.topUsers.map((user, index) => (
-            <li className="flex items-center gap-2 text-[13px]" key={user.id}>
+            <li
+              className="-mx-1 flex items-center gap-2 rounded-sm px-1 py-1 text-[13px] transition-colors hover:bg-white/10"
+              key={user.id}
+            >
               <span className="w-4 shrink-0 font-mono text-[10px] text-faint">{index + 1}</span>
               <span className="flex-1 truncate text-foreground">{user.username}</span>
               <span className="shrink-0 font-mono text-accent">
@@ -276,9 +373,19 @@ function OutcomeCard({ outcome, color }: { outcome: PredictionOutcome; color: st
   );
 }
 
-function OutcomeStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function OutcomeStat({
+  label,
+  value,
+  sub,
+  className
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  className?: string;
+}) {
   return (
-    <div>
+    <div className={className}>
       <div className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
         {label}
       </div>

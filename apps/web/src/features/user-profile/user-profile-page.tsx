@@ -122,8 +122,6 @@ function ProfileContent({ profile }: { profile: UserProfile }) {
                 @{profile.sender.slug}
               </p>
               <p className="mt-2 font-mono text-[11px] text-muted-foreground">
-                kanal{" "}
-                <span className="text-muted-foreground">{profile.overview.total_channels}</span> ·
                 ilk mesaj{" "}
                 <span className="text-muted-foreground">
                   {formatShortDate(profile.overview.first_message_at)}

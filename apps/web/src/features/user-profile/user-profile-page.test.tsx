@@ -27,6 +27,7 @@ describe("UserProfilePage", () => {
     await waitFor(() => expect(profileMocks.getUserProfile).toHaveBeenCalledWith("yavuz"));
     expect(await screen.findByRole("heading", { name: "Yavuz" })).toBeInTheDocument();
     expect(screen.getByText("@yavuz")).toBeInTheDocument();
+    expect(screen.queryByText((content) => content.includes("kanal 2 ·"))).not.toBeInTheDocument();
     expect(screen.getByText("MESAJ")).toBeInTheDocument();
     expect(screen.getByText("#hype")).toBeInTheDocument();
     expect(screen.getByText("KEKW")).toBeInTheDocument();

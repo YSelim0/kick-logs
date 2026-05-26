@@ -31,6 +31,8 @@ describe("ChannelProfilePage", () => {
     expect(screen.getByText("@alpha")).toBeInTheDocument();
     expect(screen.getByText("KEKW")).toBeInTheDocument();
     expect(screen.getByText("latest channel message")).toBeInTheDocument();
+    expect(screen.queryByText(/channel id/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/chatroom id/i)).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /kanalda ara/i })).toHaveAttribute(
       "href",
       "/search?channel=hype"

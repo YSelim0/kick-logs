@@ -122,15 +122,7 @@ function ProfileContent({ profile }: { profile: ChannelProfile }) {
                 <LoggingPill />
               </div>
               <p className="mt-2 font-mono text-[11px] text-muted-foreground">
-                channel id{" "}
-                <span className="text-muted-foreground">
-                  {profile.channel.kick_channel_id ?? "—"}
-                </span>{" "}
-                · chatroom id{" "}
-                <span className="text-muted-foreground">
-                  {profile.channel.kick_chatroom_id ?? "—"}
-                </span>{" "}
-                · ilk log{" "}
+                ilk log{" "}
                 <span className="text-muted-foreground">
                   {formatShortDate(profile.overview.first_message_at)}
                 </span>{" "}

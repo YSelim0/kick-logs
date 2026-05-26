@@ -5,6 +5,8 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { formatCompactNumber, formatPercent, outcomeColor } from "@/features/prediction/format";
 import type { PredictionOutcome } from "@/types/api";
 
+const CHART_INITIAL_DIMENSION = { width: 640, height: 224 };
+
 export function PredictionDistributionChart({ outcomes }: { outcomes: PredictionOutcome[] }) {
   const data = outcomes.map((outcome, index) => ({
     name: outcome.title,
@@ -19,9 +21,14 @@ export function PredictionDistributionChart({ outcomes }: { outcomes: Prediction
   }
 
   return (
-    <div className="w-full">
-      <div className="h-56 w-full">
-        <ResponsiveContainer height="100%" width="100%">
+    <div className="min-w-0 w-full">
+      <div className="h-56 min-w-0 w-full">
+        <ResponsiveContainer
+          height="100%"
+          initialDimension={CHART_INITIAL_DIMENSION}
+          minWidth={0}
+          width="100%"
+        >
           <PieChart>
             <Pie
               cx="50%"

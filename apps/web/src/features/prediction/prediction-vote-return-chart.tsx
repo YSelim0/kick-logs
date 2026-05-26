@@ -19,6 +19,8 @@ import {
 } from "@/features/prediction/format";
 import type { PredictionOutcome } from "@/types/api";
 
+const CHART_INITIAL_DIMENSION = { width: 640, height: 224 };
+
 export function PredictionVoteReturnChart({ outcomes }: { outcomes: PredictionOutcome[] }) {
   const data = outcomes.map((outcome) => ({
     name: outcome.title,
@@ -31,8 +33,13 @@ export function PredictionVoteReturnChart({ outcomes }: { outcomes: PredictionOu
   }
 
   return (
-    <div className="h-56 w-full">
-      <ResponsiveContainer height="100%" width="100%">
+    <div className="h-56 min-w-0 w-full">
+      <ResponsiveContainer
+        height="100%"
+        initialDimension={CHART_INITIAL_DIMENSION}
+        minWidth={0}
+        width="100%"
+      >
         <BarChart data={data} margin={{ top: 8, right: 0, bottom: 0, left: -16 }}>
           <CartesianGrid stroke="#24272c" vertical={false} />
           <XAxis

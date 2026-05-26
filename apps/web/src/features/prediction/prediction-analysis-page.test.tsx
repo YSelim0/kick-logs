@@ -1,5 +1,5 @@
-import { render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PredictionAnalysisPage } from "@/features/prediction/prediction-analysis-page";
 import { ApiClientError } from "@/lib/api-client";
@@ -31,6 +31,10 @@ describe("PredictionAnalysisPage", () => {
     apiMocks.getPrediction.mockReset();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("renders the summary, state pill, and winner badge when data resolves", async () => {
     apiMocks.getPrediction.mockResolvedValue(predictionFixture());
 
@@ -58,9 +62,60 @@ describe("PredictionAnalysisPage", () => {
 
     await waitFor(() => expect(screen.getByText(/tahmin verisi alınamadı/i)).toBeInTheDocument());
   });
+
+  it("refreshes active predictions in the background without returning to loading", async () => {
+    vi.useFakeTimers();
+    apiMocks.getPrediction
+      .mockResolvedValueOnce(predictionFixture({ state: "ACTIVE", totalPoints: 100 }))
+      .mockResolvedValueOnce(predictionFixture({ state: "ACTIVE", totalPoints: 125 }));
+
+    render(<PredictionAnalysisPage slug="nuriben" />);
+
+    await flushPromises();
+    expect(screen.getByText("Aktif")).toBeInTheDocument();
+    expect(apiMocks.getPrediction).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
+    await flushPromises();
+    expect(apiMocks.getPrediction).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText("tahmin verisi yükleniyor…")).not.toBeInTheDocument();
+    expect(screen.getByText("125")).toBeInTheDocument();
+  });
+
+  it("keeps refreshing after a terminal state so later result transitions are visible", async () => {
+    vi.useFakeTimers();
+    apiMocks.getPrediction
+      .mockResolvedValueOnce(predictionFixture({ state: "ACTIVE" }))
+      .mockResolvedValueOnce(predictionFixture({ state: "RESOLVED" }))
+      .mockResolvedValueOnce(predictionFixture({ state: "RESOLVED", totalPoints: 140 }));
+
+    render(<PredictionAnalysisPage slug="nuriben" />);
+
+    await flushPromises();
+    expect(screen.getByText("Aktif")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
+    await flushPromises();
+    expect(screen.getByText("Sonuçlandı")).toBeInTheDocument();
+    expect(apiMocks.getPrediction).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+
+    await flushPromises();
+    expect(apiMocks.getPrediction).toHaveBeenCalledTimes(3);
+    expect(screen.getByText("140")).toBeInTheDocument();
+  });
 });
 
-function predictionFixture(): Prediction {
+function predictionFixture(overrides: Partial<Prediction> = {}): Prediction {
   return {
     id: "pred-1",
     channelId: 12440103,
@@ -94,6 +149,14 @@ function predictionFixture(): Prediction {
         isWinner: false,
         topUsers: [{ id: 2, username: "bob", amount: 25 }]
       }
-    ]
+    ],
+    ...overrides
   };
+}
+
+async function flushPromises() {
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
 }

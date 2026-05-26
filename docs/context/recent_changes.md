@@ -4,6 +4,19 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Prediction analysis auto-refresh:
+  - `/prediction/{slug}` now polls `GET /channels/{slug}/prediction` every 5 seconds after the
+    prediction first loads and keeps polling while the page is open, including after terminal states.
+  - Background refreshes keep the existing summary/cards/charts mounted instead of returning to the
+    loading state, so the page does not flash or redraw from scratch during live updates.
+  - Recharts containers now provide positive initial dimensions and `min-w-0` wrappers to avoid
+    `width(-1) and height(-1)` console warnings during first measurement.
+  - Outcome cards now include point-share progress bars using each option's own color; losing
+    outcomes are slightly muted once a winner exists, and top-user rows have a subtle hover
+    background.
+  - Channel/user identity panels hide internal channel/chatroom/count fragments that were not useful
+    to public users.
+
 - Mobile responsive site header + active-route fixes + text visibility fix (branch `feat/kick-prediction-analysis`):
   - `site-header.tsx` converted to client component; hamburger (Menu/X toggle) added for mobile. Desktop layout unchanged. Mobile shows logo + wordmark + GitHub + hamburger; clicking hamburger opens a z-40 fixed dropdown panel with all nav links (Search, Channels, Users, Prediction) and Admin. Backdrop closes menu on outside click.
   - `channel-profile-page.tsx` `activeRoute` corrected from `"search"` to `"channels"` — Channels nav item now stays highlighted on `/channels/[slug]` pages.

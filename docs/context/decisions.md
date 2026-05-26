@@ -19,7 +19,12 @@
 - Prediction charts use a green/purple pair for stronger contrast on dark panels. The first two
   outcome/series colors are `#22C55E` and `#C084FC`; fallback category colors cycle through white,
   `#FF005C`, `#474f54`, and `#26001B`. State pills map onto existing tokens:
-  RESOLVED=accent green (`Sonuçlandı`), LOCKED=warning (`Kilitli`), ACTIVE=neutral (`Aktif`).
+  RESOLVED=accent green (`Sonuçlandı`), LOCKED=warning (`Kilitli`),
+  CANCELED/CANCELLED=warning (`İptal`), ACTIVE=neutral (`Aktif`).
+- `/prediction/{slug}` polls every 5 seconds after the first successful load and keeps polling while
+  the page is open, including terminal states. This captures `LOCKED` → `RESOLVED` transitions that
+  can happen after Kick locks voting. Polling is a background refresh that keeps existing content
+  mounted to avoid chart flash.
 - `/prediction` is search-first and submit-only (same rationale as `/users` and `/channels`):
   submitting navigates to `/prediction/{slug}` rather than rendering analytics in place.
 - `SiteHeader` gains a `Prediction` nav link; `ActiveRoute` extended with `"prediction"`.

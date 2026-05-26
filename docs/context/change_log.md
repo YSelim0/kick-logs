@@ -2,6 +2,22 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-26 (prediction active polling and profile polish)
+
+- `/prediction/{slug}` now refreshes the latest prediction every 5 seconds after the first
+  successful load and keeps polling while the page is open, including after terminal states so
+  `LOCKED` → `RESOLVED` transitions are still captured.
+- Background refreshes are guarded against overlapping requests and keep the existing content
+  mounted, avoiding chart/list flash during live updates.
+- `predictionStateBadge` now labels both `CANCELED` and `CANCELLED` as `İptal`.
+- Prediction chart containers now set positive Recharts initial dimensions and `min-w-0` wrappers
+  to prevent `width(-1) and height(-1)` console warnings while the first ResizeObserver measurement
+  is pending.
+- Outcome cards now show an option-colored point-share progress bar between stats and top users,
+  mute losing cards after a winner exists, and add a subtle hover background to top-user rows.
+- Channel profile identity no longer renders internal channel/chatroom ids. User profile identity no
+  longer renders the channel-count fragment before first/latest activity.
+
 ## 2026-05-26 (mobile header + active-route + text-visibility fixes)
 
 - `site-header.tsx` → client component with hamburger menu for mobile. All nav links + Admin in dropdown panel below header. Desktop layout unchanged.

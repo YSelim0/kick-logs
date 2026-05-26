@@ -69,6 +69,9 @@ implementation details, or working assumptions change.
 - `/prediction/{slug}` fetches `GET /channels/{slug}/prediction` and renders summary, donut +
   grouped-bar charts, outcome cards (winner = `KAZANAN` + accent border), and a horizontal top-users
   chart. Loading / not-found (404) / error states are handled; a refresh button re-runs the fetch.
+- After the first successful prediction load, `/prediction/{slug}` polls the same endpoint every 5
+  seconds in the background for as long as the page is open, including after `LOCKED`,
+  `CANCELED`/`CANCELLED`, or `RESOLVED`. Existing content remains mounted to avoid chart flash.
 - Backend is a live, stateless proxy: `infra/kick` prediction adapter calls Kick's undocumented
   `/api/v2/channels/{slug}/predictions/latest` with browser-like headers (avoids CORS + "Request
   blocked by security policy" that a direct browser fetch would hit). `usecase/predictions` derives
@@ -78,7 +81,8 @@ implementation details, or working assumptions change.
   found."; Kick block / non-2xx → 502 "…request was blocked…".
 - Charts use `recharts` (the repo's only charting dep). Categorical palette is tokenized (accent,
   warning, text-secondary, danger, border-strong, accent-hover) because the base palette has no
-  blue/purple. State pills: RESOLVED=accent, LOCKED=warning, ACTIVE=neutral.
+  blue/purple. State pills: RESOLVED=accent, LOCKED=warning, CANCELED/CANCELLED=warning,
+  ACTIVE=neutral.
 - SiteHeader `ActiveRoute` extended with `"prediction"`; a `Prediction` nav link points to
   `/prediction`.
 

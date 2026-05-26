@@ -228,8 +228,8 @@ no card-per-row treatment.
 
 - Breadcrumb (mono): `users / yavuz`.
 - Identity panel (`bg-panel`, horizontal): circular avatar (real image when available), username
-  (22/600), `@slug` (mono muted), mono meta row (`kanal`, `ilk mesaj`, `son aktivite`), right-aligned
-  primary CTA `Mesajlarda ara` linking to `/search?sender={slug}`.
+  (22/600), `@slug` (mono muted), mono meta row (`ilk mesaj`, `son aktivite`), right-aligned primary
+  CTA `Mesajlarda ara` linking to `/search?sender={slug}`.
 - 4-cell stats bar: `MESAJ`, `KANAL`, `EMOTE`, `İLK MESAJ`.
 - 3-column analytics grid with **equal panel heights**: `Mesaj hacmi` (chart height tuned to match
   list-panel height), `Top kanallar`, `Top emoteler`.
@@ -241,8 +241,7 @@ no card-per-row treatment.
 
 - Breadcrumb (mono): `channels / exampleChannel`.
 - Identity panel: rounded-square channel image, display name (22/600), `LOGGING` accent pill, mono
-  meta row (`channel id`, `chatroom id`, `ilk log`, `son aktivite`), CTA `Kanalda ara` linking to
-  `/search?channel={slug}`.
+  meta row (`ilk log`, `son aktivite`), CTA `Kanalda ara` linking to `/search?channel={slug}`.
 - 4-cell stats bar: `MESAJ`, `KULLANICI`, `EMOTE`, `İLK LOG`.
 - 3-column analytics grid with **equal panel heights**: `Mesaj hacmi`, `Top kullanıcılar`,
   `Top emoteler`.
@@ -270,13 +269,19 @@ the backend (`GET /channels/{slug}/prediction`); nothing is persisted.
   `text-primary`, mono), and a refresh icon button that re-runs the fetch.
 - States: loading (mono accent-dot line), not-found (calm `warning` panel + `Başka kanal dene`),
   error (`danger` panel + `Tekrar dene`).
+- Once a prediction is loaded, the analysis page refreshes every 5 seconds while the page stays
+  open, including after `LOCKED`, `CANCELED`, `CANCELLED`, or `RESOLVED`. Refreshes happen in the
+  background without returning the page to the loading state, so charts and outcome cards update in
+  place without a visible flash.
 - Summary card (`bg-panel`): prediction title + state pill; 4-cell metric row (`TOPLAM PUAN`,
   `TOPLAM OY`, `SÜRE`, `OLUŞTURULMA`). A muted lock timestamp line shows when `lockedAt` is set.
 - Outcome detail cards appear directly below the summary card, before charts: colored dot + title,
   `KAZANAN` accent badge + accent border for the winner, three stats (`PUAN` + share %, `OY`,
-  `GETİRİ` as `x` multiplier), and a ranked top-users list. On tablet/desktop, outcome cards split
-  the full row into two equal columns; do not switch them to a three-column grid for two-outcome
-  predictions.
+  `GETİRİ` as `x` multiplier), an outcome-colored progress bar filled by that outcome's
+  point-share, and a ranked top-users list. On tablet/desktop, outcome cards split the full row into
+  two equal columns; do not switch them to a three-column grid for two-outcome predictions. When a
+  winner exists, losing outcome cards render slightly lower opacity. Top-user rows get a subtle
+  translucent white hover background.
 - Chart row (two panels, stack on narrow): `Puan dağılımı` donut (point share per outcome) and
   `Oy ve getiri` grouped bar (vote count + return rate per outcome).
 - `Top kullanıcılar` panel: horizontal bar chart of the highest bettors across outcomes, bar color
@@ -289,6 +294,7 @@ hue):
 
 - `RESOLVED` → accent green, `Sonuçlandı`.
 - `LOCKED` → `warning` yellow, `Kilitli`.
+- `CANCELED` / `CANCELLED` → `warning` yellow, `İptal`.
 - `ACTIVE` → neutral (`bg-elevated` + `text-secondary`), `Aktif`.
 - unknown → neutral, raw state text.
 

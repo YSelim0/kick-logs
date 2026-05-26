@@ -61,6 +61,9 @@ export function predictionStateBadge(state: string): PredictionStateBadge {
       return { label: "Sonuçlandı", tone: "accent" };
     case "LOCKED":
       return { label: "Kilitli", tone: "warning" };
+    case "CANCELED":
+    case "CANCELLED":
+      return { label: "İptal", tone: "warning" };
     case "ACTIVE":
       return { label: "Aktif", tone: "neutral" };
     default:
