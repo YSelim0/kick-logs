@@ -93,10 +93,48 @@ describe("fetchKickPrediction", () => {
     );
   });
 
+  it("caches channel validation for repeated requests with the same fetch implementation", async () => {
+    const fetchImpl = fetchSequence(
+      channelOk(),
+      jsonResponse(predictionEnvelope({ title: "ilk veri" })),
+      jsonResponse(predictionEnvelope({ title: "guncel veri" }))
+    );
+
+    await fetchKickPrediction("nuriben", fetchImpl);
+    const prediction = await fetchKickPrediction("nuriben", fetchImpl);
+
+    expect(prediction.title).toBe("guncel veri");
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      1,
+      "https://kick.com/api/v2/channels/nuriben",
+      expect.anything()
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      2,
+      "https://kick.com/api/v2/channels/nuriben/predictions/latest",
+      expect.anything()
+    );
+    expect(fetchImpl).toHaveBeenNthCalledWith(
+      3,
+      "https://kick.com/api/v2/channels/nuriben/predictions/latest",
+      expect.anything()
+    );
+  });
+
   it("does not divide by zero when there are no points", async () => {
     const envelope = predictionEnvelope({
       winning_outcome_id: null,
-      outcomes: [{ id: "out-1", title: "Evet", total_vote_amount: 0, vote_count: 0, top_users: [] }]
+      outcomes: [
+        {
+          id: "out-1",
+          title: "Evet",
+          total_vote_amount: 0,
+          vote_count: 0,
+          return_rate: 0,
+          top_users: []
+        }
+      ]
     });
     const fetchImpl = fetchSequence(channelOk(), jsonResponse(envelope));
 
@@ -137,6 +175,41 @@ describe("fetchKickPrediction", () => {
     const fetchImpl = fetchSequence(
       channelOk(),
       jsonResponse({ error: "Request blocked by security policy." })
+    );
+
+    await expect(fetchKickPrediction("nuriben", fetchImpl)).rejects.toMatchObject({
+      status: 502
+    });
+  });
+
+  it("throws a non-404 when the prediction shape is malformed", async () => {
+    const fetchImpl = fetchSequence(
+      channelOk(),
+      jsonResponse(predictionEnvelope({ id: undefined }))
+    );
+
+    await expect(fetchKickPrediction("nuriben", fetchImpl)).rejects.toMatchObject({
+      status: 502
+    });
+  });
+
+  it("throws a non-404 when an outcome shape is malformed", async () => {
+    const fetchImpl = fetchSequence(
+      channelOk(),
+      jsonResponse(
+        predictionEnvelope({
+          outcomes: [
+            {
+              id: "out-1",
+              title: "Evet",
+              total_vote_amount: "75",
+              vote_count: 3,
+              return_rate: 1.33,
+              top_users: []
+            }
+          ]
+        })
+      )
     );
 
     await expect(fetchKickPrediction("nuriben", fetchImpl)).rejects.toMatchObject({

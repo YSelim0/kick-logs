@@ -6,25 +6,30 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 - Prediction moved client-side (issue #19, branch `feat/issue-19-client-side-prediction`):
   - `apps/web/src/features/prediction/kick-prediction-client.ts` now fetches Kick's public endpoints
-    directly from the browser (`/api/v2/channels/{slug}` then `.../predictions/latest`), normalizes
-    the snake_case payload into the existing `Prediction` shape, derives totals/point-share/winner,
-    and throws `ApiClientError` (channel 404 / null prediction → 404; blocked/non-2xx/network/malformed
-    → 502). `features/prediction/api.ts` `getPrediction(slug)` calls it; the analysis page and all its
-    tests are unchanged.
+    directly from the browser. Channel validation (`/api/v2/channels/{slug}`) is cached per
+    slug/browser fetch context so 5-second poll refreshes call only `.../predictions/latest`. The
+    client validates the latest-prediction shape, normalizes the snake_case payload into the existing
+    `Prediction` shape, derives totals/point-share/winner, and throws `ApiClientError` (channel 404 /
+    null prediction → 404; blocked/non-2xx/network/malformed JSON or malformed shape → 502).
+    `features/prediction/api.ts` `getPrediction(slug)` calls it; the analysis page and all its tests
+    are unchanged.
   - Removed the Go prediction proxy: `domain/prediction.go`, `ports/prediction.go`,
     `infra/kick/prediction_resolver.go`, `usecase/predictions/`, `http/routes/predictions.go`,
     `http/prediction_routes_test.go`, and wiring in `cmd/api/main.go`, `http/server.go`,
     `http/routes/dependencies.go`. `GET /channels/{slug}/prediction` no longer exists.
   - Decision supersedes the 2026-05-26 backend-proxy decision; prediction is excluded from the #20
     rate-limit policy.
-  - Verification: web typecheck/lint/test (21 files, 107 tests)/build green, `pnpm format:check` green;
-    `apps/api-go` `gofmt -l`/`go build`/`go vet`/`go test ./...` green.
+  - Verification: web typecheck/lint/test (21 files, 110 tests)/build green,
+    `pnpm format:check` green; `apps/api-go` `go vet ./...` and `go test ./...` green. Local
+    `gofmt -l cmd internal` lists Go files because of Windows CRLF working-tree line endings; no Go
+    source was changed in this unit.
 
 ## Previously Latest
 
-- Prediction analysis auto-refresh:
-  - `/prediction/{slug}` now polls `GET /channels/{slug}/prediction` every 5 seconds after the
-    prediction first loads and keeps polling while the page is open, including after terminal states.
+- Prediction analysis auto-refresh (superseded data source: current branch polls Kick directly from
+  the browser):
+  - `/prediction/{slug}` now polls prediction data every 5 seconds after the prediction first loads
+    and keeps polling while the page is open, including after terminal states.
   - Background refreshes keep the existing summary/cards/charts mounted instead of returning to the
     loading state, so the page does not flash or redraw from scratch during live updates.
   - Recharts containers now provide positive initial dimensions and `min-w-0` wrappers to avoid

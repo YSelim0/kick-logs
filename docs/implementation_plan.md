@@ -40,10 +40,12 @@ data-source migration only — no UI, layout, or behavior change.
   - `isWinner = winning_outcome_id != "" && outcome.id == winning_outcome_id`.
   - slug normalized to trimmed lowercase, max length 160.
 - Kick endpoints:
-  - `GET https://kick.com/api/v2/channels/{slug}` — channel existence.
+  - `GET https://kick.com/api/v2/channels/{slug}` — channel existence, cached per slug/browser fetch
+    context so live polling does not repeat this request every 5 seconds.
   - `GET https://kick.com/api/v2/channels/{slug}/predictions/latest` — latest prediction.
   - Error mapping: channel `404` and null/absent `prediction` -> `404` (not-found state);
-    non-2xx, non-empty top-level `error`, network, or malformed body -> non-404 (error state).
+    non-2xx, non-empty top-level `error`, network, malformed JSON, or malformed prediction shape ->
+    non-404 (error state).
 
 ## Changes
 
@@ -54,16 +56,18 @@ data-source migration only — no UI, layout, or behavior change.
 ### Commit 2 — `feat(web): fetch predictions directly from the browser`
 
 - [NEW] `apps/web/src/features/prediction/kick-prediction-client.ts`
-  - `fetchKickPrediction(slug, fetchImpl = fetch, signal?)`: normalize slug, validate channel via
-    `channels/{slug}`, fetch `predictions/latest`, normalize snake_case -> `Prediction`, derive
-    totals/share/winner, map failures to `ApiClientError` (404 vs non-404).
+  - `fetchKickPrediction(slug, fetchImpl = fetch, signal?)`: normalize slug, validate channel via a
+    cached `channels/{slug}` check, fetch `predictions/latest`, validate the response shape,
+    normalize snake_case -> `Prediction`, derive totals/share/winner, map failures to
+    `ApiClientError` (404 vs non-404).
 - [MODIFY] `apps/web/src/features/prediction/api.ts`
   - `getPrediction(slug)` calls `fetchKickPrediction(slug)`; same name, same `Promise<Prediction>`
     result. Drop the old `apiClient` dependency.
 - [NEW] `apps/web/src/features/prediction/kick-prediction-client.test.ts`
   - snake_case normalization; totals/share/winner derivation; zero-points divide guard; null
-    prediction -> 404; channel 404 -> 404; blocked/non-2xx -> non-404; tolerate `payload.prediction`
-    and `payload.data.prediction` containers.
+    prediction -> 404; channel 404 -> 404; cached channel validation for repeated fetches;
+    blocked/non-2xx/malformed shape -> non-404; tolerate `payload.prediction` and
+    `payload.data.prediction` containers.
 - `prediction-analysis-page.tsx` and its test: unchanged (contract preserved).
 
 ### Commit 3 — `feat(api): remove prediction proxy endpoint`
@@ -104,13 +108,14 @@ pnpm format:check
 
 # Go (commit 3)
 cd apps/api-go
-gofmt -l .
+gofmt -l cmd internal
 go vet ./...
 go test ./...
 ```
 
-Manual (post-deploy): the browser Network tab shows direct calls to
-`https://kick.com/api/v2/channels/{slug}` and `.../predictions/latest`, and no longer shows
+Manual (post-deploy): the browser Network tab shows a direct first-load call to
+`https://kick.com/api/v2/channels/{slug}` plus `.../predictions/latest`; later 5-second refreshes
+reuse the cached channel validation and call only `.../predictions/latest`. It no longer shows
 `GET /channels/{slug}/prediction`; `/prediction/{slug}` still renders and refreshes every 5s with
 loading/not-found/error states intact.
 

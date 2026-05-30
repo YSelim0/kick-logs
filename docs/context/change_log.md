@@ -2,6 +2,19 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-30 (client-side prediction review fixes)
+
+- Hardened the client-side Kick prediction fetcher after review:
+  - channel existence validation is cached per slug/browser fetch context, so after the first
+    validation the 5-second refresh loop calls only `.../predictions/latest`
+  - latest-prediction JSON is now runtime-validated before normalization; missing or wrong-typed
+    required prediction/outcome/top-user fields throw `ApiClientError(502)` instead of rendering
+    blank default data
+  - added coverage for cached channel validation and malformed prediction/outcome shapes
+- Refreshed prediction docs/context to state that prediction is browser-side, that the Go API no
+  longer serves `GET /channels/{slug}/prediction`, and that malformed prediction shapes map to the
+  error state.
+
 ## 2026-05-26 (prediction active polling and profile polish)
 
 - `/prediction/{slug}` now refreshes the latest prediction every 5 seconds after the first

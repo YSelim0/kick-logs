@@ -28,7 +28,7 @@ Do not commit screenshots or exported images unless explicitly requested.
 - `/prediction`: public channel search page for Kick predictions. Search-first — empty prompt on
   load. Submitting navigates to `/prediction/{slug}`; it does not render analytics itself.
 - `/prediction/[slug]`: public latest-prediction analysis for the channel (summary, charts, outcome
-  cards, top users), fetched live through the backend.
+  cards, top users), fetched live from Kick in the browser.
 
 Landing must stay product-focused and must not turn into a marketing site.
 
@@ -251,8 +251,9 @@ no card-per-row treatment.
 
 ## Prediction (`/prediction`, `/prediction/[slug]`)
 
-Public, no auth. Visualizes a channel's latest Kick prediction game. Data is fetched live through
-the backend (`GET /channels/{slug}/prediction`); nothing is persisted.
+Public, no auth. Visualizes a channel's latest Kick prediction game. Data is fetched live from
+Kick's public web endpoints in the browser; nothing is persisted and the Go API is not in this
+request path.
 
 ### Search page (`/prediction`)
 
@@ -272,7 +273,8 @@ the backend (`GET /channels/{slug}/prediction`); nothing is persisted.
 - Once a prediction is loaded, the analysis page refreshes every 5 seconds while the page stays
   open, including after `LOCKED`, `CANCELED`, `CANCELLED`, or `RESOLVED`. Refreshes happen in the
   background without returning the page to the loading state, so charts and outcome cards update in
-  place without a visible flash.
+  place without a visible flash. The client validates the channel once per slug/browser fetch
+  context, then poll refreshes call only the latest-prediction endpoint.
 - Summary card (`bg-panel`): prediction title + state pill; 4-cell metric row (`TOPLAM PUAN`,
   `TOPLAM OY`, `SÜRE`, `OLUŞTURULMA`). A muted lock timestamp line shows when `lockedAt` is set.
 - Outcome detail cards appear directly below the summary card, before charts: colored dot + title,
