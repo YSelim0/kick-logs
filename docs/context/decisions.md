@@ -1,5 +1,24 @@
 # Decisions
 
+## 2026-05-30 (issue #19 — prediction moved client-side)
+
+- Prediction fetching and normalization moved from the Go API proxy to the browser. The public
+  `GET /channels/{slug}/prediction` endpoint and all prediction-specific Go code (domain, port,
+  `infra/kick` adapter, `usecase/predictions`, route, tests) are removed. This **supersedes the
+  2026-05-26 backend-proxy decision below**.
+- The browser calls Kick's public endpoints directly: `GET https://kick.com/api/v2/channels/{slug}`
+  then `.../predictions/latest`. `features/prediction/kick-prediction-client.ts` normalizes the
+  snake_case payload into the existing `Prediction` shape and derives totals, per-outcome point share,
+  and the winner flag (the same logic the Go use case did).
+- The frontend contract is unchanged: `getPrediction(slug): Promise<Prediction>` stays the only
+  function the page consumes; only its implementation changed. Failures are thrown as `ApiClientError`
+  so the page keeps mapping `404` → not-found and anything else → error.
+- Rationale: prediction polling (every 5s) no longer loads the Go API, so prediction is excluded from
+  the rate-limit policy (#20), and the API stays focused on logged chat data/admin/analytics.
+- Accepted risk: Kick's browser endpoints are undocumented; a CORS/shape/blocking change breaks the
+  page with no backend fallback. Mitigation: all direct-Kick logic is isolated behind
+  `getPrediction(slug)`, so a backend proxy or feature flag can be restored without UI changes.
+
 ## 2026-05-26 (prediction feature)
 
 - Kick prediction data is fetched through a backend proxy (`GET /channels/{slug}/prediction`), not a

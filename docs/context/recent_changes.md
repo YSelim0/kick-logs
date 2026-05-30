@@ -4,6 +4,24 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Prediction moved client-side (issue #19, branch `feat/issue-19-client-side-prediction`):
+  - `apps/web/src/features/prediction/kick-prediction-client.ts` now fetches Kick's public endpoints
+    directly from the browser (`/api/v2/channels/{slug}` then `.../predictions/latest`), normalizes
+    the snake_case payload into the existing `Prediction` shape, derives totals/point-share/winner,
+    and throws `ApiClientError` (channel 404 / null prediction → 404; blocked/non-2xx/network/malformed
+    → 502). `features/prediction/api.ts` `getPrediction(slug)` calls it; the analysis page and all its
+    tests are unchanged.
+  - Removed the Go prediction proxy: `domain/prediction.go`, `ports/prediction.go`,
+    `infra/kick/prediction_resolver.go`, `usecase/predictions/`, `http/routes/predictions.go`,
+    `http/prediction_routes_test.go`, and wiring in `cmd/api/main.go`, `http/server.go`,
+    `http/routes/dependencies.go`. `GET /channels/{slug}/prediction` no longer exists.
+  - Decision supersedes the 2026-05-26 backend-proxy decision; prediction is excluded from the #20
+    rate-limit policy.
+  - Verification: web typecheck/lint/test (21 files, 107 tests)/build green, `pnpm format:check` green;
+    `apps/api-go` `gofmt -l`/`go build`/`go vet`/`go test ./...` green.
+
+## Previously Latest
+
 - Prediction analysis auto-refresh:
   - `/prediction/{slug}` now polls `GET /channels/{slug}/prediction` every 5 seconds after the
     prediction first loads and keeps polling while the page is open, including after terminal states.

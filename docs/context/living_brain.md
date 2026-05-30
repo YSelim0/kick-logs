@@ -66,19 +66,23 @@ implementation details, or working assumptions change.
 
 - `/prediction` is a search-first page (submit-only, ≥2 chars). Submit navigates to
   `/prediction/{slug}` (lowercased); it fetches no data itself.
-- `/prediction/{slug}` fetches `GET /channels/{slug}/prediction` and renders summary, donut +
+- `/prediction/{slug}` fetches the prediction client-side and renders summary, donut +
   grouped-bar charts, outcome cards (winner = `KAZANAN` + accent border), and a horizontal top-users
   chart. Loading / not-found (404) / error states are handled; a refresh button re-runs the fetch.
-- After the first successful prediction load, `/prediction/{slug}` polls the same endpoint every 5
+- After the first successful prediction load, `/prediction/{slug}` re-fetches every 5
   seconds in the background for as long as the page is open, including after `LOCKED`,
   `CANCELED`/`CANCELLED`, or `RESOLVED`. Existing content remains mounted to avoid chart flash.
-- Backend is a live, stateless proxy: `infra/kick` prediction adapter calls Kick's undocumented
-  `/api/v2/channels/{slug}/predictions/latest` with browser-like headers (avoids CORS + "Request
-  blocked by security policy" that a direct browser fetch would hit). `usecase/predictions` derives
-  total points, total votes, per-outcome point share, and the winner flag. No persistence, no
-  migration.
-- Error mapping: no prediction → 404 "No active prediction found…"; channel 404 → 404 "Channel not
-  found."; Kick block / non-2xx → 502 "…request was blocked…".
+- Prediction is client-side only (issue #19, supersedes the earlier backend-proxy decision). The
+  browser fetches Kick's undocumented public endpoints directly:
+  `GET https://kick.com/api/v2/channels/{slug}` (channel check) and
+  `.../predictions/latest`. `features/prediction/kick-prediction-client.ts` normalizes the snake_case
+  payload into the existing `Prediction` shape and derives total points, total votes, per-outcome
+  point share, and the winner flag. No backend route, no persistence, no migration. Accepted risk: if
+  Kick changes CORS/shape/blocking the page fails with its error state and there is no backend
+  fallback; all direct-Kick logic stays behind `getPrediction(slug)` so a proxy can be restored
+  without UI changes.
+- Error mapping (thrown as `ApiClientError`): channel 404 or null prediction → 404 (not-found state);
+  blocked/non-2xx/network/malformed → non-404 (error state).
 - Charts use `recharts` (the repo's only charting dep). Categorical palette is tokenized (accent,
   warning, text-secondary, danger, border-strong, accent-hover) because the base palette has no
   blue/purple. State pills: RESOLVED=accent, LOCKED=warning, CANCELED/CANCELLED=warning,
@@ -114,7 +118,6 @@ GET  /analytics/top-channels
 GET  /analytics/top-emotes
 GET  /users/{slug}/analytics
 GET  /channels/{slug}/analytics
-GET  /channels/{slug}/prediction
 ```
 
 Public routes remain unauthenticated. Admin routes require the HttpOnly JWT session cookie and an
