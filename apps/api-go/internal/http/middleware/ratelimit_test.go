@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"testing"
 
-	ratelimitinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/ratelimit"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/config"
+	ratelimitinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/ratelimit"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/ports"
 )
 

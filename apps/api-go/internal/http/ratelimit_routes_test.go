@@ -9,14 +9,14 @@ import (
 	"path/filepath"
 	"testing"
 
+	"context"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/config"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/http/routes"
 	authinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/auth"
-	ratelimitinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/ratelimit"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/migrations"
+	ratelimitinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/ratelimit"
 	sqliteinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/sqlite"
 	authusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/auth"
-	"context"
 )
 
 func newRateLimitTestRouter(t *testing.T) http.Handler {
