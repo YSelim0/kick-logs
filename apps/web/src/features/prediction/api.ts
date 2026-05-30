@@ -1,6 +1,6 @@
-import { apiClient, type ApiClient } from "@/lib/api-client";
+import { fetchKickPrediction } from "@/features/prediction/kick-prediction-client";
 import type { Prediction } from "@/types/api";
 
-export function getPrediction(slug: string, client: ApiClient = apiClient) {
-  return client.get<Prediction>(`/channels/${encodeURIComponent(slug)}/prediction`);
+export function getPrediction(slug: string): Promise<Prediction> {
+  return fetchKickPrediction(slug);
 }
