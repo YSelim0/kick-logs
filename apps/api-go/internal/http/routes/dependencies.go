@@ -16,14 +16,14 @@ import (
 )
 
 type Dependencies struct {
-	Config      config.Config
-	Auth        *authusecase.Service
-	Analytics   *analyticsusecase.Service
-	Channels    *channelsusecase.Service
-	Messages    *messagesusecase.Service
-	Profiles    *profilesusecase.Service
-	Data        *datamanagementusecase.Service
-	Operations  ports.OperationsRepository
+	Config     config.Config
+	Auth       *authusecase.Service
+	Analytics  *analyticsusecase.Service
+	Channels   *channelsusecase.Service
+	Messages   *messagesusecase.Service
+	Profiles   *profilesusecase.Service
+	Data       *datamanagementusecase.Service
+	Operations ports.OperationsRepository
 }
 
 func currentUser(request *http.Request, authService *authusecase.Service, cfg config.Config) (domain.AdminUser, error) {

@@ -99,14 +99,14 @@ func main() {
 		datamanagementinfra.NewRepository(sqliteDB, cfg.SQLitePath, clickHouseConn),
 	)
 	server := app.NewAPIServer(cfg, logger, routes.Dependencies{
-		Config:      cfg,
-		Auth:        authService,
-		Analytics:   analyticsService,
-		Channels:    channelService,
-		Messages:    messageService,
-		Profiles:    profileService,
-		Data:        dataManagementService,
-		Operations:  operationsRepo,
+		Config:     cfg,
+		Auth:       authService,
+		Analytics:  analyticsService,
+		Channels:   channelService,
+		Messages:   messageService,
+		Profiles:   profileService,
+		Data:       dataManagementService,
+		Operations: operationsRepo,
 	})
 
 	errs := make(chan error, 1)
