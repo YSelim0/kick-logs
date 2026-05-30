@@ -280,21 +280,23 @@ func newAdminTestRouter(t *testing.T) http.Handler {
 	}
 
 	channelRepo := sqliteinfra.NewFollowedChannelRepository(db)
+	tokenService := authinfra.NewJWTTokenService(cfg)
 	authService := authusecase.NewService(
 		adminRepo,
 		authinfra.NewBcryptPasswordHasher(),
-		authinfra.NewJWTTokenService(cfg),
+		tokenService,
 	)
 	channelService := channelsusecase.NewService(channelRepo, fakeChannelResolver{})
 	operationsRepo := operationsinfra.NewRepository(db, dbPath, nil, cfg.ListenerStaleAfter)
 	dataManagementService := datamanagementusecase.NewService(datamanagementinfra.NewRepository(db, dbPath, nil))
 
 	return NewRouter(cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), routes.Dependencies{
-		Config:     cfg,
-		Auth:       authService,
-		Channels:   channelService,
-		Data:       dataManagementService,
-		Operations: operationsRepo,
+		Config:       cfg,
+		Auth:         authService,
+		Channels:     channelService,
+		Data:         dataManagementService,
+		Operations:   operationsRepo,
+		TokenService: tokenService,
 	})
 }
 

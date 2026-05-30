@@ -12,8 +12,10 @@ import (
 func NewRouter(cfg config.Config, logger *slog.Logger, dependencySets ...routes.Dependencies) http.Handler {
 	mux := http.NewServeMux()
 	routes.RegisterHealthRoutes(mux)
+
+	var deps routes.Dependencies
 	if len(dependencySets) > 0 {
-		deps := dependencySets[0]
+		deps = dependencySets[0]
 		routes.RegisterAuthRoutes(mux, deps)
 		routes.RegisterMessageRoutes(mux, deps)
 		routes.RegisterAnalyticsRoutes(mux, deps)
@@ -25,6 +27,15 @@ func NewRouter(cfg config.Config, logger *slog.Logger, dependencySets ...routes.
 	}
 
 	var handler http.Handler = mux
+	if cfg.RateLimitEnabled && deps.RateLimiter != nil {
+		handler = middleware.RateLimit(
+			deps.RateLimiter,
+			middleware.DefaultPolicies(cfg.RateLimitTrustProxy),
+			deps.TokenService,
+			cfg,
+			logger,
+		)(handler)
+	}
 	handler = middleware.Recover(logger)(handler)
 	handler = middleware.RequestLogger(logger)(handler)
 	handler = middleware.CORS(cfg.BackendCORSOrigins)(handler)

@@ -20,7 +20,9 @@ import (
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/kick"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/migrations"
 	operationsinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/operations"
+	ratelimitinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/ratelimit"
 	sqliteinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/sqlite"
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/ports"
 	analyticsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/analytics"
 	authusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/auth"
 	channelsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/channels"
@@ -73,11 +75,23 @@ func main() {
 
 	channelRepo := sqliteinfra.NewFollowedChannelRepository(sqliteDB)
 	senderRepo := sqliteinfra.NewSenderProfileRepository(sqliteDB)
+	tokenService := authinfra.NewJWTTokenService(cfg)
 	authService := authusecase.NewService(
 		adminRepo,
 		authinfra.NewBcryptPasswordHasher(),
-		authinfra.NewJWTTokenService(cfg),
+		tokenService,
 	)
+
+	var rateLimiter ports.RateLimiter
+	if cfg.RateLimitEnabled {
+		rl, err := ratelimitinfra.NewGCRA(cfg.RateLimitStoreMaxKeys)
+		if err != nil {
+			logger.Error("failed to create rate limiter", "error", err)
+			os.Exit(1)
+		}
+		rateLimiter = rl
+		logger.Info("rate limiter enabled", "max_keys", cfg.RateLimitStoreMaxKeys, "trust_proxy", cfg.RateLimitTrustProxy)
+	}
 	channelService := channelsusecase.NewService(channelRepo, kick.NewWebChannelResolver())
 	var messageService *messagesusecase.Service
 	var analyticsService *analyticsusecase.Service
@@ -99,14 +113,16 @@ func main() {
 		datamanagementinfra.NewRepository(sqliteDB, cfg.SQLitePath, clickHouseConn),
 	)
 	server := app.NewAPIServer(cfg, logger, routes.Dependencies{
-		Config:     cfg,
-		Auth:       authService,
-		Analytics:  analyticsService,
-		Channels:   channelService,
-		Messages:   messageService,
-		Profiles:   profileService,
-		Data:       dataManagementService,
-		Operations: operationsRepo,
+		Config:       cfg,
+		Auth:         authService,
+		Analytics:    analyticsService,
+		Channels:     channelService,
+		Messages:     messageService,
+		Profiles:     profileService,
+		Data:         dataManagementService,
+		Operations:   operationsRepo,
+		RateLimiter:  rateLimiter,
+		TokenService: tokenService,
 	})
 
 	errs := make(chan error, 1)

@@ -3,10 +3,12 @@ package routes
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/config"
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/http/middleware"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/http/schemas"
 	authusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/auth"
 )
@@ -28,6 +30,17 @@ func login(response http.ResponseWriter, request *http.Request, deps Dependencie
 	if err := decodeJSON(request, &payload); err != nil {
 		writeError(response, http.StatusBadRequest, "Invalid request body.")
 		return
+	}
+
+	if deps.RateLimiter != nil && payload.Email != "" {
+		clientIP := middleware.ClientIP(request, deps.Config.RateLimitTrustProxy)
+		key := "login:email:" + clientIP + ":" + strings.ToLower(strings.TrimSpace(payload.Email))
+		result, _ := deps.RateLimiter.RateLimit(key, 8, 600, 3)
+		if result.Limited {
+			response.Header().Set("Retry-After", strconv.Itoa(result.RetryAfter))
+			writeError(response, http.StatusTooManyRequests, "Too many requests.")
+			return
+		}
 	}
 
 	user, token, err := deps.Auth.Login(request.Context(), payload.Email, payload.Password)
