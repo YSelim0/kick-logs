@@ -4,6 +4,27 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Rate limiting added (issue #20, branch `feat/issue-20-rate-limiting`):
+  - `internal/ports/ratelimit.go`: `RateLimiter` interface + `RateLimitResult`.
+  - `internal/infra/ratelimit/gcra.go`: GCRA implementation using `throttled/throttled/v2` v2.15.0
+    with `memstore.NewCtx` backend. Lazy per-config GCRA limiter creation in `sync.Map`. Store key
+    prefixed with rate params to ensure cross-policy isolation.
+  - `internal/http/middleware/ratelimit.go`: `ClientIP` (CF-Connecting-IP / RemoteAddr),
+    `DefaultPolicies` (ordered slice, 8 policies), `RateLimit` middleware. Fail-open on limiter
+    errors. 429 JSON `{"detail":"Too many requests."}` + `Retry-After` header.
+  - `internal/http/routes/auth.go`: login handler applies IP+email rate limit (8/10min burst 3)
+    after body parse, independent of the middleware's IP-only check.
+  - `internal/http/server.go`: `RateLimit` middleware inserted between Recover and mux.
+    Only applied when `cfg.RateLimitEnabled && deps.RateLimiter != nil`.
+  - `cmd/api/main.go`: creates `GCRARateLimiter`, captures `tokenService` separately to pass both
+    to `routes.Dependencies`.
+  - `internal/config/config.go`: `RATE_LIMIT_ENABLED`, `RATE_LIMIT_STORE_MAX_KEYS`,
+    `RATE_LIMIT_TRUST_PROXY` env vars.
+  - Tests: 4 GCRA unit tests, 11 middleware unit tests, 3 integration tests.
+  - Verification: `go vet ./...` green, `go test ./...` green (all packages).
+
+## Previously Latest
+
 - Prediction moved client-side (issue #19, branch `feat/issue-19-client-side-prediction`):
   - `apps/web/src/features/prediction/kick-prediction-client.ts` now fetches Kick's public endpoints
     directly from the browser. Channel validation (`/api/v2/channels/{slug}`) is cached per

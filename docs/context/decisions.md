@@ -1,5 +1,32 @@
 # Decisions
 
+## 2026-05-31 (issue #20 — rate limiting)
+
+- GCRA-based rate limiting added to all public and admin API endpoints via
+  `github.com/throttled/throttled/v2` with an in-memory LRU `memstore` backend. A fixed-window
+  counter was rejected: no separate burst control and double-counts across the window edge.
+- `RateLimiter` interface added to `ports/ratelimit.go`. Implementation in
+  `infra/ratelimit/gcra.go`. Middleware in `http/middleware/ratelimit.go`. Call sites depend only
+  on the interface; swapping to a Redis backend later requires no middleware or policy changes.
+- In-memory store now (`memstore`), Redis explicitly deferred — single instance, avoids new
+  memory/failure pressure on the 4 GB VPS (see #15). `RATE_LIMIT_STORE_MAX_KEYS` (default 65536)
+  bounds the LRU (~10 MB at ~150 bytes per GCRA entry).
+- Global middleware + path match strategy: single middleware holds an ordered policy table; route
+  files are untouched. First matching policy wins. `/health` and OPTIONS requests have no matching
+  policy and are always unlimited.
+- Real client IP via `CF-Connecting-IP` header under `RATE_LIMIT_TRUST_PROXY=true` (default),
+  falling back to `RemoteAddr`. Trusted only because the origin is locked to Cloudflare IP ranges
+  (infra prerequisite; VPS firewall + nginx `real_ip` are outside code scope).
+- Login dual-key: middleware applies IP-only check (20/10min burst 5); login handler applies
+  IP+email check (8/10min burst 3) after body parse. An attacker cannot lock a victim by email
+  alone because the email key includes the attacker's own IP, not the victim's.
+- Admin endpoints keyed by user ID extracted from JWT cookie via `TokenService.GetUserID()` (pure
+  token parse, no DB hit), falling back to IP if cookie is missing or invalid. `cleanup/confirm`
+  has a tighter independent policy (3/min burst 1) matched before the generic admin-write policy.
+- `RATE_LIMIT_ENABLED=false` disables the middleware entirely. Limiter is nil in tests that do not
+  exercise rate limiting so existing test helpers require no behavioral changes.
+- Prediction endpoint excluded from all policies (moved client-side per #19).
+
 ## 2026-05-30 (issue #19 — prediction moved client-side)
 
 - Prediction fetching and normalization moved from the Go API proxy to the browser. The public

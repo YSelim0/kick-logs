@@ -90,6 +90,29 @@ implementation details, or working assumptions change.
 - SiteHeader `ActiveRoute` extended with `"prediction"`; a `Prediction` nav link points to
   `/prediction`.
 
+## Rate Limiting
+
+- Port: `internal/ports/ratelimit.go` — `RateLimiter` interface, `RateLimitResult` struct.
+- Infra: `internal/infra/ratelimit/gcra.go` — GCRA via `throttled/throttled/v2`, `memstore`
+  backend, lazy per-config GCRA limiter creation with `sync.Map`.
+- Middleware: `internal/http/middleware/ratelimit.go` — `DefaultPolicies`, `ClientIP`, `RateLimit`.
+- Config env vars: `RATE_LIMIT_ENABLED` (default `true`), `RATE_LIMIT_STORE_MAX_KEYS` (default
+  `65536`), `RATE_LIMIT_TRUST_PROXY` (default `true`).
+- Real client IP: `CF-Connecting-IP` when `RATE_LIMIT_TRUST_PROXY=true`, else `RemoteAddr`.
+- Policy table (most specific first):
+  - `POST /admin/data-management/cleanup/confirm` → admin user ID, 3/min burst 1
+  - `POST /auth/login` → IP, 20/10min burst 5; + IP+email in handler, 8/10min burst 3
+  - `GET /messages/export` → IP, 3/min burst 2
+  - `GET /messages` → IP, 20/min burst 10
+  - `GET /analytics/*`, profile analytics → IP, 60/min burst 15
+  - `POST|PUT|DELETE /admin/*` → admin user ID, 30/min burst 10
+  - `GET /admin/*` → admin user ID, 120/min burst 30
+  - `/health`, OPTIONS → unlimited (no matching policy)
+- Admin keying: `TokenService.GetUserID(cookie)` (no DB hit), IP fallback on failure.
+- Login dual-key: attacker cannot lock victim email by hammering from one IP — key includes
+  attacker IP, not victim.
+- Fail-open: limiter errors log a warning and pass the request through.
+
 ## API Contract
 
 The Go API preserves the existing frontend surface:
