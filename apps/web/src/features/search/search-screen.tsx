@@ -222,7 +222,7 @@ function SearchScreenInner() {
     <main className="min-h-screen bg-page text-foreground">
       <SiteHeader activeRoute="search" />
 
-      <div className="mx-auto flex max-w-[1280px] flex-col gap-5 px-6 py-6 md:px-20 md:py-10">
+      <div className="mx-auto flex max-w-[1280px] flex-col gap-5 px-6 py-6 md:py-10">
         <header className="flex flex-wrap items-baseline gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">Search</h1>
           <span className="font-mono text-[11px] text-muted-foreground">{scopeLabel}</span>

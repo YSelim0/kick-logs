@@ -7,13 +7,14 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 
+import { KickProfileLink } from "@/components/kick-profile-link";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { getChannelProfile } from "@/features/channel-profile/api";
 import { MessageContent } from "@/features/search/message-content";
 import { formatMessageDate } from "@/features/search/search-params";
 import { ApiClientError } from "@/lib/api-client";
-import { buildUserProfileHref } from "@/lib/kick-profile-slugs";
+import { buildKickProfileUrl, buildUserProfileHref } from "@/lib/kick-profile-slugs";
 import type {
   ChannelProfile,
   Message,
@@ -106,6 +107,7 @@ function Breadcrumb({ slug }: { slug: string }) {
 
 function ProfileContent({ profile }: { profile: ChannelProfile }) {
   const searchHref = `/search?channel=${encodeURIComponent(profile.channel.slug)}`;
+  const kickProfileUrl = buildKickProfileUrl(profile.channel.slug);
 
   return (
     <div className="space-y-5">
@@ -134,12 +136,15 @@ function ProfileContent({ profile }: { profile: ChannelProfile }) {
             </div>
           </div>
 
-          <Button asChild>
-            <Link href={searchHref}>
-              <Search className="h-4 w-4" />
-              Kanalda ara
-            </Link>
-          </Button>
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            <KickProfileLink href={kickProfileUrl} />
+            <Button asChild className="w-full sm:w-auto">
+              <Link href={searchHref}>
+                <Search className="h-4 w-4" />
+                Kanalda ara
+              </Link>
+            </Button>
+          </div>
         </div>
       </section>
 

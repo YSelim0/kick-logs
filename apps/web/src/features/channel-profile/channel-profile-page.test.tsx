@@ -37,6 +37,10 @@ describe("ChannelProfilePage", () => {
       "href",
       "/search?channel=hype"
     );
+    expect(screen.getByRole("link", { name: /kick hesabını ziyaret/i })).toHaveAttribute(
+      "href",
+      "https://kick.com/hype"
+    );
     expect(screen.getByRole("link", { name: /@alpha/ })).toHaveAttribute("href", "/users/alpha");
   });
 

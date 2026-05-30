@@ -94,7 +94,7 @@ export function LandingPage() {
     <main className="min-h-screen bg-page text-foreground">
       <SiteHeader activeRoute="search" />
 
-      <div className="mx-auto max-w-[1280px] px-6 py-16 md:px-20 md:pt-16 md:pb-20">
+      <div className="mx-auto max-w-[1280px] px-6 py-16 md:pt-16 md:pb-20">
         <div className="flex flex-col gap-12">
           <Hero />
           <StatsBar overview={overview} />
@@ -115,7 +115,7 @@ export function LandingPage() {
 function Footer() {
   return (
     <footer className="border-t border-border py-3">
-      <div className="mx-auto max-w-[1280px] px-6 md:px-20">
+      <div className="mx-auto max-w-[1280px] px-6">
         <p className="flex items-center gap-1.5 font-mono text-2xs uppercase text-muted-foreground">
           <Copyright className="h-3 w-3 shrink-0" aria-hidden />
           {new Date().getFullYear()} kick-logs · Tüm hakları saklıdır.

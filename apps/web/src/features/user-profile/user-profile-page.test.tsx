@@ -42,6 +42,10 @@ describe("UserProfilePage", () => {
       "href",
       "/search?sender=yavuz"
     );
+    expect(screen.getByRole("link", { name: /kick hesabını ziyaret/i })).toHaveAttribute(
+      "href",
+      "https://kick.com/yavuz"
+    );
   });
 
   it("renders not-found state for unknown senders", async () => {
