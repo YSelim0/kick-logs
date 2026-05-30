@@ -52,6 +52,9 @@ type Config struct {
 	PostgresSourceDSN                    string
 	DefaultAdminEmail                    string
 	DefaultAdminPassword                 string
+	RateLimitEnabled                     bool
+	RateLimitStoreMaxKeys                int
+	RateLimitTrustProxy                  bool
 }
 
 func Load() (Config, error) {
@@ -180,6 +183,21 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	rateLimitEnabled, err := envBool("RATE_LIMIT_ENABLED", true)
+	if err != nil {
+		return Config{}, err
+	}
+
+	rateLimitStoreMaxKeys, err := envInt("RATE_LIMIT_STORE_MAX_KEYS", 65536)
+	if err != nil {
+		return Config{}, err
+	}
+
+	rateLimitTrustProxy, err := envBool("RATE_LIMIT_TRUST_PROXY", true)
+	if err != nil {
+		return Config{}, err
+	}
+
 	return Config{
 		AppName:                              envString("APP_NAME", "Kick Logs"),
 		AppEnv:                               envString("APP_ENV", "local"),
@@ -224,6 +242,9 @@ func Load() (Config, error) {
 		PostgresSourceDSN:                    envString("POSTGRES_SOURCE_DSN", envString("DATABASE_URL", "")),
 		DefaultAdminEmail:                    envString("DEFAULT_SUPER_ADMIN_EMAIL", "admin@kicklogs.local"),
 		DefaultAdminPassword:                 envString("DEFAULT_SUPER_ADMIN_PASSWORD", "admin123"),
+		RateLimitEnabled:                     rateLimitEnabled,
+		RateLimitStoreMaxKeys:                rateLimitStoreMaxKeys,
+		RateLimitTrustProxy:                  rateLimitTrustProxy,
 	}, nil
 }
 
