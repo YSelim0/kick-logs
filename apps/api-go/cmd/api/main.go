@@ -26,7 +26,6 @@ import (
 	channelsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/channels"
 	datamanagementusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/data_management"
 	messagesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/messages"
-	predictionsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/predictions"
 	profilesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/profiles"
 )
 
@@ -80,7 +79,6 @@ func main() {
 		authinfra.NewJWTTokenService(cfg),
 	)
 	channelService := channelsusecase.NewService(channelRepo, kick.NewWebChannelResolver())
-	predictionService := predictionsusecase.NewService(kick.NewWebPredictionResolver())
 	var messageService *messagesusecase.Service
 	var analyticsService *analyticsusecase.Service
 	var profileService *profilesusecase.Service
@@ -107,7 +105,6 @@ func main() {
 		Channels:    channelService,
 		Messages:    messageService,
 		Profiles:    profileService,
-		Predictions: predictionService,
 		Data:        dataManagementService,
 		Operations:  operationsRepo,
 	})

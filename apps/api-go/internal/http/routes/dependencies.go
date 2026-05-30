@@ -12,7 +12,6 @@ import (
 	channelsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/channels"
 	datamanagementusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/data_management"
 	messagesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/messages"
-	predictionsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/predictions"
 	profilesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/profiles"
 )
 
@@ -23,7 +22,6 @@ type Dependencies struct {
 	Channels    *channelsusecase.Service
 	Messages    *messagesusecase.Service
 	Profiles    *profilesusecase.Service
-	Predictions *predictionsusecase.Service
 	Data        *datamanagementusecase.Service
 	Operations  ports.OperationsRepository
 }
