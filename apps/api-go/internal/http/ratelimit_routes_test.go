@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"context"
@@ -73,23 +74,27 @@ func loginBody(email, password string) *bytes.Buffer {
 func TestLoginRateLimit_IPBlocked(t *testing.T) {
 	h := newRateLimitTestRouter(t)
 
-	for i := 0; i < 6; i++ {
-		r := httptest.NewRequest(http.MethodPost, "/auth/login", loginBody("admin@kicklogs.local", "wrong"))
+	// Use a distinct email per request so the IP+email handler limit
+	// (8/10min burst 3) never trips; only the middleware IP-only policy
+	// (login-ip: 20/10min burst 5 -> effective capacity 6) gates here.
+	// This makes the test actually exercise the IP policy, not the email one.
+	login := func(email string) *httptest.ResponseRecorder {
+		r := httptest.NewRequest(http.MethodPost, "/auth/login", loginBody(email, "wrong"))
 		r.Header.Set("Content-Type", "application/json")
 		r.RemoteAddr = "10.0.0.1:9999"
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, r)
-		if i < 6 {
-			continue
+		return w
+	}
+
+	for i := 0; i < 6; i++ {
+		email := "user" + strconv.Itoa(i) + "@example.com"
+		if code := login(email).Code; code == http.StatusTooManyRequests {
+			t.Fatalf("request %d should pass the IP limit (capacity 6), got 429", i)
 		}
 	}
 
-	r := httptest.NewRequest(http.MethodPost, "/auth/login", loginBody("admin@kicklogs.local", "wrong"))
-	r.Header.Set("Content-Type", "application/json")
-	r.RemoteAddr = "10.0.0.1:9999"
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, r)
-
+	w := login("user6@example.com")
 	if w.Code != http.StatusTooManyRequests {
 		t.Fatalf("expected 429 after IP limit exhausted, got %d", w.Code)
 	}

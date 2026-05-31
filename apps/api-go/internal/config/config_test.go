@@ -26,10 +26,27 @@ func TestLoadUsesDefaults(t *testing.T) {
 	t.Setenv("CLICKHOUSE_DEBUG", "")
 	t.Setenv("DEFAULT_SUPER_ADMIN_EMAIL", "")
 	t.Setenv("DEFAULT_SUPER_ADMIN_PASSWORD", "")
+	t.Setenv("RATE_LIMIT_ENABLED", "")
+	t.Setenv("RATE_LIMIT_STORE_MAX_KEYS", "")
+	t.Setenv("RATE_LIMIT_TRUST_PROXY", "")
+	t.Setenv("RATE_LIMIT_CLIENT_IP_HEADER", "")
 
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
+	}
+
+	if !cfg.RateLimitEnabled {
+		t.Fatal("RateLimitEnabled = false")
+	}
+	if cfg.RateLimitStoreMaxKeys != 65536 {
+		t.Fatalf("RateLimitStoreMaxKeys = %d", cfg.RateLimitStoreMaxKeys)
+	}
+	if !cfg.RateLimitTrustProxy {
+		t.Fatal("RateLimitTrustProxy = false")
+	}
+	if cfg.RateLimitClientIPHeader != "CF-Connecting-IP" {
+		t.Fatalf("RateLimitClientIPHeader = %q", cfg.RateLimitClientIPHeader)
 	}
 
 	if cfg.AppName != "Kick Logs" {
@@ -95,10 +112,27 @@ func TestLoadParsesOverrides(t *testing.T) {
 	t.Setenv("CLICKHOUSE_DEBUG", "true")
 	t.Setenv("DEFAULT_SUPER_ADMIN_EMAIL", "root@example.test")
 	t.Setenv("DEFAULT_SUPER_ADMIN_PASSWORD", "local-password")
+	t.Setenv("RATE_LIMIT_ENABLED", "false")
+	t.Setenv("RATE_LIMIT_STORE_MAX_KEYS", "1234")
+	t.Setenv("RATE_LIMIT_TRUST_PROXY", "false")
+	t.Setenv("RATE_LIMIT_CLIENT_IP_HEADER", "X-Real-IP")
 
 	cfg, err := Load()
 	if err != nil {
 		t.Fatalf("Load() error = %v", err)
+	}
+
+	if cfg.RateLimitEnabled {
+		t.Fatal("RateLimitEnabled = true")
+	}
+	if cfg.RateLimitStoreMaxKeys != 1234 {
+		t.Fatalf("RateLimitStoreMaxKeys = %d", cfg.RateLimitStoreMaxKeys)
+	}
+	if cfg.RateLimitTrustProxy {
+		t.Fatal("RateLimitTrustProxy = true")
+	}
+	if cfg.RateLimitClientIPHeader != "X-Real-IP" {
+		t.Fatalf("RateLimitClientIPHeader = %q", cfg.RateLimitClientIPHeader)
 	}
 
 	if cfg.AppName != "Custom Logs" {
