@@ -1,5 +1,28 @@
 # Decisions
 
+## 2026-05-31 (issue #20 — rate limiting follow-up: real IP + origin lockdown)
+
+- **Container ports bind to loopback by default.** `compose.yaml` now publishes api/web/ClickHouse
+  ports as `${API_BIND_HOST:-127.0.0.1}` / `WEB_BIND_HOST` / `CH_BIND_HOST`. Previously they bound to
+  `0.0.0.0`, so the app was reachable directly on the host IP, bypassing the reverse proxy and letting
+  a client forge the client-IP header to defeat every IP-based rate limit (and hit ClickHouse reads
+  directly). Self-hosters without a local reverse proxy set the bind host to `0.0.0.0`.
+- **Client IP header is configurable.** New `RATE_LIMIT_CLIENT_IP_HEADER` (default `CF-Connecting-IP`)
+  replaces the hardcoded header, so a plain-nginx self-hoster can use `X-Real-IP`/`X-Forwarded-For`.
+  The resolved value is validated with `net.ParseIP` (first entry for XFF) so a garbage/forged header
+  falls back to `RemoteAddr` instead of becoming a unique key.
+- **Store keys are namespaced by policy name.** The middleware prefixes the limiter key with the
+  policy `Name`. Two policies with identical rate params and key derivation (analytics and
+  profile-analytics, both 60/min burst 15 keyed by IP) previously shared one GCRA bucket, causing
+  unexpected 429s for a dashboard hitting both; they are now independent.
+- **Origin firewall is required, not optional, when behind a CDN.** The origin IP is visible in DNS,
+  so `https://<origin>` is hittable directly with a forged CDN header even after the loopback bind.
+  Locking `80`/`443` to the CDN's published ranges (keeping SSH open) is the only fix. Documented
+  generically in `docs/operations/reverse_proxy_and_origin.md`; the nginx `real_ip` snippet there is
+  optional (the app reads the header directly).
+- GCRA adapter now passes `context.Background()` to `RateLimitCtx` instead of `nil`. Login
+  handler limiter-error logging was intentionally skipped (handler already fails open).
+
 ## 2026-05-31 (issue #20 — rate limiting)
 
 - GCRA-based rate limiting added to all public and admin API endpoints via

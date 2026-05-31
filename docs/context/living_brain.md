@@ -97,8 +97,19 @@ implementation details, or working assumptions change.
   backend, lazy per-config GCRA limiter creation with `sync.Map`.
 - Middleware: `internal/http/middleware/ratelimit.go` — `DefaultPolicies`, `ClientIP`, `RateLimit`.
 - Config env vars: `RATE_LIMIT_ENABLED` (default `true`), `RATE_LIMIT_STORE_MAX_KEYS` (default
-  `65536`), `RATE_LIMIT_TRUST_PROXY` (default `true`).
-- Real client IP: `CF-Connecting-IP` when `RATE_LIMIT_TRUST_PROXY=true`, else `RemoteAddr`.
+  `65536`), `RATE_LIMIT_TRUST_PROXY` (default `true`), `RATE_LIMIT_CLIENT_IP_HEADER` (default
+  `CF-Connecting-IP`). All four are wired through `compose.yaml` and `.env.example`.
+- Real client IP: when `RATE_LIMIT_TRUST_PROXY=true`, read `RATE_LIMIT_CLIENT_IP_HEADER`
+  (`CF-Connecting-IP` behind Cloudflare; `X-Real-IP`/`X-Forwarded-For` behind a plain nginx proxy).
+  The value is validated with `net.ParseIP` (X-Forwarded-For: first entry) so a forged/garbage header
+  cannot inject an arbitrary key; otherwise it falls back to `RemoteAddr`.
+- The middleware prefixes each store key with the policy `Name`, so two policies sharing the same
+  rate params + key (analytics and profile-analytics, both 60/min burst 15 keyed by IP) get separate
+  buckets instead of colliding.
+- Trust-proxy is only safe when the app cannot be reached while bypassing the trusted proxy:
+  `compose.yaml` binds api/web/ClickHouse host ports to `127.0.0.1` by default (`API_BIND_HOST` /
+  `WEB_BIND_HOST` / `CH_BIND_HOST`), and the origin should be firewalled to the CDN. See
+  `docs/operations/reverse_proxy_and_origin.md`.
 - Policy table (most specific first):
   - `POST /admin/data-management/cleanup/confirm` → admin user ID, 3/min burst 1
   - `POST /auth/login` → IP, 20/10min burst 5; + IP+email in handler, 8/10min burst 3

@@ -4,6 +4,31 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Rate limiting hardening / real-client-IP follow-up (issue #20, branch
+  `feat/issue-20-rate-limiting`):
+  - **Security — bypass hole closed.** `compose.yaml` now binds published api/web/ClickHouse host
+    ports to `127.0.0.1` by default (`API_BIND_HOST` / `WEB_BIND_HOST` / `CH_BIND_HOST`). They were
+    on `0.0.0.0`, so the app was reachable directly on the host IP, bypassing the reverse proxy and
+    letting a client forge the client-IP header to defeat IP limits + hammer ClickHouse.
+  - **Configurable client-IP header.** New `RATE_LIMIT_CLIENT_IP_HEADER` (default `CF-Connecting-IP`)
+    in `config.go`; `ClientIP(r, trustProxy, header)` reads it, validates with `net.ParseIP` (first
+    entry for `X-Forwarded-For`), falls back to `RemoteAddr`. `DefaultPolicies` + `auth.go` login key
+    updated for the new signature. Lets plain-nginx self-hosters use `X-Real-IP`/`X-Forwarded-For`.
+  - **Bucket isolation.** Middleware prefixes each store key with the policy `Name`, so `analytics`
+    and `profile-analytics` (both 60/min burst 15 keyed by IP) no longer share one GCRA bucket.
+  - **Env wiring.** All four `RATE_LIMIT_*` vars now passed through `compose.yaml` `api` env and
+    listed in `.env.example` (plus the three `*_BIND_HOST` vars).
+  - **GCRA** uses `context.Background()` instead of `nil` in `RateLimitCtx`.
+  - **Tests.** `TestLoginRateLimit_IPBlocked` rewritten to use distinct emails per request so it
+    actually exercises the IP-only policy (capacity 6) instead of tripping the IP+email limit; removed
+    the dead `if i < 6 { continue }`. `config_test.go` now asserts the four rate-limit env defaults +
+    overrides. Middleware tests updated for the new `ClientIP`/`DefaultPolicies` signatures.
+  - **Docs.** New generic `docs/operations/reverse_proxy_and_origin.md` (loopback bind, real-IP
+    header per topology, origin firewall to the CDN with SSH kept open). Skipped: login-handler
+    limiter-error logging (handler already fails open).
+  - Verification: `apps/api-go` `go build`/`go vet`/`go test ./internal/...` green;
+    `docker compose config --quiet` green.
+
 - Rate limiting added (issue #20, branch `feat/issue-20-rate-limiting`):
   - `internal/ports/ratelimit.go`: `RateLimiter` interface + `RateLimitResult`.
   - `internal/infra/ratelimit/gcra.go`: GCRA implementation using `throttled/throttled/v2` v2.15.0
