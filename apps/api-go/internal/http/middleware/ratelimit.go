@@ -21,10 +21,22 @@ type RateLimitPolicy struct {
 	MaxBurst      int
 }
 
-func ClientIP(r *http.Request, trustProxy bool) string {
-	if trustProxy {
-		if ip := strings.TrimSpace(r.Header.Get("CF-Connecting-IP")); ip != "" {
-			return ip
+// ClientIP resolves the real client IP. When trustProxy is true and header is
+// non-empty, it reads that request header (e.g. CF-Connecting-IP behind
+// Cloudflare, or X-Real-IP / X-Forwarded-For behind a plain reverse proxy). The
+// value is validated with net.ParseIP so a forged/garbage header cannot inject
+// an arbitrary rate-limit key; for X-Forwarded-For only the first entry is used.
+// Otherwise it falls back to the RemoteAddr host.
+func ClientIP(r *http.Request, trustProxy bool, header string) string {
+	if trustProxy && header != "" {
+		raw := strings.TrimSpace(r.Header.Get(header))
+		if raw != "" {
+			if i := strings.IndexByte(raw, ','); i >= 0 {
+				raw = strings.TrimSpace(raw[:i])
+			}
+			if net.ParseIP(raw) != nil {
+				return raw
+			}
 		}
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -34,9 +46,9 @@ func ClientIP(r *http.Request, trustProxy bool) string {
 	return host
 }
 
-func DefaultPolicies(trustProxy bool) []RateLimitPolicy {
+func DefaultPolicies(trustProxy bool, clientIPHeader string) []RateLimitPolicy {
 	ip := func(r *http.Request, _ ports.TokenService, _ config.Config) string {
-		return "ip:" + ClientIP(r, trustProxy)
+		return "ip:" + ClientIP(r, trustProxy, clientIPHeader)
 	}
 
 	adminKey := func(r *http.Request, ts ports.TokenService, cfg config.Config) string {
@@ -47,7 +59,7 @@ func DefaultPolicies(trustProxy bool) []RateLimitPolicy {
 				}
 			}
 		}
-		return "admin:ip:" + ClientIP(r, trustProxy)
+		return "admin:ip:" + ClientIP(r, trustProxy, clientIPHeader)
 	}
 
 	exactMatch := func(method, path string) func(string, string) bool {
@@ -148,7 +160,10 @@ func RateLimit(limiter ports.RateLimiter, policies []RateLimitPolicy, ts ports.T
 					continue
 				}
 
-				key := p.Key(r, ts, cfg)
+				// Prefix the key with the policy name so two policies that share
+				// the same rate params (e.g. analytics and profile-analytics, both
+				// 60/min burst 15 keyed by IP) do not collapse into one bucket.
+				key := p.Name + ":" + p.Key(r, ts, cfg)
 				result, err := limiter.RateLimit(key, p.PerPeriod, p.PeriodSeconds, p.MaxBurst)
 				if err != nil {
 					logger.Warn("rate limit check failed", "policy", p.Name, "error", err)

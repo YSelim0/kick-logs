@@ -58,7 +58,7 @@ func TestClientIP_CFConnectingIP(t *testing.T) {
 	r.Header.Set("CF-Connecting-IP", "1.2.3.4")
 	r.RemoteAddr = "127.0.0.1:12345"
 
-	if got := ClientIP(r, true); got != "1.2.3.4" {
+	if got := ClientIP(r, true, "CF-Connecting-IP"); got != "1.2.3.4" {
 		t.Fatalf("got %q want 1.2.3.4", got)
 	}
 }
@@ -68,7 +68,7 @@ func TestClientIP_RemoteAddr(t *testing.T) {
 	r.Header.Set("CF-Connecting-IP", "1.2.3.4")
 	r.RemoteAddr = "5.6.7.8:9999"
 
-	if got := ClientIP(r, false); got != "5.6.7.8" {
+	if got := ClientIP(r, false, "CF-Connecting-IP"); got != "5.6.7.8" {
 		t.Fatalf("got %q want 5.6.7.8", got)
 	}
 }
@@ -77,7 +77,7 @@ func TestClientIP_FallbackToRemoteAddr(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.RemoteAddr = "9.10.11.12:8080"
 
-	if got := ClientIP(r, true); got != "9.10.11.12" {
+	if got := ClientIP(r, true, "CF-Connecting-IP"); got != "9.10.11.12" {
 		t.Fatalf("got %q want 9.10.11.12", got)
 	}
 }
@@ -86,7 +86,7 @@ func TestClientIP_RemoteAddrPortStrip(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.RemoteAddr = "192.168.1.1:12345"
 
-	if got := ClientIP(r, false); got != "192.168.1.1" {
+	if got := ClientIP(r, false, "CF-Connecting-IP"); got != "192.168.1.1" {
 		t.Fatalf("got %q want 192.168.1.1", got)
 	}
 }
@@ -128,7 +128,7 @@ func TestRateLimit_Returns429WithRetryAfter(t *testing.T) {
 
 func TestRateLimit_BurstTolerance(t *testing.T) {
 	limiter := newTestLimiter(t)
-	policies := DefaultPolicies(false)
+	policies := DefaultPolicies(false, "CF-Connecting-IP")
 
 	h := RateLimit(limiter, policies, nil, cfg(), discardLogger())(okHandler())
 
@@ -153,7 +153,7 @@ func TestRateLimit_BurstTolerance(t *testing.T) {
 
 func TestRateLimit_HealthUnlimited(t *testing.T) {
 	limiter := newTestLimiter(t)
-	policies := DefaultPolicies(false)
+	policies := DefaultPolicies(false, "CF-Connecting-IP")
 	h := RateLimit(limiter, policies, nil, cfg(), discardLogger())(okHandler())
 
 	for i := 0; i < 50; i++ {
@@ -173,8 +173,8 @@ func TestRateLimit_AdminUserIDKeying(t *testing.T) {
 	user1TS := fakeTokenService{userID: 1, ok: true}
 	user2TS := fakeTokenService{userID: 2, ok: true}
 
-	policiesUser1 := DefaultPolicies(false)
-	policiesUser2 := DefaultPolicies(false)
+	policiesUser1 := DefaultPolicies(false, "CF-Connecting-IP")
+	policiesUser2 := DefaultPolicies(false, "CF-Connecting-IP")
 
 	cfg1 := cfg()
 	h1 := RateLimit(limiter, policiesUser1, user1TS, cfg1, discardLogger())(okHandler())
@@ -213,7 +213,7 @@ func TestRateLimit_AdminIPFallback(t *testing.T) {
 						}
 					}
 				}
-				return "admin:ip:" + ClientIP(r, false)
+				return "admin:ip:" + ClientIP(r, false, "CF-Connecting-IP")
 			},
 			PerPeriod:     120,
 			PeriodSeconds: 60,
@@ -244,7 +244,7 @@ func TestRateLimit_AdminIPFallback(t *testing.T) {
 
 func TestRateLimit_CleanupConfirmTighterThanAdminWrite(t *testing.T) {
 	limiter := newTestLimiter(t)
-	policies := DefaultPolicies(false)
+	policies := DefaultPolicies(false, "CF-Connecting-IP")
 
 	ts := fakeTokenService{userID: 10, ok: true}
 	h := RateLimit(limiter, policies, ts, cfg(), discardLogger())(okHandler())
@@ -280,7 +280,7 @@ func TestRateLimit_CleanupConfirmTighterThanAdminWrite(t *testing.T) {
 
 func TestRateLimit_FailOpen(t *testing.T) {
 	limiter := &fakeRateLimiter{err: errTest("store unavailable")}
-	policies := DefaultPolicies(false)
+	policies := DefaultPolicies(false, "CF-Connecting-IP")
 
 	h := RateLimit(limiter, policies, nil, cfg(), discardLogger())(okHandler())
 	r := httptest.NewRequest(http.MethodGet, "/messages", nil)

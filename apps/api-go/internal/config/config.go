@@ -55,6 +55,7 @@ type Config struct {
 	RateLimitEnabled                     bool
 	RateLimitStoreMaxKeys                int
 	RateLimitTrustProxy                  bool
+	RateLimitClientIPHeader              string
 }
 
 func Load() (Config, error) {
@@ -245,6 +246,7 @@ func Load() (Config, error) {
 		RateLimitEnabled:                     rateLimitEnabled,
 		RateLimitStoreMaxKeys:                rateLimitStoreMaxKeys,
 		RateLimitTrustProxy:                  rateLimitTrustProxy,
+		RateLimitClientIPHeader:              envString("RATE_LIMIT_CLIENT_IP_HEADER", "CF-Connecting-IP"),
 	}, nil
 }
 

@@ -30,7 +30,7 @@ func NewRouter(cfg config.Config, logger *slog.Logger, dependencySets ...routes.
 	if cfg.RateLimitEnabled && deps.RateLimiter != nil {
 		handler = middleware.RateLimit(
 			deps.RateLimiter,
-			middleware.DefaultPolicies(cfg.RateLimitTrustProxy),
+			middleware.DefaultPolicies(cfg.RateLimitTrustProxy, cfg.RateLimitClientIPHeader),
 			deps.TokenService,
 			cfg,
 			logger,

@@ -1,6 +1,7 @@
 package ratelimit
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"sync"
@@ -51,7 +52,7 @@ func (g *GCRARateLimiter) RateLimit(key string, perPeriod int, periodSeconds int
 	}
 
 	storeKey := fmt.Sprintf("%d:%d:%d:%s", perPeriod, periodSeconds, maxBurst, key)
-	limited, result, err := limiter.RateLimitCtx(nil, storeKey, 1)
+	limited, result, err := limiter.RateLimitCtx(context.Background(), storeKey, 1)
 	if err != nil {
 		return ports.RateLimitResult{}, fmt.Errorf("rate limit check: %w", err)
 	}

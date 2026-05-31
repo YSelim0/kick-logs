@@ -33,7 +33,7 @@ func login(response http.ResponseWriter, request *http.Request, deps Dependencie
 	}
 
 	if deps.RateLimiter != nil && payload.Email != "" {
-		clientIP := middleware.ClientIP(request, deps.Config.RateLimitTrustProxy)
+		clientIP := middleware.ClientIP(request, deps.Config.RateLimitTrustProxy, deps.Config.RateLimitClientIPHeader)
 		key := "login:email:" + clientIP + ":" + strings.ToLower(strings.TrimSpace(payload.Email))
 		result, _ := deps.RateLimiter.RateLimit(key, 8, 600, 3)
 		if result.Limited {
