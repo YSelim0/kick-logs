@@ -80,10 +80,39 @@ sudo ufw enable
 The CDN ranges change occasionally; re-run the loop (or schedule it) and reload the firewall when they
 do. The same ranges should feed nginx `set_real_ip_from` in step 2.
 
+### Gotchas (verify before and after)
+
+- **A broad `allow` rule silently defeats the CDN-only rules.** ufw permits a packet if *any* rule
+  matches, so a pre-existing `80/tcp ALLOW IN Anywhere` / `443/tcp ALLOW IN Anywhere` leaves the
+  origin open to the whole internet even with the CDN-range rules present. Inspect `sudo ufw status
+  verbose` and **delete the broad rules**, keeping only the CDN-range ones:
+
+  ```bash
+  sudo ufw delete allow 80/tcp     # removes the Anywhere rule (v4+v6)
+  sudo ufw delete allow 443/tcp
+  ```
+
+- **One host, many sites.** If the box serves several vhosts on `443`, every one of them must be
+  behind the same CDN before you lock the origin, or the non-CDN site goes offline. Check each:
+
+  ```bash
+  for d in site-a.example site-b.example; do
+    echo -n "$d -> "; curl -sI "https://$d" | grep -i -E 'cf-ray|server: cloudflare' || echo "NOT PROXIED"
+  done
+  ```
+
+- Locking `80` to the CDN does not break Let's Encrypt renewal when the domain is CDN-proxied: the
+  HTTP-01 challenge reaches the origin through the CDN.
+
 ## Verify end-to-end
 
 ```bash
 curl -sS --max-time 3 http://<host-ip>:8000/health    # direct app  -> refused
 curl -sI https://<your-domain>/api/health             # via proxy   -> 200
 # spam a cheap endpoint quickly via the proxy -> eventually 429 + Retry-After
+
+# origin reachable ONLY through the CDN: force a direct hit to the origin IP,
+# bypassing the CDN -> must hang/fail; the normal URL -> 200
+curl -sI --max-time 8 --resolve <your-domain>:443:<origin-ip> https://<your-domain>   # fails
+curl -sI --max-time 8 https://<your-domain>                                           # 200
 ```
