@@ -42,17 +42,17 @@ IPs through the Cloudflare `CF-Connecting-IP` header under configurable trusted-
 
 ## Policy Table
 
-| Endpoint | Key | MaxRate (sustained) | MaxBurst |
-| --- | --- | --- | --- |
-| `/health` | — | unlimited | — |
-| `POST /auth/login` | IP | 20 / 10 min | 5 |
-| `POST /auth/login` | IP + email (handler) | 8 / 10 min | 3 |
-| `GET /messages` | IP | 20 / min | 10 |
-| `GET /messages/export` | IP | 3 / min | 2 |
-| `GET /analytics/*`, profile analytics | IP | 60 / min | 15 |
-| `GET /admin/*` | user ID (IP fallback) | 120 / min | 30 |
-| `POST/PUT/DELETE /admin/*` | user ID (IP fallback) | 30 / min | 10 |
-| `POST /admin/data-management/cleanup/confirm` | user ID | 3 / min | 1 |
+| Endpoint                                      | Key                   | MaxRate (sustained) | MaxBurst |
+| --------------------------------------------- | --------------------- | ------------------- | -------- |
+| `/health`                                     | —                     | unlimited           | —        |
+| `POST /auth/login`                            | IP                    | 20 / 10 min         | 5        |
+| `POST /auth/login`                            | IP + email (handler)  | 8 / 10 min          | 3        |
+| `GET /messages`                               | IP                    | 20 / min            | 10       |
+| `GET /messages/export`                        | IP                    | 3 / min             | 2        |
+| `GET /analytics/*`, profile analytics         | IP                    | 60 / min            | 15       |
+| `GET /admin/*`                                | user ID (IP fallback) | 120 / min           | 30       |
+| `POST/PUT/DELETE /admin/*`                    | user ID (IP fallback) | 30 / min            | 10       |
+| `POST /admin/data-management/cleanup/confirm` | user ID               | 3 / min             | 1        |
 
 Numbers are a starting point and may be tuned after observing real traffic.
 
