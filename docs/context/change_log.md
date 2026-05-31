@@ -2,6 +2,13 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-05-31 (README refresh)
+
+- Rewrote the root README as a shorter, product-focused public repo page:
+  - added a compact hero with logo + title, slogan, demo GIF, badges, and repository links
+  - removed the long API endpoint catalogue and most low-level operational detail
+  - kept the project explanation, feature summary, contribution flow, and short self-host commands
+
 ## 2026-05-30 (client-side prediction review fixes)
 
 - Hardened the client-side Kick prediction fetcher after review:

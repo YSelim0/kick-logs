@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 660" width="960" height="660" font-family="'Segoe UI', system-ui, -apple-system, sans-serif">
+
+  <defs>
+    <!-- Arrow markers -->
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555555"/>
+    </marker>
+    <marker id="arr-dim" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#aaaaaa"/>
+    </marker>
+
+    <!-- Hatch patterns -->
+    <pattern id="h-red" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+      <rect width="8" height="8" fill="#fff1f2"/>
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#fecdd3" stroke-width="2.5"/>
+    </pattern>
+    <pattern id="h-blue" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+      <rect width="8" height="8" fill="#eff6ff"/>
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#bfdbfe" stroke-width="2.5"/>
+    </pattern>
+    <pattern id="h-yellow" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+      <rect width="8" height="8" fill="#fffbeb"/>
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#fde68a" stroke-width="2.5"/>
+    </pattern>
+    <pattern id="h-green" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+      <rect width="8" height="8" fill="#f0fdf4"/>
+      <line x1="0" y1="0" x2="0" y2="8" stroke="#bbf7d0" stroke-width="2.5"/>
+    </pattern>
+  </defs>
+
+  <!-- ═══════════════════════════════════════════════
+       ARROWS  (drawn first, below boxes)
+  ════════════════════════════════════════════════ -->
+
+  <!-- Client → Next.js Web: Get Data -->
+  <line x1="480" y1="82" x2="437" y2="145" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="476" y="118" font-size="12" fill="#666" text-anchor="middle">Get Data</text>
+
+  <!-- Next.js → Core API: REST -->
+  <line x1="420" y1="212" x2="404" y2="298" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="434" y="258" font-size="12" fill="#666" text-anchor="start">REST</text>
+
+  <!-- Next.js → Kick Web API: Prediction (dashed) -->
+  <line x1="530" y1="178" x2="694" y2="178" stroke="#aaa" stroke-width="1.5" stroke-dasharray="6,4" marker-end="url(#arr-dim)"/>
+  <text x="612" y="168" font-size="12" fill="#999" text-anchor="middle">Prediction</text>
+  <text x="612" y="182" font-size="10" fill="#bbb" text-anchor="middle">(browser fetch)</text>
+
+  <!-- Core API → ClickHouse -->
+  <line x1="385" y1="365" x2="360" y2="474" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="406" y="412" font-size="11" fill="#666" text-anchor="start">SELECT · INSERT</text>
+
+  <!-- Core API → SQLite -->
+  <line x1="500" y1="355" x2="578" y2="474" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="565" y="415" font-size="11" fill="#666" text-anchor="middle">Read · Write</text>
+
+  <!-- Listener → Kick Pusher WS -->
+  <line x1="152" y1="365" x2="117" y2="474" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="116" y="428" font-size="11" fill="#666" text-anchor="end">Subscribe WS</text>
+
+  <!-- Listener → ClickHouse: Write events -->
+  <line x1="232" y1="350" x2="300" y2="474" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="245" y="415" font-size="11" fill="#666" text-anchor="end">Write events</text>
+  <text x="245" y="428" font-size="11" fill="#666" text-anchor="end">→ messages</text>
+
+  <!-- ═══════════════════════════════════════════════
+       BOXES
+  ════════════════════════════════════════════════ -->
+
+  <!-- Client (red) -->
+  <g>
+    <rect x="415" y="25" width="130" height="57" rx="8"
+          fill="url(#h-red)" stroke="#f87171" stroke-width="2"/>
+    <!-- triangle icon (like reference) -->
+    <polygon points="480,36 470,52 490,52" fill="#555"/>
+    <text x="480" y="70" text-anchor="middle" font-weight="600" font-size="14" fill="#111">Client</text>
+  </g>
+
+  <!-- Next.js Web (blue) -->
+  <g>
+    <rect x="340" y="145" width="185" height="67" rx="8"
+          fill="url(#h-blue)" stroke="#60a5fa" stroke-width="2"/>
+    <text x="433" y="173" text-anchor="middle" font-weight="700" font-size="14" fill="#111">Next.js Web</text>
+    <text x="433" y="193" text-anchor="middle" font-size="11" fill="#6b7280">apps/web</text>
+  </g>
+
+  <!-- Kick Web API (yellow / external) -->
+  <g>
+    <rect x="694" y="145" width="165" height="67" rx="8"
+          fill="url(#h-yellow)" stroke="#f59e0b" stroke-width="2"/>
+    <text x="777" y="173" text-anchor="middle" font-weight="700" font-size="14" fill="#111">Kick Web API</text>
+    <text x="777" y="193" text-anchor="middle" font-size="11" fill="#6b7280">Prediction data</text>
+  </g>
+
+  <!-- Core API (blue) -->
+  <g>
+    <rect x="315" y="298" width="195" height="67" rx="8"
+          fill="url(#h-blue)" stroke="#60a5fa" stroke-width="2"/>
+    <text x="413" y="326" text-anchor="middle" font-weight="700" font-size="14" fill="#111">Core API</text>
+    <text x="413" y="346" text-anchor="middle" font-size="11" fill="#6b7280">Go · cmd/api</text>
+  </g>
+
+  <!-- Listener (blue) -->
+  <g>
+    <rect x="65" y="298" width="185" height="67" rx="8"
+          fill="url(#h-blue)" stroke="#60a5fa" stroke-width="2"/>
+    <text x="157" y="326" text-anchor="middle" font-weight="700" font-size="14" fill="#111">Listener</text>
+    <text x="157" y="346" text-anchor="middle" font-size="11" fill="#6b7280">Go · cmd/listener</text>
+  </g>
+
+  <!-- Kick Pusher WebSocket (yellow / external) -->
+  <g>
+    <rect x="28" y="474" width="170" height="67" rx="8"
+          fill="url(#h-yellow)" stroke="#f59e0b" stroke-width="2"/>
+    <text x="113" y="502" text-anchor="middle" font-weight="700" font-size="14" fill="#111">Kick Pusher</text>
+    <text x="113" y="522" text-anchor="middle" font-size="11" fill="#6b7280">WebSocket (chat)</text>
+  </g>
+
+  <!-- ClickHouse (dark) -->
+  <g>
+    <rect x="280" y="474" width="195" height="67" rx="8"
+          fill="#111827" stroke="#374151" stroke-width="2"/>
+    <text x="377" y="502" text-anchor="middle" font-weight="700" font-size="14" fill="#f9fafb">ClickHouse</text>
+    <text x="377" y="522" text-anchor="middle" font-size="11" fill="#9ca3af">messages · raw_events</text>
+  </g>
+
+  <!-- SQLite (green) -->
+  <g>
+    <rect x="550" y="474" width="170" height="67" rx="8"
+          fill="url(#h-green)" stroke="#34d399" stroke-width="2"/>
+    <text x="635" y="502" text-anchor="middle" font-weight="700" font-size="14" fill="#111">SQLite</text>
+    <text x="635" y="522" text-anchor="middle" font-size="11" fill="#6b7280">channels · sessions</text>
+  </g>
+
+  <!-- Legend -->
+  <g opacity="0.75">
+    <rect x="28" y="590" width="14" height="14" rx="2" fill="url(#h-blue)" stroke="#60a5fa" stroke-width="1.5"/>
+    <text x="48" y="602" font-size="11" fill="#555">Internal service (Go)</text>
+
+    <rect x="195" y="590" width="14" height="14" rx="2" fill="url(#h-yellow)" stroke="#f59e0b" stroke-width="1.5"/>
+    <text x="215" y="602" font-size="11" fill="#555">External API</text>
+
+    <rect x="330" y="590" width="14" height="14" rx="2" fill="#111827" stroke="#374151" stroke-width="1.5"/>
+    <text x="350" y="602" font-size="11" fill="#555">ClickHouse</text>
+
+    <rect x="443" y="590" width="14" height="14" rx="2" fill="url(#h-green)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="463" y="602" font-size="11" fill="#555">SQLite</text>
+
+    <line x1="538" y1="597" x2="565" y2="597" stroke="#aaa" stroke-width="1.5" stroke-dasharray="5,3"/>
+    <text x="572" y="602" font-size="11" fill="#555">Browser-only</text>
+  </g>
+
+</svg>

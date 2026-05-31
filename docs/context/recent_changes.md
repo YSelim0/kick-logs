@@ -4,6 +4,14 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- README refresh:
+  - Replaced the long technical README with a shorter product-focused version.
+  - Added a compact centered hero with logo + title, concise slogan, demo GIF, repository/status/
+    license/support badges, and lightweight repo links.
+  - Removed the API endpoint catalogue and long operational sections from README. Kept the content
+    focused on product purpose, user-facing capabilities, contributing, and a short self-hosting
+    command flow.
+
 - Rate limiting hardening / real-client-IP follow-up (issue #20, branch
   `feat/issue-20-rate-limiting`):
   - **Security — bypass hole closed.** `compose.yaml` now binds published api/web/ClickHouse host

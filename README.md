@@ -1,11 +1,29 @@
+<h1 align="center">
+  <img src="./docs/app-logo.png" alt="Kick Logs logo" width="50" valign="middle" />
+  Kick Logs
+</h1>
+
 <p align="center">
-  <img src="./apps/web/public/app-logo.png" alt="Kick Logs logo" width="128" />
+  <strong>Self-hosted Kick chat logging, search, and channel analytics.</strong>
 </p>
 
-<h1 align="center">Kick Logs</h1>
+<p align="center">
+  <img src="./docs/kick-logs-demo.gif" alt="Kick Logs demo" width="60%" />
+</p>
 
 <p align="center">
-  A self-hosted Kick chat logger with durable ingestion, ClickHouse storage, and a searchable web UI.
+  <a href="https://github.com/YSelim0/kick-logs/stargazers">
+    <img src="https://img.shields.io/github/stars/YSelim0/kick-logs?style=for-the-badge&label=Stars&color=00e701&labelColor=0b0e0f" alt="GitHub stars" />
+  </a>
+  <a href="https://github.com/YSelim0/kick-logs/actions/workflows/go-tests.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/YSelim0/kick-logs/go-tests.yml?style=for-the-badge&label=Go%20CI&labelColor=0b0e0f" alt="Go CI" />
+  </a>
+  <a href="https://github.com/YSelim0/kick-logs/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/YSelim0/kick-logs?style=for-the-badge&labelColor=0b0e0f" alt="MIT License" />
+  </a>
+  <a href="https://buymeacoffee.com/yavuzselim">
+    <img src="https://img.shields.io/badge/Support-Buy%20Me%20a%20Coffee-FFF600?style=for-the-badge&logo=buymeacoffee&logoColor=000000&labelColor=0b0e0f" alt="Buy Me a Coffee" />
+  </a>
 </p>
 
 <p align="center">
@@ -14,121 +32,88 @@
   <a href="https://github.com/YSelim0/kick-logs/issues">Issues</a>
   ·
   <a href="https://github.com/YSelim0/kick-logs/pulls">Pull Requests</a>
+  ·
+  <a href="https://github.com/YSelim0/kick-logs/fork">Fork</a>
 </p>
+
+---
+
+## About
+
+Kick Logs is an open-source, self-hosted application for collecting public Kick chat messages from
+channels you follow. It keeps a durable message history, gives you a fast web search experience, and
+adds useful analytics around channels, users, emotes, replies, and activity trends.
+
+It is designed for streamers, moderators, community managers, researchers, and anyone who wants to
+own their Kick chat archive instead of depending on short-lived browser chat history.
+
+> Kick Logs is an unofficial community project. It uses Kick web behavior and public chat events that
+> can change without notice.
+
+## How It Works
 
 <p align="center">
-  <a href="https://github.com/YSelim0/kick-logs/actions/workflows/go-tests.yml">
-    <img src="https://github.com/YSelim0/kick-logs/actions/workflows/go-tests.yml/badge.svg" alt="Go CI" />
-  </a>
-  <a href="https://buymeacoffee.com/yavuzselim">
-    <img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-yavuzselim-FFF600?style=for-the-badge&logo=buymeacoffee&logoColor=000000" alt="Buy Me a Coffee" />
-  </a>
+  <img src="./docs/architecture-diagram.svg" alt="Kick Logs architecture diagram" width="100%" />
 </p>
 
-> Kick Logs is an unofficial community project. It uses Kick web endpoints,
-> Kick Pusher chat events, and inferred emote image URLs. These are not a
-> stable official Kick API contract and can change without notice.
+## What You Get
 
-## Overview
+- Live Kick chat logging for followed channels.
+- Public search across stored messages with sender, channel, text, date, reply, and emote filters.
+- Infinite-scroll message results with reply context, clickable links, and inline emotes.
+- Public user and channel profile pages with activity summaries.
+- Prediction pages that run client-side and do not store prediction data.
+- Admin dashboard for followed channels, users, listener health, storage, and cleanup previews.
+- Durable ingestion: raw events are saved before message normalization.
+- Docker Compose runtime with Go, Next.js, ClickHouse, and SQLite.
 
-Kick Logs collects public chat messages from followed Kick channels, stores the useful payload in
-ClickHouse with SQLite-backed control data, and lets users search historical messages from a Next.js
-web interface.
+## Product Shape
 
-The project is built as a monorepo:
+The app is organized around:
 
-- `apps/api-go`: Go backend, listener, migrator, ClickHouse persistence, SQLite control data
-- `apps/web`: Next.js frontend, public search UI, admin dashboard
-- `listener`: Docker service that subscribes to Kick chat events and stores raw events first
-- `docs`: architecture, implementation notes, task plans, and design decisions
+- **Search:** a public interface for finding old chat messages quickly.
+- **Profiles and analytics:** public pages for understanding active users, channels, emotes, and
+  message volume.
+- **Prediction:** a public channel prediction view that fetches live Kick prediction data in the
+  browser without storing it.
+- **Admin:** a protected dashboard for managing followed channels and watching ingestion health.
 
-## Features
+The default stack stores high-volume chat data in ClickHouse and keeps control-plane data such as
+admins, followed channels, sender profiles, retention settings, and heartbeats in SQLite.
 
-- Public `/` landing page with self-hosted positioning and live analytics summary.
-- Public `/search` page with optional filters:
-  - sender nickname
-  - channel nickname/slug
-  - message text
-  - start datetime
-  - end datetime
-- Infinite-scroll results ordered newest first.
-- Dense message rows with circular sender avatars.
-- Inline Kick emote rendering with text fallback.
-- Reply rendering: replied-to sender/content is shown above reply messages.
-- Public `/users/[slug]` pages with sender identity, analytics, top channels, top emotes, and
-  latest messages.
-- Sender names and avatars in search results link to public user profiles.
-- Public `/channels/[slug]` pages with stored Kick channel metadata, activity analytics, top
-  senders, top emotes, and latest messages.
-- Channel labels in search results and admin channel rows link to public channel profiles.
-- Admin login with HttpOnly JWT cookie sessions.
-- Default local super admin seed.
-- Admin dashboard for followed-channel management.
-- Super-admin-only admin user creation.
-- Admin operations dashboard for listener freshness, storage growth, raw event backlog, and
-  ingest timestamps.
-- Admin data management panel for database/table sizes, retention settings, dry-run cleanup
-  previews, and explicit confirmed deletion.
-- Durable raw event inbox:
-  - websocket reader stores raw chat events first
-  - workers process raw events into normalized messages
-  - stale processing rows can be reclaimed
-  - duplicate message writes are avoided by Kick message id
-- Docker Compose runtime for ClickHouse, Go API, Go listener, and web.
+## Contributing
 
-## Tech Stack
-
-- Backend: Go, stdlib HTTP, SQLite, ClickHouse
-- Frontend: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui primitives, lucide-react
-- Database: ClickHouse for messages/raw events/analytics, SQLite for admin/control-plane state
-- Tooling: Go toolchain for backend, `pnpm` for frontend packages
-- Runtime: Docker Compose
-
-## Quick Start
-
-Clone the repository:
-
-```powershell
-git clone https://github.com/YSelim0/kick-logs.git
-cd kick-logs
-```
-
-Create a local environment file:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-On macOS/Linux:
+Contributions are welcome. Keep pull requests focused, explain the user-facing change, and update
+tests or docs when behavior changes.
 
 ```bash
+git clone https://github.com/YSelim0/kick-logs.git
+cd kick-logs
 cp .env.example .env
-```
-
-Start the full stack:
-
-```powershell
 docker compose up --build -d
 ```
 
-Open:
+Useful checks:
 
-- Landing page: http://localhost:3000
-- Public search: http://localhost:3000/search
-- Public user profile: http://localhost:3000/users/{sender-slug}
-- Public channel profile: http://localhost:3000/channels/{channel-slug}
-- Admin login: http://localhost:3000/login
-- API health: http://localhost:8000/health
-
-Default local admin:
-
-```text
-email: admin@kicklogs.local
-password: admin123
+```bash
+cd apps/api-go && go test ./... && go vet ./...
+cd ../.. && pnpm format:check
 ```
 
-Before using the project outside local development, change these values in
-`.env`:
+For UI work, read `docs/design/design.md`. For backend architecture changes, read
+`docs/architecture.md`.
+
+## Self-Host It
+
+Requirements: Docker and Docker Compose.
+
+```bash
+git clone https://github.com/YSelim0/kick-logs.git
+cd kick-logs
+cp .env.example .env
+```
+
+Before running it outside local development, edit `.env` and change at least:
 
 ```text
 JWT_SECRET_KEY
@@ -137,480 +122,39 @@ DEFAULT_SUPER_ADMIN_PASSWORD
 CLICKHOUSE_PASSWORD
 ```
 
-## Basic Usage
+Start everything:
 
-1. Start the stack with Docker Compose.
-2. Open `http://localhost:3000/login`.
-3. Login with the local admin credentials.
-4. Go to `/admin`.
-5. Check the operations dashboard for listener freshness, storage size, raw event status, and
-   latest ingest timestamps.
-6. Review the data management panel before changing retention or cleanup settings.
-7. Add a Kick channel by slug/nickname.
-8. Open `/channels/{channel-slug}` to inspect stored channel activity.
-9. Keep the `listener` service running.
-10. Search collected messages from `/search`.
-
-Useful listener logs:
-
-```powershell
-docker compose logs -f listener
-```
-
-Useful service status:
-
-```powershell
-docker compose ps
-```
-
-Stop the stack:
-
-```powershell
-docker compose down
-```
-
-Stop the stack and remove persisted ClickHouse/SQLite data:
-
-```powershell
-docker compose down -v
-```
-
-## Services
-
-| Service      | Purpose                       | Local URL               |
-| ------------ | ----------------------------- | ----------------------- |
-| `clickhouse` | message/raw-event data store  | `localhost:8123/9000`   |
-| `api`        | Go HTTP API                   | `http://localhost:8000` |
-| `listener`   | Go Kick chat ingestion worker | background service      |
-| `web`        | Next.js web app               | `http://localhost:3000` |
-
-The Go API and listener apply SQLite and ClickHouse schema migrations on startup. SQLite data is
-stored in the `api_go_data` volume; ClickHouse data is stored in the `clickhouse_data` volume.
-
-## API Surface
-
-Public:
-
-```text
-GET /health
-GET /messages
-GET /messages/export
-GET /analytics/overview
-GET /analytics/message-volume
-GET /analytics/top-senders
-GET /analytics/top-channels
-GET /analytics/top-emotes
-GET /users/{slug}/analytics
-GET /channels/{slug}/analytics
-```
-
-Auth:
-
-```text
-POST /auth/login
-POST /auth/logout
-GET  /auth/me
-```
-
-Admin:
-
-```text
-GET    /admin/channels
-POST   /admin/channels
-DELETE /admin/channels/{id}
-GET    /admin/users
-POST   /admin/users
-GET    /admin/operations/summary
-GET    /admin/data-management/summary
-PUT    /admin/data-management/retention-settings
-POST   /admin/data-management/cleanup/preview
-POST   /admin/data-management/cleanup/confirm
-```
-
-Example public search:
-
-```powershell
-curl "http://localhost:8000/messages?sender=yavuz&q=selam&limit=50"
-```
-
-Example filtered export:
-
-```powershell
-curl "http://localhost:8000/messages/export?format=csv&q=selam&reply_only=true&limit=500"
-```
-
-Search filters combine with `AND`. Empty filters are omitted. The `sender`
-filter matches username/slug exactly, case-insensitively. Channel and content
-filters use case-insensitive contains matching. Empty all filters returns latest
-messages across all followed channels. `reply_only=true` limits results to reply
-messages, and `emote_only=true` limits results to messages with parsed emotes.
-Exports use the same filters and are capped by `MESSAGE_EXPORT_MAX_ROWS`.
-
-Analytics endpoints are public read-only endpoints for landing/profile features.
-They accept optional `start`, `end`, `channel`, and `sender` query params where
-relevant. Message volume also accepts `bucket=hour|day`; top lists accept
-`limit` up to 100. Analytics `sender` scope uses case-insensitive exact matching
-against sender username/slug snapshots; `channel` scope uses case-insensitive
-exact matching against channel slug/display name.
-
-Example analytics calls:
-
-```powershell
-curl "http://localhost:8000/analytics/overview"
-curl "http://localhost:8000/analytics/message-volume?bucket=day&channel=hype"
-curl "http://localhost:8000/analytics/top-senders?channel=hype&limit=10"
-curl "http://localhost:8000/analytics/top-channels?sender=yavuz&limit=10"
-curl "http://localhost:8000/analytics/top-emotes?channel=hype&sender=yavuz"
-curl "http://localhost:8000/users/yavuz/analytics"
-curl "http://localhost:8000/channels/hype/analytics"
-```
-
-## Local Development
-
-Install frontend dependencies:
-
-```powershell
-pnpm install
-```
-
-Run the Next.js app:
-
-```powershell
-pnpm --filter @kick-logs/web dev
-```
-
-Go backend commands are run from `apps/api-go`:
-
-```powershell
-cd apps/api-go
-go test ./...
-go vet ./...
-go run ./cmd/api
-go run ./cmd/listener
-go run ./cmd/migrate -target=sqlite
-```
-
-For local `go run` outside Docker, point ClickHouse at the host port:
-
-```powershell
-$env:CLICKHOUSE_ADDR = "127.0.0.1:9000"
-```
-
-Frontend checks are run from the repository root:
-
-```powershell
-pnpm --filter @kick-logs/web test
-pnpm --filter @kick-logs/web typecheck
-pnpm --filter @kick-logs/web lint
-pnpm --filter @kick-logs/web build
-pnpm format:check
-```
-
-Run `typecheck` and `build` sequentially. Running both at the same time can
-race on Next.js generated `.next/types` files.
-
-Formatting:
-
-```powershell
-pnpm format
-```
-
-Use Prettier for frontend, JSON, YAML, and Markdown files. Go files must be formatted with
-`gofmt`. Prettier is configured to use 100-column line width and the repository's current
-double-quote style.
-
-### Legacy PostgreSQL Data Migration
-
-The current runtime does not include PostgreSQL. If you are upgrading an older Kick Logs deployment,
-restore or expose the old PostgreSQL database separately, set `POSTGRES_SOURCE_DSN`, then run the
-one-time migrator:
-
-```powershell
-docker compose up -d clickhouse
-$env:POSTGRES_SOURCE_DSN = "postgresql://kick_logs:kick_logs@host.docker.internal:5432/kick_logs"
-docker compose --profile tools run --rm migrate-go -target=data -dry-run
-docker compose --profile tools run --rm migrate-go -target=data -execute
-docker compose --profile tools run --rm migrate-go -target=data -validation-only
-```
-
-The migrator reads `POSTGRES_SOURCE_DSN` or `DATABASE_URL`, accepts Python's
-`postgresql+asyncpg://` URL scheme, preserves source IDs, validates existing bcrypt admin hashes,
-copies control-plane rows into SQLite, copies chat/raw-event rows into ClickHouse, and records the
-execute/validation run metadata in SQLite. Use `-batch-size` to tune large local migrations.
-
-Cutover sequence from an existing PostgreSQL deployment:
-
-1. Stop the old listener.
-2. Run `migrate-go -target=data -execute`.
-3. Run `migrate-go -target=data -validation-only`.
-4. Start the default Go stack with `docker compose up --build -d`.
-
-```powershell
-$env:POSTGRES_SOURCE_DSN = "postgresql://kick_logs:kick_logs@host.docker.internal:5432/kick_logs"
-docker compose --profile tools run --rm migrate-go -target=data -execute
-docker compose --profile tools run --rm migrate-go -target=data -validation-only
+```bash
 docker compose up --build -d
 ```
 
-## Continuous Integration
-
-GitHub Actions runs backend and formatting checks on every pull request and every push.
-
-The Go workflow starts ClickHouse, downloads Go dependencies, then runs:
-
-```powershell
-go test ./...
-go vet ./...
-KICK_LOGS_RUN_CLICKHOUSE_TESTS=1 go test ./internal/infra/clickhouse -run TestClickHouseMigrationsAndRepositories -count=1 -v
-go run ./cmd/migrate -target=sqlite
-go run ./cmd/migrate -target=clickhouse
-```
-
-The code style workflow installs frontend dependencies and runs:
-
-```powershell
-pnpm format:check
-```
-
-## Repository Structure
+Open:
 
 ```text
-kick-logs/
-  apps/
-    api-go/
-      cmd/
-      internal/
-    web/
-      public/
-      src/
-  docs/
-    archive/
-    context/
-    design/
-  compose.yaml
-  README.md
+Web:   http://localhost:3000
+Admin: http://localhost:3000/login
+API:   http://localhost:8000/health
 ```
 
-Backend dependency direction:
+Default local admin:
 
 ```text
-http -> usecase -> domain
-infra -> ports/domain
-cmd -> app/config/http/worker
+email: admin@kicklogs.local
+password: admin123
 ```
 
-Go domain code stays independent from HTTP, SQLite, ClickHouse, JWT, websocket, and external Kick
-clients. Historical Python/PostgreSQL planning and contract inventory documents are archived under
-`docs/archive/`.
+Stop the app:
 
-## Data Captured
-
-Kick Logs stores normalized fields and the raw payload so the project can adapt
-as Kick message shapes evolve.
-
-Stored data includes:
-
-- channel metadata
-- sender metadata and profile image URL when available
-- message content
-- message type
-- sender badges
-- parsed emotes
-- reply metadata
-- thread parent id
-- original raw Kick payload
-
-Messages are persisted indefinitely unless the operator removes data manually or
-runs a confirmed retention cleanup from the admin data management panel.
-
-## Data Management And Backups
-
-The admin data management panel lives under `/admin`. It is admin-only and shows
-database size, table sizes, row counts, and the active retention settings for
-messages and raw Kick events.
-
-Retention settings support:
-
-- keep forever
-- 30 days
-- 90 days
-
-Retention settings do not delete data by themselves. They define the cutoff used
-by the old-message and old-raw-event cleanup actions. A destructive cleanup must
-first run a dry-run preview, then the admin must type the exact confirmation text
-returned by the backend.
-
-Cleanup targets:
-
-- old messages according to message retention
-- old raw events according to raw-event retention
-- all stored messages/raw events for a specific channel slug
-- all stored messages/raw events for a specific sender
-
-Cleanup runs ClickHouse mutations with synchronous completion requested by the API. Logical rows are
-removed before the API returns, but physical disk reclamation can still lag behind ClickHouse merge
-cycles.
-
-Back up ClickHouse and SQLite before running large cleanup operations.
-
-Create a local backup directory:
-
-```powershell
-New-Item -ItemType Directory -Force backups
+```bash
+docker compose down
 ```
 
-Back up SQLite control-plane data:
+Remove all stored local data:
 
-```powershell
-docker compose stop api listener
-docker run --rm -v kick-logs_api_go_data:/data -v ${PWD}\backups:/backup alpine sh -c "cp /data/kick-logs-go.sqlite3 /backup/kick-logs-go.sqlite3"
-docker compose up -d api listener
+```bash
+docker compose down -v
 ```
-
-Back up ClickHouse volume data:
-
-```powershell
-docker compose stop api listener clickhouse
-docker run --rm -v kick-logs_clickhouse_data:/var/lib/clickhouse -v ${PWD}\backups:/backup alpine tar czf /backup/clickhouse_data.tgz -C /var/lib/clickhouse .
-docker compose up -d clickhouse api listener
-```
-
-For production deployments, prefer your infrastructure-level volume snapshot or a configured
-ClickHouse `BACKUP DATABASE` target.
-
-`docker compose down -v` removes the ClickHouse and SQLite volumes. Use it only when you
-intentionally want to delete all stored data.
-
-For pre-cutover PostgreSQL data, keep a PostgreSQL dump until you are confident in the migrated
-ClickHouse/SQLite data.
-
-## Configuration
-
-Copy `.env.example` to `.env` and adjust values as needed.
-
-Important variables:
-
-```text
-BACKEND_CORS_ORIGINS=http://localhost:3000
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-SQLITE_PATH=/data/kick-logs-go.sqlite3
-CLICKHOUSE_ADDR=clickhouse:9000
-CLICKHOUSE_DATABASE=kick_logs
-CLICKHOUSE_USERNAME=kick_logs
-CLICKHOUSE_PASSWORD=kick_logs
-POSTGRES_SOURCE_DSN=
-JWT_SECRET_KEY=change-me-for-local-development-secret-key
-KICK_PUSHER_URL=...
-LISTENER_WORKER_COUNT=4
-LISTENER_RAW_EVENT_BATCH_SIZE=100
-LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS=60
-LISTENER_RAW_EVENT_WRITE_BATCH_SIZE=500
-LISTENER_RAW_EVENT_WRITE_FLUSH_INTERVAL_MS=500
-LISTENER_RAW_EVENT_WRITE_QUEUE_SIZE=50000
-LISTENER_RAW_EVENT_WRITE_MAX_RETRIES=10
-LISTENER_CLICKHOUSE_BACKOFF_INITIAL_MS=1000
-LISTENER_CLICKHOUSE_BACKOFF_MAX_MS=30000
-LISTENER_CLICKHOUSE_BACKOFF_MULTIPLIER=2
-LISTENER_CLICKHOUSE_BREAKER_FAILURE_THRESHOLD=5
-```
-
-The `LISTENER_RAW_EVENT_WRITE_*` knobs control the buffered ClickHouse writer that batches
-incoming Pusher events before insert. The `LISTENER_CLICKHOUSE_*` knobs control the shared
-exponential backoff and circuit breaker that protect ClickHouse during transient outages. The
-admin operations dashboard surfaces the resulting backlog, writer buffer, breaker state, and
-flush metrics under `ingestion` on `GET /admin/operations/summary`.
-
-See [`docs/operations/load_test.md`](docs/operations/load_test.md) for the synthetic load test
-that exercises the ingestion pipeline end to end.
-
-Never commit `.env`, secrets, local database dumps, virtual environments, or
-generated dependency/build folders.
-
-## Support
-
-Kick Logs is an open source self-hosted project. If it helps your workflow or
-you want to support continued development, you can
-[buy me a coffee](https://buymeacoffee.com/yavuzselim).
-
-## Contributing
-
-Contributions are welcome. The goal is for this repository to be easy to fork,
-run locally, and improve.
-
-Recommended flow:
-
-1. Fork https://github.com/YSelim0/kick-logs
-2. Create a feature branch from `main`.
-3. Open or pick an issue before larger changes.
-4. Keep changes scoped and reviewable.
-5. Add or update tests for behavior changes.
-6. Update docs when behavior, setup, or architecture changes.
-7. Run the relevant checks.
-8. Open a pull request with a clear summary.
-
-Commit format:
-
-```text
-feat(scope): title
-fix(scope): title
-docs(scope): title
-test(scope): title
-refactor(scope): title
-```
-
-Examples:
-
-```text
-feat(search): render reply context
-fix(listener): reconnect after channel changes
-docs(readme): improve setup guide
-```
-
-For UI changes, read `docs/design/design.md` first. For backend architecture
-changes, read `docs/architecture.md` first.
-
-## Suggested First Issues
-
-Good contribution areas:
-
-- better Kick payload fixtures
-- more listener resilience tests
-- richer sender profile enrichment
-- search performance tuning
-- export tools for logs
-- UI polish for long messages and mobile rows
-- deployment examples for VPS environments
-- CI workflow setup
-
-## Security And Operations
-
-- Change default credentials before any non-local use.
-- Use a strong `JWT_SECRET_KEY`.
-- Treat Kick integration failures as expected operational events because the
-  ingestion path relies on unofficial web behavior.
-- Use `/admin` to check listener freshness, database/table size, failed raw events, pending raw
-  events, and the latest ingest timestamps before digging into Docker logs.
-- Keep ClickHouse and SQLite backups if the logs matter.
-- Review data retention expectations before running against large channels.
-
-## Project Status
-
-Kick Logs is a self-hosted MVP with its first post-MVP feature set completed:
-admin operations, search improvements/export, analytics-backed landing content, user/channel
-profiles, guarded data management, and a Go + ClickHouse default runtime. It is usable locally
-through Docker Compose, but the Kick integration should be considered best-effort because it depends
-on undocumented Kick web behavior.
-
-Current quality gates used during development:
-
-- Go backend tests with `go test ./...`
-- Go backend static checks with `go vet ./...`
-- frontend tests with Vitest and React Testing Library
-- frontend TypeScript typecheck
-- frontend lint
-- frontend production build
-- Docker Compose smoke checks
 
 ## License
 
-Kick Logs is released under the MIT License. See [LICENSE](./LICENSE).
+Kick Logs is released under the [MIT License](./LICENSE).
