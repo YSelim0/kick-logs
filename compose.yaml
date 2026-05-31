@@ -8,9 +8,12 @@ services:
       CLICKHOUSE_USER: ${CLICKHOUSE_USERNAME:-kick_logs}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-kick_logs}
       CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    # Bind published ports to loopback by default so the database is not exposed
+    # on the host's public interface. Inter-container access uses the compose
+    # network (clickhouse:9000), which does not need a host port mapping.
     ports:
-      - "${CLICKHOUSE_HTTP_PORT:-8123}:8123"
-      - "${CLICKHOUSE_NATIVE_PORT:-9000}:9000"
+      - "${CH_BIND_HOST:-127.0.0.1}:${CLICKHOUSE_HTTP_PORT:-8123}:8123"
+      - "${CH_BIND_HOST:-127.0.0.1}:${CLICKHOUSE_NATIVE_PORT:-9000}:9000"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
       # Mount only this file, not the whole config.d directory: a directory bind
@@ -61,11 +64,23 @@ services:
       CLICKHOUSE_DEBUG: ${CLICKHOUSE_DEBUG:-false}
       DEFAULT_SUPER_ADMIN_EMAIL: ${DEFAULT_SUPER_ADMIN_EMAIL:-admin@kicklogs.local}
       DEFAULT_SUPER_ADMIN_PASSWORD: ${DEFAULT_SUPER_ADMIN_PASSWORD:-admin123}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      RATE_LIMIT_STORE_MAX_KEYS: ${RATE_LIMIT_STORE_MAX_KEYS:-65536}
+      # Trust a proxy header for the real client IP. Keep true only when the API
+      # is reachable solely through the trusted reverse proxy (see #20): bind the
+      # port to loopback below and/or firewall the origin, otherwise the header
+      # is spoofable and IP rate limits collapse.
+      RATE_LIMIT_TRUST_PROXY: ${RATE_LIMIT_TRUST_PROXY:-true}
+      # Header carrying the real client IP. CF-Connecting-IP behind Cloudflare;
+      # X-Real-IP / X-Forwarded-For behind a plain nginx reverse proxy.
+      RATE_LIMIT_CLIENT_IP_HEADER: ${RATE_LIMIT_CLIENT_IP_HEADER:-CF-Connecting-IP}
     depends_on:
       clickhouse:
         condition: service_healthy
+    # Loopback by default: the API is meant to sit behind a reverse proxy on the
+    # host. If you run without a local proxy, set API_BIND_HOST=0.0.0.0.
     ports:
-      - "${API_PORT:-8000}:8000"
+      - "${API_BIND_HOST:-127.0.0.1}:${API_PORT:-8000}:8000"
     volumes:
       - api_go_data:/data
 
@@ -125,8 +140,10 @@ services:
       NEXT_TELEMETRY_DISABLED: 1
     depends_on:
       - api
+    # Loopback by default (sits behind a host reverse proxy). Set
+    # WEB_BIND_HOST=0.0.0.0 to expose it directly without a local proxy.
     ports:
-      - "${WEB_PORT:-3000}:3000"
+      - "${WEB_BIND_HOST:-127.0.0.1}:${WEB_PORT:-3000}:3000"
 
   migrate-go:
     profiles:
