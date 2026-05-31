@@ -61,7 +61,7 @@ raw `RemoteAddr`.
 Only needed when a CDN proxies traffic and you trust its client-IP header. Restrict `80`/`443` to the
 CDN's published ranges so nobody can hit the origin directly with a forged header.
 
-> **WARNING — do not lock yourself out.** Keep SSH (`22`) and any other admin access open *before*
+> **WARNING — do not lock yourself out.** Keep SSH (`22`) and any other admin access open _before_
 > enabling a default-deny policy. Apply and verify over a session you can afford to lose, or use a
 > console fallback.
 
@@ -82,12 +82,13 @@ do. The same ranges should feed nginx `set_real_ip_from` in step 2.
 
 ### Gotchas (verify before and after)
 
-- **A broad `allow` rule silently defeats the CDN-only rules.** ufw permits a packet if *any* rule
+- **A broad `allow` rule silently defeats the CDN-only rules.** ufw permits a packet if _any_ rule
   matches, so a pre-existing `80/tcp ALLOW IN Anywhere` / `443/tcp ALLOW IN Anywhere` leaves the
-  origin open to the whole internet even with the CDN-range rules present. Inspect `sudo ufw status
-  verbose` and **delete the broad rules**, keeping only the CDN-range ones:
+  origin open to the whole internet even with the CDN-range rules present. Inspect the verbose status
+  and **delete the broad rules**, keeping only the CDN-range ones:
 
   ```bash
+  sudo ufw status verbose
   sudo ufw delete allow 80/tcp     # removes the Anywhere rule (v4+v6)
   sudo ufw delete allow 443/tcp
   ```
