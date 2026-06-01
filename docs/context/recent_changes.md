@@ -30,6 +30,37 @@ This file is the short handoff summary of the latest project changes. Keep it co
     `KICK_LOGS_RUN_CLICKHOUSE_TESTS=1`).
   - Verification: `go build ./...`, `go vet ./...`, `go test ./...` all green.
 
+## Previously Latest (Phase 3)
+
+- Kick webhook subscription sync (issue #22, Phase 3, branch `feat/issue-22-kick-subscription-webhooks`):
+  - `config.go`: 9 new fields (`KICK_CLIENT_ID`, `KICK_CLIENT_SECRET`, `KICK_API_BASE_URL`,
+    `KICK_OAUTH_TOKEN_URL`, `KICK_WEBHOOK_PUBLIC_KEY`, `KICK_WEBHOOK_SYNC_ENABLED`,
+    `KICK_WEBHOOK_EVENTS`, `KICK_WEBHOOK_PROCESS_BATCH_SIZE`, `KICK_WEBHOOK_PROCESS_MAX_ATTEMPTS`).
+    If credentials missing, API starts and logs a warning; sync disabled.
+    If public key missing, API starts and logs a warning.
+  - `.env.example` and `compose.yaml` wired with all new vars.
+  - `infra/kick/channel_resolver.go`: `channelPayload` now includes `user_id` and `user.id` fields;
+    `ResolveChannel` populates `FollowedChannel.BroadcasterUserID`.
+  - `infra/kick/event_subscription_client.go`: new `EventSubscriptionClient` implements
+    `ports.KickEventSubscriptionClient`. OAuth2 client credentials with 60s expiry buffer token cache.
+    `ResolveBroadcasterUserID` uses `kick.com/api/v2/channels/{slug}` (same as web resolver).
+    `ListEventSubscriptions`, `CreateEventSubscription`, `DeleteEventSubscription` use official
+    `KICK_API_BASE_URL/public/v1/events/subscriptions` with Bearer token.
+    404 on delete is silently ignored (already gone).
+  - `infra/sqlite/kick_event_subscriptions.go`: upsert SQL updated — `kick_subscription_id` is
+    preserved when the new value is empty (`CASE WHEN excluded != '' THEN excluded ELSE existing`).
+  - `usecase/kicksync/service.go`: new `Service` — `SyncAll` (startup, no error return),
+    `EnsureChannelSubscriptions` (on channel add), `RemoveChannelSubscriptions` (on channel disable).
+    Per-channel errors logged and stored in registry; sync never takes down the API.
+  - `usecase/kicksync/service_test.go`: 5 tests with fake client covering resolve, create,
+    skip-existing-active, delete, and error-storage scenarios.
+  - `http/routes/dependencies.go`: `KickSync *kicksync.Service` added.
+  - `http/routes/admin_channels.go`: channel add triggers `EnsureChannelSubscriptions` in goroutine;
+    channel disable triggers `RemoveChannelSubscriptions` in goroutine.
+  - `cmd/api/main.go`: wires `EventSubscriptionClient` and `kicksync.Service` when credentials
+    are present; runs `SyncAll` in background goroutine on startup.
+  - Verification: `go build ./...`, `go vet ./...`, `go test ./...` all green.
+
 ## Previously Latest
 
 - README refresh:

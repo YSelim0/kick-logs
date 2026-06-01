@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -76,6 +77,16 @@ func addChannel(response http.ResponseWriter, request *http.Request, deps Depend
 		return
 	}
 
+	if deps.KickSync != nil {
+		go func() {
+			ctx := context.Background()
+			if err := deps.KickSync.EnsureChannelSubscriptions(ctx, channel.ID); err != nil {
+				// Error is logged inside the service; caller need not act on it.
+				_ = err
+			}
+		}()
+	}
+
 	writeJSON(response, http.StatusCreated, channelResponse(channel, 0))
 }
 
@@ -98,6 +109,15 @@ func disableChannel(response http.ResponseWriter, request *http.Request, deps De
 		}
 		writeError(response, http.StatusInternalServerError, "Internal server error.")
 		return
+	}
+
+	if deps.KickSync != nil {
+		go func() {
+			ctx := context.Background()
+			if err := deps.KickSync.RemoveChannelSubscriptions(ctx, channel.ID); err != nil {
+				_ = err
+			}
+		}()
 	}
 
 	writeJSON(response, http.StatusOK, channelResponse(channel, 0))

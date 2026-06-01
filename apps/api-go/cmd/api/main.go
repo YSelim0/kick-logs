@@ -19,6 +19,7 @@ import (
 	datamanagementinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/data_management"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/kick"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/migrations"
+	kicksyncusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/kicksync"
 	operationsinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/operations"
 	ratelimitinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/ratelimit"
 	sqliteinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/sqlite"
@@ -93,6 +94,26 @@ func main() {
 		logger.Info("rate limiter enabled", "max_keys", cfg.RateLimitStoreMaxKeys, "trust_proxy", cfg.RateLimitTrustProxy)
 	}
 	channelService := channelsusecase.NewService(channelRepo, kick.NewWebChannelResolver())
+
+	webhookEventRepo := sqliteinfra.NewKickWebhookEventRepository(sqliteDB)
+	eventSubRepo := sqliteinfra.NewKickEventSubscriptionRepository(sqliteDB)
+
+	var kickSyncService *kicksyncusecase.Service
+	if cfg.KickClientID != "" && cfg.KickClientSecret != "" {
+		kickAPIClient := kick.NewEventSubscriptionClient(cfg.KickAPIBaseURL, cfg.KickOAuthTokenURL, cfg.KickClientID, cfg.KickClientSecret)
+		kickSyncService = kicksyncusecase.NewService(logger, channelRepo, eventSubRepo, kickAPIClient, cfg.KickWebhookEvents)
+		if cfg.KickWebhookSyncEnabled {
+			go func() {
+				kickSyncService.SyncAll(context.Background())
+			}()
+		}
+	} else {
+		logger.Warn("Kick client credentials not configured; webhook subscription sync is disabled")
+	}
+	if cfg.KickWebhookPublicKey == "" {
+		logger.Warn("KICK_WEBHOOK_PUBLIC_KEY not configured; POST /webhooks/kick will reject all requests")
+	}
+	_ = webhookEventRepo
 	var messageService *messagesusecase.Service
 	var analyticsService *analyticsusecase.Service
 	var profileService *profilesusecase.Service
@@ -120,6 +141,7 @@ func main() {
 		Messages:     messageService,
 		Profiles:     profileService,
 		Data:         dataManagementService,
+		KickSync:     kickSyncService,
 		Operations:   operationsRepo,
 		RateLimiter:  rateLimiter,
 		TokenService: tokenService,
