@@ -2,7 +2,19 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (webhook sync contract fix)
+## Latest (admin webhook status UI)
+
+- Operations Webhooks panel now summarizes each channel's subscription state in one row instead of
+  rendering three event rows inline. The summary is clickable:
+  - `aktif` when all configured Kick subscription events are active.
+  - `Aktif değil` when one or more event subscriptions are missing/inactive without a sync error.
+  - `N Hata` when one or more event subscriptions has a sync error.
+- Clicking the summary opens a design-system modal with channel metadata and per-event
+  `aktif` / `aktif değil` / `hata` status rows.
+- Verification: `pnpm --filter @kick-logs/web test -- webhook-health-panel.test.tsx` and
+  `pnpm --filter @kick-logs/web typecheck` green.
+
+## Previously Latest (webhook sync contract fix)
 
 - Follow-up fix: `GET /channels/{slug}/subscription-summary` was returning zero even when
   ClickHouse had active subscription periods. Root cause was scanning ClickHouse

@@ -20,7 +20,11 @@ vi.mock("@/features/operations/api", () => ({
 
 function healthFixture(overrides: Partial<WebhookHealth> = {}): WebhookHealth {
   return {
-    configured_event_types: ["channel.subscription.new", "channel.subscription.renewal"],
+    configured_event_types: [
+      "channel.subscription.new",
+      "channel.subscription.renewal",
+      "channel.subscription.gifts"
+    ],
     missing_client_credentials: false,
     missing_webhook_public_key: false,
     webhook_sync_enabled: true,
@@ -35,6 +39,20 @@ function healthFixture(overrides: Partial<WebhookHealth> = {}): WebhookHealth {
           {
             event_type: "channel.subscription.new",
             kick_subscription_id: "sub-123",
+            status: "active",
+            latest_sync_error: null,
+            synced_at: "2026-06-01T10:00:00Z"
+          },
+          {
+            event_type: "channel.subscription.renewal",
+            kick_subscription_id: "sub-456",
+            status: "active",
+            latest_sync_error: null,
+            synced_at: "2026-06-01T10:00:00Z"
+          },
+          {
+            event_type: "channel.subscription.gifts",
+            kick_subscription_id: "sub-789",
             status: "active",
             latest_sync_error: null,
             synced_at: "2026-06-01T10:00:00Z"
@@ -61,12 +79,84 @@ describe("WebhookHealthPanel", () => {
     expect(screen.getByText("100")).toBeInTheDocument();
   });
 
-  it("shows channel sync status", async () => {
+  it("shows channel sync summary and details", async () => {
+    const user = userEvent.setup();
     render(<WebhookHealthPanel />);
     await waitFor(() => expect(opsMocks.getWebhookHealth).toHaveBeenCalled());
     expect(await screen.findByText("hype")).toBeInTheDocument();
     expect(screen.getByText("9000")).toBeInTheDocument();
-    expect(screen.getByText("aktif")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /aktif/i }));
+    expect(screen.getByRole("heading", { name: /webhook detayı/i })).toBeInTheDocument();
+    expect(screen.getByText("new")).toBeInTheDocument();
+    expect(screen.getByText("renewal")).toBeInTheDocument();
+    expect(screen.getByText("gifts")).toBeInTheDocument();
+  });
+
+  it("separates inactive subscriptions from errors", async () => {
+    const user = userEvent.setup();
+    opsMocks.getWebhookHealth.mockResolvedValue(
+      healthFixture({
+        channels: [
+          {
+            followed_channel_id: 1,
+            slug: "hype",
+            broadcaster_user_id: 9000,
+            subscriptions: [
+              {
+                event_type: "channel.subscription.new",
+                kick_subscription_id: "sub-123",
+                status: "active",
+                latest_sync_error: null,
+                synced_at: "2026-06-01T10:00:00Z"
+              }
+            ]
+          }
+        ]
+      })
+    );
+    render(<WebhookHealthPanel />);
+    const inactiveButton = await screen.findByRole("button", { name: /aktif değil/i });
+    await user.click(inactiveButton);
+    expect(screen.getAllByText("aktif değil").length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("summarizes sync errors by count", async () => {
+    opsMocks.getWebhookHealth.mockResolvedValue(
+      healthFixture({
+        channels: [
+          {
+            followed_channel_id: 1,
+            slug: "hype",
+            broadcaster_user_id: 9000,
+            subscriptions: [
+              {
+                event_type: "channel.subscription.new",
+                kick_subscription_id: "",
+                status: "deleted",
+                latest_sync_error: "create event subscription returned status 429",
+                synced_at: null
+              },
+              {
+                event_type: "channel.subscription.renewal",
+                kick_subscription_id: "sub-456",
+                status: "active",
+                latest_sync_error: null,
+                synced_at: "2026-06-01T10:00:00Z"
+              },
+              {
+                event_type: "channel.subscription.gifts",
+                kick_subscription_id: "sub-789",
+                status: "active",
+                latest_sync_error: null,
+                synced_at: "2026-06-01T10:00:00Z"
+              }
+            ]
+          }
+        ]
+      })
+    );
+    render(<WebhookHealthPanel />);
+    expect(await screen.findByRole("button", { name: /1 hata/i })).toBeInTheDocument();
   });
 
   it("shows config warnings when credentials missing", async () => {

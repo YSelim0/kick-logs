@@ -2,6 +2,16 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-06-01 (admin webhook status UI)
+
+- Updated the Operations Webhooks panel so channel subscription health is summarized per channel
+  instead of rendering one table row per Kick event subscription.
+- Added three distinct channel summary states: `aktif`, `Aktif değil`, and `N Hata`. Missing or
+  inactive event subscriptions without sync errors are no longer labeled as errors.
+- Added a clickable details modal that shows channel metadata and each configured event's
+  `aktif` / `aktif değil` / `hata` state, including sync error text when present.
+- Updated frontend tests for active, inactive, and error webhook subscription states.
+
 ## 2026-06-01 (issue #22 — webhook sync contract fix)
 
 - Fixed channel subscription summary counts. ClickHouse `countDistinctIf(...)` returns `UInt64`;

@@ -1,11 +1,26 @@
 "use client";
 
-import { Loader2, RefreshCcw, TriangleAlert, Webhook } from "lucide-react";
+import {
+  CheckCircle2,
+  CircleAlert,
+  Loader2,
+  RefreshCcw,
+  TriangleAlert,
+  Webhook
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog";
 import { getWebhookHealth, triggerWebhookSync } from "@/features/operations/api";
-import type { ChannelSyncStatus, WebhookHealth } from "@/types/api";
+import type { ChannelSyncStatus, EventSubStatus, WebhookHealth } from "@/types/api";
 
 export function WebhookHealthPanel() {
   const [health, setHealth] = useState<WebhookHealth | null>(null);
@@ -101,7 +116,7 @@ export function WebhookHealthPanel() {
         <div className="flex flex-col gap-4">
           <ConfigWarnings health={health} />
           <InboxCounts health={health} />
-          <ChannelSyncTable channels={health.channels} />
+          <ChannelSyncTable channels={health.channels} eventTypes={health.configured_event_types} />
         </div>
       ) : null}
     </section>
@@ -186,7 +201,15 @@ function InboxCounts({ health }: { health: WebhookHealth }) {
   );
 }
 
-function ChannelSyncTable({ channels }: { channels: ChannelSyncStatus[] }) {
+function ChannelSyncTable({
+  channels,
+  eventTypes
+}: {
+  channels: ChannelSyncStatus[];
+  eventTypes: string[];
+}) {
+  const [selectedChannel, setSelectedChannel] = useState<ChannelSyncStatus | null>(null);
+
   if (channels.length === 0) {
     return (
       <div className="rounded-md border border-border bg-elevated px-4 py-4 text-[13px] text-muted-foreground">
@@ -201,7 +224,7 @@ function ChannelSyncTable({ channels }: { channels: ChannelSyncStatus[] }) {
         <span className="text-[14px] font-semibold text-foreground">Kanal Abonelikleri</span>
       </div>
       <div className="overflow-x-auto rounded-md border border-border">
-        <table className="w-full min-w-[600px] text-[13px]">
+        <table className="w-full min-w-[520px] text-[13px]">
           <thead>
             <tr className="border-b border-border bg-elevated">
               <th className="px-3 py-2 text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -211,76 +234,190 @@ function ChannelSyncTable({ channels }: { channels: ChannelSyncStatus[] }) {
                 Broadcaster ID
               </th>
               <th className="px-3 py-2 text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                Event Tip
-              </th>
-              <th className="px-3 py-2 text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                Durum
+                Webhook Durumu
               </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {channels.flatMap((ch) =>
-              ch.subscriptions.length > 0
-                ? ch.subscriptions.map((sub, i) => (
-                    <tr
-                      className="hover:bg-elevated/40"
-                      key={`${ch.followed_channel_id}-${sub.event_type}`}
-                    >
-                      {i === 0 ? (
-                        <td
-                          className="px-3 py-2 font-medium text-foreground"
-                          rowSpan={ch.subscriptions.length}
-                        >
-                          {ch.slug}
-                        </td>
-                      ) : null}
-                      {i === 0 ? (
-                        <td
-                          className="px-3 py-2 font-mono text-[11px] text-muted-foreground"
-                          rowSpan={ch.subscriptions.length}
-                        >
-                          {ch.broadcaster_user_id > 0 ? ch.broadcaster_user_id : "—"}
-                        </td>
-                      ) : null}
-                      <td className="px-3 py-2 font-mono text-[11px] text-muted-foreground">
-                        {sub.event_type.replace("channel.subscription.", "")}
-                      </td>
-                      <td className="px-3 py-2">
-                        <SubStatusPill status={sub.status} error={sub.latest_sync_error} />
-                      </td>
-                    </tr>
-                  ))
-                : [
-                    <tr className="hover:bg-elevated/40" key={ch.followed_channel_id}>
-                      <td className="px-3 py-2 font-medium text-foreground">{ch.slug}</td>
-                      <td className="px-3 py-2 font-mono text-[11px] text-muted-foreground">
-                        {ch.broadcaster_user_id > 0 ? ch.broadcaster_user_id : "—"}
-                      </td>
-                      <td
-                        className="px-3 py-2 font-mono text-[11px] text-muted-foreground"
-                        colSpan={2}
-                      >
-                        <span className="text-muted-foreground">abonelik yok</span>
-                      </td>
-                    </tr>
-                  ]
-            )}
+            {channels.map((ch) => (
+              <tr className="hover:bg-elevated/40" key={ch.followed_channel_id}>
+                <td className="px-3 py-2 font-medium text-foreground">{ch.slug}</td>
+                <td className="px-3 py-2 font-mono text-[11px] text-muted-foreground">
+                  {ch.broadcaster_user_id > 0 ? ch.broadcaster_user_id : "—"}
+                </td>
+                <td className="px-3 py-2">
+                  <ChannelSyncSummaryButton
+                    channel={ch}
+                    eventTypes={eventTypes}
+                    onClick={() => setSelectedChannel(ch)}
+                  />
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
+      <ChannelSyncDetailsDialog
+        channel={selectedChannel}
+        eventTypes={eventTypes}
+        onClose={() => setSelectedChannel(null)}
+      />
     </div>
   );
 }
 
-function SubStatusPill({ status, error }: { status: string; error?: string | null }) {
-  const color =
-    status === "active"
-      ? "bg-accent/20 text-accent"
-      : status === "error"
-        ? "bg-danger/20 text-danger"
-        : "bg-elevated text-muted-foreground";
+function ChannelSyncSummaryButton({
+  channel,
+  eventTypes,
+  onClick
+}: {
+  channel: ChannelSyncStatus;
+  eventTypes: string[];
+  onClick: () => void;
+}) {
+  const state = getChannelSyncState(channel, eventTypes);
+  const isHealthy = state.kind === "active";
+  const isInactive = state.kind === "inactive";
 
-  const label = status === "active" ? "aktif" : status === "error" ? "hata" : status;
+  return (
+    <button
+      className={`inline-flex min-w-[78px] items-center justify-center gap-1.5 rounded-md border px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider transition hover:border-border-strong ${
+        isHealthy
+          ? "border-accent/40 bg-accent/10 text-accent"
+          : isInactive
+            ? "border-warning/40 bg-warning/10 text-warning"
+            : "border-danger/50 bg-danger/10 text-danger"
+      }`}
+      onClick={onClick}
+      type="button"
+    >
+      {isHealthy ? (
+        <CheckCircle2 className="h-3 w-3" />
+      ) : isInactive ? (
+        <TriangleAlert className="h-3 w-3" />
+      ) : (
+        <CircleAlert className="h-3 w-3" />
+      )}
+      {state.label}
+    </button>
+  );
+}
+
+function ChannelSyncDetailsDialog({
+  channel,
+  eventTypes,
+  onClose
+}: {
+  channel: ChannelSyncStatus | null;
+  eventTypes: string[];
+  onClose: () => void;
+}) {
+  if (!channel) return null;
+
+  const rows = buildEventRows(channel, eventTypes);
+  const state = getChannelSyncState(channel, eventTypes);
+
+  return (
+    <Dialog open={Boolean(channel)} onOpenChange={(open) => (!open ? onClose() : undefined)}>
+      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto border-border bg-panel p-0 text-foreground shadow-none">
+        <DialogClose onClose={onClose} />
+        <div className="border-b border-border px-5 py-4">
+          <DialogHeader>
+            <DialogTitle className="text-[18px]">Webhook Detayı</DialogTitle>
+            <DialogDescription className="text-[12px] text-muted-foreground">
+              Kanal bilgileri ve beklenen Kick abonelik event durumları
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-2 sm:grid-cols-3">
+            <DetailCell label="KANAL" value={channel.slug} />
+            <DetailCell
+              label="BROADCASTER ID"
+              value={channel.broadcaster_user_id > 0 ? String(channel.broadcaster_user_id) : "—"}
+            />
+            <DetailCell
+              label="GENEL DURUM"
+              value={state.kind === "active" ? "aktif" : state.label.toLocaleLowerCase("tr-TR")}
+            />
+          </div>
+        </div>
+
+        <div className="px-5 py-4">
+          <div className="overflow-hidden rounded-md border border-border">
+            {rows.map((row) => (
+              <div
+                className="border-b border-border bg-panel px-3 py-3 last:border-b-0"
+                key={row.eventType}
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-[11px] text-muted-foreground">
+                      {formatEventType(row.eventType)}
+                    </span>
+                    <SubStatusPill
+                      error={row.subscription?.latest_sync_error}
+                      missing={!row.subscription}
+                      status={row.subscription?.status ?? "missing"}
+                    />
+                  </div>
+                  <div className="mt-2 grid gap-1 font-mono text-[10px] text-muted-foreground sm:grid-cols-2">
+                    <span title={row.subscription?.kick_subscription_id || undefined}>
+                      ID: {row.subscription?.kick_subscription_id || "—"}
+                    </span>
+                    <span>Sync: {formatDateTime(row.subscription?.synced_at)}</span>
+                  </div>
+                  {row.subscription?.latest_sync_error ? (
+                    <p className="mt-2 rounded-md border border-danger/40 bg-danger/10 px-2 py-1 text-[12px] text-danger">
+                      {row.subscription.latest_sync_error}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DetailCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-border bg-elevated px-3 py-2">
+      <span className="block font-mono text-[10px] tracking-[0.5px] text-muted-foreground">
+        {label}
+      </span>
+      <span className="mt-1 block truncate text-[13px] font-medium text-foreground" title={value}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function SubStatusPill({
+  status,
+  error,
+  missing = false
+}: {
+  status: string;
+  error?: string | null;
+  missing?: boolean;
+}) {
+  const hasError = Boolean(error) || status === "error";
+  const isActive = status === "active" && !hasError;
+  const color = isActive
+    ? "bg-accent/20 text-accent"
+    : hasError
+      ? "bg-danger/20 text-danger"
+      : "bg-warning/10 text-warning";
+
+  const label = isActive
+    ? "aktif"
+    : hasError
+      ? "hata"
+      : missing || status === "deleted" || status === "missing"
+        ? "aktif değil"
+        : status;
 
   return (
     <span
@@ -290,4 +427,58 @@ function SubStatusPill({ status, error }: { status: string; error?: string | nul
       {label}
     </span>
   );
+}
+
+function buildEventRows(channel: ChannelSyncStatus, eventTypes: string[]) {
+  const expectedEventTypes =
+    eventTypes.length > 0
+      ? eventTypes
+      : channel.subscriptions.map((subscription) => subscription.event_type);
+
+  return expectedEventTypes.map((eventType) => ({
+    eventType,
+    subscription: channel.subscriptions.find(
+      (subscription) => subscription.event_type === eventType
+    )
+  }));
+}
+
+function getChannelSyncState(channel: ChannelSyncStatus, eventTypes: string[]) {
+  const rows = buildEventRows(channel, eventTypes);
+  const errorCount = rows.filter((row) => isSubscriptionError(row.subscription)).length;
+  const inactiveCount = rows.filter(
+    (row) => !isSubscriptionError(row.subscription) && isSubscriptionInactive(row.subscription)
+  ).length;
+
+  if (errorCount > 0) {
+    return { kind: "error" as const, label: `${errorCount} Hata` };
+  }
+
+  if (inactiveCount > 0) {
+    return { kind: "inactive" as const, label: "Aktif değil" };
+  }
+
+  return { kind: "active" as const, label: "aktif" };
+}
+
+function isSubscriptionError(subscription?: EventSubStatus) {
+  return Boolean(subscription?.latest_sync_error) || subscription?.status === "error";
+}
+
+function isSubscriptionInactive(subscription?: EventSubStatus) {
+  return !subscription || subscription.status !== "active";
+}
+
+function formatEventType(eventType: string) {
+  return eventType.replace("channel.subscription.", "");
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("tr-TR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
 }
