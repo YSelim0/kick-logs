@@ -130,6 +130,8 @@ func main() {
 		} else {
 			webhookVerifier = v
 		}
+	} else if cfg.KickWebhookSkipVerification {
+		logger.Warn("KICK_WEBHOOK_SKIP_VERIFICATION=true; webhook signature verification bypassed (test mode only)")
 	} else {
 		logger.Warn("KICK_WEBHOOK_PUBLIC_KEY not configured; POST /webhooks/kick will reject all requests")
 	}

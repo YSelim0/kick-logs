@@ -65,6 +65,7 @@ type Config struct {
 	KickWebhookEvents                    []string
 	KickWebhookProcessBatchSize          int
 	KickWebhookProcessMaxAttempts        int
+	KickWebhookSkipVerification          bool
 }
 
 func Load() (Config, error) {
@@ -223,6 +224,11 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	kickWebhookSkipVerification, err := envBool("KICK_WEBHOOK_SKIP_VERIFICATION", false)
+	if err != nil {
+		return Config{}, err
+	}
+
 	return Config{
 		AppName:                              envString("APP_NAME", "Kick Logs"),
 		AppEnv:                               envString("APP_ENV", "local"),
@@ -280,6 +286,7 @@ func Load() (Config, error) {
 		KickWebhookEvents:                    envCSV("KICK_WEBHOOK_EVENTS", "channel.subscription.new,channel.subscription.renewal,channel.subscription.gifts"),
 		KickWebhookProcessBatchSize:          kickWebhookProcessBatchSize,
 		KickWebhookProcessMaxAttempts:        kickWebhookProcessMaxAttempts,
+		KickWebhookSkipVerification:          kickWebhookSkipVerification,
 	}, nil
 }
 

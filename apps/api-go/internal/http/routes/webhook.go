@@ -25,7 +25,8 @@ func RegisterWebhookRoutes(mux *http.ServeMux, deps Dependencies) {
 }
 
 func handleKickWebhook(w http.ResponseWriter, r *http.Request, deps Dependencies) {
-	if deps.WebhookVerifier == nil {
+	skipVerification := deps.Config.KickWebhookSkipVerification
+	if deps.WebhookVerifier == nil && !skipVerification {
 		writeError(w, http.StatusServiceUnavailable, "Webhook signature verification not configured.")
 		return
 	}
@@ -36,7 +37,11 @@ func handleKickWebhook(w http.ResponseWriter, r *http.Request, deps Dependencies
 	eventVersion := strings.TrimSpace(r.Header.Get(headerVersion))
 	signature := strings.TrimSpace(r.Header.Get(headerSignature))
 
-	if messageID == "" || timestamp == "" || eventType == "" || eventVersion == "" || signature == "" {
+	if messageID == "" || timestamp == "" || eventType == "" || eventVersion == "" {
+		writeError(w, http.StatusBadRequest, "Missing required Kick webhook headers.")
+		return
+	}
+	if !skipVerification && signature == "" {
 		writeError(w, http.StatusBadRequest, "Missing required Kick webhook headers.")
 		return
 	}
@@ -47,9 +52,11 @@ func handleKickWebhook(w http.ResponseWriter, r *http.Request, deps Dependencies
 		return
 	}
 
-	if err := deps.WebhookVerifier.Verify(messageID, timestamp, body, signature); err != nil {
-		writeError(w, http.StatusUnauthorized, "Invalid webhook signature.")
-		return
+	if !skipVerification {
+		if err := deps.WebhookVerifier.Verify(messageID, timestamp, body, signature); err != nil {
+			writeError(w, http.StatusUnauthorized, "Invalid webhook signature.")
+			return
+		}
 	}
 
 	if deps.WebhookEvents == nil {
