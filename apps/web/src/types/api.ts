@@ -367,6 +367,38 @@ export type MessageExportResponse = {
   truncated: boolean;
 };
 
+export type ChannelSubscriptionSummary = {
+  channel_slug: string;
+  active_count: number;
+  active_gifted_count: number;
+  latest_event_at: string | null;
+};
+
+export type EventSubStatus = {
+  event_type: string;
+  kick_subscription_id: string;
+  status: string;
+  latest_sync_error: string | null;
+  synced_at: string | null;
+};
+
+export type ChannelSyncStatus = {
+  followed_channel_id: number;
+  slug: string;
+  broadcaster_user_id: number;
+  subscriptions: EventSubStatus[];
+};
+
+export type WebhookHealth = {
+  configured_event_types: string[];
+  missing_client_credentials: boolean;
+  missing_webhook_public_key: boolean;
+  webhook_sync_enabled: boolean;
+  latest_webhook_received_at: string | null;
+  inbox_counts: Record<string, number>;
+  channels: ChannelSyncStatus[];
+};
+
 export type ApiErrorBody = {
   detail?: unknown;
 };

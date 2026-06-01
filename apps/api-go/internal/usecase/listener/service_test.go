@@ -604,6 +604,15 @@ func (repo *fakeChannelRepository) GetByChatroomID(_ context.Context, kickChatro
 	return domain.FollowedChannel{}, sql.ErrNoRows
 }
 
+func (repo *fakeChannelRepository) GetByBroadcasterUserID(_ context.Context, broadcasterUserID int64) (domain.FollowedChannel, error) {
+	for _, channel := range repo.channels {
+		if channel.BroadcasterUserID == broadcasterUserID {
+			return channel, nil
+		}
+	}
+	return domain.FollowedChannel{}, sql.ErrNoRows
+}
+
 func (repo *fakeChannelRepository) List(_ context.Context) ([]domain.FollowedChannel, error) {
 	return repo.channels, nil
 }

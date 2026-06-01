@@ -2,7 +2,119 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest
+## Latest (admin webhook status UI)
+
+- Operations Webhooks panel now summarizes each channel's subscription state in one row instead of
+  rendering three event rows inline. The summary is clickable:
+  - `aktif` when all configured Kick subscription events are active.
+  - `Aktif değil` when one or more event subscriptions are missing/inactive without a sync error.
+  - `N Hata` when one or more event subscriptions has a sync error.
+- Clicking the summary opens a design-system modal with channel metadata and per-event
+  `aktif` / `aktif değil` / `hata` status rows.
+- Verification: `pnpm --filter @kick-logs/web test -- webhook-health-panel.test.tsx` and
+  `pnpm --filter @kick-logs/web typecheck` green.
+
+## Previously Latest (webhook sync contract fix)
+
+- Follow-up fix: `GET /channels/{slug}/subscription-summary` was returning zero even when
+  ClickHouse had active subscription periods. Root cause was scanning ClickHouse
+  `countDistinctIf(...)` (`UInt64`) into Go `int64`; the route swallowed the repository error and
+  returned the zero-value response. The repository now scans unsigned counts and safely converts
+  them. Local smoke: `/channels/levo/subscription-summary` returns `active_count: 1`.
+- Fixed Kick webhook subscription sync against the current Kick API contract:
+  - create requests now send `events: [{name, version: 1}]` plus `method: webhook`, not the old
+    single `type` field.
+  - missing events are created per channel in one batch request and then reconciled with a
+    list-after-create fallback if Kick returns an ambiguous response.
+  - delete now uses `DELETE /public/v1/events/subscriptions?id=<subscription_id>`.
+  - public key auto-fetch now uses `GET /public/v1/public-key` and reads `data.public_key`.
+- Webhook signature verification corrected to RSA-SHA256 over
+  `message_id + "." + timestamp + "." + raw_body`; old Ed25519 assumptions are removed.
+- Webhook processor now ignores events for disabled channels, preventing stale remote subscriptions
+  from polluting active subscriber metrics.
+- Local smoke after Docker API rebuild:
+  - API fetched the Kick webhook public key successfully.
+  - Enabled channels `gugucan`, `levo`, and `prensesperver` all have active
+    `channel.subscription.new`, `channel.subscription.renewal`, and `channel.subscription.gifts`
+    subscriptions.
+- Verification: `go test ./...` and `go vet ./...` green in `apps/api-go`.
+
+## Latest (Phase 7 — docs and smoke)
+
+- Context docs updated for completed webhook backend (Phases 2–7):
+  - `docs/architecture.md`: new endpoints added to API surface and public/admin route lists.
+  - `docs/context/living_brain.md`: phase status → Phase 7 complete; API contract section updated;
+    rate-limit note added for `POST /webhooks/kick` (exempt, signature-secured).
+  - `docs/context/decisions.md`: 10 webhook pipeline decision entries added (broadcaster_user_id
+    sentinel, inbox idempotency, rate-limit exemption, RSA-SHA256 signed message format, ClickHouse
+    engine choice, expires_at NULL strategy, kick_subscription_id preservation, sync non-blocking,
+    processor placement, ResolveBroadcasterUserID via web API).
+  - `docs/context/change_log.md`: Phase 1–7 summary entry added.
+  - `docs/operations/webhooks.md`: new runbook — Kick Developer panel setup, cloudflared tunnel,
+    production Cloudflare bypass, rate-limit exemption rationale, sync/health endpoints, partial
+    data window note.
+- Verification: `go test ./...` green, `go vet ./...` green, `pnpm format:check` green.
+
+## Previously Latest (Phase 6)
+
+- Webhook subscription storage foundation (issue #22, Phase 2, branch `feat/issue-22-kick-subscription-webhooks`):
+  - `domain/models.go`: added `BroadcasterUserID int64` to `FollowedChannel`; new types
+    `KickWebhookEvent`, `KickEventSubscription`, `KickAPIEventSub`, `ChannelSubscriptionPeriod`,
+    `ChannelSubscriptionSummary`; webhook/event-subscription status constants.
+  - `ports/storage.go`: new `KickWebhookEventRepository`, `KickEventSubscriptionRepository`,
+    `SubscriptionPeriodRepository` interfaces; `GetByBroadcasterUserID` added to
+    `FollowedChannelRepository`.
+  - `ports/kick.go`: new `KickEventSubscriptionClient` interface (impl deferred to Phase 3).
+  - SQLite migrations v5 (`broadcaster_user_id` column on `followed_channels`), v6
+    (`kick_webhook_events` inbox with `INSERT OR IGNORE` idempotency), v7
+    (`kick_event_subscriptions` registry with UNIQUE upsert guard).
+  - `infra/sqlite/followed_channels.go`: all queries updated for `broadcaster_user_id`;
+    `GetByBroadcasterUserID` added.
+  - `infra/sqlite/kick_webhook_events.go`: inbox repo — idempotent insert, list pending,
+    mark processed/failed/ignored, count by status, latest received_at.
+  - `infra/sqlite/kick_event_subscriptions.go`: registry repo — ON CONFLICT upsert,
+    list/delete by channel, update sync error (soft-delete pattern).
+  - ClickHouse migration v5 (`channel_subscription_periods`,
+    `ReplacingMergeTree(ingested_at)` ORDER BY `id`, partitioned by month).
+  - `infra/clickhouse/subscription_periods.go`: batch insert + active summary
+    (`countDistinctIf` + `FINAL`).
+  - Tests: new SQLite repo tests for webhook inbox transitions, subscription upsert/delete;
+    new ClickHouse integration test for insert batch + active summary (gated on
+    `KICK_LOGS_RUN_CLICKHOUSE_TESTS=1`).
+  - Verification: `go build ./...`, `go vet ./...`, `go test ./...` all green.
+
+## Previously Latest (Phase 3)
+
+- Kick webhook subscription sync (issue #22, Phase 3, branch `feat/issue-22-kick-subscription-webhooks`):
+  - `config.go`: 9 new fields (`KICK_CLIENT_ID`, `KICK_CLIENT_SECRET`, `KICK_API_BASE_URL`,
+    `KICK_OAUTH_TOKEN_URL`, `KICK_WEBHOOK_PUBLIC_KEY`, `KICK_WEBHOOK_SYNC_ENABLED`,
+    `KICK_WEBHOOK_EVENTS`, `KICK_WEBHOOK_PROCESS_BATCH_SIZE`, `KICK_WEBHOOK_PROCESS_MAX_ATTEMPTS`).
+    If credentials missing, API starts and logs a warning; sync disabled.
+    If public key missing, API starts and logs a warning.
+  - `.env.example` and `compose.yaml` wired with all new vars.
+  - `infra/kick/channel_resolver.go`: `channelPayload` now includes `user_id` and `user.id` fields;
+    `ResolveChannel` populates `FollowedChannel.BroadcasterUserID`.
+  - `infra/kick/event_subscription_client.go`: new `EventSubscriptionClient` implements
+    `ports.KickEventSubscriptionClient`. OAuth2 client credentials with 60s expiry buffer token cache.
+    `ResolveBroadcasterUserID` uses `kick.com/api/v2/channels/{slug}` (same as web resolver).
+    `ListEventSubscriptions`, `CreateEventSubscription`, `DeleteEventSubscription` use official
+    `KICK_API_BASE_URL/public/v1/events/subscriptions` with Bearer token.
+    404 on delete is silently ignored (already gone).
+  - `infra/sqlite/kick_event_subscriptions.go`: upsert SQL updated — `kick_subscription_id` is
+    preserved when the new value is empty (`CASE WHEN excluded != '' THEN excluded ELSE existing`).
+  - `usecase/kicksync/service.go`: new `Service` — `SyncAll` (startup, no error return),
+    `EnsureChannelSubscriptions` (on channel add), `RemoveChannelSubscriptions` (on channel disable).
+    Per-channel errors logged and stored in registry; sync never takes down the API.
+  - `usecase/kicksync/service_test.go`: 5 tests with fake client covering resolve, create,
+    skip-existing-active, delete, and error-storage scenarios.
+  - `http/routes/dependencies.go`: `KickSync *kicksync.Service` added.
+  - `http/routes/admin_channels.go`: channel add triggers `EnsureChannelSubscriptions` in goroutine;
+    channel disable triggers `RemoveChannelSubscriptions` in goroutine.
+  - `cmd/api/main.go`: wires `EventSubscriptionClient` and `kicksync.Service` when credentials
+    are present; runs `SyncAll` in background goroutine on startup.
+  - Verification: `go build ./...`, `go vet ./...`, `go test ./...` all green.
+
+## Previously Latest
 
 - README refresh:
   - Replaced the long technical README with a shorter product-focused version.

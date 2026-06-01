@@ -45,6 +45,7 @@ func (repo *FollowedChannelRepository) Upsert(ctx context.Context, channel domai
 	args := []any{
 		nullInt64(channel.KickChannelID),
 		nullInt64(channel.KickChatroomID),
+		nullInt64(channel.BroadcasterUserID),
 		channel.Slug,
 		channel.DisplayName,
 		channel.ProfileImageURL,
@@ -62,10 +63,10 @@ func (repo *FollowedChannelRepository) Upsert(ctx context.Context, channel domai
 		result, err := repo.db.ExecContext(
 			ctx,
 			`INSERT INTO followed_channels (
-				kick_channel_id, kick_chatroom_id, slug, display_name, profile_image_url,
-				banner_image_url, is_enabled, raw_payload_json, created_at, updated_at,
-				last_resolved_at, last_message_at, last_listener_error
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				kick_channel_id, kick_chatroom_id, broadcaster_user_id, slug, display_name,
+				profile_image_url, banner_image_url, is_enabled, raw_payload_json, created_at,
+				updated_at, last_resolved_at, last_message_at, last_listener_error
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			args...,
 		)
 		if err != nil {
@@ -79,10 +80,10 @@ func (repo *FollowedChannelRepository) Upsert(ctx context.Context, channel domai
 	if _, err := repo.db.ExecContext(
 		ctx,
 		`UPDATE followed_channels
-		 SET kick_channel_id = ?, kick_chatroom_id = ?, slug = ?, display_name = ?,
-		     profile_image_url = ?, banner_image_url = ?, is_enabled = ?, raw_payload_json = ?,
-		     created_at = ?, updated_at = ?, last_resolved_at = ?, last_message_at = ?,
-		     last_listener_error = ?
+		 SET kick_channel_id = ?, kick_chatroom_id = ?, broadcaster_user_id = ?, slug = ?,
+		     display_name = ?, profile_image_url = ?, banner_image_url = ?, is_enabled = ?,
+		     raw_payload_json = ?, created_at = ?, updated_at = ?, last_resolved_at = ?,
+		     last_message_at = ?, last_listener_error = ?
 		 WHERE id = ?`,
 		args...,
 	); err != nil {
@@ -94,9 +95,9 @@ func (repo *FollowedChannelRepository) Upsert(ctx context.Context, channel domai
 func (repo *FollowedChannelRepository) GetBySlug(ctx context.Context, slug string) (domain.FollowedChannel, error) {
 	row := repo.db.QueryRowContext(
 		ctx,
-		`SELECT id, kick_channel_id, kick_chatroom_id, slug, display_name, profile_image_url,
-		        banner_image_url, is_enabled, raw_payload_json, created_at, updated_at,
-		        last_resolved_at, last_message_at, last_listener_error
+		`SELECT id, kick_channel_id, kick_chatroom_id, broadcaster_user_id, slug, display_name,
+		        profile_image_url, banner_image_url, is_enabled, raw_payload_json, created_at,
+		        updated_at, last_resolved_at, last_message_at, last_listener_error
 		 FROM followed_channels
 		 WHERE slug = ?`,
 		normalizeSlug(slug),
@@ -107,9 +108,9 @@ func (repo *FollowedChannelRepository) GetBySlug(ctx context.Context, slug strin
 func (repo *FollowedChannelRepository) GetByID(ctx context.Context, id int64) (domain.FollowedChannel, error) {
 	row := repo.db.QueryRowContext(
 		ctx,
-		`SELECT id, kick_channel_id, kick_chatroom_id, slug, display_name, profile_image_url,
-		        banner_image_url, is_enabled, raw_payload_json, created_at, updated_at,
-		        last_resolved_at, last_message_at, last_listener_error
+		`SELECT id, kick_channel_id, kick_chatroom_id, broadcaster_user_id, slug, display_name,
+		        profile_image_url, banner_image_url, is_enabled, raw_payload_json, created_at,
+		        updated_at, last_resolved_at, last_message_at, last_listener_error
 		 FROM followed_channels
 		 WHERE id = ?`,
 		id,
@@ -117,12 +118,25 @@ func (repo *FollowedChannelRepository) GetByID(ctx context.Context, id int64) (d
 	return scanFollowedChannel(row)
 }
 
+func (repo *FollowedChannelRepository) GetByBroadcasterUserID(ctx context.Context, broadcasterUserID int64) (domain.FollowedChannel, error) {
+	row := repo.db.QueryRowContext(
+		ctx,
+		`SELECT id, kick_channel_id, kick_chatroom_id, broadcaster_user_id, slug, display_name,
+		        profile_image_url, banner_image_url, is_enabled, raw_payload_json, created_at,
+		        updated_at, last_resolved_at, last_message_at, last_listener_error
+		 FROM followed_channels
+		 WHERE broadcaster_user_id = ?`,
+		broadcasterUserID,
+	)
+	return scanFollowedChannel(row)
+}
+
 func (repo *FollowedChannelRepository) GetByChatroomID(ctx context.Context, kickChatroomID int64) (domain.FollowedChannel, error) {
 	row := repo.db.QueryRowContext(
 		ctx,
-		`SELECT id, kick_channel_id, kick_chatroom_id, slug, display_name, profile_image_url,
-		        banner_image_url, is_enabled, raw_payload_json, created_at, updated_at,
-		        last_resolved_at, last_message_at, last_listener_error
+		`SELECT id, kick_channel_id, kick_chatroom_id, broadcaster_user_id, slug, display_name,
+		        profile_image_url, banner_image_url, is_enabled, raw_payload_json, created_at,
+		        updated_at, last_resolved_at, last_message_at, last_listener_error
 		 FROM followed_channels
 		 WHERE kick_chatroom_id = ?`,
 		kickChatroomID,
@@ -133,9 +147,9 @@ func (repo *FollowedChannelRepository) GetByChatroomID(ctx context.Context, kick
 func (repo *FollowedChannelRepository) List(ctx context.Context) ([]domain.FollowedChannel, error) {
 	rows, err := repo.db.QueryContext(
 		ctx,
-		`SELECT id, kick_channel_id, kick_chatroom_id, slug, display_name, profile_image_url,
-		        banner_image_url, is_enabled, raw_payload_json, created_at, updated_at,
-		        last_resolved_at, last_message_at, last_listener_error
+		`SELECT id, kick_channel_id, kick_chatroom_id, broadcaster_user_id, slug, display_name,
+		        profile_image_url, banner_image_url, is_enabled, raw_payload_json, created_at,
+		        updated_at, last_resolved_at, last_message_at, last_listener_error
 		 FROM followed_channels
 		 ORDER BY slug ASC`,
 	)
@@ -150,9 +164,9 @@ func (repo *FollowedChannelRepository) List(ctx context.Context) ([]domain.Follo
 func (repo *FollowedChannelRepository) ListEnabled(ctx context.Context) ([]domain.FollowedChannel, error) {
 	rows, err := repo.db.QueryContext(
 		ctx,
-		`SELECT id, kick_channel_id, kick_chatroom_id, slug, display_name, profile_image_url,
-		        banner_image_url, is_enabled, raw_payload_json, created_at, updated_at,
-		        last_resolved_at, last_message_at, last_listener_error
+		`SELECT id, kick_channel_id, kick_chatroom_id, broadcaster_user_id, slug, display_name,
+		        profile_image_url, banner_image_url, is_enabled, raw_payload_json, created_at,
+		        updated_at, last_resolved_at, last_message_at, last_listener_error
 		 FROM followed_channels
 		 WHERE is_enabled = 1
 		 ORDER BY slug ASC`,
@@ -211,6 +225,7 @@ func scanFollowedChannel(scanner followedChannelScanner) (domain.FollowedChannel
 	var channel domain.FollowedChannel
 	var kickChannelID sql.NullInt64
 	var kickChatroomID sql.NullInt64
+	var broadcasterUserID sql.NullInt64
 	var isEnabled int
 	var createdAt string
 	var updatedAt string
@@ -220,6 +235,7 @@ func scanFollowedChannel(scanner followedChannelScanner) (domain.FollowedChannel
 		&channel.ID,
 		&kickChannelID,
 		&kickChatroomID,
+		&broadcasterUserID,
 		&channel.Slug,
 		&channel.DisplayName,
 		&channel.ProfileImageURL,
@@ -236,6 +252,7 @@ func scanFollowedChannel(scanner followedChannelScanner) (domain.FollowedChannel
 	}
 	channel.KickChannelID = scanInt64(kickChannelID)
 	channel.KickChatroomID = scanInt64(kickChatroomID)
+	channel.BroadcasterUserID = scanInt64(broadcasterUserID)
 	channel.IsEnabled = intToBool(isEnabled)
 	channel.CreatedAt = parseTime(createdAt)
 	channel.UpdatedAt = parseTime(updatedAt)

@@ -5,9 +5,9 @@ implementation details, or working assumptions change.
 
 ## Current State
 
-- Branch: `feat/issue-19-client-side-prediction`.
-- Active plan: client-side Kick prediction migration (see `docs/implementation_plan.md`). Prediction
-  UI stays unchanged, while the data source moves out of the Go API and into the browser client.
+- Branch: `feat/issue-22-kick-subscription-webhooks`.
+- Active plan: Kick webhook subscription tracking (see `docs/implementation_plan.md`, issue #22).
+  Phase 6 (backend query APIs) complete. Phase 7 next (docs and smoke).
 - Earlier: channels/users index search pages — `/channels` and `/users` search-first index pages
   added 2026-05-24.
 - Responsive polish pass is current through 2026-05-22: profile rows, admin navigation, admin
@@ -31,6 +31,22 @@ implementation details, or working assumptions change.
   - `chat_messages`: 123790
   - `raw_kick_events`: 121664
   - `raw_event_attempts`: 121664
+
+## Webhook Subscription Pipeline (issue #22, Phase 6 complete)
+
+- `domain.KickWebhookEvent` — webhook inbox model; status: `pending/processed/failed/ignored`
+- `domain.KickEventSubscription` — Kick event subscription registry; status: `active/deleted/error`
+- `domain.ChannelSubscriptionPeriod` — ClickHouse normalized subscription period; deterministic `id`
+- `domain.ChannelSubscriptionSummary` — active count aggregate returned by public API
+- `domain.KickAPIEventSub` — lightweight type for Kick API event subscription responses
+- `FollowedChannel.BroadcasterUserID int64` — Kick broadcaster user ID (0 = not yet resolved)
+- Port: `KickWebhookEventRepository` (SQLite inbox), `KickEventSubscriptionRepository` (SQLite registry)
+- Port: `SubscriptionPeriodRepository` (ClickHouse), `KickEventSubscriptionClient` (Phase 3 impl)
+- Port: `FollowedChannelRepository.GetByBroadcasterUserID` added
+- API contract additions: `GET /channels/{slug}/subscription-summary` (public), `GET /admin/webhooks/health` (admin), `POST /admin/webhooks/sync` (admin)
+- SQLite migrations v5 (broadcaster_user_id), v6 (kick_webhook_events), v7 (kick_event_subscriptions)
+- ClickHouse migration v5 (channel_subscription_periods, ReplacingMergeTree ORDER BY id)
+- Active count query uses `FINAL` + `countDistinctIf(subscriber_kick_user_id, expires_at > now())`
 
 ## Default Data Stores
 
@@ -119,14 +135,13 @@ implementation details, or working assumptions change.
   - `POST|PUT|DELETE /admin/*` → admin user ID, 30/min burst 10
   - `GET /admin/*` → admin user ID, 120/min burst 30
   - `/health`, OPTIONS → unlimited (no matching policy)
+- `POST /webhooks/kick` → no matching policy (rate-limit exempt; security is RSA-SHA256 signature + idempotent inbox insert)
 - Admin keying: `TokenService.GetUserID(cookie)` (no DB hit), IP fallback on failure.
 - Login dual-key: attacker cannot lock victim email by hammering from one IP — key includes
   attacker IP, not victim.
 - Fail-open: limiter errors log a warning and pass the request through.
 
 ## API Contract
-
-The Go API preserves the existing frontend surface:
 
 ```text
 GET  /health
@@ -152,6 +167,10 @@ GET  /analytics/top-channels
 GET  /analytics/top-emotes
 GET  /users/{slug}/analytics
 GET  /channels/{slug}/analytics
+GET  /channels/{slug}/subscription-summary
+POST /webhooks/kick
+GET  /admin/webhooks/health
+POST /admin/webhooks/sync
 ```
 
 Public routes remain unauthenticated. Admin routes require the HttpOnly JWT session cookie and an
@@ -177,6 +196,11 @@ admin/super-admin role.
 
 - The listener loads enabled channels from SQLite.
 - It resolves missing Kick metadata before subscription.
+- Kick event subscription create uses `events: [{name, version: 1}]` with `method: webhook`; delete
+  uses `DELETE /public/v1/events/subscriptions?id=<subscription_id>`.
+- Webhook public key is auto-fetched from `GET /public/v1/public-key` when credentials exist.
+- Webhook processor ignores events for disabled channels so stale remote subscriptions cannot pollute
+  active subscriber counts.
 - It subscribes to `chatrooms.{chatroom_id}.v2` plus channel-level streams.
 - Once a Kick websocket chat event reaches the process, submit it to the in-memory buffered
   writer. The writer flushes batches to ClickHouse archive using `InsertEventsBatch` and then

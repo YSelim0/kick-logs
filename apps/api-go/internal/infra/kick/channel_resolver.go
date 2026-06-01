@@ -71,19 +71,21 @@ func (resolver *WebChannelResolver) ResolveChannel(ctx context.Context, slug str
 	}
 
 	return domain.FollowedChannel{
-		KickChannelID:   payload.ID,
-		KickChatroomID:  payload.Chatroom.ID,
-		Slug:            strings.ToLower(resolvedSlug),
-		DisplayName:     displayName,
-		ProfileImageURL: payload.profileImageURL(),
-		BannerImageURL:  payload.bannerImageURL(),
-		IsEnabled:       true,
-		RawPayloadJSON:  string(rawPayload),
+		KickChannelID:     payload.ID,
+		KickChatroomID:    payload.Chatroom.ID,
+		BroadcasterUserID: payload.broadcasterUserID(),
+		Slug:              strings.ToLower(resolvedSlug),
+		DisplayName:       displayName,
+		ProfileImageURL:   payload.profileImageURL(),
+		BannerImageURL:    payload.bannerImageURL(),
+		IsEnabled:         true,
+		RawPayloadJSON:    string(rawPayload),
 	}, nil
 }
 
 type channelPayload struct {
 	ID          int64           `json:"id"`
+	UserID      int64           `json:"user_id"`
 	Slug        string          `json:"slug"`
 	User        userPayload     `json:"user"`
 	Chatroom    chatroomPayload `json:"chatroom"`
@@ -96,6 +98,7 @@ type channelPayload struct {
 }
 
 type userPayload struct {
+	ID          int64  `json:"id"`
 	Username    string `json:"username"`
 	ProfilePic  string `json:"profilepic"`
 	ProfilePic2 string `json:"profile_pic"`
@@ -104,6 +107,13 @@ type userPayload struct {
 
 type chatroomPayload struct {
 	ID int64 `json:"id"`
+}
+
+func (payload channelPayload) broadcasterUserID() int64 {
+	if payload.UserID != 0 {
+		return payload.UserID
+	}
+	return payload.User.ID
 }
 
 func (payload channelPayload) profileImageURL() string {

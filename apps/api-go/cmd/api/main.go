@@ -27,8 +27,10 @@ import (
 	authusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/auth"
 	channelsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/channels"
 	datamanagementusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/data_management"
+	kicksyncusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/kicksync"
 	messagesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/messages"
 	profilesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/profiles"
+	webhookprocessorusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/webhookprocessor"
 )
 
 func main() {
@@ -93,15 +95,68 @@ func main() {
 		logger.Info("rate limiter enabled", "max_keys", cfg.RateLimitStoreMaxKeys, "trust_proxy", cfg.RateLimitTrustProxy)
 	}
 	channelService := channelsusecase.NewService(channelRepo, kick.NewWebChannelResolver())
+
+	webhookEventRepo := sqliteinfra.NewKickWebhookEventRepository(sqliteDB)
+	eventSubRepo := sqliteinfra.NewKickEventSubscriptionRepository(sqliteDB)
+
+	var kickSyncService *kicksyncusecase.Service
+	if cfg.KickClientID != "" && cfg.KickClientSecret != "" {
+		kickAPIClient := kick.NewEventSubscriptionClient(cfg.KickAPIBaseURL, cfg.KickOAuthTokenURL, cfg.KickClientID, cfg.KickClientSecret)
+		kickSyncService = kicksyncusecase.NewService(logger, channelRepo, eventSubRepo, kickAPIClient, cfg.KickWebhookEvents)
+		if cfg.KickWebhookSyncEnabled {
+			go func() {
+				kickSyncService.SyncAll(context.Background())
+			}()
+		}
+	} else {
+		logger.Warn("Kick client credentials not configured; webhook subscription sync is disabled")
+	}
+	var webhookVerifier ports.KickWebhookVerifier
+	resolvedPublicKey := cfg.KickWebhookPublicKey
+	if resolvedPublicKey == "" && kickSyncService != nil {
+		// Auto-fetch the webhook public key from the Kick API when credentials are available.
+		kickAPIClient := kick.NewEventSubscriptionClient(cfg.KickAPIBaseURL, cfg.KickOAuthTokenURL, cfg.KickClientID, cfg.KickClientSecret)
+		if fetched, err := kickAPIClient.FetchWebhookPublicKey(context.Background()); err != nil {
+			logger.Warn("could not auto-fetch KICK_WEBHOOK_PUBLIC_KEY; POST /webhooks/kick will reject all requests", "error", err)
+		} else {
+			resolvedPublicKey = fetched
+			logger.Info("fetched Kick webhook public key from API")
+		}
+	}
+	if resolvedPublicKey != "" {
+		v, err := kick.NewWebhookVerifier(resolvedPublicKey)
+		if err != nil {
+			logger.Warn("KICK_WEBHOOK_PUBLIC_KEY is invalid; POST /webhooks/kick will reject all requests", "error", err)
+		} else {
+			webhookVerifier = v
+		}
+	} else if cfg.KickWebhookSkipVerification {
+		logger.Warn("KICK_WEBHOOK_SKIP_VERIFICATION=true; webhook signature verification bypassed (test mode only)")
+	} else {
+		logger.Warn("KICK_WEBHOOK_PUBLIC_KEY not configured; POST /webhooks/kick will reject all requests")
+	}
 	var messageService *messagesusecase.Service
 	var analyticsService *analyticsusecase.Service
 	var profileService *profilesusecase.Service
+	var subPeriodRepoForAPI ports.SubscriptionPeriodRepository
 	if clickHouseConn != nil {
 		messageRepository := clickhouseinfra.NewMessageRepository(clickHouseConn)
 		analyticsRepository := clickhouseinfra.NewAnalyticsRepository(clickHouseConn)
+		subPeriodRepo := clickhouseinfra.NewSubscriptionPeriodRepository(clickHouseConn)
+		subPeriodRepoForAPI = subPeriodRepo
 		messageService = messagesusecase.NewService(messageRepository)
 		analyticsService = analyticsusecase.NewService(analyticsRepository)
 		profileService = profilesusecase.NewService(analyticsRepository, channelRepo, senderRepo)
+
+		processorSvc := webhookprocessorusecase.NewService(
+			logger,
+			webhookEventRepo,
+			channelRepo,
+			subPeriodRepo,
+			cfg.KickWebhookProcessBatchSize,
+			cfg.KickWebhookProcessMaxAttempts,
+		)
+		processorSvc.Start(context.Background())
 	}
 	operationsRepo := operationsinfra.NewRepository(
 		sqliteDB,
@@ -113,16 +168,21 @@ func main() {
 		datamanagementinfra.NewRepository(sqliteDB, cfg.SQLitePath, clickHouseConn),
 	)
 	server := app.NewAPIServer(cfg, logger, routes.Dependencies{
-		Config:       cfg,
-		Auth:         authService,
-		Analytics:    analyticsService,
-		Channels:     channelService,
-		Messages:     messageService,
-		Profiles:     profileService,
-		Data:         dataManagementService,
-		Operations:   operationsRepo,
-		RateLimiter:  rateLimiter,
-		TokenService: tokenService,
+		Config:              cfg,
+		Auth:                authService,
+		Analytics:           analyticsService,
+		Channels:            channelService,
+		Messages:            messageService,
+		Profiles:            profileService,
+		Data:                dataManagementService,
+		KickSync:            kickSyncService,
+		WebhookEvents:       webhookEventRepo,
+		WebhookVerifier:     webhookVerifier,
+		WebhookEventSubs:    eventSubRepo,
+		SubscriptionPeriods: subPeriodRepoForAPI,
+		Operations:          operationsRepo,
+		RateLimiter:         rateLimiter,
+		TokenService:        tokenService,
 	})
 
 	errs := make(chan error, 1)

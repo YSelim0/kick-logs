@@ -284,6 +284,229 @@ func TestSenderProfileRepositoryUpsertHandlesNaturalKeyConflicts(t *testing.T) {
 	}
 }
 
+func TestKickWebhookEventRepository(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openMigratedSQLite(t, ctx)
+	defer db.Close()
+
+	repo := sqlite.NewKickWebhookEventRepository(db)
+
+	event := domain.KickWebhookEvent{
+		MessageID:      "msg-001",
+		SubscriptionID: "sub-001",
+		EventType:      "channel.subscription.new",
+		EventVersion:   "v1",
+		RawPayloadJSON: `{"test":true}`,
+		ReceivedAt:     time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC),
+	}
+
+	if err := repo.InsertIdempotent(ctx, event); err != nil {
+		t.Fatalf("InsertIdempotent() error = %v", err)
+	}
+
+	if err := repo.InsertIdempotent(ctx, event); err != nil {
+		t.Fatalf("InsertIdempotent() duplicate error = %v", err)
+	}
+
+	fetched, err := repo.GetByMessageID(ctx, "msg-001")
+	if err != nil {
+		t.Fatalf("GetByMessageID() error = %v", err)
+	}
+	if fetched.Status != domain.WebhookEventStatusPending || fetched.Attempts != 0 {
+		t.Fatalf("fetched = %#v", fetched)
+	}
+
+	pending, err := repo.ListPending(ctx, 10, 5)
+	if err != nil {
+		t.Fatalf("ListPending() error = %v", err)
+	}
+	if len(pending) != 1 {
+		t.Fatalf("pending len = %d", len(pending))
+	}
+
+	if err := repo.MarkFailed(ctx, "msg-001", "parse error", 5); err != nil {
+		t.Fatalf("MarkFailed() error = %v", err)
+	}
+	after1, _ := repo.GetByMessageID(ctx, "msg-001")
+	if after1.Attempts != 1 || after1.Status != domain.WebhookEventStatusPending {
+		t.Fatalf("after 1 failure: attempts=%d status=%s", after1.Attempts, after1.Status)
+	}
+
+	for i := 0; i < 4; i++ {
+		if err := repo.MarkFailed(ctx, "msg-001", "parse error", 5); err != nil {
+			t.Fatalf("MarkFailed() iteration %d error = %v", i, err)
+		}
+	}
+	exhausted, _ := repo.GetByMessageID(ctx, "msg-001")
+	if exhausted.Status != domain.WebhookEventStatusFailed {
+		t.Fatalf("exhausted status = %s, want failed", exhausted.Status)
+	}
+
+	event2 := domain.KickWebhookEvent{
+		MessageID:  "msg-002",
+		EventType:  "channel.subscription.renewal",
+		ReceivedAt: time.Now().UTC(),
+	}
+	_ = repo.InsertIdempotent(ctx, event2)
+
+	if err := repo.MarkProcessed(ctx, "msg-002"); err != nil {
+		t.Fatalf("MarkProcessed() error = %v", err)
+	}
+	processed, _ := repo.GetByMessageID(ctx, "msg-002")
+	if processed.Status != domain.WebhookEventStatusProcessed {
+		t.Fatalf("processed status = %s", processed.Status)
+	}
+
+	event3 := domain.KickWebhookEvent{
+		MessageID:  "msg-003",
+		EventType:  "channel.subscription.gifts",
+		ReceivedAt: time.Now().UTC(),
+	}
+	_ = repo.InsertIdempotent(ctx, event3)
+
+	if err := repo.MarkIgnored(ctx, "msg-003", "unsupported event type"); err != nil {
+		t.Fatalf("MarkIgnored() error = %v", err)
+	}
+	ignored, _ := repo.GetByMessageID(ctx, "msg-003")
+	if ignored.Status != domain.WebhookEventStatusIgnored {
+		t.Fatalf("ignored status = %s", ignored.Status)
+	}
+
+	counts, err := repo.CountByStatus(ctx)
+	if err != nil {
+		t.Fatalf("CountByStatus() error = %v", err)
+	}
+	if counts[domain.WebhookEventStatusFailed] != 1 || counts[domain.WebhookEventStatusProcessed] != 1 || counts[domain.WebhookEventStatusIgnored] != 1 {
+		t.Fatalf("counts = %v", counts)
+	}
+
+	latest, err := repo.LatestReceivedAt(ctx)
+	if err != nil {
+		t.Fatalf("LatestReceivedAt() error = %v", err)
+	}
+	if latest.IsZero() {
+		t.Fatal("LatestReceivedAt() returned zero time")
+	}
+}
+
+func TestKickEventSubscriptionRepository(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openMigratedSQLite(t, ctx)
+	defer db.Close()
+
+	channelRepo := sqlite.NewFollowedChannelRepository(db)
+	ch, err := channelRepo.Upsert(ctx, domain.FollowedChannel{
+		Slug:              "test-channel",
+		DisplayName:       "Test Channel",
+		BroadcasterUserID: 9999,
+		IsEnabled:         true,
+		RawPayloadJSON:    "{}",
+	})
+	if err != nil {
+		t.Fatalf("channel Upsert() error = %v", err)
+	}
+
+	subRepo := sqlite.NewKickEventSubscriptionRepository(db)
+
+	sub := domain.KickEventSubscription{
+		FollowedChannelID:  ch.ID,
+		BroadcasterUserID:  9999,
+		EventType:          "channel.subscription.new",
+		EventVersion:       "v1",
+		Method:             "webhook",
+		KickSubscriptionID: "kick-sub-001",
+		Status:             domain.KickEventSubStatusActive,
+	}
+
+	inserted, err := subRepo.Upsert(ctx, sub)
+	if err != nil {
+		t.Fatalf("Upsert() error = %v", err)
+	}
+	if inserted.ID == 0 {
+		t.Fatal("inserted ID = 0")
+	}
+
+	sub.KickSubscriptionID = "kick-sub-001-updated"
+	updated, err := subRepo.Upsert(ctx, sub)
+	if err != nil {
+		t.Fatalf("Upsert() update error = %v", err)
+	}
+	if updated.ID != inserted.ID {
+		t.Fatalf("upsert changed ID: got %d want %d", updated.ID, inserted.ID)
+	}
+	if updated.KickSubscriptionID != "kick-sub-001-updated" {
+		t.Fatalf("KickSubscriptionID not updated: %s", updated.KickSubscriptionID)
+	}
+
+	sub2 := domain.KickEventSubscription{
+		FollowedChannelID: ch.ID,
+		BroadcasterUserID: 9999,
+		EventType:         "channel.subscription.renewal",
+		EventVersion:      "v1",
+		Method:            "webhook",
+		Status:            domain.KickEventSubStatusActive,
+	}
+	_, _ = subRepo.Upsert(ctx, sub2)
+
+	byChannel, err := subRepo.ListByChannel(ctx, ch.ID)
+	if err != nil {
+		t.Fatalf("ListByChannel() error = %v", err)
+	}
+	if len(byChannel) != 2 {
+		t.Fatalf("ListByChannel() len = %d, want 2", len(byChannel))
+	}
+
+	if err := subRepo.UpdateSyncError(ctx, inserted.ID, "Kick API timeout"); err != nil {
+		t.Fatalf("UpdateSyncError() error = %v", err)
+	}
+	afterError, _ := subRepo.ListByChannel(ctx, ch.ID)
+	for _, s := range afterError {
+		if s.ID == inserted.ID && s.Status != domain.KickEventSubStatusError {
+			t.Fatalf("status after sync error = %s, want error", s.Status)
+		}
+	}
+
+	if err := subRepo.DeleteByChannel(ctx, ch.ID); err != nil {
+		t.Fatalf("DeleteByChannel() error = %v", err)
+	}
+	afterDelete, _ := subRepo.ListByChannel(ctx, ch.ID)
+	for _, s := range afterDelete {
+		if s.Status != domain.KickEventSubStatusDeleted {
+			t.Fatalf("status after delete = %s, want deleted", s.Status)
+		}
+	}
+}
+
+func TestFollowedChannelBroadcasterUserID(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openMigratedSQLite(t, ctx)
+	defer db.Close()
+
+	repo := sqlite.NewFollowedChannelRepository(db)
+
+	ch, err := repo.Upsert(ctx, domain.FollowedChannel{
+		Slug:              "broadcaster-test",
+		DisplayName:       "Broadcaster Test",
+		BroadcasterUserID: 42000,
+		IsEnabled:         true,
+		RawPayloadJSON:    "{}",
+	})
+	if err != nil {
+		t.Fatalf("Upsert() error = %v", err)
+	}
+	if ch.BroadcasterUserID != 42000 {
+		t.Fatalf("BroadcasterUserID = %d, want 42000", ch.BroadcasterUserID)
+	}
+
+	fetched, err := repo.GetByBroadcasterUserID(ctx, 42000)
+	if err != nil {
+		t.Fatalf("GetByBroadcasterUserID() error = %v", err)
+	}
+	if fetched.Slug != "broadcaster-test" {
+		t.Fatalf("fetched slug = %s", fetched.Slug)
+	}
+}
+
 func openMigratedSQLite(t *testing.T, ctx context.Context) (*sql.DB, string) {
 	t.Helper()
 

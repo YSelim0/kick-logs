@@ -2,6 +2,63 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-06-01 (admin webhook status UI)
+
+- Updated the Operations Webhooks panel so channel subscription health is summarized per channel
+  instead of rendering one table row per Kick event subscription.
+- Added three distinct channel summary states: `aktif`, `Aktif değil`, and `N Hata`. Missing or
+  inactive event subscriptions without sync errors are no longer labeled as errors.
+- Added a clickable details modal that shows channel metadata and each configured event's
+  `aktif` / `aktif değil` / `hata` state, including sync error text when present.
+- Updated frontend tests for active, inactive, and error webhook subscription states.
+
+## 2026-06-01 (issue #22 — webhook sync contract fix)
+
+- Fixed channel subscription summary counts. ClickHouse `countDistinctIf(...)` returns `UInt64`;
+  scanning directly into Go `int64` caused the repository to error, and the route returned zero
+  counts. `SubscriptionPeriodRepository.ActiveSummary` now scans unsigned counts and converts them
+  safely. Verified `/channels/levo/subscription-summary` returns `active_count: 1` for the processed
+  renewal webhook.
+- Corrected the Kick event subscription client to match the current public API:
+  - create uses batch `events: [{name, version: 1}]` and `method: webhook`
+  - delete uses `DELETE /public/v1/events/subscriptions?id=<subscription_id>`
+  - webhook public key auto-fetch uses `GET /public/v1/public-key`
+- Corrected webhook signature verification from the earlier Ed25519 assumption to RSA-SHA256 over
+  `message_id + "." + timestamp + "." + raw_body`.
+- Reworked sync to create missing events per channel in one request, reconcile ambiguous responses
+  with list-after-create, and clear previous error records once Kick reports the subscription active.
+- Added processor protection for disabled channels so stale remote subscriptions cannot create active
+  subscription periods locally.
+- Added tests for the Kick event-subscription HTTP contract, RSA webhook signatures, batch sync, and
+  disabled-channel webhook ignores.
+- Verified locally: `go test ./...`, `go vet ./...`, Docker API rebuild, startup sync, manual sync,
+  and `/admin/webhooks/health` for active channels.
+
+## 2026-06-01 (issue #22 — Kick webhook subscription tracking, Phases 1–7)
+
+Backend pipeline for tracking Kick subscription events via webhooks. Phase 8 (frontend) deferred.
+
+- **Phase 2 — Storage foundation**: `followed_channels.broadcaster_user_id`; SQLite tables
+  `kick_webhook_events` (inbox) and `kick_event_subscriptions` (registry); ClickHouse table
+  `channel_subscription_periods` (`ReplacingMergeTree` ORDER BY deterministic `id`); all port
+  interfaces; full repository test coverage.
+- **Phase 3 — Kick API client and sync**: `EventSubscriptionClient` (OAuth2 client credentials,
+  token cache, broadcaster_user_id resolve, event sub CRUD via `api.kick.com`); `kicksync.Service`
+  (`SyncAll`, `EnsureChannelSubscriptions`, `RemoveChannelSubscriptions`); startup background sync;
+  channel add/disable triggers goroutine sync; 5 unit tests.
+- **Phase 4 — Webhook receiver**: `POST /webhooks/kick`; RSA-SHA256 signature verification
+  (`infra/kick/WebhookVerifier`, PEM/base64 public key formats); `INSERT OR IGNORE` idempotency;
+  fail-closed (503 with no key, 401 on bad sig); rate-limit exempt; 8 route tests.
+- **Phase 5 — Processor and normalization**: `webhookprocessor.Service` (5s tick, background
+  worker); normalizer handles `channel.subscription.new/renewal` (1 period) and
+  `channel.subscription.gifts` (1 period/giftee); `expires_at` fallback `created_at + 30d`;
+  `ErrIgnored` for unsupported/unfollowed events; 13 tests.
+- **Phase 6 — Backend query APIs**: `GET /channels/{slug}/subscription-summary` (public active
+  count); `GET /admin/webhooks/health` (inbox counts, sync status, config flags);
+  `POST /admin/webhooks/sync` (manual sync trigger); auth-gated admin endpoints.
+- **Phase 7 — Docs and smoke**: context, architecture, decisions, change log, operations runbook
+  updated; `go test ./...`, `go vet ./...`, `pnpm format:check` verified green.
+
 ## 2026-05-31 (README refresh)
 
 - Rewrote the root README as a shorter, product-focused public repo page:

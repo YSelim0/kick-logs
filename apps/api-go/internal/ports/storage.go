@@ -19,6 +19,7 @@ type FollowedChannelRepository interface {
 	GetByID(ctx context.Context, id int64) (domain.FollowedChannel, error)
 	GetBySlug(ctx context.Context, slug string) (domain.FollowedChannel, error)
 	GetByChatroomID(ctx context.Context, kickChatroomID int64) (domain.FollowedChannel, error)
+	GetByBroadcasterUserID(ctx context.Context, broadcasterUserID int64) (domain.FollowedChannel, error)
 	List(ctx context.Context) ([]domain.FollowedChannel, error)
 	ListEnabled(ctx context.Context) ([]domain.FollowedChannel, error)
 	Disable(ctx context.Context, id int64) (domain.FollowedChannel, error)
@@ -112,6 +113,30 @@ type OperationsRepository interface {
 	ListFailedEvents(ctx context.Context, limit int) ([]domain.FailedRawEvent, error)
 	RetryFailedEvents(ctx context.Context) (int64, error)
 	ClearFailedEvents(ctx context.Context) (int64, error)
+}
+
+type KickWebhookEventRepository interface {
+	InsertIdempotent(ctx context.Context, event domain.KickWebhookEvent) error
+	GetByMessageID(ctx context.Context, messageID string) (domain.KickWebhookEvent, error)
+	ListPending(ctx context.Context, limit int, maxAttempts int) ([]domain.KickWebhookEvent, error)
+	MarkProcessed(ctx context.Context, messageID string) error
+	MarkFailed(ctx context.Context, messageID string, errMessage string, maxAttempts int) error
+	MarkIgnored(ctx context.Context, messageID string, reason string) error
+	CountByStatus(ctx context.Context) (map[string]int64, error)
+	LatestReceivedAt(ctx context.Context) (time.Time, error)
+}
+
+type KickEventSubscriptionRepository interface {
+	Upsert(ctx context.Context, sub domain.KickEventSubscription) (domain.KickEventSubscription, error)
+	ListByChannel(ctx context.Context, followedChannelID int64) ([]domain.KickEventSubscription, error)
+	DeleteByChannel(ctx context.Context, followedChannelID int64) error
+	List(ctx context.Context) ([]domain.KickEventSubscription, error)
+	UpdateSyncError(ctx context.Context, id int64, syncError string) error
+}
+
+type SubscriptionPeriodRepository interface {
+	InsertBatch(ctx context.Context, periods []domain.ChannelSubscriptionPeriod) error
+	ActiveSummary(ctx context.Context, followedChannelID int64) (domain.ChannelSubscriptionSummary, error)
 }
 
 type DataManagementRepository interface {

@@ -472,4 +472,87 @@ func TestClickHouseMigrationsAndRepositories(t *testing.T) {
 	if len(batchFound) != 2 {
 		t.Fatalf("batch messages len = %d", len(batchFound))
 	}
+
+	subPeriodRepo := clickhouseinfra.NewSubscriptionPeriodRepository(conn)
+
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	periods := []domain.ChannelSubscriptionPeriod{
+		{
+			ID:                   "period-new-" + suffix,
+			EventMessageID:       "msg-new-" + suffix,
+			EventType:            "channel.subscription.new",
+			FollowedChannelID:    1,
+			BroadcasterUserID:    1001,
+			ChannelSlug:          "hype-" + suffix,
+			ChannelDisplayName:   "Hype",
+			SubscriberKickUserID: 5001,
+			SubscriberUsername:   "subscriber_" + suffix,
+			SubscriberSlug:       "subscriber-" + suffix,
+			IsGift:               false,
+			StartedAt:            now.Add(-24 * time.Hour),
+			ExpiresAt:            now.Add(6 * 24 * time.Hour),
+			RawPayloadJSON:       `{}`,
+			IngestedAt:           now,
+		},
+		{
+			ID:                   "period-gift-" + suffix,
+			EventMessageID:       "msg-gift-" + suffix,
+			EventType:            "channel.subscription.gifts",
+			FollowedChannelID:    1,
+			BroadcasterUserID:    1001,
+			ChannelSlug:          "hype-" + suffix,
+			ChannelDisplayName:   "Hype",
+			SubscriberKickUserID: 5002,
+			SubscriberUsername:   "giftee_" + suffix,
+			SubscriberSlug:       "giftee-" + suffix,
+			GifterKickUserID:     5003,
+			GifterUsername:       "gifter_" + suffix,
+			GifterSlug:           "gifter-" + suffix,
+			IsGift:               true,
+			StartedAt:            now.Add(-24 * time.Hour),
+			ExpiresAt:            now.Add(6 * 24 * time.Hour),
+			RawPayloadJSON:       `{}`,
+			IngestedAt:           now,
+		},
+		{
+			ID:                   "period-expired-" + suffix,
+			EventMessageID:       "msg-expired-" + suffix,
+			EventType:            "channel.subscription.renewal",
+			FollowedChannelID:    1,
+			BroadcasterUserID:    1001,
+			ChannelSlug:          "hype-" + suffix,
+			ChannelDisplayName:   "Hype",
+			SubscriberKickUserID: 5004,
+			SubscriberUsername:   "expired_" + suffix,
+			SubscriberSlug:       "expired-" + suffix,
+			IsGift:               false,
+			StartedAt:            now.Add(-60 * 24 * time.Hour),
+			ExpiresAt:            now.Add(-30 * 24 * time.Hour),
+			RawPayloadJSON:       `{}`,
+			IngestedAt:           now,
+		},
+	}
+
+	if err := subPeriodRepo.InsertBatch(ctx, periods); err != nil {
+		t.Fatalf("subPeriodRepo.InsertBatch() error = %v", err)
+	}
+
+	if err := subPeriodRepo.InsertBatch(ctx, nil); err != nil {
+		t.Fatalf("subPeriodRepo.InsertBatch(empty) error = %v", err)
+	}
+
+	if err := subPeriodRepo.InsertBatch(ctx, periods); err != nil {
+		t.Fatalf("subPeriodRepo.InsertBatch(duplicate) error = %v", err)
+	}
+
+	summary, err := subPeriodRepo.ActiveSummary(ctx, 1)
+	if err != nil {
+		t.Fatalf("subPeriodRepo.ActiveSummary() error = %v", err)
+	}
+	if summary.ActiveCount != 2 {
+		t.Fatalf("ActiveCount = %d, want 2 (expired excluded)", summary.ActiveCount)
+	}
+	if summary.ActiveGiftedCount != 1 {
+		t.Fatalf("ActiveGiftedCount = %d, want 1", summary.ActiveGiftedCount)
+	}
 }

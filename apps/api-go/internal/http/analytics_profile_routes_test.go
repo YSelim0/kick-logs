@@ -312,6 +312,16 @@ func (repo *fakeProfileChannelRepository) GetByChatroomID(
 	return domain.FollowedChannel{}, sql.ErrNoRows
 }
 
+func (repo *fakeProfileChannelRepository) GetByBroadcasterUserID(
+	_ context.Context,
+	broadcasterUserID int64,
+) (domain.FollowedChannel, error) {
+	if repo.channel.BroadcasterUserID == broadcasterUserID {
+		return repo.channel, nil
+	}
+	return domain.FollowedChannel{}, sql.ErrNoRows
+}
+
 func (repo *fakeProfileChannelRepository) List(_ context.Context) ([]domain.FollowedChannel, error) {
 	return []domain.FollowedChannel{repo.channel}, nil
 }

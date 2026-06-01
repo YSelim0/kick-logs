@@ -16,6 +16,8 @@ func NewRouter(cfg config.Config, logger *slog.Logger, dependencySets ...routes.
 	var deps routes.Dependencies
 	if len(dependencySets) > 0 {
 		deps = dependencySets[0]
+		routes.RegisterWebhookRoutes(mux, deps)
+		routes.RegisterWebhookAdminRoutes(mux, deps)
 		routes.RegisterAuthRoutes(mux, deps)
 		routes.RegisterMessageRoutes(mux, deps)
 		routes.RegisterAnalyticsRoutes(mux, deps)

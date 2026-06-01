@@ -347,6 +347,13 @@ Login required.
 - Ingestion panel: header `Ingestion` + mono sub `queue, breaker, flush`; right pill
   `BREAKER CLOSED` / `OPEN` with accent or danger dot. Below: 6-cell mono metric strip
   (`Queue depth`, `Write queue`, `Drop count`, `Flush count`, `Son flush`, `CH failures`).
+- Webhooks panel channel subscriptions render one compact status action per channel instead of one
+  table row per event. Summary states:
+  - `aktif`: all configured subscription events are active and error-free.
+  - `Aktif değil`: one or more configured events are not subscribed/active, but there is no sync
+    error.
+  - `N Hata`: one or more configured events has a sync error. Clicking any summary opens a modal
+    with channel metadata and per-event `aktif` / `aktif değil` / `hata` rows.
 
 ### Channels Section
 

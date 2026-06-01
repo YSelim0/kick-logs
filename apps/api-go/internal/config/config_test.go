@@ -30,6 +30,15 @@ func TestLoadUsesDefaults(t *testing.T) {
 	t.Setenv("RATE_LIMIT_STORE_MAX_KEYS", "")
 	t.Setenv("RATE_LIMIT_TRUST_PROXY", "")
 	t.Setenv("RATE_LIMIT_CLIENT_IP_HEADER", "")
+	t.Setenv("KICK_CLIENT_ID", "")
+	t.Setenv("KICK_CLIENT_SECRET", "")
+	t.Setenv("KICK_API_BASE_URL", "")
+	t.Setenv("KICK_OAUTH_TOKEN_URL", "")
+	t.Setenv("KICK_WEBHOOK_PUBLIC_KEY", "")
+	t.Setenv("KICK_WEBHOOK_SYNC_ENABLED", "")
+	t.Setenv("KICK_WEBHOOK_EVENTS", "")
+	t.Setenv("KICK_WEBHOOK_PROCESS_BATCH_SIZE", "")
+	t.Setenv("KICK_WEBHOOK_PROCESS_MAX_ATTEMPTS", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -90,6 +99,25 @@ func TestLoadUsesDefaults(t *testing.T) {
 	}
 	if cfg.DefaultAdminEmail != "admin@kicklogs.local" {
 		t.Fatalf("DefaultAdminEmail = %q", cfg.DefaultAdminEmail)
+	}
+
+	if cfg.KickAPIBaseURL != "https://api.kick.com" {
+		t.Fatalf("KickAPIBaseURL = %q", cfg.KickAPIBaseURL)
+	}
+	if cfg.KickOAuthTokenURL != "https://id.kick.com/oauth/token" {
+		t.Fatalf("KickOAuthTokenURL = %q", cfg.KickOAuthTokenURL)
+	}
+	if !cfg.KickWebhookSyncEnabled {
+		t.Fatal("KickWebhookSyncEnabled = false")
+	}
+	if len(cfg.KickWebhookEvents) != 3 {
+		t.Fatalf("KickWebhookEvents = %v", cfg.KickWebhookEvents)
+	}
+	if cfg.KickWebhookProcessBatchSize != 50 {
+		t.Fatalf("KickWebhookProcessBatchSize = %d", cfg.KickWebhookProcessBatchSize)
+	}
+	if cfg.KickWebhookProcessMaxAttempts != 5 {
+		t.Fatalf("KickWebhookProcessMaxAttempts = %d", cfg.KickWebhookProcessMaxAttempts)
 	}
 }
 

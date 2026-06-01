@@ -23,6 +23,7 @@ type FollowedChannel struct {
 	ID                int64
 	KickChannelID     int64
 	KickChatroomID    int64
+	BroadcasterUserID int64
 	Slug              string
 	DisplayName       string
 	ProfileImageURL   string
@@ -413,4 +414,83 @@ type DataCleanupResult struct {
 	ChannelSlug      string
 	Sender           string
 	RetentionDays    *int
+}
+
+const (
+	WebhookEventStatusPending   = "pending"
+	WebhookEventStatusProcessed = "processed"
+	WebhookEventStatusFailed    = "failed"
+	WebhookEventStatusIgnored   = "ignored"
+)
+
+type KickWebhookEvent struct {
+	MessageID      string
+	SubscriptionID string
+	EventType      string
+	EventVersion   string
+	RawPayloadJSON string
+	Status         string
+	Attempts       int
+	ReceivedAt     time.Time
+	ProcessedAt    time.Time
+	ErrorMessage   string
+}
+
+const (
+	KickEventSubStatusActive  = "active"
+	KickEventSubStatusDeleted = "deleted"
+	KickEventSubStatusError   = "error"
+)
+
+type KickEventSubscription struct {
+	ID                 int64
+	FollowedChannelID  int64
+	BroadcasterUserID  int64
+	EventType          string
+	EventVersion       string
+	Method             string
+	KickSubscriptionID string
+	Status             string
+	LatestSyncError    string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	SyncedAt           time.Time
+}
+
+type KickAPIEventSub struct {
+	SubscriptionID    string
+	BroadcasterUserID int64
+	EventType         string
+	Method            string
+	CreatedAt         time.Time
+}
+
+type ChannelSubscriptionPeriod struct {
+	ID                        string
+	EventMessageID            string
+	EventType                 string
+	FollowedChannelID         int64
+	BroadcasterUserID         int64
+	ChannelSlug               string
+	ChannelDisplayName        string
+	SubscriberKickUserID      int64
+	SubscriberUsername        string
+	SubscriberSlug            string
+	SubscriberProfileImageURL string
+	GifterKickUserID          int64
+	GifterUsername            string
+	GifterSlug                string
+	GifterProfileImageURL     string
+	IsGift                    bool
+	StartedAt                 time.Time
+	ExpiresAt                 time.Time
+	RawPayloadJSON            string
+	IngestedAt                time.Time
+}
+
+type ChannelSubscriptionSummary struct {
+	ChannelSlug       string
+	ActiveCount       int64
+	ActiveGiftedCount int64
+	LatestEventAt     time.Time
 }

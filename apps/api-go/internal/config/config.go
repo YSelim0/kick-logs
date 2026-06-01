@@ -56,6 +56,16 @@ type Config struct {
 	RateLimitStoreMaxKeys                int
 	RateLimitTrustProxy                  bool
 	RateLimitClientIPHeader              string
+	KickClientID                         string
+	KickClientSecret                     string
+	KickAPIBaseURL                       string
+	KickOAuthTokenURL                    string
+	KickWebhookPublicKey                 string
+	KickWebhookSyncEnabled               bool
+	KickWebhookEvents                    []string
+	KickWebhookProcessBatchSize          int
+	KickWebhookProcessMaxAttempts        int
+	KickWebhookSkipVerification          bool
 }
 
 func Load() (Config, error) {
@@ -199,6 +209,26 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	kickWebhookSyncEnabled, err := envBool("KICK_WEBHOOK_SYNC_ENABLED", true)
+	if err != nil {
+		return Config{}, err
+	}
+
+	kickWebhookProcessBatchSize, err := envInt("KICK_WEBHOOK_PROCESS_BATCH_SIZE", 50)
+	if err != nil {
+		return Config{}, err
+	}
+
+	kickWebhookProcessMaxAttempts, err := envInt("KICK_WEBHOOK_PROCESS_MAX_ATTEMPTS", 5)
+	if err != nil {
+		return Config{}, err
+	}
+
+	kickWebhookSkipVerification, err := envBool("KICK_WEBHOOK_SKIP_VERIFICATION", false)
+	if err != nil {
+		return Config{}, err
+	}
+
 	return Config{
 		AppName:                              envString("APP_NAME", "Kick Logs"),
 		AppEnv:                               envString("APP_ENV", "local"),
@@ -247,6 +277,16 @@ func Load() (Config, error) {
 		RateLimitStoreMaxKeys:                rateLimitStoreMaxKeys,
 		RateLimitTrustProxy:                  rateLimitTrustProxy,
 		RateLimitClientIPHeader:              envString("RATE_LIMIT_CLIENT_IP_HEADER", "CF-Connecting-IP"),
+		KickClientID:                         envString("KICK_CLIENT_ID", ""),
+		KickClientSecret:                     envString("KICK_CLIENT_SECRET", ""),
+		KickAPIBaseURL:                       envString("KICK_API_BASE_URL", "https://api.kick.com"),
+		KickOAuthTokenURL:                    envString("KICK_OAUTH_TOKEN_URL", "https://id.kick.com/oauth/token"),
+		KickWebhookPublicKey:                 envString("KICK_WEBHOOK_PUBLIC_KEY", ""),
+		KickWebhookSyncEnabled:               kickWebhookSyncEnabled,
+		KickWebhookEvents:                    envCSV("KICK_WEBHOOK_EVENTS", "channel.subscription.new,channel.subscription.renewal,channel.subscription.gifts"),
+		KickWebhookProcessBatchSize:          kickWebhookProcessBatchSize,
+		KickWebhookProcessMaxAttempts:        kickWebhookProcessMaxAttempts,
+		KickWebhookSkipVerification:          kickWebhookSkipVerification,
 	}, nil
 }
 
