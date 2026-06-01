@@ -10,13 +10,14 @@ import { useEffect, useState } from "react";
 import { KickProfileLink } from "@/components/kick-profile-link";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
-import { getChannelProfile } from "@/features/channel-profile/api";
+import { getChannelProfile, getChannelSubscriptionSummary } from "@/features/channel-profile/api";
 import { MessageContent } from "@/features/search/message-content";
 import { formatMessageDate } from "@/features/search/search-params";
 import { ApiClientError } from "@/lib/api-client";
 import { buildKickProfileUrl, buildUserProfileHref } from "@/lib/kick-profile-slugs";
 import type {
   ChannelProfile,
+  ChannelSubscriptionSummary,
   Message,
   MessageVolumePoint,
   TopEmoteAnalytics,
@@ -28,29 +29,34 @@ type ProfileStatus = "loading" | "ready" | "not-found" | "error";
 export function ChannelProfilePage({ slug }: { slug: string }) {
   const [profile, setProfile] = useState<ChannelProfile | null>(null);
   const [status, setStatus] = useState<ProfileStatus>("loading");
+  const [subscription, setSubscription] = useState<ChannelSubscriptionSummary | null>(null);
 
   useEffect(() => {
     let isMounted = true;
 
     async function loadProfile() {
       setStatus("loading");
+      setSubscription(null);
 
       try {
         const nextProfile = await getChannelProfile(slug);
-        if (!isMounted) {
-          return;
-        }
+        if (!isMounted) return;
         setProfile(nextProfile);
         setStatus("ready");
       } catch (caught) {
-        if (!isMounted) {
-          return;
-        }
+        if (!isMounted) return;
         setProfile(null);
         setStatus(
           caught instanceof ApiClientError && caught.status === 404 ? "not-found" : "error"
         );
       }
+
+      // Non-blocking: subscription summary failure does not affect main profile.
+      getChannelSubscriptionSummary(slug)
+        .then((data) => {
+          if (isMounted) setSubscription(data);
+        })
+        .catch(() => {});
     }
 
     void loadProfile();
@@ -85,7 +91,9 @@ export function ChannelProfilePage({ slug }: { slug: string }) {
               tone="danger"
             />
           ) : null}
-          {status === "ready" && profile ? <ProfileContent profile={profile} /> : null}
+          {status === "ready" && profile ? (
+            <ProfileContent profile={profile} subscription={subscription} />
+          ) : null}
         </div>
       </div>
     </main>
@@ -105,7 +113,13 @@ function Breadcrumb({ slug }: { slug: string }) {
   );
 }
 
-function ProfileContent({ profile }: { profile: ChannelProfile }) {
+function ProfileContent({
+  profile,
+  subscription
+}: {
+  profile: ChannelProfile;
+  subscription: ChannelSubscriptionSummary | null;
+}) {
   const searchHref = `/search?channel=${encodeURIComponent(profile.channel.slug)}`;
   const kickProfileUrl = buildKickProfileUrl(profile.channel.slug);
 
@@ -154,7 +168,15 @@ function ProfileContent({ profile }: { profile: ChannelProfile }) {
           { label: "MESAJ", value: formatCompactNumber(profile.overview.total_messages) },
           { label: "KULLANICI", value: formatCompactNumber(profile.overview.total_senders) },
           { label: "EMOTE", value: formatCompactNumber(profile.overview.total_emote_usages) },
-          { label: "İLK LOG", value: formatShortDate(profile.overview.first_message_at) }
+          { label: "İLK LOG", value: formatShortDate(profile.overview.first_message_at) },
+          {
+            label: "AKTİF ABONE",
+            value: subscription ? formatCompactNumber(subscription.active_count) : "—"
+          },
+          {
+            label: "HEDİYE ABONE",
+            value: subscription ? formatCompactNumber(subscription.active_gifted_count) : "—"
+          }
         ]}
       />
 
@@ -270,7 +292,7 @@ function ProfileStatsBar({ cells }: { cells: StatCell[] }) {
   return (
     <section
       aria-label="Kanal metrikleri"
-      className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-4"
+      className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-3 xl:grid-cols-6"
     >
       {cells.map((cell) => (
         <div key={cell.label} className="bg-panel px-5 py-4">

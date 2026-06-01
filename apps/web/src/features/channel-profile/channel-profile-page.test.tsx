@@ -6,7 +6,8 @@ import { ApiClientError } from "@/lib/api-client";
 import type { ChannelProfile } from "@/types/api";
 
 const profileMocks = vi.hoisted(() => ({
-  getChannelProfile: vi.fn()
+  getChannelProfile: vi.fn(),
+  getChannelSubscriptionSummary: vi.fn()
 }));
 
 vi.mock("next/image", () => ({
@@ -18,7 +19,14 @@ vi.mock("@/features/channel-profile/api", () => profileMocks);
 describe("ChannelProfilePage", () => {
   beforeEach(() => {
     profileMocks.getChannelProfile.mockReset();
+    profileMocks.getChannelSubscriptionSummary.mockReset();
     profileMocks.getChannelProfile.mockResolvedValue(profileFixture());
+    profileMocks.getChannelSubscriptionSummary.mockResolvedValue({
+      channel_slug: "hype",
+      active_count: 42,
+      active_gifted_count: 5,
+      latest_event_at: null
+    });
   });
 
   it("renders channel analytics and latest messages", async () => {
@@ -28,6 +36,8 @@ describe("ChannelProfilePage", () => {
     expect(await screen.findByRole("heading", { name: "Hype" })).toBeInTheDocument();
     expect(screen.getByText("MESAJ")).toBeInTheDocument();
     expect(screen.getByText("KULLANICI")).toBeInTheDocument();
+    expect(screen.getByText("AKTİF ABONE")).toBeInTheDocument();
+    expect(screen.getByText("HEDİYE ABONE")).toBeInTheDocument();
     expect(screen.getByText("@alpha")).toBeInTheDocument();
     expect(screen.getByText("KEKW")).toBeInTheDocument();
     expect(screen.getByText("latest channel message")).toBeInTheDocument();
