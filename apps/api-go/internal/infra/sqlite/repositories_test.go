@@ -3,6 +3,7 @@ package sqlite_test
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"path/filepath"
 	"testing"
 	"time"
@@ -386,6 +387,31 @@ func TestKickWebhookEventRepository(t *testing.T) {
 	}
 	if latest.IsZero() {
 		t.Fatal("LatestReceivedAt() returned zero time")
+	}
+
+	old := time.Now().UTC().Add(-8 * 24 * time.Hour)
+	if _, err := db.ExecContext(
+		ctx,
+		`UPDATE kick_webhook_events SET processed_at = ? WHERE message_id IN ('msg-002', 'msg-003')`,
+		old.Format(time.RFC3339Nano),
+	); err != nil {
+		t.Fatalf("backdate terminal webhook events: %v", err)
+	}
+	pruned, err := repo.PruneTerminalBefore(ctx, time.Now().UTC().Add(-7*24*time.Hour))
+	if err != nil {
+		t.Fatalf("PruneTerminalBefore() error = %v", err)
+	}
+	if pruned != 2 {
+		t.Fatalf("pruned = %d, want 2", pruned)
+	}
+	if _, err := repo.GetByMessageID(ctx, "msg-002"); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("processed event after prune err = %v, want sql.ErrNoRows", err)
+	}
+	if _, err := repo.GetByMessageID(ctx, "msg-003"); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("ignored event after prune err = %v, want sql.ErrNoRows", err)
+	}
+	if _, err := repo.GetByMessageID(ctx, "msg-001"); err != nil {
+		t.Fatalf("failed event should remain after prune: %v", err)
 	}
 }
 

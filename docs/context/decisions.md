@@ -28,6 +28,10 @@
   until max attempts. They get a ClickHouse `raw_event_attempts.status = 'ignored'` record and are
   removed from the active SQLite queue. Backfill and operations metrics treat `ignored`/`invalid` as
   terminal statuses alongside `processed`.
+- **Webhook inbox has short terminal retention.** `kick_webhook_events` remains the idempotent
+  receiver inbox, but processed/ignored rows older than 7 days are pruned by the webhook processor.
+  Pending and failed webhook rows are never pruned by this path because they still represent work or
+  operator-visible failures. Subscription periods remain durable in ClickHouse.
 
 ## 2026-06-01 (issue #22 — Kick webhook subscription tracking)
 

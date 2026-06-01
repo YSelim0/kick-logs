@@ -210,6 +210,56 @@ func TestProcessorRetriesAndExhausts(t *testing.T) {
 	}
 }
 
+func TestProcessorPrunesOldProcessedAndIgnoredInboxRows(t *testing.T) {
+	ctx := context.Background()
+
+	inbox := newFakeInbox()
+	old := time.Now().UTC().Add(-8 * 24 * time.Hour)
+	recent := time.Now().UTC()
+	inbox.add(domain.KickWebhookEvent{
+		MessageID:   "old-processed",
+		Status:      domain.WebhookEventStatusProcessed,
+		ProcessedAt: old,
+		ReceivedAt:  old,
+	})
+	inbox.add(domain.KickWebhookEvent{
+		MessageID:    "old-ignored",
+		Status:       domain.WebhookEventStatusIgnored,
+		ProcessedAt:  old,
+		ReceivedAt:   old,
+		ErrorMessage: "unsupported",
+	})
+	inbox.add(domain.KickWebhookEvent{
+		MessageID:    "old-failed",
+		Status:       domain.WebhookEventStatusFailed,
+		ProcessedAt:  old,
+		ReceivedAt:   old,
+		ErrorMessage: "keep me",
+	})
+	inbox.add(domain.KickWebhookEvent{
+		MessageID:   "recent-processed",
+		Status:      domain.WebhookEventStatusProcessed,
+		ProcessedAt: recent,
+		ReceivedAt:  recent,
+	})
+
+	svc := webhookprocessor.NewService(discardLogger(), inbox, newFakeChannelRepo(), &fakePeriodRepo{}, 10, 5)
+	svc.ProcessBatchOnce(ctx)
+
+	if _, err := inbox.GetByMessageID(ctx, "old-processed"); err != sql.ErrNoRows {
+		t.Fatalf("old processed error = %v, want sql.ErrNoRows", err)
+	}
+	if _, err := inbox.GetByMessageID(ctx, "old-ignored"); err != sql.ErrNoRows {
+		t.Fatalf("old ignored error = %v, want sql.ErrNoRows", err)
+	}
+	if _, err := inbox.GetByMessageID(ctx, "old-failed"); err != nil {
+		t.Fatalf("old failed should remain: %v", err)
+	}
+	if _, err := inbox.GetByMessageID(ctx, "recent-processed"); err != nil {
+		t.Fatalf("recent processed should remain: %v", err)
+	}
+}
+
 // --- fakes ---
 
 type fakeInbox struct {
@@ -282,6 +332,21 @@ func (f *fakeInbox) MarkIgnored(_ context.Context, id string, reason string) err
 		}
 	}
 	return nil
+}
+
+func (f *fakeInbox) PruneTerminalBefore(_ context.Context, cutoff time.Time) (int64, error) {
+	kept := f.events[:0]
+	var pruned int64
+	for _, event := range f.events {
+		isTerminal := event.Status == domain.WebhookEventStatusProcessed || event.Status == domain.WebhookEventStatusIgnored
+		if isTerminal && !event.ProcessedAt.IsZero() && event.ProcessedAt.Before(cutoff) {
+			pruned++
+			continue
+		}
+		kept = append(kept, event)
+	}
+	f.events = kept
+	return pruned, nil
 }
 
 func (f *fakeInbox) CountByStatus(_ context.Context) (map[string]int64, error) { return nil, nil }

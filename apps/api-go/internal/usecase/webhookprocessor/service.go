@@ -11,16 +11,20 @@ import (
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/ports"
 )
 
-const defaultTickInterval = 5 * time.Second
+const (
+	defaultTickInterval   = 5 * time.Second
+	defaultInboxRetention = 7 * 24 * time.Hour
+)
 
 type Service struct {
-	log          *slog.Logger
-	inbox        ports.KickWebhookEventRepository
-	channels     ports.FollowedChannelRepository
-	periods      ports.SubscriptionPeriodRepository
-	batchSize    int
-	maxAttempts  int
-	tickInterval time.Duration
+	log            *slog.Logger
+	inbox          ports.KickWebhookEventRepository
+	channels       ports.FollowedChannelRepository
+	periods        ports.SubscriptionPeriodRepository
+	batchSize      int
+	maxAttempts    int
+	tickInterval   time.Duration
+	inboxRetention time.Duration
 }
 
 func NewService(
@@ -32,13 +36,14 @@ func NewService(
 	maxAttempts int,
 ) *Service {
 	return &Service{
-		log:          log,
-		inbox:        inbox,
-		channels:     channels,
-		periods:      periods,
-		batchSize:    batchSize,
-		maxAttempts:  maxAttempts,
-		tickInterval: defaultTickInterval,
+		log:            log,
+		inbox:          inbox,
+		channels:       channels,
+		periods:        periods,
+		batchSize:      batchSize,
+		maxAttempts:    maxAttempts,
+		tickInterval:   defaultTickInterval,
+		inboxRetention: defaultInboxRetention,
 	}
 }
 
@@ -74,6 +79,7 @@ func (s *Service) processBatch(ctx context.Context) {
 	for i := range events {
 		s.processOne(ctx, events[i])
 	}
+	s.pruneTerminalInbox(ctx)
 }
 
 func (s *Service) processOne(ctx context.Context, event domain.KickWebhookEvent) {
@@ -150,5 +156,20 @@ func (s *Service) processOne(ctx context.Context, event domain.KickWebhookEvent)
 			"message_id", event.MessageID,
 			"error", err,
 		)
+	}
+}
+
+func (s *Service) pruneTerminalInbox(ctx context.Context) {
+	if s.inboxRetention <= 0 {
+		return
+	}
+	cutoff := time.Now().UTC().Add(-s.inboxRetention)
+	pruned, err := s.inbox.PruneTerminalBefore(ctx, cutoff)
+	if err != nil {
+		s.log.Warn("webhook processor: prune terminal inbox failed", "error", err)
+		return
+	}
+	if pruned > 0 {
+		s.log.Info("webhook processor: pruned terminal inbox events", "count", pruned)
 	}
 }

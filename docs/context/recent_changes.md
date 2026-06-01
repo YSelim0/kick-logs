@@ -2,7 +2,16 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue #23 — terminal invalid raw events)
+## Latest (issue #23 — webhook inbox retention)
+
+- Webhook processor now prunes old terminal SQLite inbox rows after processing ticks.
+- Retention applies only to `kick_webhook_events` rows with status `processed` or `ignored` and a
+  `processed_at` older than 7 days.
+- Pending and failed webhook inbox rows are preserved for processing/admin visibility; normalized
+  subscription periods remain durable in ClickHouse.
+- Added SQLite repository and webhook processor tests for retention behavior.
+
+## Previously Latest (issue #23 — terminal invalid raw events)
 
 - Permanently invalid raw chat payloads now write a terminal ClickHouse attempt with status
   `ignored` and are removed from active SQLite queue work instead of retrying until max attempts.

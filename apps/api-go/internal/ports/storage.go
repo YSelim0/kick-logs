@@ -122,6 +122,7 @@ type KickWebhookEventRepository interface {
 	MarkProcessed(ctx context.Context, messageID string) error
 	MarkFailed(ctx context.Context, messageID string, errMessage string, maxAttempts int) error
 	MarkIgnored(ctx context.Context, messageID string, reason string) error
+	PruneTerminalBefore(ctx context.Context, cutoff time.Time) (int64, error)
 	CountByStatus(ctx context.Context) (map[string]int64, error)
 	LatestReceivedAt(ctx context.Context) (time.Time, error)
 }

@@ -161,6 +161,9 @@ func (r *fakeInboxRepo) ListPending(_ context.Context, _ int, _ int) ([]domain.K
 func (r *fakeInboxRepo) MarkProcessed(_ context.Context, _ string) error               { return nil }
 func (r *fakeInboxRepo) MarkFailed(_ context.Context, _ string, _ string, _ int) error { return nil }
 func (r *fakeInboxRepo) MarkIgnored(_ context.Context, _ string, _ string) error       { return nil }
+func (r *fakeInboxRepo) PruneTerminalBefore(_ context.Context, _ time.Time) (int64, error) {
+	return 0, nil
+}
 func (r *fakeInboxRepo) CountByStatus(_ context.Context) (map[string]int64, error) {
 	return r.counts, nil
 }

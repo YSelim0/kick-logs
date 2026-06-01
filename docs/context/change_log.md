@@ -50,6 +50,16 @@ This is a living implementation log. Add new entries for each meaningful project
 - Operations raw-event status counts now expose `ignored` and exclude terminal ignored/invalid rows
   from pending/failed calculations.
 
+## 2026-06-01 (issue #23 — webhook inbox retention)
+
+- Added `KickWebhookEventRepository.PruneTerminalBefore`.
+- SQLite webhook inbox pruning deletes only `processed` and `ignored` rows whose `processed_at` is
+  older than the retention cutoff.
+- Webhook processor now prunes terminal inbox rows older than the default 7-day retention window
+  after each processing tick.
+- Added repository and processor tests proving processed/ignored old rows are pruned while failed
+  and recent terminal rows remain.
+
 ## 2026-06-01 (admin webhook status UI)
 
 - Updated the Operations Webhooks panel so channel subscription health is summarized per channel
