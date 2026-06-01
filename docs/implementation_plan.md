@@ -1,462 +1,298 @@
-# Kick Webhook Subscription Tracking
+# Storage Hot Path Hardening
 
 ## Summary
 
-Kick Logs will add a generic Kick webhook foundation and first use it to track
-subscription events for followed channels. The first product goal is to calculate each followed
-channel's **currently active subscriber count** from webhook-delivered subscription periods.
-
-Initial normalized event scope:
-
-- `channel.subscription.new`
-- `channel.subscription.renewal`
-- `channel.subscription.gifts`
-
-Out of scope for this first implementation:
-
-- KICKs analytics
-- moderation events such as ban/timeout
-- follow/livestream events
-- frontend visualization as the first step
-
-The infrastructure must still be generic enough to add those event families later without
-redesigning the webhook receiver, raw inbox, event subscription registry, or processing flow.
-
-## Product Rules
-
-- Active subscriber count means channel-specific unique users whose subscription period has not
-  expired.
-- Active count is calculated dynamically from stored periods:
-  `started_at <= now < expires_at`.
-- Do not run a cleanup/cron just to expire users from active counts.
-- Use Kick-provided `expires_at` as the source of truth.
-- If `expires_at` is missing, fallback to `created_at + 30 days`.
-- During the first 30 days after enabling webhooks, serve whatever data has been collected. Do not
-  show warning/coverage labels for the initial partial window.
-- Gift subscriptions create one normalized subscription period per giftee.
-- Anonymous or missing gifter data must not block normalization.
-- Disabling a followed channel should delete or deactivate the related Kick event subscriptions so
-  unnecessary webhook traffic stops.
-- Frontend work comes after the backend/data pipeline is complete.
-
-## Runtime And Networking
-
-- Add a public webhook endpoint: `POST /webhooks/kick`.
-- Local development uses a Cloudflare tunnel URL, for example:
-  `https://local-cloudflare-domain.com/webhooks/kick`.
-- Production uses the real domain, for example:
-  `https://kicklogs.net/webhooks/kick`.
-- The Kick Developer panel webhook callback URL must point to the active environment's public
-  `/webhooks/kick` URL.
-- The Kick event subscription API does not receive the callback URL in the request body; it uses the
-  app's configured webhook callback.
-- Cloudflare challenge/access/bot protections must not apply to `/webhooks/kick`.
-- Existing `/search` Cloudflare protection is acceptable as long as it is path-scoped and does not
-  affect `/webhooks/kick`.
-- App rate limiting should not treat webhook requests like user traffic. Webhook security is
-  signature verification plus idempotency, not aggressive IP throttling.
-
-## Configuration
-
-Add env/config fields:
-
-- `KICK_CLIENT_ID`
-- `KICK_CLIENT_SECRET`
-- `KICK_API_BASE_URL=https://api.kick.com`
-- `KICK_OAUTH_TOKEN_URL=https://id.kick.com/oauth/token`
-- `KICK_WEBHOOK_PUBLIC_KEY` (optional when credentials are configured; auto-fetched from Kick)
-- `KICK_WEBHOOK_SYNC_ENABLED=true`
-- `KICK_WEBHOOK_EVENTS=channel.subscription.new,channel.subscription.renewal,channel.subscription.gifts`
-- `KICK_WEBHOOK_PROCESS_BATCH_SIZE=50`
-- `KICK_WEBHOOK_PROCESS_MAX_ATTEMPTS=5`
-
-Behavior:
-
-- If Kick client credentials are missing:
-  - API still starts.
-  - Event subscription sync is disabled.
-  - Chat logging and the rest of the product continue to work.
-  - Log a clear warning.
-- If the webhook public key cannot be configured or auto-fetched:
-  - API still starts.
-  - `POST /webhooks/kick` fails closed because signatures cannot be verified.
-  - Log a clear warning.
-- Add all new env fields to `.env.example` and Compose API env wiring.
-
-## Data Model
-
-SQLite remains the control-plane store:
-
-- Kick app token cache metadata if needed.
-- Kick event subscription registry.
-- Webhook inbox status and retry state.
-- Sync state per followed channel/event type.
-
-ClickHouse remains the data-plane analytics store:
-
-- Normalized subscription periods.
-- Optional raw valid webhook archive if needed for audit/debug beyond the SQLite inbox.
-
-Required logical entities:
-
-### `followed_channels`
-
-Add an explicit broadcaster identity field:
-
-- `broadcaster_user_id`
-
-Important rule:
-
-- Do not assume existing `followed_channels.kick_channel_id` is the same as Kick
-  `broadcaster_user_id`.
-- Resolve and store `broadcaster_user_id` through the official Kick channel API before creating
-  webhook event subscriptions.
-
-### `kick_webhook_events`
-
-SQLite inbox table:
-
-- `message_id` from `Kick-Event-Message-Id` as the primary idempotency key
-- `subscription_id`
-- `event_type`
-- `event_version`
-- `raw_payload_json`
-- `status`: `pending`, `processed`, `failed`, `ignored`
-- `attempts`
-- `received_at`
-- `processed_at`
-- `error_message`
-
-### `kick_event_subscriptions`
-
-SQLite registry table:
-
-- followed channel id
-- broadcaster user id
-- event type
-- event version
-- method `webhook`
-- Kick subscription id
-- status
-- latest sync error
-- created/updated/synced timestamps
-
-### `channel_subscription_periods`
-
-ClickHouse normalized analytics table:
-
-- deterministic id
-- event message id
-- event type
-- followed channel id
-- broadcaster user id
-- channel slug/display-name snapshot
-- subscriber/giftee Kick user id
-- subscriber username/slug/profile snapshot when available
-- gifter Kick user id and username/slug/profile snapshot when available
-- `is_gift`
-- `started_at`
-- `expires_at`
-- raw payload JSON
-- ingested timestamp
-
-Idempotency:
-
-- `Kick-Event-Message-Id` is unique in the inbox.
-- Normalized rows must also be idempotent.
-- For gift events with multiple giftees, use a deterministic unique key such as:
-  `message_id + giftee_user_id`.
-
-## Kick API Integration
-
-Add a Kick API client for official endpoints.
-
-Responsibilities:
-
-- Obtain and cache app access tokens using env client credentials.
-- Resolve broadcaster user id for followed channels through official channel lookup.
-- List existing event subscriptions.
-- Create event subscriptions via `POST /public/v1/events/subscriptions` using
-  `{"broadcaster_user_id": ..., "events": [{"name": "...", "version": 1}], "method": "webhook"}`.
-- Delete event subscriptions with `DELETE /public/v1/events/subscriptions?id=<subscription_id>`
-  when a followed channel is disabled.
-- Fetch the webhook signing public key from `GET /public/v1/public-key` when it is not set in env.
-
-Event subscription sync:
-
-- On API startup:
-  - Load enabled followed channels.
-  - Resolve missing broadcaster user ids.
-  - Ensure required subscription events exist.
-  - Store created/existing subscription ids.
-- On admin channel add:
-  - Resolve channel metadata.
-  - Upsert followed channel.
-  - Ensure subscription events for that channel.
-- On admin channel disable:
-  - Disable the local followed channel.
-  - Delete known Kick event subscriptions for that channel.
-  - Mark local subscription records deleted/disabled.
-- Add an authenticated manual sync endpoint for recovery/debugging even though startup and channel
-  changes sync automatically.
-
-If Kick API fails during sync:
-
-- Do not fail the whole API.
-- Store latest sync error.
-- Surface sync health through admin API.
-- Retry on next startup, channel update, or explicit manual sync.
-
-## Webhook Receiver
-
-Receiver flow:
-
-1. Accept only `POST /webhooks/kick`.
-2. Read the raw request body once.
-3. Validate required Kick headers:
-   - `Kick-Event-Message-Id`
-   - `Kick-Event-Message-Timestamp`
-   - `Kick-Event-Type`
-   - `Kick-Event-Version`
-   - `Kick-Event-Signature`
-4. Verify the RSA-SHA256 signature against `message_id + "." + timestamp + "." + raw_body`.
-5. Insert the webhook inbox row idempotently.
-6. Return 2xx quickly for duplicates and successfully stored events.
-7. Return non-2xx for invalid signature, missing required headers, or malformed required envelope.
-
-Security rules:
-
-- Do not rely on source IP allowlisting for Kick webhook authenticity.
-- Do not require admin auth on the webhook endpoint.
-- Do not apply the normal user-facing rate limit policies to the webhook endpoint.
-- Signature verification is fail-closed.
-
-## Webhook Processor
-
-Processor flow:
-
-1. Pick pending webhook inbox rows.
-2. Parse event by type.
-3. For supported sub events, normalize into subscription periods.
-4. Write normalized periods to ClickHouse.
-5. Mark the inbox row processed.
-6. On parse/DB failure, increment attempts and keep latest error.
-7. Unsupported but valid events are marked ignored/raw-stored, not failed.
-
-Normalization rules:
-
-- `channel.subscription.new` creates one non-gift period.
-- `channel.subscription.renewal` creates one non-gift renewal period.
-- `channel.subscription.gifts` creates one gift period per giftee.
-- Store subscriber/giftee snapshots from payload.
-- Store gifter snapshot only when present.
-- Store broadcaster/channel snapshot from payload and map to a followed channel by
-  `broadcaster_user_id`.
-- Unknown/unfollowed/disabled broadcaster events should not crash processing. Mark them ignored with
-  a clear reason.
-
-Runtime placement:
-
-- Keep webhook processing in the API process for the first implementation unless the processing path
-  proves heavy.
-- Use a bounded background worker started by `cmd/api`.
-- Keep processing idempotent so a future dedicated worker service can be split out cleanly.
-
-## Public And Admin API
-
-Backend APIs must be ready before frontend work starts.
-
-Public API:
-
-- Add a channel subscription summary endpoint for channel profile usage.
-- Response includes at minimum:
-  - channel slug
-  - active subscriber count
-  - active gifted subscriber count
-  - latest subscription event timestamp if available
-
-Admin API:
-
-- Add webhook/subscription health endpoint.
-- Include:
-  - configured event types
-  - missing credentials/config flags
-  - followed channels with subscription sync status
-  - latest webhook received timestamp
-  - pending/failed/ignored/processed webhook inbox counts
-  - latest sync error per channel/event type
-
-Admin action:
-
-- Add manual webhook subscription sync endpoint for recovery/debugging.
-
-Frontend:
-
-- Defer visual implementation until backend is complete.
-- Later UI surfaces:
-  - public channel profile active subscriber metric
-  - admin channel list/sync health
-  - admin operations webhook health panel
+Kick Logs already moved the main chat archive to ClickHouse, but some high-frequency listener paths
+still write too much long-lived state to SQLite. This plan hardens the storage split without changing
+the public API contract or deleting historical chat data.
+
+Primary goal:
+
+- ClickHouse remains the durable data-plane store for chat events, visible messages, processing
+  attempts, and subscription periods.
+- SQLite remains the control-plane store plus temporary work queues.
+- Message ingestion should prefer preserving visible `chat_messages` over updating optional caches.
+
+This plan is intentionally safe for production deployments with existing ClickHouse data. It must not
+mutate or drop `chat_messages`.
+
+## Current Problem
+
+Observed production behavior:
+
+- `chat_messages` is the actual table served to users.
+- `raw_kick_events` archives every received raw Kick chat event.
+- `raw_event_attempts` records processing history.
+- SQLite `raw_event_queue` currently keeps processed rows forever.
+- SQLite `sender_profiles` can receive one upsert per processed message.
+- SQLite `kick_webhook_events` keeps processed and ignored webhook inbox rows forever.
+
+That means SQLite drifts from "control-plane plus queue" toward another data-plane database. Under
+heavy chat load this creates unnecessary write pressure and database growth.
+
+## Locked Storage Rules
+
+### ClickHouse Owns Data-Plane History
+
+ClickHouse tables are long-lived history:
+
+- `chat_messages`
+- `raw_kick_events`
+- `raw_event_attempts`
+- `channel_subscription_periods`
+
+Search, export, analytics, profile pages, and subscription summaries continue to read from
+ClickHouse-backed normalized tables. No frontend contract changes are expected.
+
+### SQLite Owns Control Plane And Temporary Queues
+
+SQLite tables are control-plane or temporary runtime state:
+
+- `admin_users`
+- `followed_channels`
+- `sender_profiles` as a best-effort cache
+- `retention_settings`
+- `worker_heartbeats`
+- `data_migration_runs`
+- `kick_event_subscriptions`
+- `raw_event_queue` as temporary pending/failed work only
+- `kick_webhook_events` as a short-retention webhook inbox
+
+Processed queue/inbox rows should not live forever in SQLite.
+
+### No User-Visible Data Loss
+
+The application serves historical chat from `chat_messages`. This work must not delete or rewrite
+that table. If a queue row is pruned after a successful processed attempt, that does not remove the
+visible message.
+
+## Production Safety Rules
+
+- Apply this work through normal migrations and code deploys; do not require a manual destructive
+  SQL step.
+- Keep migration statements idempotent.
+- Do not add ClickHouse mutations against `chat_messages`.
+- Existing processed rows in SQLite can be pruned only when they are no longer needed for retry.
+- `raw_event_attempts` remains the source used by startup backfill to know whether a raw event was
+  already processed.
+- If a processed queue row is removed but its ClickHouse processed attempt exists, startup backfill
+  must not re-enqueue it.
+- If a ClickHouse attempt insert fails, do not delete the queue row as processed.
+- Failed queue rows should remain available for admin inspection/retry.
+
+## Target Behavior
+
+### Raw Event Queue
+
+`raw_event_queue` should contain only:
+
+- pending rows
+- claimed rows
+- failed rows that need admin action or retry
+
+Successful rows should be removed from the queue after:
+
+1. the message batch was inserted or confirmed duplicate,
+2. the processed attempt was written to ClickHouse, and
+3. the worker is ready to acknowledge the queue item.
+
+The repository method can keep the existing name `MarkProcessed`, but its implementation should
+delete the queue row instead of updating it to `processed`.
+
+### Raw Event Attempts
+
+`raw_event_attempts` remains in ClickHouse. It is the audit/history table and also protects startup
+backfill from re-enqueuing already processed raw events.
+
+Malformed raw events that can never succeed should not be retried forever. Examples:
+
+- missing message id
+- malformed JSON payload
+- unsupported/incomplete chat payload shape that cannot produce a valid chat message
+
+These should be recorded as terminal ignored/invalid outcomes in ClickHouse attempt history and
+removed from the active queue, or otherwise marked terminal without staying in a retry loop.
+
+### Sender Profiles
+
+`sender_profiles` is a cache, not the source of truth for visible messages. A sender profile write
+must never block `chat_messages` insertion.
+
+Required behavior:
+
+- Build the `ChatMessage` from the sender data already present in the raw payload.
+- Attempt to upsert the sender profile cache only when useful.
+- If sender cache upsert fails, log it and continue processing the message.
+- Add a TTL/throttle gate so repeated messages from the same sender do not cause a SQLite write per
+  message.
+
+Initial acceptable TTL:
+
+- one cache write per sender every 10 minutes in the listener process.
+
+The cache may be in-memory. It does not need to survive process restart.
+
+### Webhook Inbox
+
+`kick_webhook_events` should remain an idempotent receiver inbox, but processed and ignored rows do
+not need to live forever in SQLite.
+
+Target behavior:
+
+- Keep pending and failed webhook events until processed/retried/admin inspected.
+- Prune processed and ignored webhook events older than a short retention window.
+- Default retention: 7 days.
+- Expose the retention as config only if implementation complexity stays low.
+
+Normalized subscription periods already live in ClickHouse, so pruning processed inbox rows must not
+change public subscription counts.
+
+### Admin Operations
+
+Operations UI/API should distinguish:
+
+- active queue state from SQLite (`pending`, `claimed`, `failed`)
+- historical raw-event state from ClickHouse attempts
+- storage size by table
+
+If processed queue rows are no longer stored in SQLite, admin copy and metrics should not imply that
+SQLite queue row counts represent all-time processed event history.
 
 ## Implementation Phases
 
-### Phase 1 - Plan And Config Docs
+### Phase 1 - Plan And Context
 
-- Replace the stale active implementation plan with this webhook subscription plan.
-- Add GitHub issue from the same plan text.
+- Replace the stale active implementation plan with this storage hot-path plan.
+- Update context files so future agents know issue #23 is active.
 - Do not change runtime code in this phase.
+- Commit as one docs feature.
 
-### Phase 2 - Storage And Domain Foundation
+### Phase 2 - Sender Profile Cache Becomes Best Effort
 
-- Add domain models and port interfaces for:
-  - webhook inbox
-  - event subscription registry
-  - subscription periods
-  - Kick event subscription API client
-- Add SQLite migrations and repositories for:
-  - `followed_channels.broadcaster_user_id`
-  - `kick_webhook_events`
-  - `kick_event_subscriptions`
-- Add ClickHouse migration and repository for:
-  - `channel_subscription_periods`
-- Add repository tests for idempotent inserts, pending/failure transitions, subscription registry
-  upserts, and active summary query.
-- Commit as one backend storage feature.
+- Refactor listener message preparation so the sender snapshot from the raw payload is sufficient to
+  build `ChatMessage`.
+- Make `SenderProfileRepository.Upsert` failures non-fatal in listener processing.
+- Log sender cache failures with raw event id and sender kick user id when available.
+- Add tests proving a sender profile upsert error still produces a visible chat message and a
+  processed raw event attempt.
+- Commit as one listener safety feature.
 
-### Phase 3 - Kick API Client And Subscription Sync
+### Phase 3 - Sender Profile Write Throttle
 
-- Add config/env loading for Kick client credentials, token URL, API base URL, webhook event list,
-  and sync enable flag.
-- Implement app access token acquisition/cache.
-- Implement official Kick channel lookup to resolve `broadcaster_user_id`.
-- Implement list/create/delete event subscription methods.
-- Add sync service:
-  - startup sync
-  - channel add sync
-  - channel disable cleanup
-  - manual admin sync
-- Sync failures must be stored and visible; they must not take the API down.
-- Add unit tests with fake Kick API client.
-- Commit as one Kick subscription sync feature.
+- Add a small in-memory TTL gate around sender profile cache writes.
+- Default TTL: 10 minutes.
+- Avoid introducing another dependency or persistent store for this gate.
+- Ensure first observation of a sender still writes immediately.
+- Ensure repeated messages from the same sender within the TTL do not upsert again.
+- Add focused unit tests.
+- Commit as one listener cache-throttle feature.
 
-### Phase 4 - Webhook Receiver
+### Phase 4 - Delete Processed Queue Rows
 
-- Add signature verifier.
-- Add `POST /webhooks/kick`.
-- Insert valid webhook events into the SQLite inbox idempotently.
-- Return 2xx for duplicate message ids.
-- Fail closed on invalid/missing signature config or invalid signatures.
-- Exclude webhook endpoint from normal user-facing rate-limit policies.
-- Add route/middleware tests for valid, duplicate, missing header, invalid signature, and malformed
-  body cases.
-- Commit as one webhook receiver feature.
+- Change SQLite `RawEventQueueRepository.MarkProcessed` to remove the row.
+- Keep the method idempotent: calling it for an already-deleted row should return nil.
+- Update fake queue repositories and tests to expect missing rows after successful processing.
+- Confirm `CountPending`, `OldestPendingAge`, and admin queue depth still only count active
+  pending/claimed rows.
+- Add or update tests proving startup backfill does not re-enqueue a raw event that already has a
+  ClickHouse `processed` attempt.
+- Commit as one raw-event queue pruning feature.
 
-### Phase 5 - Webhook Processor And Normalization
+### Phase 5 - Terminal Invalid Raw Events
 
-- Add parser/normalizer for supported sub events.
-- Normalize:
-  - `channel.subscription.new`
-  - `channel.subscription.renewal`
-  - `channel.subscription.gifts`
-- Create one period per giftee for gift events.
-- Use `expires_at` first, fallback to `created_at + 30 days`.
-- Ignore valid but unsupported/unfollowed events with a clear reason.
-- Start bounded background processing in API.
-- Add tests for normalization and retry/failure behavior.
-- Commit as one processor feature.
+- Classify permanent normalization failures separately from retryable failures.
+- Initial terminal invalid cases:
+  - missing message id
+  - malformed raw payload JSON
+  - missing followed channel after channel lookup proves the channel is not known
+- Store a terminal attempt status in ClickHouse, for example `ignored` or `invalid`.
+- Remove terminal invalid items from `raw_event_queue` so they do not retry forever.
+- Keep truly transient failures retryable.
+- Update failed-event admin behavior so terminal invalid events are visible or intentionally excluded
+  according to the chosen status.
+- Add tests for terminal invalid versus retryable failures.
+- Commit as one raw-event invalid-classification feature.
 
-### Phase 6 - Backend Query APIs
+### Phase 6 - Webhook Inbox Retention
 
-- Add public channel subscription summary endpoint.
-- Add admin webhook/subscription health endpoint.
-- Add admin manual sync endpoint.
-- Add tests for public summary, admin auth, health response shape, and manual sync.
-- Commit as one API feature.
+- Add a repository method for pruning processed/ignored webhook inbox rows older than the retention
+  window.
+- Add config for retention only if it stays simple; otherwise use a constant default of 7 days.
+- Run pruning from the webhook processor loop or another existing API background path.
+- Do not prune pending or failed webhook events.
+- Add repository/service tests.
+- Commit as one webhook inbox retention feature.
 
-### Phase 7 - Docs And Smoke
+### Phase 7 - Admin Operations Clarification
 
-- Update project docs/context for the completed backend webhook pipeline.
-- Add operation notes for:
-  - local Cloudflare tunnel callback
-  - production callback URL
-  - Cloudflare challenge bypass for `/webhooks/kick`
-  - Kick callback URL is configured in the Kick Developer panel
-- Run relevant backend checks:
+- Adjust operations response/UI copy if needed to clarify:
+  - SQLite queue depth is active work, not all-time history.
+  - processed raw history comes from ClickHouse attempts.
+  - failed queue rows may be retryable, while terminal invalid rows are not ordinary backlog.
+- Ensure storage table rows still display row counts and sizes accurately after queue pruning.
+- Add/update frontend and backend tests if response shape/copy changes.
+- Commit as one admin operations feature.
+
+### Phase 8 - Docs And Verification
+
+- Update:
+  - `docs/architecture.md`
+  - `docs/project_plan.md` if storage wording changed
+  - `docs/context/living_brain.md`
+  - `docs/context/decisions.md`
+  - `docs/context/change_log.md`
+  - `docs/context/recent_changes.md`
+- Run relevant validation:
   - `go test ./...`
   - `go vet ./...`
-  - targeted ClickHouse integration test if Docker is available
+  - frontend tests/typecheck only if UI changed
   - `pnpm format:check`
-- Commit docs/smoke updates.
-
-### Phase 8 - Frontend Visualization
-
-- Start only after backend is complete and verified.
-- Add public channel profile active subscriber metric.
-- Add admin webhook/subscription health surfaces.
-- Follow `docs/design/design.md`.
-- Commit frontend UI as separate feature-sized commits.
+- Commit final docs/verification updates.
 
 ## Test Plan
 
-Unit tests:
+Backend unit tests:
 
-- Signature verification accepts valid raw body/signature.
-- Signature verification rejects tampered body.
-- Missing required webhook headers returns non-2xx.
-- Duplicate message id is idempotent.
-- New subscription event normalizes one period.
-- Renewal event normalizes one period.
-- Gift subscription event normalizes one period per giftee.
-- Anonymous/missing gifter does not fail.
-- Missing `expires_at` falls back to `created_at + 30 days`.
-- Active count excludes expired periods.
-- Active count dedupes overlapping periods for the same user/channel.
-- Unsupported valid events are ignored, not failed.
+- Sender profile upsert failure does not fail raw event processing.
+- Sender profile cache write is throttled per sender.
+- Processed queue rows are deleted.
+- `MarkProcessed` remains idempotent.
+- Pending/claimed queue counts are unchanged by processed-row deletion.
+- Backfill skips events with processed ClickHouse attempts.
+- Terminal invalid payloads stop retrying.
+- Retryable failures still retry until max attempts.
+- Webhook retention prunes only processed/ignored old rows.
+- Webhook retention leaves pending/failed rows untouched.
 
-Integration tests:
+Backend integration-style tests:
 
-- Webhook receiver stores raw inbox row and returns quickly.
-- Processor writes normalized ClickHouse rows and marks inbox processed.
-- Processor retry path preserves raw payload and latest error.
-- Channel add triggers subscription ensure when config is present.
-- Channel disable triggers subscription deletion.
-- Startup sync reconciles existing followed channels.
-- Public summary endpoint reflects current active counts.
-- Admin health endpoint reports inbox counts and subscription sync state.
+- Listener processes a batch, writes `chat_messages`, writes processed attempts, and leaves no
+  processed queue rows.
+- Startup after processing does not refill the queue with already-processed raw events.
+- Failed event admin endpoints still show retryable failed items.
 
-Manual checks:
+Frontend tests:
 
-- Start app locally.
-- Expose `/webhooks/kick` through Cloudflare tunnel.
-- Configure Kick Developer panel callback URL to the tunnel URL.
-- Add followed channel.
-- Verify Kick event subscriptions are created.
-- Trigger or receive real subscription/gift-sub events.
-- Confirm normalized periods and active count update.
+- Only required if admin operations response/copy changes.
 
-## Operations Notes
+Manual production checks after deploy:
 
-Local development:
+- Back up Docker volumes before deploy.
+- Restart with the new image.
+- Verify `/health`.
+- Verify `/search` can query existing historical messages.
+- Verify admin Operations:
+  - queue depth does not grow indefinitely under normal traffic
+  - failed raw events are understandable
+  - ClickHouse failures remain stable
+  - listener heartbeat is fresh
+- Watch `listener` logs during a high-traffic channel.
 
-```text
-Kick -> https://local-cloudflare-domain.com/webhooks/kick -> cloudflared tunnel -> local API
-```
+## Out Of Scope
 
-Production:
-
-```text
-Kick -> https://kicklogs.net/webhooks/kick -> Cloudflare/proxy -> VPS API
-```
-
-Production requirements:
-
-- `/webhooks/kick` must bypass Cloudflare challenge/access/bot protections.
-- The origin can remain Cloudflare-only.
-- Do not open direct VPS firewall rules for unknown Kick IPs.
-- The Kick Developer panel callback URL must be changed to whichever environment is being tested.
-
-Important limitation:
-
-- Kick webhooks only provide events after event subscriptions are created.
-- The first 30 days after enabling the feature may be incomplete, but the application will still
-  serve the collected data without a warning label by product decision.
+- Replacing SQLite queue with RabbitMQ, NATS, Kafka, Redis, or ClickHouse queue tables.
+- Removing `raw_kick_events` or `raw_event_attempts`.
+- Changing public `/messages` response shape.
+- Changing frontend search/profile behavior.
+- Deleting historical `chat_messages`.
+- Adding distributed multi-node listener coordination.

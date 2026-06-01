@@ -2,6 +2,21 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-06-01 (issue #23 — storage hot path hardening plan)
+
+- Replaced the active implementation plan with the storage hot-path hardening plan for issue #23.
+- Documented the production-safe target split:
+  - ClickHouse remains the durable data-plane store for chat messages, raw Kick events, processing
+    attempts, and subscription periods.
+  - SQLite remains the control-plane store plus temporary queue/inbox state.
+- Planned feature-sized implementation phases for:
+  - best-effort sender profile cache writes
+  - sender profile write throttling
+  - deleting processed raw-event queue rows
+  - terminal invalid raw-event handling
+  - webhook inbox retention
+  - admin operations clarification
+
 ## 2026-06-01 (admin webhook status UI)
 
 - Updated the Operations Webhooks panel so channel subscription health is summarized per channel

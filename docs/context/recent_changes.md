@@ -2,7 +2,21 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (admin webhook status UI)
+## Latest (issue #23 — storage hot path hardening plan)
+
+- Active implementation plan now targets issue #23 storage hot-path hardening.
+- Locked the intended storage split:
+  - ClickHouse owns durable data-plane history (`chat_messages`, `raw_kick_events`,
+    `raw_event_attempts`, `channel_subscription_periods`).
+  - SQLite owns control-plane state plus temporary queue/inbox rows.
+- Planned safe production changes:
+  - sender profile cache upserts become best-effort and TTL-gated
+  - processed `raw_event_queue` rows are removed after successful ClickHouse processed attempts
+  - permanent invalid raw events stop retrying forever
+  - processed/ignored webhook inbox rows get short retention
+  - admin Operations copy/metrics clarify active queue state versus historical ClickHouse data
+
+## Previously Latest (admin webhook status UI)
 
 - Operations Webhooks panel now summarizes each channel's subscription state in one row instead of
   rendering three event rows inline. The summary is clickable:

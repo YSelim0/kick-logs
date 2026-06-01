@@ -5,9 +5,10 @@ implementation details, or working assumptions change.
 
 ## Current State
 
-- Branch: `feat/issue-22-kick-subscription-webhooks`.
-- Active plan: Kick webhook subscription tracking (see `docs/implementation_plan.md`, issue #22).
-  Phase 6 (backend query APIs) complete. Phase 7 next (docs and smoke).
+- Branch: `feat/issue-23-storage-hot-path-hardening`.
+- Active plan: Storage hot path hardening (see `docs/implementation_plan.md`, issue #23).
+  The goal is to keep ClickHouse as data-plane history while returning SQLite to control-plane and
+  temporary queue/inbox responsibilities.
 - Earlier: channels/users index search pages — `/channels` and `/users` search-first index pages
   added 2026-05-24.
 - Responsive polish pass is current through 2026-05-22: profile rows, admin navigation, admin
@@ -53,17 +54,31 @@ implementation details, or working assumptions change.
 - SQLite stores control-plane data:
   - admin users
   - followed channels
-  - sender profile cache
+  - sender profile cache (best-effort; must not block chat message persistence)
   - retention settings
   - worker heartbeats
-  - raw-event work queue (`raw_event_queue`)
+  - raw-event work queue (`raw_event_queue`) for pending/claimed/failed active work only
   - schema/data migration metadata
 - ClickHouse stores data-plane rows:
   - chat messages
   - raw Kick events
   - raw-event processing attempts
+  - normalized channel subscription periods
 - `chat_messages` is denormalized for search/export/analytics/profile paths. Hot read paths should
   not join back to SQLite.
+
+## Storage Hot Path Hardening (issue #23)
+
+- `raw_event_queue` should behave as an active work queue, not permanent processed history.
+  Processed queue rows can be removed after the ClickHouse processed attempt has been written.
+- Startup queue bootstrap must keep using ClickHouse `raw_event_attempts` to avoid re-enqueuing raw
+  events that already have a processed attempt.
+- Sender profile writes are cache updates only. A failed SQLite sender-profile upsert must not fail
+  raw chat event processing or prevent a visible `chat_messages` row.
+- Sender profile cache writes should be TTL-gated so high-volume senders do not cause one SQLite
+  write per message.
+- `kick_webhook_events` remains the webhook idempotency inbox, but processed/ignored rows should be
+  pruned after a short retention window. Pending/failed rows must remain for processing/admin action.
 
 ## Search Index Pages
 
