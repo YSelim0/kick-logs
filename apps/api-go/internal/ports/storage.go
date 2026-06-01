@@ -7,7 +7,6 @@ import (
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/domain"
 )
 
-
 type AdminUserRepository interface {
 	Upsert(ctx context.Context, user domain.AdminUser) (domain.AdminUser, error)
 	GetByID(ctx context.Context, id int64) (domain.AdminUser, error)

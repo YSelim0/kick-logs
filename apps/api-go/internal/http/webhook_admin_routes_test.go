@@ -149,14 +149,16 @@ type fakeInboxRepo struct {
 	latestTime time.Time
 }
 
-func (r *fakeInboxRepo) InsertIdempotent(_ context.Context, _ domain.KickWebhookEvent) error { return nil }
+func (r *fakeInboxRepo) InsertIdempotent(_ context.Context, _ domain.KickWebhookEvent) error {
+	return nil
+}
 func (r *fakeInboxRepo) GetByMessageID(_ context.Context, _ string) (domain.KickWebhookEvent, error) {
 	return domain.KickWebhookEvent{}, nil
 }
 func (r *fakeInboxRepo) ListPending(_ context.Context, _ int, _ int) ([]domain.KickWebhookEvent, error) {
 	return nil, nil
 }
-func (r *fakeInboxRepo) MarkProcessed(_ context.Context, _ string) error             { return nil }
+func (r *fakeInboxRepo) MarkProcessed(_ context.Context, _ string) error               { return nil }
 func (r *fakeInboxRepo) MarkFailed(_ context.Context, _ string, _ string, _ int) error { return nil }
 func (r *fakeInboxRepo) MarkIgnored(_ context.Context, _ string, _ string) error       { return nil }
 func (r *fakeInboxRepo) CountByStatus(_ context.Context) (map[string]int64, error) {

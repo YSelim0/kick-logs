@@ -19,8 +19,6 @@ import (
 	datamanagementinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/data_management"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/kick"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/migrations"
-	kicksyncusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/kicksync"
-	webhookprocessorusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/webhookprocessor"
 	operationsinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/operations"
 	ratelimitinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/ratelimit"
 	sqliteinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/sqlite"
@@ -29,8 +27,10 @@ import (
 	authusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/auth"
 	channelsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/channels"
 	datamanagementusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/data_management"
+	kicksyncusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/kicksync"
 	messagesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/messages"
 	profilesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/profiles"
+	webhookprocessorusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/webhookprocessor"
 )
 
 func main() {

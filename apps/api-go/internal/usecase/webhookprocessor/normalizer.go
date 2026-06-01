@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	EventTypeNew      = "channel.subscription.new"
-	EventTypeRenewal  = "channel.subscription.renewal"
-	EventTypeGifts    = "channel.subscription.gifts"
+	EventTypeNew     = "channel.subscription.new"
+	EventTypeRenewal = "channel.subscription.renewal"
+	EventTypeGifts   = "channel.subscription.gifts"
 )
 
 // ExtractBroadcasterUserID pulls broadcaster.user_id from any subscription payload.

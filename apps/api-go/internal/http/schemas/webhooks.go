@@ -18,9 +18,9 @@ type WebhookHealthResponse struct {
 }
 
 type ChannelSyncStatus struct {
-	FollowedChannelID int64           `json:"followed_channel_id"`
-	Slug              string          `json:"slug"`
-	BroadcasterUserID int64           `json:"broadcaster_user_id"`
+	FollowedChannelID int64            `json:"followed_channel_id"`
+	Slug              string           `json:"slug"`
+	BroadcasterUserID int64            `json:"broadcaster_user_id"`
 	Subscriptions     []EventSubStatus `json:"subscriptions"`
 }
 
