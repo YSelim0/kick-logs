@@ -1,8 +1,11 @@
 package routes
 
 import (
+	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -29,6 +32,14 @@ func handleKickWebhook(w http.ResponseWriter, r *http.Request, deps Dependencies
 	if deps.WebhookVerifier == nil && !skipVerification {
 		writeError(w, http.StatusServiceUnavailable, "Webhook signature verification not configured.")
 		return
+	}
+	// Log all Kick headers to determine signing mechanism.
+	if skipVerification {
+		for name, values := range r.Header {
+			if strings.HasPrefix(strings.ToLower(name), "kick-") {
+				logWebhookHeader(name, values)
+			}
+		}
 	}
 
 	messageID := strings.TrimSpace(r.Header.Get(headerMessageID))
@@ -79,5 +90,10 @@ func handleKickWebhook(w http.ResponseWriter, r *http.Request, deps Dependencies
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func logWebhookHeader(name string, values []string) {
+	slog.Info("kick webhook header", "name", name, "value", strings.Join(values, ", "))
+	fmt.Fprintf(os.Stderr, "[webhook-debug] header %s = %s\n", name, strings.Join(values, ", "))
 }
 

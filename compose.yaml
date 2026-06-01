@@ -83,6 +83,7 @@ services:
       KICK_WEBHOOK_EVENTS: ${KICK_WEBHOOK_EVENTS:-channel.subscription.new,channel.subscription.renewal,channel.subscription.gifts}
       KICK_WEBHOOK_PROCESS_BATCH_SIZE: ${KICK_WEBHOOK_PROCESS_BATCH_SIZE:-50}
       KICK_WEBHOOK_PROCESS_MAX_ATTEMPTS: ${KICK_WEBHOOK_PROCESS_MAX_ATTEMPTS:-5}
+      KICK_WEBHOOK_SKIP_VERIFICATION: ${KICK_WEBHOOK_SKIP_VERIFICATION:-false}
     depends_on:
       clickhouse:
         condition: service_healthy
