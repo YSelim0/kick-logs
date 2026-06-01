@@ -31,7 +31,7 @@ func (r *KickEventSubscriptionRepository) Upsert(ctx context.Context, sub domain
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(followed_channel_id, event_type, event_version, method) DO UPDATE SET
 			broadcaster_user_id   = excluded.broadcaster_user_id,
-			kick_subscription_id  = excluded.kick_subscription_id,
+			kick_subscription_id  = CASE WHEN excluded.kick_subscription_id != '' THEN excluded.kick_subscription_id ELSE kick_event_subscriptions.kick_subscription_id END,
 			status                = excluded.status,
 			latest_sync_error     = excluded.latest_sync_error,
 			updated_at            = excluded.updated_at,
