@@ -180,6 +180,39 @@ func TestRawEventProcessorKeepsMessageWhenSenderCacheFails(t *testing.T) {
 	}
 }
 
+func TestRawEventProcessorThrottlesSenderCacheWrites(t *testing.T) {
+	unit := newFakeListenerUnit()
+	service := newTestService(unit, fakePusherClient{})
+
+	for index, messageID := range []string{"message-cache-1", "message-cache-2"} {
+		payload := buildPayload(messageID)
+		enqueueRawEvent(t, unit, domain.RawKickEvent{
+			ID:            "raw-cache-" + idAt(index),
+			EventName:     chatMessageEventName,
+			KickMessageID: messageID,
+			ChatroomID:    123,
+			ChannelID:     1,
+			PayloadJSON:   rawPayloadJSON(payload),
+			Status:        "pending",
+			ReceivedAt:    time.Now().UTC(),
+		})
+	}
+
+	result, err := service.ProcessRawEventsOnce(context.Background())
+	if err != nil {
+		t.Fatalf("ProcessRawEventsOnce() error = %v", err)
+	}
+	if result.Claimed != 2 || result.Processed != 2 || result.Failed != 0 {
+		t.Fatalf("result = %#v", result)
+	}
+	if len(unit.messages.messages) != 2 {
+		t.Fatalf("messages = %#v", unit.messages.messages)
+	}
+	if unit.senders.upsertCalls != 1 {
+		t.Fatalf("sender cache upsert calls = %d, want 1", unit.senders.upsertCalls)
+	}
+}
+
 func TestRawEventProcessorSkipsAlreadyClaimedRawEvents(t *testing.T) {
 	unit := newFakeListenerUnit()
 	service := newTestService(unit, fakePusherClient{})
@@ -1011,11 +1044,13 @@ func (repo *fakeMessageRepository) Search(_ context.Context, _ domain.MessageSea
 }
 
 type fakeSenderRepository struct {
-	values     []domain.SenderProfile
-	failUpsert error
+	values      []domain.SenderProfile
+	failUpsert  error
+	upsertCalls int
 }
 
 func (repo *fakeSenderRepository) Upsert(_ context.Context, sender domain.SenderProfile) (domain.SenderProfile, error) {
+	repo.upsertCalls++
 	if repo.failUpsert != nil {
 		return domain.SenderProfile{}, repo.failUpsert
 	}

@@ -23,8 +23,11 @@ This is a living implementation log. Add new entries for each meaningful project
   chat message normalization.
 - The listener now logs sender cache upsert errors and continues with the sender snapshot from the
   raw Kick payload.
+- Added an in-memory sender profile write gate so the listener attempts at most one cache upsert per
+  Kick user id every 10 minutes.
 - Added coverage proving a sender profile cache failure still produces a visible chat message and a
-  processed raw-event attempt.
+  processed raw-event attempt, plus coverage for repeated sender messages avoiding repeated cache
+  writes.
 
 ## 2026-06-01 (admin webhook status UI)
 

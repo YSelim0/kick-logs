@@ -2,14 +2,16 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue #23 — sender profile cache best-effort)
+## Latest (issue #23 — sender profile cache throttling)
 
 - Listener raw-event processing no longer fails a chat message when SQLite `sender_profiles` upsert
   fails.
 - The message is still built from the raw Kick payload sender snapshot and written to
   `chat_messages`; the cache failure is logged for operations visibility.
-- Added listener test coverage for sender cache failure producing a processed attempt and visible
-  message.
+- Sender profile cache writes are now TTL-gated in memory: at most one SQLite upsert per Kick user
+  id every 10 minutes.
+- Added listener and gate tests for cache failure, first write, TTL expiry, per-sender separation,
+  and repeated messages from the same sender avoiding repeated cache writes.
 
 ## Previously Latest (issue #23 — storage hot path hardening plan)
 

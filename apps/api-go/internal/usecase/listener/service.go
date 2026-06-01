@@ -30,6 +30,7 @@ type Service struct {
 	config          ServiceConfig
 	writer          *bufferedRawWriter
 	breaker         *CircuitBreaker
+	senderCacheGate *senderProfileWriteGate
 }
 
 type ServiceConfig struct {
@@ -52,6 +53,7 @@ type ServiceConfig struct {
 	ClickHouseBackoffMax      time.Duration
 	ClickHouseBackoffFactor   float64
 	ClickHouseBreakerThresh   int
+	SenderProfileCacheTTL     time.Duration
 }
 
 type Dependencies struct {
@@ -103,6 +105,7 @@ func NewService(deps Dependencies) *Service {
 		logger:          logger,
 		config:          cfg,
 		breaker:         breaker,
+		senderCacheGate: newSenderProfileWriteGate(cfg.SenderProfileCacheTTL),
 	}
 	if deps.RawEvents != nil && deps.Queue != nil {
 		service.writer = newBufferedRawWriter(BufferedWriterConfig{
@@ -509,7 +512,7 @@ func (service *Service) prepareMessage(ctx context.Context, rawEvent domain.RawK
 	if err != nil {
 		return domain.ChatMessage{}, false, err
 	}
-	if service.senders != nil {
+	if service.senders != nil && service.senderCacheGate.ShouldWrite(sender.KickUserID) {
 		upserted, err := service.senders.Upsert(ctx, sender)
 		if err != nil {
 			service.logger.Warn(
@@ -709,6 +712,9 @@ func (cfg ServiceConfig) withDefaults() ServiceConfig {
 	}
 	if cfg.ClickHouseBreakerThresh < 1 {
 		cfg.ClickHouseBreakerThresh = 5
+	}
+	if cfg.SenderProfileCacheTTL <= 0 {
+		cfg.SenderProfileCacheTTL = 10 * time.Minute
 	}
 	return cfg
 }

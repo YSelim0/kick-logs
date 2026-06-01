@@ -10,6 +10,11 @@
   message still stores `sender_kick_id`, username, slug, color, badges, and profile-image hints from
   the payload. `normalizeMessagePayload` falls back to the Kick user id when no SQLite sender row id
   is available.
+- **Sender profile cache writes are TTL-gated in memory.** The listener attempts at most one
+  `sender_profiles` write per Kick user id every 10 minutes. The first observed message for a sender
+  still writes immediately; repeated messages inside the TTL use the payload snapshot and avoid a
+  SQLite write. Failed cache writes also consume the TTL window to prevent a busy SQLite cache from
+  being hammered during high-volume chat.
 
 ## 2026-06-01 (issue #22 — Kick webhook subscription tracking)
 
