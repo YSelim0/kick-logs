@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	defaultTickInterval   = 5 * time.Second
-	defaultInboxRetention = 7 * 24 * time.Hour
+	defaultTickInterval       = 5 * time.Second
+	defaultInboxRetention     = 7 * 24 * time.Hour
+	defaultInboxPruneInterval = time.Hour
 )
 
 type Service struct {
@@ -25,6 +26,8 @@ type Service struct {
 	maxAttempts    int
 	tickInterval   time.Duration
 	inboxRetention time.Duration
+	pruneInterval  time.Duration
+	lastPruneAt    time.Time
 }
 
 func NewService(
@@ -44,6 +47,7 @@ func NewService(
 		maxAttempts:    maxAttempts,
 		tickInterval:   defaultTickInterval,
 		inboxRetention: defaultInboxRetention,
+		pruneInterval:  defaultInboxPruneInterval,
 	}
 }
 
@@ -163,7 +167,12 @@ func (s *Service) pruneTerminalInbox(ctx context.Context) {
 	if s.inboxRetention <= 0 {
 		return
 	}
-	cutoff := time.Now().UTC().Add(-s.inboxRetention)
+	now := time.Now().UTC()
+	if s.pruneInterval > 0 && !s.lastPruneAt.IsZero() && now.Sub(s.lastPruneAt) < s.pruneInterval {
+		return
+	}
+	s.lastPruneAt = now
+	cutoff := now.Add(-s.inboxRetention)
 	pruned, err := s.inbox.PruneTerminalBefore(ctx, cutoff)
 	if err != nil {
 		s.log.Warn("webhook processor: prune terminal inbox failed", "error", err)

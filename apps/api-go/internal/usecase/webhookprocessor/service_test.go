@@ -260,10 +260,32 @@ func TestProcessorPrunesOldProcessedAndIgnoredInboxRows(t *testing.T) {
 	}
 }
 
+func TestProcessorThrottlesTerminalInboxPruneAttempts(t *testing.T) {
+	ctx := context.Background()
+
+	inbox := newFakeInbox()
+	old := time.Now().UTC().Add(-8 * 24 * time.Hour)
+	inbox.add(domain.KickWebhookEvent{
+		MessageID:   "old-processed",
+		Status:      domain.WebhookEventStatusProcessed,
+		ProcessedAt: old,
+		ReceivedAt:  old,
+	})
+
+	svc := webhookprocessor.NewService(discardLogger(), inbox, newFakeChannelRepo(), &fakePeriodRepo{}, 10, 5)
+	svc.ProcessBatchOnce(ctx)
+	svc.ProcessBatchOnce(ctx)
+
+	if inbox.pruneCalls != 1 {
+		t.Fatalf("prune calls = %d, want 1", inbox.pruneCalls)
+	}
+}
+
 // --- fakes ---
 
 type fakeInbox struct {
-	events []domain.KickWebhookEvent
+	events     []domain.KickWebhookEvent
+	pruneCalls int
 }
 
 func newFakeInbox() *fakeInbox { return &fakeInbox{} }
@@ -335,6 +357,7 @@ func (f *fakeInbox) MarkIgnored(_ context.Context, id string, reason string) err
 }
 
 func (f *fakeInbox) PruneTerminalBefore(_ context.Context, cutoff time.Time) (int64, error) {
+	f.pruneCalls++
 	kept := f.events[:0]
 	var pruned int64
 	for _, event := range f.events {

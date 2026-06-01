@@ -2,7 +2,22 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue #23 — docs and verification)
+## Latest (issue #23 — SQLite lock follow-up)
+
+- Fixed admin Data Management summary returning `Internal server error` while the listener/API had
+  concurrent SQLite writers.
+- Root cause: `GET /admin/data-management/summary` called `GetRetentionSettings`, which attempted
+  an `INSERT ... ON CONFLICT DO NOTHING` even when the settings row already existed. Under live
+  listener writes this could hit `SQLITE_BUSY`.
+- `GetRetentionSettings` now reads first and only creates the default row on `sql.ErrNoRows`, so the
+  summary path stays read-only after first setup.
+- Webhook inbox terminal pruning is now throttled to avoid attempting a SQLite `DELETE` every 5
+  seconds during normal processor ticks. A failed prune attempt is also throttled before retrying, so
+  lock warnings do not spam logs.
+- Added regression coverage for Data Management summary under a concurrent SQLite writer and
+  webhook prune throttling.
+
+## Previously Latest (issue #23 — docs and verification)
 
 - Architecture and project plan docs now describe the hardened storage split:
   - ClickHouse owns raw/message/attempt/subscription history.

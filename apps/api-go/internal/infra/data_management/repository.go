@@ -44,9 +44,21 @@ func (repo *Repository) Summary(ctx context.Context) (domain.DataManagementSumma
 }
 
 func (repo *Repository) GetRetentionSettings(ctx context.Context) (domain.RetentionSettings, error) {
+	settings, err := repo.readRetentionSettings(ctx)
+	if err == nil {
+		return settings, nil
+	}
+	if err != sql.ErrNoRows {
+		return domain.RetentionSettings{}, err
+	}
+
 	if err := repo.ensureRetentionSettings(ctx); err != nil {
 		return domain.RetentionSettings{}, err
 	}
+	return repo.readRetentionSettings(ctx)
+}
+
+func (repo *Repository) readRetentionSettings(ctx context.Context) (domain.RetentionSettings, error) {
 	row := repo.sqliteDB.QueryRowContext(
 		ctx,
 		`SELECT id, message_retention_days, raw_event_retention_days, created_at, updated_at

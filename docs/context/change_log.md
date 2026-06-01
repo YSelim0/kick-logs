@@ -81,6 +81,17 @@ This is a living implementation log. Add new entries for each meaningful project
   `feat/issue-23-storage-hot-path-hardening`.
 - Refreshed context handoff docs for the completed storage hot-path hardening branch.
 
+## 2026-06-01 (issue #23 — SQLite lock follow-up)
+
+- Fixed admin Data Management summary returning 500 under concurrent SQLite writer pressure.
+- `GetRetentionSettings` now reads existing settings first and only writes the default row when no
+  row exists, keeping `/admin/data-management/summary` read-only after initial setup.
+- Webhook processor terminal inbox pruning is throttled to once per hour instead of attempting a
+  SQLite `DELETE` every 5-second processor tick. Failed prune attempts also wait for the next
+  interval before retrying, avoiding repeated `SQLITE_BUSY` warnings.
+- Added regression tests for Data Management summary during a concurrent SQLite write lock and for
+  webhook prune throttling.
+
 ## 2026-06-01 (admin webhook status UI)
 
 - Updated the Operations Webhooks panel so channel subscription health is summarized per channel

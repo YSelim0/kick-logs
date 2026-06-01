@@ -36,6 +36,13 @@
   Operations come from ClickHouse history. SQLite `raw_event_queue` is surfaced as active ingestion
   backlog only, and terminal ignored/invalid raw events are excluded from retryable failed-event
   actions.
+- **Admin Data Management summary must stay read-only after setup.** The summary endpoint should not
+  perform opportunistic SQLite writes during normal reads. Retention settings are created only when
+  missing, because live listener/webhook writes can otherwise make a harmless admin read fail with
+  `SQLITE_BUSY`.
+- **Webhook inbox pruning is periodic maintenance, not per-tick work.** Terminal inbox cleanup is
+  throttled so the processor does not compete with live webhook inserts/listener SQLite writes every
+  5 seconds.
 
 ## 2026-06-01 (issue #22 — Kick webhook subscription tracking)
 
