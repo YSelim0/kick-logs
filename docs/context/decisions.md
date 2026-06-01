@@ -1,5 +1,36 @@
 # Decisions
 
+## 2026-06-01 (issue #22 — Kick webhook subscription tracking)
+
+- **`broadcaster_user_id` stored as `int64` with 0 = unresolved**, same pattern as `kick_channel_id`
+  in `followed_channels`. No pointer type; 0 is the sentinel for "not yet resolved via sync".
+- **`kick_webhook_events` uses `INSERT OR IGNORE`** for idempotency so duplicate deliveries from
+  Kick are silently dropped at the DB level without an extra SELECT round-trip.
+- **Webhook endpoint excluded from rate limiting.** `POST /webhooks/kick` has no matching rate-limit
+  policy. Security is Ed25519 signature verification (fail-closed: 503 if public key missing,
+  401 if signature invalid). Treating it like user traffic would throttle Kick's delivery retries.
+- **Ed25519 signed message is `messageID + timestamp + body` raw concatenation.** No delimiter used.
+  This matches the most common webhook signing convention. If Kick's actual format differs,
+  `infra/kick/webhook_verifier.go` is the single place to fix.
+- **`channel_subscription_periods` uses `ReplacingMergeTree(ingested_at)` ORDER BY `id`.** The
+  deterministic `id` (`messageID` for new/renewal, `messageID_gifteeUserID` for gifts) makes
+  re-processing idempotent. Queries use `FINAL` to deduplicate on read.
+- **Subscription period `expires_at` is always set before storage.** The fallback (`created_at + 30d`)
+  is applied during normalization (Phase 5), not at query time. The ClickHouse column is NOT NULL.
+- **`kick_subscription_id` preserved on upsert conflict.** The `ON CONFLICT DO UPDATE` SQL uses
+  `CASE WHEN excluded.kick_subscription_id != '' THEN ... ELSE existing END` so a sync error
+  upsert does not wipe a previously recorded Kick subscription ID.
+- **Subscription sync is non-blocking.** `SyncAll` returns void; per-channel errors are stored in
+  the registry and surfaced through `GET /admin/webhooks/health`. The API never fails to start
+  due to Kick API unavailability.
+- **Processor stays in the API process for now.** The background worker runs in a goroutine inside
+  `cmd/api`. Splitting into a separate binary is deferred until live load shows it is necessary;
+  idempotency guarantees the transition is safe.
+- **`ResolveBroadcasterUserID` uses the undocumented web API** (`kick.com/api/v2/channels/{slug}`)
+  rather than the official API, because the official API requires broadcaster_user_id as input
+  (no slug lookup). The web API already used by `WebChannelResolver` is the only practical source.
+  All broadcaster-ID resolution logic is isolated in `infra/kick/event_subscription_client.go`.
+
 ## 2026-05-31 (issue #20 — rate limiting follow-up: real IP + origin lockdown)
 
 - **Container ports bind to loopback by default.** `compose.yaml` now publishes api/web/ClickHouse

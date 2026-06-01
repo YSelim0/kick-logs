@@ -135,14 +135,13 @@ implementation details, or working assumptions change.
   - `POST|PUT|DELETE /admin/*` → admin user ID, 30/min burst 10
   - `GET /admin/*` → admin user ID, 120/min burst 30
   - `/health`, OPTIONS → unlimited (no matching policy)
+- `POST /webhooks/kick` → no matching policy (rate-limit exempt; security is Ed25519 signature + idempotent inbox insert)
 - Admin keying: `TokenService.GetUserID(cookie)` (no DB hit), IP fallback on failure.
 - Login dual-key: attacker cannot lock victim email by hammering from one IP — key includes
   attacker IP, not victim.
 - Fail-open: limiter errors log a warning and pass the request through.
 
 ## API Contract
-
-The Go API preserves the existing frontend surface:
 
 ```text
 GET  /health
@@ -168,6 +167,10 @@ GET  /analytics/top-channels
 GET  /analytics/top-emotes
 GET  /users/{slug}/analytics
 GET  /channels/{slug}/analytics
+GET  /channels/{slug}/subscription-summary
+POST /webhooks/kick
+GET  /admin/webhooks/health
+POST /admin/webhooks/sync
 ```
 
 Public routes remain unauthenticated. Admin routes require the HttpOnly JWT session cookie and an

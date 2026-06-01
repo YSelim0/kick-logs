@@ -2,7 +2,23 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest
+## Latest (Phase 7 — docs and smoke)
+
+- Context docs updated for completed webhook backend (Phases 2–7):
+  - `docs/architecture.md`: new endpoints added to API surface and public/admin route lists.
+  - `docs/context/living_brain.md`: phase status → Phase 7 complete; API contract section updated;
+    rate-limit note added for `POST /webhooks/kick` (exempt, signature-secured).
+  - `docs/context/decisions.md`: 10 webhook pipeline decision entries added (broadcaster_user_id
+    sentinel, inbox idempotency, rate-limit exemption, Ed25519 signed message format, ClickHouse
+    engine choice, expires_at NULL strategy, kick_subscription_id preservation, sync non-blocking,
+    processor placement, ResolveBroadcasterUserID via web API).
+  - `docs/context/change_log.md`: Phase 1–7 summary entry added.
+  - `docs/operations/webhooks.md`: new runbook — Kick Developer panel setup, cloudflared tunnel,
+    production Cloudflare bypass, rate-limit exemption rationale, sync/health endpoints, partial
+    data window note.
+- Verification: `go test ./...` green, `go vet ./...` green, `pnpm format:check` green.
+
+## Previously Latest (Phase 6)
 
 - Webhook subscription storage foundation (issue #22, Phase 2, branch `feat/issue-22-kick-subscription-webhooks`):
   - `domain/models.go`: added `BroadcasterUserID int64` to `FollowedChannel`; new types

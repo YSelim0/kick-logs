@@ -2,6 +2,31 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-06-01 (issue #22 — Kick webhook subscription tracking, Phases 1–7)
+
+Backend pipeline for tracking Kick subscription events via webhooks. Phase 8 (frontend) deferred.
+
+- **Phase 2 — Storage foundation**: `followed_channels.broadcaster_user_id`; SQLite tables
+  `kick_webhook_events` (inbox) and `kick_event_subscriptions` (registry); ClickHouse table
+  `channel_subscription_periods` (`ReplacingMergeTree` ORDER BY deterministic `id`); all port
+  interfaces; full repository test coverage.
+- **Phase 3 — Kick API client and sync**: `EventSubscriptionClient` (OAuth2 client credentials,
+  token cache, broadcaster_user_id resolve, event sub CRUD via `api.kick.com`); `kicksync.Service`
+  (`SyncAll`, `EnsureChannelSubscriptions`, `RemoveChannelSubscriptions`); startup background sync;
+  channel add/disable triggers goroutine sync; 5 unit tests.
+- **Phase 4 — Webhook receiver**: `POST /webhooks/kick`; Ed25519 signature verification
+  (`infra/kick/WebhookVerifier`, PEM/base64/hex key formats); `INSERT OR IGNORE` idempotency;
+  fail-closed (503 with no key, 401 on bad sig); rate-limit exempt; 8 route tests.
+- **Phase 5 — Processor and normalization**: `webhookprocessor.Service` (5s tick, background
+  worker); normalizer handles `channel.subscription.new/renewal` (1 period) and
+  `channel.subscription.gifts` (1 period/giftee); `expires_at` fallback `created_at + 30d`;
+  `ErrIgnored` for unsupported/unfollowed events; 13 tests.
+- **Phase 6 — Backend query APIs**: `GET /channels/{slug}/subscription-summary` (public active
+  count); `GET /admin/webhooks/health` (inbox counts, sync status, config flags);
+  `POST /admin/webhooks/sync` (manual sync trigger); auth-gated admin endpoints.
+- **Phase 7 — Docs and smoke**: context, architecture, decisions, change log, operations runbook
+  updated; `go test ./...`, `go vet ./...`, `pnpm format:check` verified green.
+
 ## 2026-05-31 (README refresh)
 
 - Rewrote the root README as a shorter, product-focused public repo page:

@@ -152,6 +152,12 @@ GET /analytics/top-emotes
 
 GET /users/{slug}/analytics
 GET /channels/{slug}/analytics
+GET /channels/{slug}/subscription-summary
+
+POST /webhooks/kick
+
+GET  /admin/webhooks/health
+POST /admin/webhooks/sync
 ```
 
 Public routes:
@@ -161,6 +167,8 @@ Public routes:
 - `/analytics/*`
 - `/users/{slug}/analytics`
 - `/channels/{slug}/analytics`
+- `/channels/{slug}/subscription-summary`
+- `/webhooks/kick` (no auth, signature-verified)
 
 Prediction is client-side only. The browser calls Kick's public endpoints
 (`https://kick.com/api/v2/channels/{slug}` and `.../predictions/latest`) directly; the frontend
