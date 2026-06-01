@@ -49,6 +49,15 @@ func (service *Service) Add(ctx context.Context, slug string) (domain.FollowedCh
 	return service.channels.Upsert(ctx, channel)
 }
 
+func (service *Service) GetBySlug(ctx context.Context, slug string) (domain.FollowedChannel, error) {
+	slug = strings.TrimSpace(slug)
+	ch, err := service.channels.GetBySlug(ctx, slug)
+	if errors.Is(err, sql.ErrNoRows) {
+		return domain.FollowedChannel{}, ErrChannelNotFound
+	}
+	return ch, err
+}
+
 func (service *Service) Disable(ctx context.Context, id int64) (domain.FollowedChannel, error) {
 	channel, err := service.channels.Disable(ctx, id)
 	if errors.Is(err, sql.ErrNoRows) {

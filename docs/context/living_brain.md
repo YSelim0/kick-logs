@@ -7,7 +7,7 @@ implementation details, or working assumptions change.
 
 - Branch: `feat/issue-22-kick-subscription-webhooks`.
 - Active plan: Kick webhook subscription tracking (see `docs/implementation_plan.md`, issue #22).
-  Phase 5 (webhook processor and normalization) complete. Phase 6 next.
+  Phase 6 (backend query APIs) complete. Phase 7 next (docs and smoke).
 - Earlier: channels/users index search pages — `/channels` and `/users` search-first index pages
   added 2026-05-24.
 - Responsive polish pass is current through 2026-05-22: profile rows, admin navigation, admin
@@ -32,7 +32,7 @@ implementation details, or working assumptions change.
   - `raw_kick_events`: 121664
   - `raw_event_attempts`: 121664
 
-## Webhook Subscription Pipeline (issue #22, Phase 5 complete)
+## Webhook Subscription Pipeline (issue #22, Phase 6 complete)
 
 - `domain.KickWebhookEvent` — webhook inbox model; status: `pending/processed/failed/ignored`
 - `domain.KickEventSubscription` — Kick event subscription registry; status: `active/deleted/error`
@@ -43,6 +43,7 @@ implementation details, or working assumptions change.
 - Port: `KickWebhookEventRepository` (SQLite inbox), `KickEventSubscriptionRepository` (SQLite registry)
 - Port: `SubscriptionPeriodRepository` (ClickHouse), `KickEventSubscriptionClient` (Phase 3 impl)
 - Port: `FollowedChannelRepository.GetByBroadcasterUserID` added
+- API contract additions: `GET /channels/{slug}/subscription-summary` (public), `GET /admin/webhooks/health` (admin), `POST /admin/webhooks/sync` (admin)
 - SQLite migrations v5 (broadcaster_user_id), v6 (kick_webhook_events), v7 (kick_event_subscriptions)
 - ClickHouse migration v5 (channel_subscription_periods, ReplacingMergeTree ORDER BY id)
 - Active count query uses `FINAL` + `countDistinctIf(subscriber_kick_user_id, expires_at > now())`

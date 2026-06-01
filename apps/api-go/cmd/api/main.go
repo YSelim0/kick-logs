@@ -125,10 +125,12 @@ func main() {
 	var messageService *messagesusecase.Service
 	var analyticsService *analyticsusecase.Service
 	var profileService *profilesusecase.Service
+	var subPeriodRepoForAPI ports.SubscriptionPeriodRepository
 	if clickHouseConn != nil {
 		messageRepository := clickhouseinfra.NewMessageRepository(clickHouseConn)
 		analyticsRepository := clickhouseinfra.NewAnalyticsRepository(clickHouseConn)
 		subPeriodRepo := clickhouseinfra.NewSubscriptionPeriodRepository(clickHouseConn)
+		subPeriodRepoForAPI = subPeriodRepo
 		messageService = messagesusecase.NewService(messageRepository)
 		analyticsService = analyticsusecase.NewService(analyticsRepository)
 		profileService = profilesusecase.NewService(analyticsRepository, channelRepo, senderRepo)
@@ -153,19 +155,21 @@ func main() {
 		datamanagementinfra.NewRepository(sqliteDB, cfg.SQLitePath, clickHouseConn),
 	)
 	server := app.NewAPIServer(cfg, logger, routes.Dependencies{
-		Config:          cfg,
-		Auth:            authService,
-		Analytics:       analyticsService,
-		Channels:        channelService,
-		Messages:        messageService,
-		Profiles:        profileService,
-		Data:            dataManagementService,
-		KickSync:        kickSyncService,
-		WebhookEvents:   webhookEventRepo,
-		WebhookVerifier: webhookVerifier,
-		Operations:      operationsRepo,
-		RateLimiter:     rateLimiter,
-		TokenService:    tokenService,
+		Config:              cfg,
+		Auth:                authService,
+		Analytics:           analyticsService,
+		Channels:            channelService,
+		Messages:            messageService,
+		Profiles:            profileService,
+		Data:                dataManagementService,
+		KickSync:            kickSyncService,
+		WebhookEvents:       webhookEventRepo,
+		WebhookVerifier:     webhookVerifier,
+		WebhookEventSubs:    eventSubRepo,
+		SubscriptionPeriods: subPeriodRepoForAPI,
+		Operations:          operationsRepo,
+		RateLimiter:         rateLimiter,
+		TokenService:        tokenService,
 	})
 
 	errs := make(chan error, 1)
