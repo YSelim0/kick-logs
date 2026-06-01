@@ -10,10 +10,6 @@ import (
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/ports"
 )
 
-// kickAPIDelay is the pause between consecutive Kick event subscription API calls
-// to avoid 429 rate limit responses during bulk sync.
-const kickAPIDelay = 500 * time.Millisecond
-
 type Service struct {
 	log       *slog.Logger
 	channels  ports.FollowedChannelRepository
@@ -50,7 +46,7 @@ func (s *Service) SyncAll(ctx context.Context) {
 	}
 	s.log.Info("kicksync: fetched existing Kick subscriptions", "count", len(kickSubs))
 	for _, sub := range kickSubs {
-		s.log.Info("kicksync: existing Kick sub", "broadcaster_user_id", sub.BroadcasterUserID, "event_type", sub.EventType, "sub_id", sub.SubscriptionID)
+		s.log.Debug("kicksync: existing Kick sub", "broadcaster_user_id", sub.BroadcasterUserID, "event_type", sub.EventType, "sub_id", sub.SubscriptionID)
 	}
 	kickSubIndex := buildKickSubIndex(kickSubs)
 
@@ -70,10 +66,14 @@ func (s *Service) SyncAll(ctx context.Context) {
 func buildKickSubIndex(subs []domain.KickAPIEventSub) map[string]domain.KickAPIEventSub {
 	index := make(map[string]domain.KickAPIEventSub, len(subs))
 	for _, s := range subs {
-		key := fmt.Sprintf("%d:%s", s.BroadcasterUserID, s.EventType)
+		key := subscriptionKey(s.BroadcasterUserID, s.EventType)
 		index[key] = s
 	}
 	return index
+}
+
+func subscriptionKey(broadcasterUserID int64, eventType string) string {
+	return fmt.Sprintf("%d:%s", broadcasterUserID, eventType)
 }
 
 // EnsureChannelSubscriptions creates any missing Kick event subscriptions for
@@ -83,7 +83,10 @@ func (s *Service) EnsureChannelSubscriptions(ctx context.Context, followedChanne
 	if err != nil {
 		return fmt.Errorf("get channel %d: %w", followedChannelID, err)
 	}
-	kickSubs, _ := s.client.ListEventSubscriptions(ctx)
+	kickSubs, err := s.client.ListEventSubscriptions(ctx)
+	if err != nil {
+		s.log.Warn("kicksync: could not list existing Kick subscriptions before channel sync; will attempt creation anyway", "channel", ch.Slug, "error", err)
+	}
 	return s.syncChannel(ctx, ch, buildKickSubIndex(kickSubs))
 }
 
@@ -146,75 +149,145 @@ func (s *Service) syncChannel(ctx context.Context, ch domain.FollowedChannel, ki
 		}
 
 		// Already exists on Kick (fetched from list) — just record it locally.
-		kickKey := fmt.Sprintf("%d:%s", ch.BroadcasterUserID, eventType)
+		kickKey := subscriptionKey(ch.BroadcasterUserID, eventType)
 		if kickSub, found := kickSubIndex[kickKey]; found {
-			newSub := domain.KickEventSubscription{
-				FollowedChannelID:  ch.ID,
-				BroadcasterUserID:  ch.BroadcasterUserID,
-				EventType:          eventType,
-				EventVersion:       "v1",
-				Method:             "webhook",
-				KickSubscriptionID: kickSub.SubscriptionID,
-				Status:             domain.KickEventSubStatusActive,
-				SyncedAt:           time.Now().UTC(),
-			}
-			if exists {
-				newSub.CreatedAt = current.CreatedAt
-			}
-			if _, upsertErr := s.eventSubs.Upsert(ctx, newSub); upsertErr != nil {
-				s.log.Warn("kicksync: save existing subscription to registry failed", "channel", ch.Slug, "event_type", eventType, "error", upsertErr)
-			} else {
+			if s.recordActiveSubscription(ctx, ch, eventType, kickSub, current, exists) {
 				s.log.Info("kicksync: recorded existing Kick subscription", "channel", ch.Slug, "event_type", eventType, "kick_sub_id", kickSub.SubscriptionID)
 			}
 			continue
 		}
+	}
 
-		// Not on Kick yet — create it.
-		time.Sleep(kickAPIDelay)
-		apiSub, createErr := s.client.CreateEventSubscription(ctx, ch.BroadcasterUserID, eventType)
-		if createErr != nil {
-			s.log.Warn("kicksync: create event subscription failed",
-				"channel", ch.Slug,
-				"event_type", eventType,
-				"error", createErr,
-			)
-			if exists {
-				_ = s.eventSubs.UpdateSyncError(ctx, current.ID, createErr.Error())
-			} else {
-				errSub := domain.KickEventSubscription{
-					FollowedChannelID: ch.ID,
-					BroadcasterUserID: ch.BroadcasterUserID,
-					EventType:         eventType,
-					EventVersion:      "v1",
-					Method:            "webhook",
-					Status:            domain.KickEventSubStatusError,
-					LatestSyncError:   createErr.Error(),
-				}
-				if _, upsertErr := s.eventSubs.Upsert(ctx, errSub); upsertErr != nil {
-					s.log.Warn("kicksync: save error subscription record failed", "error", upsertErr)
-				}
+	missingEvents := s.missingEventTypes(ch, byType, kickSubIndex)
+	if len(missingEvents) == 0 {
+		return nil
+	}
+
+	apiSubs, createErr := s.client.CreateEventSubscriptions(ctx, ch.BroadcasterUserID, missingEvents)
+	if createErr != nil {
+		s.log.Warn("kicksync: create event subscriptions failed",
+			"channel", ch.Slug,
+			"events", missingEvents,
+			"error", createErr,
+		)
+	} else {
+		s.log.Info("kicksync: event subscriptions created", "channel", ch.Slug, "count", len(apiSubs))
+	}
+
+	for _, apiSub := range apiSubs {
+		if apiSub.EventType == "" {
+			continue
+		}
+		if apiSub.BroadcasterUserID == 0 {
+			apiSub.BroadcasterUserID = ch.BroadcasterUserID
+		}
+		kickSubIndex[subscriptionKey(apiSub.BroadcasterUserID, apiSub.EventType)] = apiSub
+	}
+
+	if createErr != nil || len(apiSubs) < len(missingEvents) {
+		refreshedSubs, listErr := s.client.ListEventSubscriptions(ctx)
+		if listErr != nil {
+			s.log.Warn("kicksync: list subscriptions after create failed", "channel", ch.Slug, "error", listErr)
+		} else {
+			for _, sub := range refreshedSubs {
+				kickSubIndex[subscriptionKey(sub.BroadcasterUserID, sub.EventType)] = sub
+			}
+		}
+	}
+
+	for _, eventType := range missingEvents {
+		current, exists := byType[eventType]
+		key := subscriptionKey(ch.BroadcasterUserID, eventType)
+		if apiSub, found := kickSubIndex[key]; found && apiSub.SubscriptionID != "" {
+			if s.recordActiveSubscription(ctx, ch, eventType, apiSub, current, exists) {
+				s.log.Info("kicksync: event subscription active", "channel", ch.Slug, "event_type", eventType, "kick_sub_id", apiSub.SubscriptionID)
 			}
 			continue
 		}
 
-		newSub := domain.KickEventSubscription{
-			FollowedChannelID:  ch.ID,
-			BroadcasterUserID:  ch.BroadcasterUserID,
-			EventType:          eventType,
-			EventVersion:       "v1",
-			Method:             "webhook",
-			KickSubscriptionID: apiSub.SubscriptionID,
-			Status:             domain.KickEventSubStatusActive,
-			SyncedAt:           time.Now().UTC(),
+		errText := "event subscription was not returned by Kick API"
+		if createErr != nil {
+			errText = createErr.Error()
 		}
-		if exists {
-			newSub.CreatedAt = current.CreatedAt
-		}
-		if _, upsertErr := s.eventSubs.Upsert(ctx, newSub); upsertErr != nil {
-			s.log.Warn("kicksync: save subscription to registry failed", "channel", ch.Slug, "event_type", eventType, "error", upsertErr)
-		} else {
-			s.log.Info("kicksync: event subscription created", "channel", ch.Slug, "event_type", eventType, "kick_sub_id", apiSub.SubscriptionID)
-		}
+		s.recordSubscriptionError(ctx, ch, eventType, current, exists, errText)
 	}
 	return nil
+}
+
+func (s *Service) missingEventTypes(
+	ch domain.FollowedChannel,
+	localByType map[string]domain.KickEventSubscription,
+	kickSubIndex map[string]domain.KickAPIEventSub,
+) []string {
+	missing := make([]string, 0, len(s.events))
+	for _, eventType := range s.events {
+		current, exists := localByType[eventType]
+		if exists && current.Status == domain.KickEventSubStatusActive && current.KickSubscriptionID != "" {
+			continue
+		}
+		if _, found := kickSubIndex[subscriptionKey(ch.BroadcasterUserID, eventType)]; found {
+			continue
+		}
+		missing = append(missing, eventType)
+	}
+	return missing
+}
+
+func (s *Service) recordActiveSubscription(
+	ctx context.Context,
+	ch domain.FollowedChannel,
+	eventType string,
+	apiSub domain.KickAPIEventSub,
+	current domain.KickEventSubscription,
+	exists bool,
+) bool {
+	newSub := domain.KickEventSubscription{
+		FollowedChannelID:  ch.ID,
+		BroadcasterUserID:  ch.BroadcasterUserID,
+		EventType:          eventType,
+		EventVersion:       "v1",
+		Method:             "webhook",
+		KickSubscriptionID: apiSub.SubscriptionID,
+		Status:             domain.KickEventSubStatusActive,
+		SyncedAt:           time.Now().UTC(),
+	}
+	if exists {
+		newSub.CreatedAt = current.CreatedAt
+	}
+	if _, upsertErr := s.eventSubs.Upsert(ctx, newSub); upsertErr != nil {
+		s.log.Warn("kicksync: save subscription to registry failed", "channel", ch.Slug, "event_type", eventType, "error", upsertErr)
+		return false
+	}
+	return true
+}
+
+func (s *Service) recordSubscriptionError(
+	ctx context.Context,
+	ch domain.FollowedChannel,
+	eventType string,
+	current domain.KickEventSubscription,
+	exists bool,
+	errText string,
+) {
+	s.log.Warn("kicksync: event subscription inactive",
+		"channel", ch.Slug,
+		"event_type", eventType,
+		"error", errText,
+	)
+	if exists {
+		_ = s.eventSubs.UpdateSyncError(ctx, current.ID, errText)
+		return
+	}
+	errSub := domain.KickEventSubscription{
+		FollowedChannelID: ch.ID,
+		BroadcasterUserID: ch.BroadcasterUserID,
+		EventType:         eventType,
+		EventVersion:      "v1",
+		Method:            "webhook",
+		Status:            domain.KickEventSubStatusError,
+		LatestSyncError:   errText,
+	}
+	if _, upsertErr := s.eventSubs.Upsert(ctx, errSub); upsertErr != nil {
+		s.log.Warn("kicksync: save error subscription record failed", "error", upsertErr)
+	}
 }

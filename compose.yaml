@@ -78,11 +78,14 @@ services:
       KICK_CLIENT_SECRET: ${KICK_CLIENT_SECRET:-}
       KICK_API_BASE_URL: ${KICK_API_BASE_URL:-https://api.kick.com}
       KICK_OAUTH_TOKEN_URL: ${KICK_OAUTH_TOKEN_URL:-https://id.kick.com/oauth/token}
+      # Optional manual override. Normally empty: the API fetches the webhook
+      # public key from Kick with the client credentials.
       KICK_WEBHOOK_PUBLIC_KEY: ${KICK_WEBHOOK_PUBLIC_KEY:-}
       KICK_WEBHOOK_SYNC_ENABLED: ${KICK_WEBHOOK_SYNC_ENABLED:-true}
       KICK_WEBHOOK_EVENTS: ${KICK_WEBHOOK_EVENTS:-channel.subscription.new,channel.subscription.renewal,channel.subscription.gifts}
       KICK_WEBHOOK_PROCESS_BATCH_SIZE: ${KICK_WEBHOOK_PROCESS_BATCH_SIZE:-50}
       KICK_WEBHOOK_PROCESS_MAX_ATTEMPTS: ${KICK_WEBHOOK_PROCESS_MAX_ATTEMPTS:-5}
+      # Local debug escape hatch only. Keep false in every real deployment.
       KICK_WEBHOOK_SKIP_VERIFICATION: ${KICK_WEBHOOK_SKIP_VERIFICATION:-false}
     depends_on:
       clickhouse:

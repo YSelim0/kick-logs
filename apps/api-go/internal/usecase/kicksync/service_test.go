@@ -94,6 +94,9 @@ func TestEnsureChannelSubscriptionsCreatesAll(t *testing.T) {
 			t.Fatalf("subscription not active: %+v", sub)
 		}
 	}
+	if client.createCalls != 1 {
+		t.Fatalf("CreateEventSubscriptions called %d times, want 1", client.createCalls)
+	}
 }
 
 func TestEnsureChannelSubscriptionsSkipsExistingActive(t *testing.T) {
@@ -130,7 +133,7 @@ func TestEnsureChannelSubscriptionsSkipsExistingActive(t *testing.T) {
 	}
 
 	if client.createCalls != 0 {
-		t.Fatalf("CreateEventSubscription called %d times, want 0", client.createCalls)
+		t.Fatalf("CreateEventSubscriptions called %d times, want 0", client.createCalls)
 	}
 }
 
@@ -228,17 +231,22 @@ func (f *fakeKickClient) ListEventSubscriptions(_ context.Context) ([]domain.Kic
 	return nil, nil
 }
 
-func (f *fakeKickClient) CreateEventSubscription(_ context.Context, _ int64, eventType string) (domain.KickAPIEventSub, error) {
+func (f *fakeKickClient) CreateEventSubscriptions(_ context.Context, broadcasterUserID int64, eventTypes []string) ([]domain.KickAPIEventSub, error) {
 	f.createCalls++
 	if f.createError != "" {
-		return domain.KickAPIEventSub{}, fmt.Errorf("%s", f.createError)
+		return nil, fmt.Errorf("%s", f.createError)
 	}
-	f.counter++
-	return domain.KickAPIEventSub{
-		SubscriptionID: fmt.Sprintf("%s-%d", f.subIDPrefix, f.counter),
-		EventType:      eventType,
-		Method:         "webhook",
-	}, nil
+	subs := make([]domain.KickAPIEventSub, 0, len(eventTypes))
+	for _, eventType := range eventTypes {
+		f.counter++
+		subs = append(subs, domain.KickAPIEventSub{
+			SubscriptionID:    fmt.Sprintf("%s-%d", f.subIDPrefix, f.counter),
+			BroadcasterUserID: broadcasterUserID,
+			EventType:         eventType,
+			Method:            "webhook",
+		})
+	}
+	return subs, nil
 }
 
 func (f *fakeKickClient) DeleteEventSubscription(_ context.Context, _ string) error {

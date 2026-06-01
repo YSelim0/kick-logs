@@ -2,6 +2,26 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
+## Latest (webhook sync contract fix)
+
+- Fixed Kick webhook subscription sync against the current Kick API contract:
+  - create requests now send `events: [{name, version: 1}]` plus `method: webhook`, not the old
+    single `type` field.
+  - missing events are created per channel in one batch request and then reconciled with a
+    list-after-create fallback if Kick returns an ambiguous response.
+  - delete now uses `DELETE /public/v1/events/subscriptions?id=<subscription_id>`.
+  - public key auto-fetch now uses `GET /public/v1/public-key` and reads `data.public_key`.
+- Webhook signature verification corrected to RSA-SHA256 over
+  `message_id + "." + timestamp + "." + raw_body`; old Ed25519 assumptions are removed.
+- Webhook processor now ignores events for disabled channels, preventing stale remote subscriptions
+  from polluting active subscriber metrics.
+- Local smoke after Docker API rebuild:
+  - API fetched the Kick webhook public key successfully.
+  - Enabled channels `gugucan`, `levo`, and `prensesperver` all have active
+    `channel.subscription.new`, `channel.subscription.renewal`, and `channel.subscription.gifts`
+    subscriptions.
+- Verification: `go test ./...` and `go vet ./...` green in `apps/api-go`.
+
 ## Latest (Phase 7 — docs and smoke)
 
 - Context docs updated for completed webhook backend (Phases 2–7):
@@ -9,7 +29,7 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `docs/context/living_brain.md`: phase status → Phase 7 complete; API contract section updated;
     rate-limit note added for `POST /webhooks/kick` (exempt, signature-secured).
   - `docs/context/decisions.md`: 10 webhook pipeline decision entries added (broadcaster_user_id
-    sentinel, inbox idempotency, rate-limit exemption, Ed25519 signed message format, ClickHouse
+    sentinel, inbox idempotency, rate-limit exemption, RSA-SHA256 signed message format, ClickHouse
     engine choice, expires_at NULL strategy, kick_subscription_id preservation, sync non-blocking,
     processor placement, ResolveBroadcasterUserID via web API).
   - `docs/context/change_log.md`: Phase 1–7 summary entry added.

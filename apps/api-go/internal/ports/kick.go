@@ -18,7 +18,7 @@ type PusherClient interface {
 	Listen(ctx context.Context, channels []domain.ListenerChannel, handle func(string) error) error
 }
 
-// KickWebhookVerifier verifies the Ed25519 signature on incoming Kick webhook requests.
+// KickWebhookVerifier verifies the RSA-SHA256 signature on incoming Kick webhook requests.
 type KickWebhookVerifier interface {
 	Verify(messageID, timestamp string, body []byte, signature string) error
 }
@@ -26,6 +26,6 @@ type KickWebhookVerifier interface {
 type KickEventSubscriptionClient interface {
 	ResolveBroadcasterUserID(ctx context.Context, slug string) (int64, error)
 	ListEventSubscriptions(ctx context.Context) ([]domain.KickAPIEventSub, error)
-	CreateEventSubscription(ctx context.Context, broadcasterUserID int64, eventType string) (domain.KickAPIEventSub, error)
+	CreateEventSubscriptions(ctx context.Context, broadcasterUserID int64, eventTypes []string) ([]domain.KickAPIEventSub, error)
 	DeleteEventSubscription(ctx context.Context, subscriptionID string) error
 }

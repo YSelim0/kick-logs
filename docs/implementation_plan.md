@@ -64,7 +64,7 @@ Add env/config fields:
 - `KICK_CLIENT_SECRET`
 - `KICK_API_BASE_URL=https://api.kick.com`
 - `KICK_OAUTH_TOKEN_URL=https://id.kick.com/oauth/token`
-- `KICK_WEBHOOK_PUBLIC_KEY`
+- `KICK_WEBHOOK_PUBLIC_KEY` (optional when credentials are configured; auto-fetched from Kick)
 - `KICK_WEBHOOK_SYNC_ENABLED=true`
 - `KICK_WEBHOOK_EVENTS=channel.subscription.new,channel.subscription.renewal,channel.subscription.gifts`
 - `KICK_WEBHOOK_PROCESS_BATCH_SIZE=50`
@@ -77,7 +77,7 @@ Behavior:
   - Event subscription sync is disabled.
   - Chat logging and the rest of the product continue to work.
   - Log a clear warning.
-- If the webhook public key is missing:
+- If the webhook public key cannot be configured or auto-fetched:
   - API still starts.
   - `POST /webhooks/kick` fails closed because signatures cannot be verified.
   - Log a clear warning.
@@ -176,8 +176,11 @@ Responsibilities:
 - Obtain and cache app access tokens using env client credentials.
 - Resolve broadcaster user id for followed channels through official channel lookup.
 - List existing event subscriptions.
-- Create event subscriptions via `POST /public/v1/events/subscriptions`.
-- Delete event subscriptions when a followed channel is disabled.
+- Create event subscriptions via `POST /public/v1/events/subscriptions` using
+  `{"broadcaster_user_id": ..., "events": [{"name": "...", "version": 1}], "method": "webhook"}`.
+- Delete event subscriptions with `DELETE /public/v1/events/subscriptions?id=<subscription_id>`
+  when a followed channel is disabled.
+- Fetch the webhook signing public key from `GET /public/v1/public-key` when it is not set in env.
 
 Event subscription sync:
 
@@ -216,7 +219,7 @@ Receiver flow:
    - `Kick-Event-Type`
    - `Kick-Event-Version`
    - `Kick-Event-Signature`
-4. Verify the signature against the raw body and timestamp using `KICK_WEBHOOK_PUBLIC_KEY`.
+4. Verify the RSA-SHA256 signature against `message_id + "." + timestamp + "." + raw_body`.
 5. Insert the webhook inbox row idempotently.
 6. Return 2xx quickly for duplicates and successfully stored events.
 7. Return non-2xx for invalid signature, missing required headers, or malformed required envelope.
@@ -249,8 +252,8 @@ Normalization rules:
 - Store gifter snapshot only when present.
 - Store broadcaster/channel snapshot from payload and map to a followed channel by
   `broadcaster_user_id`.
-- Unknown/unfollowed broadcaster events should not crash processing. Mark them ignored with a clear
-  reason.
+- Unknown/unfollowed/disabled broadcaster events should not crash processing. Mark them ignored with
+  a clear reason.
 
 Runtime placement:
 

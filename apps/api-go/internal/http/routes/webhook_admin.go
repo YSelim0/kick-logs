@@ -72,7 +72,7 @@ func webhookHealth(w http.ResponseWriter, r *http.Request, deps Dependencies) {
 	resp := schemas.WebhookHealthResponse{
 		ConfiguredEventTypes:     deps.Config.KickWebhookEvents,
 		MissingClientCredentials: deps.Config.KickClientID == "" || deps.Config.KickClientSecret == "",
-		MissingWebhookPublicKey:  deps.Config.KickWebhookPublicKey == "",
+		MissingWebhookPublicKey:  deps.WebhookVerifier == nil && !deps.Config.KickWebhookSkipVerification,
 		SyncEnabled:              deps.Config.KickWebhookSyncEnabled,
 		InboxCounts:              map[string]int64{},
 		Channels:                 []schemas.ChannelSyncStatus{},

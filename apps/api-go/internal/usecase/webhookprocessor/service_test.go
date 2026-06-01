@@ -17,7 +17,7 @@ import (
 func TestProcessorWritesPeriodsAndMarksProcessed(t *testing.T) {
 	ctx := context.Background()
 
-	channel := domain.FollowedChannel{ID: 1, BroadcasterUserID: 9000, Slug: "chan", DisplayName: "Chan"}
+	channel := domain.FollowedChannel{ID: 1, BroadcasterUserID: 9000, Slug: "chan", DisplayName: "Chan", IsEnabled: true}
 	inbox := newFakeInbox()
 	channels := newFakeChannelRepo(channel)
 	periods := &fakePeriodRepo{}
@@ -51,7 +51,7 @@ func TestProcessorWritesPeriodsAndMarksProcessed(t *testing.T) {
 func TestProcessorHandlesGiftWithMultipleGiftees(t *testing.T) {
 	ctx := context.Background()
 
-	channel := domain.FollowedChannel{ID: 1, BroadcasterUserID: 9000, Slug: "chan", DisplayName: "Chan"}
+	channel := domain.FollowedChannel{ID: 1, BroadcasterUserID: 9000, Slug: "chan", DisplayName: "Chan", IsEnabled: true}
 	inbox := newFakeInbox()
 	channels := newFakeChannelRepo(channel)
 	periods := &fakePeriodRepo{}
@@ -116,10 +116,45 @@ func TestProcessorIgnoresUnknownBroadcaster(t *testing.T) {
 	}
 }
 
+func TestProcessorIgnoresDisabledChannel(t *testing.T) {
+	ctx := context.Background()
+
+	channel := domain.FollowedChannel{ID: 1, BroadcasterUserID: 9000, Slug: "chan", DisplayName: "Chan", IsEnabled: false}
+	inbox := newFakeInbox()
+	channels := newFakeChannelRepo(channel)
+	periods := &fakePeriodRepo{}
+
+	payload, _ := json.Marshal(map[string]any{
+		"broadcaster": map[string]any{"user_id": 9000},
+		"subscriber":  map[string]any{"user_id": 1001, "username": "sub1"},
+		"created_at":  "2026-06-01T10:00:00Z",
+	})
+	inbox.add(domain.KickWebhookEvent{
+		MessageID:      "msg-disabled-channel",
+		EventType:      webhookprocessor.EventTypeNew,
+		RawPayloadJSON: string(payload),
+		Status:         domain.WebhookEventStatusPending,
+		ReceivedAt:     time.Now().UTC(),
+	})
+
+	svc := webhookprocessor.NewService(discardLogger(), inbox, channels, periods, 10, 5)
+	svc.ProcessBatchOnce(ctx)
+
+	if len(periods.inserted) != 0 {
+		t.Fatalf("periods inserted = %d, want 0", len(periods.inserted))
+	}
+	if inbox.events[0].Status != domain.WebhookEventStatusIgnored {
+		t.Fatalf("status = %s, want ignored", inbox.events[0].Status)
+	}
+	if inbox.events[0].ErrorMessage != "channel disabled" {
+		t.Fatalf("ignore reason = %q", inbox.events[0].ErrorMessage)
+	}
+}
+
 func TestProcessorIgnoresUnsupportedEventType(t *testing.T) {
 	ctx := context.Background()
 
-	channel := domain.FollowedChannel{ID: 1, BroadcasterUserID: 9000, Slug: "chan", DisplayName: "Chan"}
+	channel := domain.FollowedChannel{ID: 1, BroadcasterUserID: 9000, Slug: "chan", DisplayName: "Chan", IsEnabled: true}
 	inbox := newFakeInbox()
 	channels := newFakeChannelRepo(channel)
 	periods := &fakePeriodRepo{}
@@ -146,7 +181,7 @@ func TestProcessorIgnoresUnsupportedEventType(t *testing.T) {
 func TestProcessorRetriesAndExhausts(t *testing.T) {
 	ctx := context.Background()
 
-	channel := domain.FollowedChannel{ID: 1, BroadcasterUserID: 9000, Slug: "chan", DisplayName: "Chan"}
+	channel := domain.FollowedChannel{ID: 1, BroadcasterUserID: 9000, Slug: "chan", DisplayName: "Chan", IsEnabled: true}
 	inbox := newFakeInbox()
 	channels := newFakeChannelRepo(channel)
 	periods := &fakePeriodRepo{failInsert: true}

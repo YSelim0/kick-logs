@@ -3,9 +3,13 @@ package httpapi_test
 import (
 	"bytes"
 	"context"
-	"crypto/ed25519"
+	"crypto"
 	"crypto/rand"
-	"encoding/hex"
+	"crypto/rsa"
+	"crypto/sha256"
+	"crypto/x509"
+	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"log/slog"
@@ -24,12 +28,11 @@ import (
 )
 
 func TestKickWebhookReceiver(t *testing.T) {
-	pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
+	publicKeyPEM, privateKey, err := newWebhookTestKey()
 	if err != nil {
-		t.Fatalf("generate key: %v", err)
+		t.Fatalf("newWebhookTestKey: %v", err)
 	}
-
-	verifier, err := kick.NewWebhookVerifier(hex.EncodeToString(pubKey))
+	verifier, err := kick.NewWebhookVerifier(publicKeyPEM)
 	if err != nil {
 		t.Fatalf("NewWebhookVerifier: %v", err)
 	}
@@ -43,7 +46,7 @@ func TestKickWebhookReceiver(t *testing.T) {
 	timestamp := time.Now().UTC().Format(time.RFC3339)
 
 	msg := buildMsg(messageID, timestamp, body)
-	sig := hex.EncodeToString(ed25519.Sign(privKey, msg))
+	sig := signWebhookMessage(t, privateKey, msg)
 
 	t.Run("valid event stored", func(t *testing.T) {
 		w := httptest.NewRecorder()
@@ -74,7 +77,7 @@ func TestKickWebhookReceiver(t *testing.T) {
 
 	t.Run("invalid signature returns 401", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		req := webhookRequest(body, messageID, timestamp, "channel.subscription.new", "v1", strings.Repeat("0", 128))
+		req := webhookRequest(body, messageID, timestamp, "channel.subscription.new", "v1", base64.StdEncoding.EncodeToString([]byte(strings.Repeat("0", 128))))
 		router.ServeHTTP(w, req)
 		if w.Code != http.StatusUnauthorized {
 			t.Fatalf("status = %d", w.Code)
@@ -129,12 +132,15 @@ func TestKickWebhookReceiver(t *testing.T) {
 }
 
 func TestWebhookVerifierSignatureFormats(t *testing.T) {
-	pubKey, privKey, _ := ed25519.GenerateKey(rand.Reader)
+	publicKeyPEM, privateKey, err := newWebhookTestKey()
+	if err != nil {
+		t.Fatalf("newWebhookTestKey: %v", err)
+	}
 	body := []byte(`{"test":1}`)
 	messageID := "msg-fmt-test"
 	timestamp := "2026-06-01T12:00:00Z"
 	msg := buildMsg(messageID, timestamp, body)
-	rawSig := ed25519.Sign(privKey, msg)
+	rawSig := signWebhookRaw(t, privateKey, msg)
 
 	tests := []struct {
 		name      string
@@ -143,9 +149,9 @@ func TestWebhookVerifierSignatureFormats(t *testing.T) {
 		expectErr bool
 	}{
 		{
-			name:   "hex key + hex sig",
-			keyStr: hex.EncodeToString(pubKey),
-			sigStr: hex.EncodeToString(rawSig),
+			name:   "pem key + base64 sig",
+			keyStr: publicKeyPEM,
+			sigStr: base64.StdEncoding.EncodeToString(rawSig),
 		},
 	}
 
@@ -170,11 +176,41 @@ func TestWebhookVerifierSignatureFormats(t *testing.T) {
 }
 
 func buildMsg(messageID, timestamp string, body []byte) []byte {
-	msg := make([]byte, 0, len(messageID)+len(timestamp)+len(body))
+	msg := make([]byte, 0, len(messageID)+len(timestamp)+len(body)+2)
 	msg = append(msg, []byte(messageID)...)
+	msg = append(msg, '.')
 	msg = append(msg, []byte(timestamp)...)
+	msg = append(msg, '.')
 	msg = append(msg, body...)
 	return msg
+}
+
+func newWebhookTestKey() (string, *rsa.PrivateKey, error) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return "", nil, err
+	}
+	der, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		return "", nil, err
+	}
+	pemBytes := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der})
+	return string(pemBytes), privateKey, nil
+}
+
+func signWebhookMessage(t *testing.T, privateKey *rsa.PrivateKey, msg []byte) string {
+	t.Helper()
+	return base64.StdEncoding.EncodeToString(signWebhookRaw(t, privateKey, msg))
+}
+
+func signWebhookRaw(t *testing.T, privateKey *rsa.PrivateKey, msg []byte) []byte {
+	t.Helper()
+	digest := sha256.Sum256(msg)
+	sig, err := rsa.SignPKCS1v15(rand.Reader, privateKey, crypto.SHA256, digest[:])
+	if err != nil {
+		t.Fatalf("sign webhook message: %v", err)
+	}
+	return sig
 }
 
 func webhookRequest(body []byte, messageID, timestamp, eventType, version, sig string) *http.Request {

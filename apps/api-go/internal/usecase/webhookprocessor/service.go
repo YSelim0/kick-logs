@@ -106,6 +106,16 @@ func (s *Service) processOne(ctx context.Context, event domain.KickWebhookEvent)
 		_ = s.inbox.MarkFailed(ctx, event.MessageID, err.Error(), s.maxAttempts)
 		return
 	}
+	if !ch.IsEnabled {
+		reason := "channel disabled"
+		s.log.Debug("webhook processor: ignoring event for disabled channel",
+			"message_id", event.MessageID,
+			"broadcaster_user_id", broadcasterID,
+			"channel", ch.Slug,
+		)
+		_ = s.inbox.MarkIgnored(ctx, event.MessageID, reason)
+		return
+	}
 
 	normalizedPeriods, err := NormalizeEvent(event, ch)
 	if err != nil {

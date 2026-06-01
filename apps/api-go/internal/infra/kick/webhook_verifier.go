@@ -1,24 +1,24 @@
 package kick
 
 import (
-	"crypto/ed25519"
+	"crypto"
+	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"strings"
 )
 
-// WebhookVerifier verifies Ed25519 signatures on incoming Kick webhook requests.
-// The signed message is: messageID + timestamp + raw body (concatenated bytes).
-// The signature is hex-encoded; base64 is accepted as a fallback.
+// WebhookVerifier verifies RSA-SHA256 signatures on incoming Kick webhook requests.
+// The signed message is: messageID + "." + timestamp + "." + raw body.
 type WebhookVerifier struct {
-	publicKey ed25519.PublicKey
+	publicKey *rsa.PublicKey
 }
 
 func NewWebhookVerifier(publicKeyStr string) (*WebhookVerifier, error) {
-	pub, err := parseEd25519PublicKey(publicKeyStr)
+	pub, err := parseRSAPublicKey(publicKeyStr)
 	if err != nil {
 		return nil, fmt.Errorf("parse Kick webhook public key: %w", err)
 	}
@@ -32,28 +32,28 @@ func (v *WebhookVerifier) Verify(messageID, timestamp string, body []byte, signa
 	}
 
 	msg := buildSignedMessage(messageID, timestamp, body)
+	digest := sha256.Sum256(msg)
 
-	if !ed25519.Verify(v.publicKey, msg, sigBytes) {
+	if err := rsa.VerifyPKCS1v15(v.publicKey, crypto.SHA256, digest[:], sigBytes); err != nil {
 		return fmt.Errorf("signature verification failed")
 	}
 	return nil
 }
 
 func buildSignedMessage(messageID, timestamp string, body []byte) []byte {
-	msg := make([]byte, 0, len(messageID)+len(timestamp)+len(body))
+	msg := make([]byte, 0, len(messageID)+len(timestamp)+len(body)+2)
 	msg = append(msg, []byte(messageID)...)
+	msg = append(msg, '.')
 	msg = append(msg, []byte(timestamp)...)
+	msg = append(msg, '.')
 	msg = append(msg, body...)
 	return msg
 }
 
 func decodeSignature(sig string) ([]byte, error) {
 	sig = strings.TrimSpace(sig)
-
-	if b, err := hex.DecodeString(sig); err == nil {
-		if len(b) == ed25519.SignatureSize {
-			return b, nil
-		}
+	if sig == "" {
+		return nil, fmt.Errorf("signature is empty")
 	}
 
 	decoders := []func(string) ([]byte, error){
@@ -63,34 +63,43 @@ func decodeSignature(sig string) ([]byte, error) {
 		func(s string) ([]byte, error) { return base64.RawURLEncoding.DecodeString(s) },
 	}
 	for _, decode := range decoders {
-		if b, err := decode(sig); err == nil && len(b) == ed25519.SignatureSize {
+		if b, err := decode(sig); err == nil && len(b) > 0 {
 			return b, nil
 		}
 	}
 
-	return nil, fmt.Errorf("cannot decode signature as hex or base64 (len=%d)", len(sig))
+	return nil, fmt.Errorf("cannot decode signature as base64 (len=%d)", len(sig))
 }
 
-func parseEd25519PublicKey(keyStr string) (ed25519.PublicKey, error) {
+func parseRSAPublicKey(keyStr string) (*rsa.PublicKey, error) {
 	keyStr = strings.TrimSpace(keyStr)
 	if keyStr == "" {
 		return nil, fmt.Errorf("public key is empty")
 	}
 
+	derBytes, err := publicKeyDERBytes(keyStr)
+	if err != nil {
+		return nil, err
+	}
+
+	pub, err := x509.ParsePKIXPublicKey(derBytes)
+	if err != nil {
+		return nil, fmt.Errorf("parse PKIX public key: %w", err)
+	}
+	rsaKey, ok := pub.(*rsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("key is not RSA")
+	}
+	return rsaKey, nil
+}
+
+func publicKeyDERBytes(keyStr string) ([]byte, error) {
 	if strings.HasPrefix(keyStr, "-----") {
 		block, _ := pem.Decode([]byte(keyStr))
 		if block == nil {
 			return nil, fmt.Errorf("failed to decode PEM block")
 		}
-		pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-		if err != nil {
-			return nil, fmt.Errorf("parse PKIX public key: %w", err)
-		}
-		ed, ok := pub.(ed25519.PublicKey)
-		if !ok {
-			return nil, fmt.Errorf("key is not Ed25519")
-		}
-		return ed, nil
+		return block.Bytes, nil
 	}
 
 	decoders := []func(string) ([]byte, error){
@@ -98,13 +107,12 @@ func parseEd25519PublicKey(keyStr string) (ed25519.PublicKey, error) {
 		func(s string) ([]byte, error) { return base64.RawStdEncoding.DecodeString(s) },
 		func(s string) ([]byte, error) { return base64.URLEncoding.DecodeString(s) },
 		func(s string) ([]byte, error) { return base64.RawURLEncoding.DecodeString(s) },
-		func(s string) ([]byte, error) { return hex.DecodeString(s) },
 	}
 	for _, decode := range decoders {
-		if b, err := decode(keyStr); err == nil && len(b) == ed25519.PublicKeySize {
-			return ed25519.PublicKey(b), nil
+		if b, err := decode(keyStr); err == nil && len(b) > 0 {
+			return b, nil
 		}
 	}
 
-	return nil, fmt.Errorf("cannot parse public key: not PEM, base64, or hex (len=%d)", len(keyStr))
+	return nil, fmt.Errorf("cannot parse public key: not PEM or base64 (len=%d)", len(keyStr))
 }

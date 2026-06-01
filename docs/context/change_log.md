@@ -2,6 +2,23 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-06-01 (issue #22 — webhook sync contract fix)
+
+- Corrected the Kick event subscription client to match the current public API:
+  - create uses batch `events: [{name, version: 1}]` and `method: webhook`
+  - delete uses `DELETE /public/v1/events/subscriptions?id=<subscription_id>`
+  - webhook public key auto-fetch uses `GET /public/v1/public-key`
+- Corrected webhook signature verification from the earlier Ed25519 assumption to RSA-SHA256 over
+  `message_id + "." + timestamp + "." + raw_body`.
+- Reworked sync to create missing events per channel in one request, reconcile ambiguous responses
+  with list-after-create, and clear previous error records once Kick reports the subscription active.
+- Added processor protection for disabled channels so stale remote subscriptions cannot create active
+  subscription periods locally.
+- Added tests for the Kick event-subscription HTTP contract, RSA webhook signatures, batch sync, and
+  disabled-channel webhook ignores.
+- Verified locally: `go test ./...`, `go vet ./...`, Docker API rebuild, startup sync, manual sync,
+  and `/admin/webhooks/health` for active channels.
+
 ## 2026-06-01 (issue #22 — Kick webhook subscription tracking, Phases 1–7)
 
 Backend pipeline for tracking Kick subscription events via webhooks. Phase 8 (frontend) deferred.
@@ -14,8 +31,8 @@ Backend pipeline for tracking Kick subscription events via webhooks. Phase 8 (fr
   token cache, broadcaster_user_id resolve, event sub CRUD via `api.kick.com`); `kicksync.Service`
   (`SyncAll`, `EnsureChannelSubscriptions`, `RemoveChannelSubscriptions`); startup background sync;
   channel add/disable triggers goroutine sync; 5 unit tests.
-- **Phase 4 — Webhook receiver**: `POST /webhooks/kick`; Ed25519 signature verification
-  (`infra/kick/WebhookVerifier`, PEM/base64/hex key formats); `INSERT OR IGNORE` idempotency;
+- **Phase 4 — Webhook receiver**: `POST /webhooks/kick`; RSA-SHA256 signature verification
+  (`infra/kick/WebhookVerifier`, PEM/base64 public key formats); `INSERT OR IGNORE` idempotency;
   fail-closed (503 with no key, 401 on bad sig); rate-limit exempt; 8 route tests.
 - **Phase 5 — Processor and normalization**: `webhookprocessor.Service` (5s tick, background
   worker); normalizer handles `channel.subscription.new/renewal` (1 period) and

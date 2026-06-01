@@ -135,7 +135,7 @@ implementation details, or working assumptions change.
   - `POST|PUT|DELETE /admin/*` → admin user ID, 30/min burst 10
   - `GET /admin/*` → admin user ID, 120/min burst 30
   - `/health`, OPTIONS → unlimited (no matching policy)
-- `POST /webhooks/kick` → no matching policy (rate-limit exempt; security is Ed25519 signature + idempotent inbox insert)
+- `POST /webhooks/kick` → no matching policy (rate-limit exempt; security is RSA-SHA256 signature + idempotent inbox insert)
 - Admin keying: `TokenService.GetUserID(cookie)` (no DB hit), IP fallback on failure.
 - Login dual-key: attacker cannot lock victim email by hammering from one IP — key includes
   attacker IP, not victim.
@@ -196,6 +196,11 @@ admin/super-admin role.
 
 - The listener loads enabled channels from SQLite.
 - It resolves missing Kick metadata before subscription.
+- Kick event subscription create uses `events: [{name, version: 1}]` with `method: webhook`; delete
+  uses `DELETE /public/v1/events/subscriptions?id=<subscription_id>`.
+- Webhook public key is auto-fetched from `GET /public/v1/public-key` when credentials exist.
+- Webhook processor ignores events for disabled channels so stale remote subscriptions cannot pollute
+  active subscriber counts.
 - It subscribes to `chatrooms.{chatroom_id}.v2` plus channel-level streams.
 - Once a Kick websocket chat event reaches the process, submit it to the in-memory buffered
   writer. The writer flushes batches to ClickHouse archive using `InsertEventsBatch` and then

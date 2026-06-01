@@ -7,11 +7,11 @@
 - **`kick_webhook_events` uses `INSERT OR IGNORE`** for idempotency so duplicate deliveries from
   Kick are silently dropped at the DB level without an extra SELECT round-trip.
 - **Webhook endpoint excluded from rate limiting.** `POST /webhooks/kick` has no matching rate-limit
-  policy. Security is Ed25519 signature verification (fail-closed: 503 if public key missing,
+  policy. Security is RSA-SHA256 signature verification (fail-closed: 503 if public key missing,
   401 if signature invalid). Treating it like user traffic would throttle Kick's delivery retries.
-- **Ed25519 signed message is `messageID + timestamp + body` raw concatenation.** No delimiter used.
-  This matches the most common webhook signing convention. If Kick's actual format differs,
-  `infra/kick/webhook_verifier.go` is the single place to fix.
+- **Kick webhook signature message is `messageID + "." + timestamp + "." + raw body`.** The
+  signature is base64 RSA-SHA256 over that message. `infra/kick/webhook_verifier.go` owns the
+  verification logic.
 - **`channel_subscription_periods` uses `ReplacingMergeTree(ingested_at)` ORDER BY `id`.** The
   deterministic `id` (`messageID` for new/renewal, `messageID_gifteeUserID` for gifts) makes
   re-processing idempotent. Queries use `FINAL` to deduplicate on read.
@@ -26,10 +26,17 @@
 - **Processor stays in the API process for now.** The background worker runs in a goroutine inside
   `cmd/api`. Splitting into a separate binary is deferred until live load shows it is necessary;
   idempotency guarantees the transition is safe.
-- **`ResolveBroadcasterUserID` uses the undocumented web API** (`kick.com/api/v2/channels/{slug}`)
-  rather than the official API, because the official API requires broadcaster_user_id as input
-  (no slug lookup). The web API already used by `WebChannelResolver` is the only practical source.
-  All broadcaster-ID resolution logic is isolated in `infra/kick/event_subscription_client.go`.
+- **`ResolveBroadcasterUserID` tries the official public API first, then the web API fallback.**
+  The official path is `GET /public/v1/channels?slug=...`; if that shape or availability changes,
+  the existing `kick.com/api/v2/channels/{slug}` fallback preserves channel setup. All broadcaster-ID
+  resolution logic is isolated in `infra/kick/event_subscription_client.go`.
+- **Kick event subscription create uses batch `events`, not a single `type` field.** The request is
+  `POST /public/v1/events/subscriptions` with `broadcaster_user_id`, `method: webhook`, and
+  `events: [{name, version: 1}]`. Missing events are created per channel in one request to reduce
+  Kick API rate-limit pressure.
+- **Disabled channels are ignored by the webhook processor.** A stale remote Kick subscription can
+  still deliver events if it predates the local registry or failed deletion; the processor must not
+  count subscription periods for disabled channels.
 
 ## 2026-05-31 (issue #20 — rate limiting follow-up: real IP + origin lockdown)
 
