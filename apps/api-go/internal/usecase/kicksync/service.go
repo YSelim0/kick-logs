@@ -10,6 +10,10 @@ import (
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/ports"
 )
 
+// kickAPIDelay is the pause between consecutive Kick event subscription API calls
+// to avoid 429 rate limit responses during bulk sync.
+const kickAPIDelay = 500 * time.Millisecond
+
 type Service struct {
 	log       *slog.Logger
 	channels  ports.FollowedChannelRepository
@@ -117,6 +121,7 @@ func (s *Service) syncChannel(ctx context.Context, ch domain.FollowedChannel) er
 			continue
 		}
 
+		time.Sleep(kickAPIDelay)
 		apiSub, createErr := s.client.CreateEventSubscription(ctx, ch.BroadcasterUserID, eventType)
 		if createErr != nil {
 			s.log.Warn("kicksync: create event subscription failed",

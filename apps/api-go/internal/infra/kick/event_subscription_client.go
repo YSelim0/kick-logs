@@ -170,14 +170,15 @@ func (c *EventSubscriptionClient) CreateEventSubscription(ctx context.Context, b
 		return domain.KickAPIEventSub{}, fmt.Errorf("read create subscription response: %w", err)
 	}
 
+	// Kick returns {"data": [{...}]} (array), not {"data": {...}}.
 	var result struct {
-		Data kickSubResponse `json:"data"`
+		Data []kickSubResponse `json:"data"`
 	}
 	if err := json.Unmarshal(respBody, &result); err != nil {
 		return domain.KickAPIEventSub{}, fmt.Errorf("decode create subscription response: %w", err)
 	}
 
-	subs := toAPIEventSubs([]kickSubResponse{result.Data})
+	subs := toAPIEventSubs(result.Data)
 	if len(subs) == 0 {
 		return domain.KickAPIEventSub{}, fmt.Errorf("empty response from create event subscription")
 	}
@@ -185,43 +186,59 @@ func (c *EventSubscriptionClient) CreateEventSubscription(ctx context.Context, b
 }
 
 // FetchWebhookPublicKey retrieves the app's webhook signing public key from the Kick API.
-// The returned string can be passed directly to NewWebhookVerifier.
+// Tries multiple known endpoint paths. The returned string can be passed to NewWebhookVerifier.
 func (c *EventSubscriptionClient) FetchWebhookPublicKey(ctx context.Context) (string, error) {
 	token, err := c.getAccessToken(ctx)
 	if err != nil {
 		return "", err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.apiBaseURL+"/public/v1/webhooks/public-key", nil)
+	candidates := []string{
+		"/public/v1/webhooks/public-key",
+		"/public/v1/events/subscriptions/public-key",
+		"/public/v1/events/public-key",
+	}
+
+	for _, path := range candidates {
+		key, err := c.tryFetchPublicKey(ctx, token, path)
+		if err == nil {
+			return key, nil
+		}
+	}
+	return "", fmt.Errorf("could not fetch webhook public key from any known Kick API path (set KICK_WEBHOOK_PUBLIC_KEY manually)")
+}
+
+func (c *EventSubscriptionClient) tryFetchPublicKey(ctx context.Context, token, path string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.apiBaseURL+path, nil)
 	if err != nil {
-		return "", fmt.Errorf("build public key request: %w", err)
+		return "", err
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("fetch webhook public key: %w", err)
+		return "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", fmt.Errorf("fetch webhook public key returned status %d", resp.StatusCode)
+		return "", fmt.Errorf("status %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("read public key response: %w", err)
+		return "", err
 	}
 
 	var result struct {
 		PublicKey string `json:"public_key"`
 	}
 	if err := json.Unmarshal(body, &result); err != nil {
-		return "", fmt.Errorf("decode public key response: %w", err)
+		return "", err
 	}
 	if result.PublicKey == "" {
-		return "", fmt.Errorf("empty public_key in response")
+		return "", fmt.Errorf("empty public_key")
 	}
 	return result.PublicKey, nil
 }
