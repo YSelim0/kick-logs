@@ -7,7 +7,7 @@ implementation details, or working assumptions change.
 
 - Branch: `feat/issue-22-kick-subscription-webhooks`.
 - Active plan: Kick webhook subscription tracking (see `docs/implementation_plan.md`, issue #22).
-  Phase 4 (webhook receiver) complete. Phase 5 next.
+  Phase 5 (webhook processor and normalization) complete. Phase 6 next.
 - Earlier: channels/users index search pages — `/channels` and `/users` search-first index pages
   added 2026-05-24.
 - Responsive polish pass is current through 2026-05-22: profile rows, admin navigation, admin
@@ -32,7 +32,7 @@ implementation details, or working assumptions change.
   - `raw_kick_events`: 121664
   - `raw_event_attempts`: 121664
 
-## Webhook Subscription Pipeline (issue #22, Phase 4 complete)
+## Webhook Subscription Pipeline (issue #22, Phase 5 complete)
 
 - `domain.KickWebhookEvent` — webhook inbox model; status: `pending/processed/failed/ignored`
 - `domain.KickEventSubscription` — Kick event subscription registry; status: `active/deleted/error`

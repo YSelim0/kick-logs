@@ -20,6 +20,7 @@ import (
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/kick"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/migrations"
 	kicksyncusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/kicksync"
+	webhookprocessorusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/webhookprocessor"
 	operationsinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/operations"
 	ratelimitinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/ratelimit"
 	sqliteinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/sqlite"
@@ -127,9 +128,20 @@ func main() {
 	if clickHouseConn != nil {
 		messageRepository := clickhouseinfra.NewMessageRepository(clickHouseConn)
 		analyticsRepository := clickhouseinfra.NewAnalyticsRepository(clickHouseConn)
+		subPeriodRepo := clickhouseinfra.NewSubscriptionPeriodRepository(clickHouseConn)
 		messageService = messagesusecase.NewService(messageRepository)
 		analyticsService = analyticsusecase.NewService(analyticsRepository)
 		profileService = profilesusecase.NewService(analyticsRepository, channelRepo, senderRepo)
+
+		processorSvc := webhookprocessorusecase.NewService(
+			logger,
+			webhookEventRepo,
+			channelRepo,
+			subPeriodRepo,
+			cfg.KickWebhookProcessBatchSize,
+			cfg.KickWebhookProcessMaxAttempts,
+		)
+		processorSvc.Start(context.Background())
 	}
 	operationsRepo := operationsinfra.NewRepository(
 		sqliteDB,
