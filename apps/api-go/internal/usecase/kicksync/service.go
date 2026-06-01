@@ -48,6 +48,10 @@ func (s *Service) SyncAll(ctx context.Context) {
 		s.log.Warn("kicksync: could not list existing Kick subscriptions; will attempt creation anyway", "error", err)
 		kickSubs = nil
 	}
+	s.log.Info("kicksync: fetched existing Kick subscriptions", "count", len(kickSubs))
+	for _, sub := range kickSubs {
+		s.log.Info("kicksync: existing Kick sub", "broadcaster_user_id", sub.BroadcasterUserID, "event_type", sub.EventType, "sub_id", sub.SubscriptionID)
+	}
 	kickSubIndex := buildKickSubIndex(kickSubs)
 
 	channels, err := s.channels.ListEnabled(ctx)

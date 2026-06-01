@@ -329,10 +329,38 @@ func (c *EventSubscriptionClient) getAccessToken(ctx context.Context) (string, e
 
 type kickSubResponse struct {
 	ID                string `json:"id"`
+	SubscriptionID    string `json:"subscription_id"` // alternate ID field name
 	BroadcasterUserID int64  `json:"broadcaster_user_id"`
-	EventType         string `json:"type"`
+	UserID            int64  `json:"user_id"` // alternate broadcaster field name
+	Type              string `json:"type"`
+	Name              string `json:"name"`  // alternate event type field name
+	Event             string `json:"event"` // another alternate
 	Method            string `json:"method"`
 	CreatedAt         string `json:"created_at"`
+}
+
+func (r kickSubResponse) subID() string {
+	if r.ID != "" {
+		return r.ID
+	}
+	return r.SubscriptionID
+}
+
+func (r kickSubResponse) broadcasterID() int64 {
+	if r.BroadcasterUserID != 0 {
+		return r.BroadcasterUserID
+	}
+	return r.UserID
+}
+
+func (r kickSubResponse) eventType() string {
+	if r.Type != "" {
+		return r.Type
+	}
+	if r.Name != "" {
+		return r.Name
+	}
+	return r.Event
 }
 
 func toAPIEventSubs(responses []kickSubResponse) []domain.KickAPIEventSub {
@@ -343,9 +371,9 @@ func toAPIEventSubs(responses []kickSubResponse) []domain.KickAPIEventSub {
 			createdAt, _ = time.Parse(time.RFC3339, r.CreatedAt)
 		}
 		subs = append(subs, domain.KickAPIEventSub{
-			SubscriptionID:    r.ID,
-			BroadcasterUserID: r.BroadcasterUserID,
-			EventType:         r.EventType,
+			SubscriptionID:    r.subID(),
+			BroadcasterUserID: r.broadcasterID(),
+			EventType:         r.eventType(),
 			Method:            r.Method,
 			CreatedAt:         createdAt,
 		})
