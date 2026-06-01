@@ -270,12 +270,8 @@ func TestRawEventProcessorClaimsDuplicateRowsOnce(t *testing.T) {
 	if len(unit.messages.messages) != 1 || len(unit.rawEvents.attempts) != 1 {
 		t.Fatalf("messages=%#v attempts=%#v", unit.messages.messages, unit.rawEvents.attempts)
 	}
-	item, err := unit.queue.GetByID(context.Background(), "raw-same")
-	if err != nil {
-		t.Fatalf("queue GetByID() error = %v", err)
-	}
-	if item.Status != domain.RawEventQueueStatusProcessed {
-		t.Fatalf("queue status = %q, want processed", item.Status)
+	if _, err := unit.queue.GetByID(context.Background(), "raw-same"); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("queue GetByID() error = %v, want sql.ErrNoRows", err)
 	}
 }
 
@@ -385,12 +381,8 @@ func TestRawEventProcessorMixesProcessedAndFailedInOneTick(t *testing.T) {
 	if len(unit.rawEvents.attemptBatchSizes) != 1 || unit.rawEvents.attemptBatchSizes[0] != 2 {
 		t.Fatalf("attempt batch calls = %#v", unit.rawEvents.attemptBatchSizes)
 	}
-	good, err := unit.queue.GetByID(context.Background(), "raw-good")
-	if err != nil {
-		t.Fatalf("GetByID good error = %v", err)
-	}
-	if good.Status != domain.RawEventQueueStatusProcessed {
-		t.Fatalf("good status = %q", good.Status)
+	if _, err := unit.queue.GetByID(context.Background(), "raw-good"); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("GetByID good error = %v, want sql.ErrNoRows", err)
 	}
 	bad, err := unit.queue.GetByID(context.Background(), "raw-bad")
 	if err != nil {
@@ -433,6 +425,44 @@ func TestRawEventProcessorReleasesClaimsWhenBatchInsertFails(t *testing.T) {
 		if item.Status != domain.RawEventQueueStatusPending {
 			t.Fatalf("status = %q for id %d, want pending after batch failure", item.Status, i)
 		}
+	}
+}
+
+func TestRawEventQueueBootstrapSkipsProcessedAttempts(t *testing.T) {
+	unit := newFakeListenerUnit()
+	service := newTestService(unit, fakePusherClient{})
+
+	if err := unit.rawEvents.InsertEvent(context.Background(), domain.RawKickEvent{
+		ID:            "raw-processed-before-start",
+		EventName:     chatMessageEventName,
+		KickMessageID: "message-processed-before-start",
+		ChatroomID:    123,
+		ChannelID:     1,
+		PayloadJSON:   rawPayloadJSON(buildPayload("message-processed-before-start")),
+		Status:        "pending",
+		ReceivedAt:    time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("InsertEvent() error = %v", err)
+	}
+	if err := unit.rawEvents.InsertAttempt(context.Background(), domain.RawEventAttempt{
+		RawEventID: "raw-processed-before-start",
+		Attempt:    1,
+		Status:     "processed",
+		StartedAt:  time.Now().UTC(),
+		FinishedAt: time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("InsertAttempt() error = %v", err)
+	}
+
+	if err := service.bootstrapQueue(context.Background()); err != nil {
+		t.Fatalf("bootstrapQueue() error = %v", err)
+	}
+	pending, err := unit.queue.ListPending(context.Background(), 10, 5)
+	if err != nil {
+		t.Fatalf("ListPending() error = %v", err)
+	}
+	if len(pending) != 0 {
+		t.Fatalf("pending = %#v, want none", pending)
 	}
 }
 
@@ -904,15 +934,7 @@ func (repo *fakeRawEventQueueRepository) MarkProcessed(_ context.Context, rawEve
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
 
-	item := repo.items[rawEventID]
-	if item == nil {
-		return nil
-	}
-	item.Status = domain.RawEventQueueStatusProcessed
-	item.Attempts++
-	item.ClaimedBy = ""
-	item.ClaimedAt = time.Time{}
-	item.LastError = ""
+	delete(repo.items, rawEventID)
 	return nil
 }
 

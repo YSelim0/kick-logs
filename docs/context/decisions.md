@@ -15,6 +15,10 @@
   still writes immediately; repeated messages inside the TTL use the payload snapshot and avoid a
   SQLite write. Failed cache writes also consume the TTL window to prevent a busy SQLite cache from
   being hammered during high-volume chat.
+- **Processed raw-event queue rows are pruned from SQLite.** `raw_event_queue` is active work state,
+  not permanent history. After the worker writes the processed ClickHouse attempt, `MarkProcessed`
+  deletes the queue row. Startup backfill still relies on ClickHouse `raw_event_attempts` to avoid
+  re-enqueuing already processed raw events.
 
 ## 2026-06-01 (issue #22 — Kick webhook subscription tracking)
 

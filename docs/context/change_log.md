@@ -29,6 +29,15 @@ This is a living implementation log. Add new entries for each meaningful project
   processed raw-event attempt, plus coverage for repeated sender messages avoiding repeated cache
   writes.
 
+## 2026-06-01 (issue #23 — raw event queue processed-row pruning)
+
+- Changed SQLite `raw_event_queue.MarkProcessed` to delete processed queue rows instead of keeping a
+  permanent `processed` row in SQLite.
+- Added SQLite migration v8 to prune existing `processed` queue rows on deploy.
+- Updated listener and SQLite queue tests so successful processing leaves no active queue row.
+- Added coverage proving startup queue bootstrap skips raw events that already have a ClickHouse
+  `processed` attempt, which prevents re-enqueue loops after queue pruning.
+
 ## 2026-06-01 (admin webhook status UI)
 
 - Updated the Operations Webhooks panel so channel subscription health is summarized per channel

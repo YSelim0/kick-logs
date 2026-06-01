@@ -2,7 +2,16 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue #23 — sender profile cache throttling)
+## Latest (issue #23 — raw event queue processed-row pruning)
+
+- SQLite `raw_event_queue` now behaves as active work state: successful `MarkProcessed` deletes the
+  queue row instead of storing a permanent `processed` row.
+- SQLite migration v8 prunes existing `processed` queue rows during deploy. This does not delete
+  `chat_messages`, `raw_kick_events`, or ClickHouse `raw_event_attempts`.
+- Listener tests now expect successful raw events to disappear from the queue and include coverage
+  that startup bootstrap skips raw events with existing ClickHouse `processed` attempts.
+
+## Previously Latest (issue #23 — sender profile cache throttling)
 
 - Listener raw-event processing no longer fails a chat message when SQLite `sender_profiles` upsert
   fails.

@@ -180,22 +180,13 @@ func (repo *RawEventQueueRepository) MarkProcessed(ctx context.Context, rawEvent
 	if rawEventID == "" {
 		return fmt.Errorf("raw event id is required")
 	}
-	now := time.Now().UTC()
 	_, err := repo.db.ExecContext(
 		ctx,
-		`UPDATE raw_event_queue
-		 SET status = 'processed',
-			 attempts = attempts + 1,
-			 claimed_by = '',
-			 claimed_at = '',
-			 last_error = '',
-			 updated_at = ?
-		 WHERE raw_event_id = ? AND status != 'processed';`,
-		formatTime(now),
+		`DELETE FROM raw_event_queue WHERE raw_event_id = ?;`,
 		rawEventID,
 	)
 	if err != nil {
-		return fmt.Errorf("mark raw event processed: %w", err)
+		return fmt.Errorf("delete processed raw event queue row: %w", err)
 	}
 	return nil
 }

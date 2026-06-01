@@ -2,6 +2,8 @@ package sqlite_test
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"testing"
 	"time"
 
@@ -92,7 +94,7 @@ func TestRawEventQueueClaimAndRelease(t *testing.T) {
 	}
 }
 
-func TestRawEventQueueMarkProcessedIsTerminal(t *testing.T) {
+func TestRawEventQueueMarkProcessedDeletesRow(t *testing.T) {
 	ctx := context.Background()
 	db, _ := openMigratedSQLite(t, ctx)
 	defer db.Close()
@@ -110,15 +112,8 @@ func TestRawEventQueueMarkProcessedIsTerminal(t *testing.T) {
 	if err := repo.MarkProcessed(ctx, "x"); err != nil {
 		t.Fatalf("MarkProcessed() idempotent error = %v", err)
 	}
-	item, err := repo.GetByID(ctx, "x")
-	if err != nil {
-		t.Fatalf("GetByID() error = %v", err)
-	}
-	if item.Status != domain.RawEventQueueStatusProcessed {
-		t.Fatalf("status = %q", item.Status)
-	}
-	if item.Attempts != 1 {
-		t.Fatalf("attempts = %d, want 1", item.Attempts)
+	if _, err := repo.GetByID(ctx, "x"); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("GetByID() error = %v, want sql.ErrNoRows", err)
 	}
 	pending, err := repo.ListPending(ctx, 10, 5)
 	if err != nil {
