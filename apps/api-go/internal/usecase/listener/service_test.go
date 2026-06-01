@@ -296,10 +296,10 @@ func TestRawEventProcessorDoesNotRetryDuplicateRowsInSameBatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ProcessRawEventsOnce() error = %v", err)
 	}
-	if result.Claimed != 1 || result.Processed != 0 || result.Failed != 1 {
+	if result.Claimed != 1 || result.Processed != 0 || result.Ignored != 1 || result.Failed != 0 {
 		t.Fatalf("result = %#v", result)
 	}
-	if len(unit.rawEvents.attempts) != 1 || unit.rawEvents.attempts[0].Status != "failed" {
+	if len(unit.rawEvents.attempts) != 1 || unit.rawEvents.attempts[0].Status != "ignored" {
 		t.Fatalf("attempts = %#v", unit.rawEvents.attempts)
 	}
 }
@@ -372,7 +372,7 @@ func TestRawEventProcessorMixesProcessedAndFailedInOneTick(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ProcessRawEventsOnce() error = %v", err)
 	}
-	if result.Claimed != 2 || result.Processed != 1 || result.Failed != 1 {
+	if result.Claimed != 2 || result.Processed != 1 || result.Ignored != 1 || result.Failed != 0 {
 		t.Fatalf("result = %#v", result)
 	}
 	if len(unit.messages.batchCallSizes) != 1 || unit.messages.batchCallSizes[0] != 1 {
@@ -384,12 +384,8 @@ func TestRawEventProcessorMixesProcessedAndFailedInOneTick(t *testing.T) {
 	if _, err := unit.queue.GetByID(context.Background(), "raw-good"); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("GetByID good error = %v, want sql.ErrNoRows", err)
 	}
-	bad, err := unit.queue.GetByID(context.Background(), "raw-bad")
-	if err != nil {
-		t.Fatalf("GetByID bad error = %v", err)
-	}
-	if bad.Status != domain.RawEventQueueStatusPending || bad.Attempts != 1 {
-		t.Fatalf("bad item = %#v", bad)
+	if _, err := unit.queue.GetByID(context.Background(), "raw-bad"); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("GetByID bad error = %v, want sql.ErrNoRows", err)
 	}
 }
 
@@ -425,6 +421,39 @@ func TestRawEventProcessorReleasesClaimsWhenBatchInsertFails(t *testing.T) {
 		if item.Status != domain.RawEventQueueStatusPending {
 			t.Fatalf("status = %q for id %d, want pending after batch failure", item.Status, i)
 		}
+	}
+}
+
+func TestRawEventProcessorReleasesClaimsWhenAttemptInsertFails(t *testing.T) {
+	unit := newFakeListenerUnit()
+	service := newTestService(unit, fakePusherClient{})
+	unit.rawEvents.failAttemptBatch = errors.New("clickhouse attempts unavailable")
+
+	payload := buildPayload("message-attempt-fail")
+	enqueueRawEvent(t, unit, domain.RawKickEvent{
+		ID:            "raw-attempt-fail",
+		EventName:     chatMessageEventName,
+		KickMessageID: "message-attempt-fail",
+		ChatroomID:    123,
+		ChannelID:     1,
+		PayloadJSON:   rawPayloadJSON(payload),
+		Status:        "pending",
+		ReceivedAt:    time.Now().UTC(),
+	})
+
+	_, err := service.ProcessRawEventsOnce(context.Background())
+	if err == nil {
+		t.Fatal("expected attempt batch insert failure to surface as error")
+	}
+	item, err := unit.queue.GetByID(context.Background(), "raw-attempt-fail")
+	if err != nil {
+		t.Fatalf("GetByID() error = %v", err)
+	}
+	if item.Status != domain.RawEventQueueStatusPending {
+		t.Fatalf("status = %q, want pending after attempt insert failure", item.Status)
+	}
+	if len(unit.messages.messages) != 1 {
+		t.Fatalf("message insert should remain idempotent for retry = %#v", unit.messages.messages)
 	}
 }
 
@@ -469,8 +498,8 @@ func TestRawEventQueueBootstrapSkipsProcessedAttempts(t *testing.T) {
 func TestRawEventProcessorMarksFailuresAndHeartbeat(t *testing.T) {
 	unit := newFakeListenerUnit()
 	service := newTestService(unit, fakePusherClient{})
+	unit.channels.getByChatroomErr = errors.New("sqlite unavailable")
 	payload := buildPayload("message-failure")
-	payload["chatroom_id"] = 999
 	enqueueRawEvent(t, unit, domain.RawKickEvent{
 		ID:            "raw-fail",
 		EventName:     chatMessageEventName,
@@ -488,7 +517,7 @@ func TestRawEventProcessorMarksFailuresAndHeartbeat(t *testing.T) {
 	if result.Failed != 1 || len(unit.rawEvents.attempts) != 1 || unit.rawEvents.attempts[0].Status != "failed" {
 		t.Fatalf("failed result=%#v attempts=%#v", result, unit.rawEvents.attempts)
 	}
-	if !strings.Contains(unit.rawEvents.attempts[0].ErrorMessage, "not followed") {
+	if !strings.Contains(unit.rawEvents.attempts[0].ErrorMessage, "sqlite unavailable") {
 		t.Fatalf("error = %q", unit.rawEvents.attempts[0].ErrorMessage)
 	}
 
@@ -497,6 +526,39 @@ func TestRawEventProcessorMarksFailuresAndHeartbeat(t *testing.T) {
 	}
 	if unit.heartbeats.last.ServiceName != "listener" || unit.heartbeats.last.MetadataJSON == "" {
 		t.Fatalf("heartbeat = %#v", unit.heartbeats.last)
+	}
+}
+
+func TestRawEventProcessorIgnoresPermanentInvalidPayload(t *testing.T) {
+	unit := newFakeListenerUnit()
+	service := newTestService(unit, fakePusherClient{})
+	payload := buildPayload("message-invalid")
+	delete(payload, "id")
+	enqueueRawEvent(t, unit, domain.RawKickEvent{
+		ID:          "raw-invalid",
+		EventName:   chatMessageEventName,
+		ChatroomID:  123,
+		ChannelID:   1,
+		PayloadJSON: rawPayloadJSON(payload),
+		Status:      "pending",
+		ReceivedAt:  time.Now().UTC(),
+	})
+
+	result, err := service.ProcessRawEventsOnce(context.Background())
+	if err != nil {
+		t.Fatalf("ProcessRawEventsOnce() error = %v", err)
+	}
+	if result.Ignored != 1 || result.Failed != 0 || result.Processed != 0 {
+		t.Fatalf("result = %#v", result)
+	}
+	if len(unit.rawEvents.attempts) != 1 || unit.rawEvents.attempts[0].Status != "ignored" {
+		t.Fatalf("attempts = %#v", unit.rawEvents.attempts)
+	}
+	if !strings.Contains(unit.rawEvents.attempts[0].ErrorMessage, "missing message id") {
+		t.Fatalf("error = %q", unit.rawEvents.attempts[0].ErrorMessage)
+	}
+	if _, err := unit.queue.GetByID(context.Background(), "raw-invalid"); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("GetByID() error = %v, want sql.ErrNoRows", err)
 	}
 }
 
@@ -671,7 +733,8 @@ func newFakeListenerUnit() *fakeListenerUnit {
 }
 
 type fakeChannelRepository struct {
-	channels []domain.FollowedChannel
+	channels         []domain.FollowedChannel
+	getByChatroomErr error
 }
 
 func (repo *fakeChannelRepository) Upsert(_ context.Context, channel domain.FollowedChannel) (domain.FollowedChannel, error) {
@@ -701,6 +764,9 @@ func (repo *fakeChannelRepository) GetBySlug(_ context.Context, slug string) (do
 }
 
 func (repo *fakeChannelRepository) GetByChatroomID(_ context.Context, kickChatroomID int64) (domain.FollowedChannel, error) {
+	if repo.getByChatroomErr != nil {
+		return domain.FollowedChannel{}, repo.getByChatroomErr
+	}
 	for _, channel := range repo.channels {
 		if channel.KickChatroomID == kickChatroomID {
 			return channel, nil
@@ -746,6 +812,7 @@ type fakeRawEventRepository struct {
 	events            []domain.RawKickEvent
 	attempts          []domain.RawEventAttempt
 	attemptBatchSizes []int
+	failAttemptBatch  error
 }
 
 func (repo *fakeRawEventRepository) InsertEvent(_ context.Context, event domain.RawKickEvent) error {
@@ -774,21 +841,24 @@ func (repo *fakeRawEventRepository) InsertAttempt(_ context.Context, attempt dom
 }
 
 func (repo *fakeRawEventRepository) InsertAttemptsBatch(_ context.Context, attempts []domain.RawEventAttempt) error {
+	if repo.failAttemptBatch != nil {
+		return repo.failAttemptBatch
+	}
 	repo.attemptBatchSizes = append(repo.attemptBatchSizes, len(attempts))
 	repo.attempts = append(repo.attempts, attempts...)
 	return nil
 }
 
 func (repo *fakeRawEventRepository) ListUnprocessed(_ context.Context, limit uint64, maxAttempts uint16) ([]domain.RawKickEvent, error) {
-	processed := make(map[string]bool)
+	terminal := make(map[string]bool)
 	for _, attempt := range repo.attempts {
-		if attempt.Status == "processed" {
-			processed[attempt.RawEventID] = true
+		if attempt.Status == "processed" || attempt.Status == "ignored" || attempt.Status == "invalid" {
+			terminal[attempt.RawEventID] = true
 		}
 	}
 	events := make([]domain.RawKickEvent, 0)
 	for _, event := range repo.events {
-		if processed[event.ID] {
+		if terminal[event.ID] {
 			continue
 		}
 		event.Attempts = repo.attemptsFor(event.ID)

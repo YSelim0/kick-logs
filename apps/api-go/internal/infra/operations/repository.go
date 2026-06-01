@@ -209,6 +209,19 @@ func (repo *Repository) fillClickHouseSummary(ctx context.Context, summary *doma
 	if err != nil {
 		return err
 	}
+	ignored, err := countClickHouseRows(
+		ctx,
+		repo.clickHouse,
+		`SELECT uniqExact(raw_event_id)
+		 FROM raw_event_attempts
+		 WHERE status IN ('ignored', 'invalid')
+		   AND raw_event_id NOT IN (
+			SELECT raw_event_id FROM raw_event_attempts WHERE status = 'processed'
+		   )`,
+	)
+	if err != nil {
+		return err
+	}
 	failed, err := countClickHouseRows(
 		ctx,
 		repo.clickHouse,
@@ -217,17 +230,21 @@ func (repo *Repository) fillClickHouseSummary(ctx context.Context, summary *doma
 		 WHERE status = 'failed'
 		   AND raw_event_id NOT IN (
 			SELECT raw_event_id FROM raw_event_attempts WHERE status = 'processed'
+		   )
+		   AND raw_event_id NOT IN (
+			SELECT raw_event_id FROM raw_event_attempts WHERE status IN ('ignored', 'invalid')
 		   )`,
 	)
 	if err != nil {
 		return err
 	}
-	pending := int64(rawEvents) - processed - failed
+	pending := int64(rawEvents) - processed - ignored - failed
 	if pending < 0 {
 		pending = 0
 	}
 	summary.RawEventStatusCounts["pending"] = pending
 	summary.RawEventStatusCounts["processed"] = processed
+	summary.RawEventStatusCounts["ignored"] = ignored
 	summary.RawEventStatusCounts["failed"] = failed
 
 	sizeRows, err := repo.clickHouse.Query(
@@ -278,6 +295,9 @@ func (repo *Repository) fillClickHouseSummary(ctx context.Context, summary *doma
 			SELECT raw_event_id FROM raw_event_attempts WHERE status = 'processed'
 		 )
 		   AND id NOT IN (
+			SELECT raw_event_id FROM raw_event_attempts WHERE status IN ('ignored', 'invalid')
+		 )
+		   AND id NOT IN (
 			SELECT raw_event_id FROM raw_event_attempts WHERE status = 'failed'
 		 )`,
 		&summary.Timestamps.OldestPendingRawEventReceivedAt,
@@ -308,6 +328,9 @@ func (repo *Repository) ListFailedEvents(ctx context.Context, limit int) ([]doma
 		 WHERE a.status = 'failed'
 		   AND a.raw_event_id NOT IN (
 			SELECT raw_event_id FROM raw_event_attempts WHERE status = 'processed'
+		   )
+		   AND a.raw_event_id NOT IN (
+			SELECT raw_event_id FROM raw_event_attempts WHERE status IN ('ignored', 'invalid')
 		   )
 		 GROUP BY a.raw_event_id, e.channel_slug, a.error_message
 		 ORDER BY max(a.finished_at) DESC
@@ -370,6 +393,9 @@ func (repo *Repository) ClearFailedEvents(ctx context.Context) (int64, error) {
 		 WHERE status = 'failed'
 		   AND raw_event_id NOT IN (
 			SELECT raw_event_id FROM raw_event_attempts WHERE status = 'processed'
+		   )
+		   AND raw_event_id NOT IN (
+			SELECT raw_event_id FROM raw_event_attempts WHERE status IN ('ignored', 'invalid')
 		   )`,
 	).Scan(&count); err != nil {
 		return 0, fmt.Errorf("count failed events before clear: %w", err)
@@ -383,6 +409,9 @@ func (repo *Repository) ClearFailedEvents(ctx context.Context) (int64, error) {
 		 WHERE status = 'failed'
 		   AND raw_event_id NOT IN (
 			SELECT raw_event_id FROM raw_event_attempts WHERE status = 'processed'
+		   )
+		   AND raw_event_id NOT IN (
+			SELECT raw_event_id FROM raw_event_attempts WHERE status IN ('ignored', 'invalid')
 		   )`,
 	); err != nil {
 		return 0, fmt.Errorf("clear failed events: %w", err)

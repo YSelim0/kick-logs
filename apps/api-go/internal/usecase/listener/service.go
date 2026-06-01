@@ -73,6 +73,7 @@ type Dependencies struct {
 type RawEventProcessingResult struct {
 	Claimed      int
 	Processed    int
+	Ignored      int
 	Failed       int
 	PendingCount int64
 }
@@ -257,6 +258,7 @@ func (service *Service) ProcessRawEventsOnce(ctx context.Context) (RawEventProce
 type rawEventOutcome struct {
 	item       domain.RawEventQueueItem
 	processed  bool
+	terminal   bool
 	message    domain.ChatMessage
 	hasMessage bool
 	failure    error
@@ -330,8 +332,13 @@ func (service *Service) processRawEventsOnce(ctx context.Context, workerID int) 
 		message, alreadyExists, normErr := service.prepareMessage(ctx, rawEvent, existingIDs)
 		if normErr != nil {
 			outcome.failure = normErr
+			outcome.terminal = isTerminalRawEventError(normErr)
 			outcomes = append(outcomes, outcome)
-			attempts = append(attempts, buildAttempt(item, "failed", normErr))
+			status := "failed"
+			if outcome.terminal {
+				status = "ignored"
+			}
+			attempts = append(attempts, buildAttempt(item, status, normErr))
 			continue
 		}
 		outcome.processed = true
@@ -354,16 +361,23 @@ func (service *Service) processRawEventsOnce(ctx context.Context, workerID int) 
 	if len(attempts) > 0 {
 		if err := service.rawEvents.InsertAttemptsBatch(ctx, attempts); err != nil {
 			service.logger.Error("raw event attempts batch insert failed", "batch_size", len(attempts), "error", err)
+			service.releaseClaims(ctx, claimed, claimWorkerID)
+			return RawEventProcessingResult{}, fmt.Errorf("insert raw event attempts batch: %w", err)
 		}
 	}
 
 	for _, outcome := range outcomes {
-		if outcome.processed {
+		if outcome.processed || outcome.terminal {
 			if err := service.queue.MarkProcessed(ctx, outcome.item.RawEventID); err != nil {
-				service.logger.Error("failed to mark queue item processed", "raw_event_id", outcome.item.RawEventID, "error", err)
+				service.logger.Error("failed to remove completed queue item", "raw_event_id", outcome.item.RawEventID, "error", err)
 				continue
 			}
-			result.Processed++
+			if outcome.terminal {
+				result.Ignored++
+				service.logger.Warn("raw Kick event ignored", "raw_event_id", outcome.item.RawEventID, "error", outcome.failure)
+			} else {
+				result.Processed++
+			}
 		} else {
 			message := ""
 			if outcome.failure != nil {
@@ -482,15 +496,42 @@ func (service *Service) loadEnabledChannels(ctx context.Context) ([]domain.Follo
 	return ready, nil
 }
 
+type terminalRawEventError struct {
+	err error
+}
+
+func (err *terminalRawEventError) Error() string {
+	if err == nil || err.err == nil {
+		return "terminal raw event error"
+	}
+	return err.err.Error()
+}
+
+func (err *terminalRawEventError) Unwrap() error {
+	if err == nil {
+		return nil
+	}
+	return err.err
+}
+
+func terminalRawEvent(err error) error {
+	return &terminalRawEventError{err: err}
+}
+
+func isTerminalRawEventError(err error) bool {
+	var terminal *terminalRawEventError
+	return errors.As(err, &terminal)
+}
+
 func (service *Service) prepareMessage(ctx context.Context, rawEvent domain.RawKickEvent, existingIDs map[string]bool) (domain.ChatMessage, bool, error) {
 	var payload map[string]any
 	if err := json.Unmarshal([]byte(rawEvent.PayloadJSON), &payload); err != nil {
-		return domain.ChatMessage{}, false, fmt.Errorf("decode raw payload: %w", err)
+		return domain.ChatMessage{}, false, terminalRawEvent(fmt.Errorf("decode raw payload: %w", err))
 	}
 
 	kickMessageID := cleanText(payload["id"])
 	if kickMessageID == "" {
-		return domain.ChatMessage{}, false, fmt.Errorf("raw event payload missing message id")
+		return domain.ChatMessage{}, false, terminalRawEvent(errors.New("raw event payload missing message id"))
 	}
 	if existingIDs[kickMessageID] {
 		return domain.ChatMessage{}, true, nil
@@ -503,14 +544,14 @@ func (service *Service) prepareMessage(ctx context.Context, rawEvent domain.RawK
 	channel, err := service.channels.GetByChatroomID(ctx, chatroomID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			err = fmt.Errorf("message channel is not followed")
+			return domain.ChatMessage{}, false, terminalRawEvent(errors.New("message channel is not followed"))
 		}
 		return domain.ChatMessage{}, false, err
 	}
 
 	sender, err := senderProfileFromPayload(payload)
 	if err != nil {
-		return domain.ChatMessage{}, false, err
+		return domain.ChatMessage{}, false, terminalRawEvent(err)
 	}
 	if service.senders != nil && service.senderCacheGate.ShouldWrite(sender.KickUserID) {
 		upserted, err := service.senders.Upsert(ctx, sender)
@@ -528,7 +569,7 @@ func (service *Service) prepareMessage(ctx context.Context, rawEvent domain.RawK
 
 	message, err := normalizeMessagePayload(payload, channel, sender)
 	if err != nil {
-		return domain.ChatMessage{}, false, err
+		return domain.ChatMessage{}, false, terminalRawEvent(err)
 	}
 	return message, false, nil
 }
@@ -556,6 +597,7 @@ func (service *Service) processRawEventsForever(ctx context.Context, workerID in
 					"worker_id", workerID,
 					"claimed", result.Claimed,
 					"processed", result.Processed,
+					"ignored", result.Ignored,
 					"failed", result.Failed,
 					"pending", result.PendingCount,
 				)

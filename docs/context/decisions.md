@@ -19,6 +19,15 @@
   not permanent history. After the worker writes the processed ClickHouse attempt, `MarkProcessed`
   deletes the queue row. Startup backfill still relies on ClickHouse `raw_event_attempts` to avoid
   re-enqueuing already processed raw events.
+- **Attempt history is required before queue acknowledgement.** If `InsertAttemptsBatch` fails, the
+  listener releases claimed queue rows back to pending instead of deleting them. `chat_messages`
+  inserts are idempotent by `kick_message_id`, so retrying after an attempt-write failure preserves
+  the audit/backfill guard without duplicating visible messages.
+- **Permanent invalid raw events use terminal `ignored` attempts.** Malformed payloads, missing
+  message ids, invalid sender/message shape, and known-unfollowed channel payloads are not retried
+  until max attempts. They get a ClickHouse `raw_event_attempts.status = 'ignored'` record and are
+  removed from the active SQLite queue. Backfill and operations metrics treat `ignored`/`invalid` as
+  terminal statuses alongside `processed`.
 
 ## 2026-06-01 (issue #22 — Kick webhook subscription tracking)
 

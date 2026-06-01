@@ -38,6 +38,18 @@ This is a living implementation log. Add new entries for each meaningful project
 - Added coverage proving startup queue bootstrap skips raw events that already have a ClickHouse
   `processed` attempt, which prevents re-enqueue loops after queue pruning.
 
+## 2026-06-01 (issue #23 — terminal invalid raw events)
+
+- Added terminal invalid raw-event handling for permanently malformed payloads. These events now
+  write ClickHouse attempts with status `ignored` and are removed from active SQLite queue work
+  instead of retrying until max attempts.
+- Updated raw-event backfill queries to treat `processed`, `ignored`, and `invalid` attempts as
+  terminal statuses.
+- Changed worker behavior so a failed `raw_event_attempts` batch insert releases queue claims back
+  to pending instead of acknowledging/deleting queue rows without ClickHouse attempt history.
+- Operations raw-event status counts now expose `ignored` and exclude terminal ignored/invalid rows
+  from pending/failed calculations.
+
 ## 2026-06-01 (admin webhook status UI)
 
 - Updated the Operations Webhooks panel so channel subscription health is summarized per channel

@@ -2,7 +2,18 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue #23 — raw event queue processed-row pruning)
+## Latest (issue #23 — terminal invalid raw events)
+
+- Permanently invalid raw chat payloads now write a terminal ClickHouse attempt with status
+  `ignored` and are removed from active SQLite queue work instead of retrying until max attempts.
+- Backfill now treats `processed`, `ignored`, and `invalid` raw-event attempts as terminal, so
+  ignored malformed events do not re-enter the queue after restart.
+- Worker safety tightened: if the ClickHouse attempt batch insert fails, claimed queue rows are
+  released back to pending instead of being acknowledged without attempt history.
+- Operations status counts now include `ignored` and exclude terminal ignored/invalid rows from
+  pending/failed calculations.
+
+## Previously Latest (issue #23 — raw event queue processed-row pruning)
 
 - SQLite `raw_event_queue` now behaves as active work state: successful `MarkProcessed` deletes the
   queue row instead of storing a permanent `processed` row.
