@@ -133,5 +133,53 @@ func SQLiteMigrations() []SQLiteMigration {
 				`CREATE INDEX IF NOT EXISTS idx_raw_event_queue_claimed ON raw_event_queue (status, claimed_at);`,
 			},
 		},
+		{
+			Version: 5,
+			Name:    "add_broadcaster_user_id_to_followed_channels",
+			Statements: []string{
+				`ALTER TABLE followed_channels ADD COLUMN broadcaster_user_id INTEGER;`,
+			},
+		},
+		{
+			Version: 6,
+			Name:    "create_kick_webhook_events",
+			Statements: []string{
+				`CREATE TABLE IF NOT EXISTS kick_webhook_events (
+					message_id TEXT PRIMARY KEY,
+					subscription_id TEXT NOT NULL DEFAULT '',
+					event_type TEXT NOT NULL DEFAULT '',
+					event_version TEXT NOT NULL DEFAULT '',
+					raw_payload_json TEXT NOT NULL DEFAULT '{}',
+					status TEXT NOT NULL CHECK (status IN ('pending', 'processed', 'failed', 'ignored')) DEFAULT 'pending',
+					attempts INTEGER NOT NULL DEFAULT 0,
+					received_at TEXT NOT NULL,
+					processed_at TEXT NOT NULL DEFAULT '',
+					error_message TEXT NOT NULL DEFAULT ''
+				);`,
+				`CREATE INDEX IF NOT EXISTS idx_kick_webhook_events_pending ON kick_webhook_events (status, received_at) WHERE status = 'pending';`,
+			},
+		},
+		{
+			Version: 7,
+			Name:    "create_kick_event_subscriptions",
+			Statements: []string{
+				`CREATE TABLE IF NOT EXISTS kick_event_subscriptions (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					followed_channel_id INTEGER NOT NULL,
+					broadcaster_user_id INTEGER NOT NULL DEFAULT 0,
+					event_type TEXT NOT NULL DEFAULT '',
+					event_version TEXT NOT NULL DEFAULT 'v1',
+					method TEXT NOT NULL DEFAULT 'webhook',
+					kick_subscription_id TEXT NOT NULL DEFAULT '',
+					status TEXT NOT NULL CHECK (status IN ('active', 'deleted', 'error')) DEFAULT 'active',
+					latest_sync_error TEXT NOT NULL DEFAULT '',
+					created_at TEXT NOT NULL,
+					updated_at TEXT NOT NULL,
+					synced_at TEXT NOT NULL DEFAULT '',
+					UNIQUE (followed_channel_id, event_type, event_version, method)
+				);`,
+				`CREATE INDEX IF NOT EXISTS idx_kick_event_subscriptions_channel ON kick_event_subscriptions (followed_channel_id, status);`,
+			},
+		},
 	}
 }
