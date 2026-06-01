@@ -112,8 +112,19 @@ func main() {
 		logger.Warn("Kick client credentials not configured; webhook subscription sync is disabled")
 	}
 	var webhookVerifier ports.KickWebhookVerifier
-	if cfg.KickWebhookPublicKey != "" {
-		v, err := kick.NewWebhookVerifier(cfg.KickWebhookPublicKey)
+	resolvedPublicKey := cfg.KickWebhookPublicKey
+	if resolvedPublicKey == "" && kickSyncService != nil {
+		// Auto-fetch the webhook public key from the Kick API when credentials are available.
+		kickAPIClient := kick.NewEventSubscriptionClient(cfg.KickAPIBaseURL, cfg.KickOAuthTokenURL, cfg.KickClientID, cfg.KickClientSecret)
+		if fetched, err := kickAPIClient.FetchWebhookPublicKey(context.Background()); err != nil {
+			logger.Warn("could not auto-fetch KICK_WEBHOOK_PUBLIC_KEY; POST /webhooks/kick will reject all requests", "error", err)
+		} else {
+			resolvedPublicKey = fetched
+			logger.Info("fetched Kick webhook public key from API")
+		}
+	}
+	if resolvedPublicKey != "" {
+		v, err := kick.NewWebhookVerifier(resolvedPublicKey)
 		if err != nil {
 			logger.Warn("KICK_WEBHOOK_PUBLIC_KEY is invalid; POST /webhooks/kick will reject all requests", "error", err)
 		} else {

@@ -184,6 +184,48 @@ func (c *EventSubscriptionClient) CreateEventSubscription(ctx context.Context, b
 	return subs[0], nil
 }
 
+// FetchWebhookPublicKey retrieves the app's webhook signing public key from the Kick API.
+// The returned string can be passed directly to NewWebhookVerifier.
+func (c *EventSubscriptionClient) FetchWebhookPublicKey(ctx context.Context) (string, error) {
+	token, err := c.getAccessToken(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.apiBaseURL+"/public/v1/webhooks/public-key", nil)
+	if err != nil {
+		return "", fmt.Errorf("build public key request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("fetch webhook public key: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("fetch webhook public key returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("read public key response: %w", err)
+	}
+
+	var result struct {
+		PublicKey string `json:"public_key"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return "", fmt.Errorf("decode public key response: %w", err)
+	}
+	if result.PublicKey == "" {
+		return "", fmt.Errorf("empty public_key in response")
+	}
+	return result.PublicKey, nil
+}
+
 func (c *EventSubscriptionClient) DeleteEventSubscription(ctx context.Context, subscriptionID string) error {
 	token, err := c.getAccessToken(ctx)
 	if err != nil {
