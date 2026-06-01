@@ -10,8 +10,8 @@ The default runtime is Go + ClickHouse + SQLite:
 - Go API serves the existing HTTP contract.
 - Go listener subscribes to Kick chat streams and persists raw events before normalization.
 - ClickHouse stores chat messages, raw Kick events, exports, analytics, and profile aggregates.
-- SQLite stores admin users, followed channels, sender profiles, retention settings, heartbeats,
-  and migration metadata.
+- SQLite stores admin users, followed channels, sender profile cache, retention settings,
+  heartbeats, temporary queue/inbox state, and migration metadata.
 - Next.js serves the public/search/admin web UI.
 
 Default local startup:
@@ -45,7 +45,8 @@ docker compose up --build -d
 - `apps/api-go`: Go backend, listener, migrator, ClickHouse/SQLite repositories.
 - `apps/web`: Next.js frontend using pnpm, Tailwind, shadcn/ui, and lucide-react.
 - `clickhouse`: default data-plane database.
-- `api_go_data`: Docker volume that stores SQLite control-plane data.
+- `api_go_data`: Docker volume that stores SQLite control-plane data plus temporary
+  pending/failed queue and webhook inbox rows.
 - `clickhouse_data`: Docker volume that stores ClickHouse data.
 
 Detailed structure lives in `docs/architecture.md`.
@@ -158,6 +159,9 @@ convert `_` to `-`.
 - operations health, storage growth, raw event status, and listener freshness
 - retention settings and guarded cleanup preview/confirm flows
 
+Operations treats SQLite queue depth as active work only. Processed raw-event history is read from
+ClickHouse attempts, while terminal ignored events are excluded from retryable failed-event actions.
+
 ## Data Management
 
 Retention values:
@@ -176,6 +180,10 @@ Cleanup targets:
 Cleanup requires a dry-run preview and exact confirmation text before execution. ClickHouse cleanup
 uses mutations; logical rows are removed before the API returns, while physical disk reclamation may
 lag behind background merges.
+
+The listener and webhook inbox do not keep processed rows forever in SQLite. Processed raw-event
+queue rows are deleted after ClickHouse attempt history is written, and processed/ignored webhook
+inbox rows are pruned after the short retention window.
 
 ## Legacy Data Migration
 

@@ -101,9 +101,12 @@ SQLite stores control-plane data:
 
 - `admin_users`
 - `followed_channels`
-- `sender_profiles`
+- `sender_profiles` as a best-effort cache
 - `retention_settings`
 - `worker_heartbeats`
+- `raw_event_queue` for active pending/claimed/failed listener work
+- `kick_webhook_events` as a short-retention webhook inbox
+- `kick_event_subscriptions`
 - schema/data migration bookkeeping
 
 ClickHouse stores data-plane rows:
@@ -111,6 +114,7 @@ ClickHouse stores data-plane rows:
 - `chat_messages`
 - `raw_kick_events`
 - `raw_event_attempts`
+- `channel_subscription_periods`
 
 `chat_messages` is denormalized. It includes sender/channel snapshots, normalized helper columns,
 reply metadata, emote arrays/image URLs, badges, raw payload JSON, message timestamps, and ingestion
@@ -209,17 +213,28 @@ The Go listener follows the durable-inbox rule:
 2. Resolve missing Kick channel metadata.
 3. Subscribe to Kick Pusher streams.
 4. Persist received `App\Events\ChatMessageEvent` payloads to ClickHouse `raw_kick_events`.
-5. Normalize raw events into visible `chat_messages`.
-6. Upsert sender profile cache in SQLite when available.
-7. Append raw-event attempt history.
-8. Record listener heartbeat in SQLite.
+5. Enqueue active work in SQLite `raw_event_queue`.
+6. Normalize queue items into visible `chat_messages`.
+7. Upsert sender profile cache in SQLite only as a throttled best-effort cache.
+8. Append raw-event attempt history in ClickHouse.
+9. Delete processed queue rows from SQLite after attempt history is durable.
+10. Record listener heartbeat in SQLite.
 
 The listener reconnects/resyncs periodically so admin channel changes take effect without a manual
-restart. Visible message inserts remain idempotent by `kick_message_id`.
+restart. Visible message inserts remain idempotent by `kick_message_id`. Permanent invalid payloads
+write terminal ignored attempts and leave the active queue instead of retrying forever.
 
 ## Data Management
 
 Admin data-management endpoints operate against SQLite settings and ClickHouse rows.
+
+Operations/data-management views distinguish active SQLite runtime state from ClickHouse history:
+
+- `raw_event_queue` row counts represent active pending/claimed/failed listener work, not all-time
+  processed event history.
+- `raw_kick_events` and `raw_event_attempts` remain the durable raw-event archive/audit history.
+- processed/ignored webhook inbox rows are pruned from SQLite after the short retention window,
+  while normalized subscription periods stay in ClickHouse.
 
 Retention settings:
 

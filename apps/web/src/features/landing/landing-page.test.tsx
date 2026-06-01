@@ -107,7 +107,7 @@ describe("LandingPage", () => {
     expect(screen.getByRole("heading", { name: "Top kullanıcılar" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Top emoteler" })).toBeInTheDocument();
 
-    expect(screen.getByText("Hype")).toBeInTheDocument();
+    expect(await screen.findByText("Hype")).toBeInTheDocument();
     expect(screen.getByText("KEKW")).toBeInTheDocument();
     expect(screen.getByText("Yavuz")).toBeInTheDocument();
   });

@@ -7,8 +7,8 @@ implementation details, or working assumptions change.
 
 - Branch: `feat/issue-23-storage-hot-path-hardening`.
 - Active plan: Storage hot path hardening (see `docs/implementation_plan.md`, issue #23).
-  The goal is to keep ClickHouse as data-plane history while returning SQLite to control-plane and
-  temporary queue/inbox responsibilities.
+  Implemented on this branch. The goal is to keep ClickHouse as data-plane history while returning
+  SQLite to control-plane and temporary queue/inbox responsibilities.
 - Earlier: channels/users index search pages — `/channels` and `/users` search-first index pages
   added 2026-05-24.
 - Responsive polish pass is current through 2026-05-22: profile rows, admin navigation, admin

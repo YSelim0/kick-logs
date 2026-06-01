@@ -2,7 +2,18 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue #23 — admin operations clarification)
+## Latest (issue #23 — docs and verification)
+
+- Architecture and project plan docs now describe the hardened storage split:
+  - ClickHouse owns raw/message/attempt/subscription history.
+  - SQLite owns control-plane state plus temporary active queue/inbox rows.
+  - processed raw-event queue rows and old terminal webhook inbox rows do not live forever in
+    SQLite.
+- `docs/implementation_plan.md` is marked implemented for branch
+  `feat/issue-23-storage-hot-path-hardening`.
+- Final validation for the branch is being run before the docs verification commit.
+
+## Previously Latest (issue #23 — admin operations clarification)
 
 - Admin Operations copy now separates active SQLite queue state from all-time ClickHouse raw-event
   history.

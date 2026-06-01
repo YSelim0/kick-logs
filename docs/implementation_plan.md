@@ -6,6 +6,8 @@ Kick Logs already moved the main chat archive to ClickHouse, but some high-frequ
 still write too much long-lived state to SQLite. This plan hardens the storage split without changing
 the public API contract or deleting historical chat data.
 
+Status: implemented on branch `feat/issue-23-storage-hot-path-hardening`.
+
 Primary goal:
 
 - ClickHouse remains the durable data-plane store for chat events, visible messages, processing

@@ -33,7 +33,7 @@ describe("DataManagementPanel", () => {
     render(<DataManagementPanel />);
 
     expect(await screen.findByRole("heading", { name: "Veri Yönetimi" })).toBeInTheDocument();
-    expect(screen.getByText("Veritabanı")).toBeInTheDocument();
+    expect(await screen.findByText("Veritabanı")).toBeInTheDocument();
     expect(screen.getByText("chat_messages")).toBeInTheDocument();
     expect(screen.getByText("raw_kick_events")).toBeInTheDocument();
     expect(screen.getByText("raw_event_queue")).toBeInTheDocument();

@@ -72,6 +72,15 @@ This is a living implementation log. Add new entries for each meaningful project
   `kick_event_subscriptions`, and `schema_migrations` row counts so temporary/runtime SQLite state
   remains visible after processed rows are deleted.
 
+## 2026-06-01 (issue #23 — docs and verification)
+
+- Updated `docs/architecture.md` and `docs/project_plan.md` so the current storage split is explicit:
+  ClickHouse owns durable data-plane history, while SQLite owns control-plane state and temporary
+  active queue/inbox rows.
+- Marked `docs/implementation_plan.md` as implemented on
+  `feat/issue-23-storage-hot-path-hardening`.
+- Refreshed context handoff docs for the completed storage hot-path hardening branch.
+
 ## 2026-06-01 (admin webhook status UI)
 
 - Updated the Operations Webhooks panel so channel subscription health is summarized per channel
