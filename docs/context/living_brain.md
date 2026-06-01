@@ -79,6 +79,9 @@ implementation details, or working assumptions change.
   write per message.
 - `kick_webhook_events` remains the webhook idempotency inbox, but processed/ignored rows should be
   pruned after a short retention window. Pending/failed rows must remain for processing/admin action.
+- Admin Operations must treat `raw_event_queue` as active backlog only. Raw-event archive/history
+  counts come from ClickHouse, and terminal ignored/invalid raw events are not retryable failed
+  backlog.
 
 ## Search Index Pages
 

@@ -32,6 +32,10 @@
   receiver inbox, but processed/ignored rows older than 7 days are pruned by the webhook processor.
   Pending and failed webhook rows are never pruned by this path because they still represent work or
   operator-visible failures. Subscription periods remain durable in ClickHouse.
+- **Admin Operations separates active queue from history.** Raw-event archive counts shown in admin
+  Operations come from ClickHouse history. SQLite `raw_event_queue` is surfaced as active ingestion
+  backlog only, and terminal ignored/invalid raw events are excluded from retryable failed-event
+  actions.
 
 ## 2026-06-01 (issue #22 — Kick webhook subscription tracking)
 

@@ -62,7 +62,7 @@ export function OperationsDashboard() {
 
   const ingestion = summary?.ingestion ?? EMPTY_INGESTION;
   const failedRawEvents = summary ? getStatusCount(summary, "failed") : 0;
-  const pendingRawEvents = summary ? getStatusCount(summary, "pending") : 0;
+  const ignoredRawEvents = summary ? getStatusCount(summary, "ignored") : 0;
   const isBreakerOpen = ingestion.breaker_state === "open";
 
   return (
@@ -71,7 +71,7 @@ export function OperationsDashboard() {
         <div className="flex flex-col gap-1">
           <h2 className="text-[22px] font-semibold tracking-tight text-foreground">Operations</h2>
           <p className="font-sans text-[13px] text-muted-foreground">
-            Listener sağlığı, ingestion durumu, depolama özeti
+            Listener sağlığı, aktif queue, ClickHouse geçmişi, depolama özeti
           </p>
         </div>
         <Button
@@ -114,7 +114,7 @@ export function OperationsDashboard() {
           {failedRawEvents > 0 ? (
             <OperationsNotice
               icon={<TriangleAlert className="h-4 w-4" />}
-              message="Başarısız raw event var. İşleme hatalarını backend loglarıyla incelemek gerekebilir."
+              message="Retry edilebilir başarısız raw event var. İşleme hatalarını backend loglarıyla incelemek gerekebilir."
               tone="danger"
             />
           ) : null}
@@ -166,7 +166,11 @@ export function OperationsDashboard() {
               value={formatNumber(summary.counts.messages)}
             />
             <MetricCard
-              detail={`pending ${formatNumber(pendingRawEvents)}`}
+              detail={
+                ignoredRawEvents > 0
+                  ? `ClickHouse geçmişi · ignored ${formatNumber(ignoredRawEvents)}`
+                  : "ClickHouse geçmişi"
+              }
               icon={<HardDrive className="h-3.5 w-3.5" />}
               iconTone="muted"
               label="RAW EVENT"
@@ -193,8 +197,10 @@ export function OperationsDashboard() {
           <div className="rounded-lg border border-border bg-panel p-5">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex flex-col gap-0.5">
-                <span className="text-[14px] font-semibold text-foreground">Ingestion</span>
-                <span className="font-mono text-[11px] text-faint">queue, breaker, flush</span>
+                <span className="text-[14px] font-semibold text-foreground">Aktif Ingestion</span>
+                <span className="font-mono text-[11px] text-faint">
+                  SQLite queue, writer buffer, ClickHouse breaker
+                </span>
               </div>
               <div
                 className={`flex items-center gap-1.5 rounded-full bg-elevated px-2.5 py-1 font-mono text-[10px] font-semibold tracking-[0.8px] ${
@@ -209,7 +215,7 @@ export function OperationsDashboard() {
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
               <div className="flex min-w-[480px] divide-x divide-border">
-                <IngestionCell label="Queue depth" value={formatNumber(ingestion.queue_depth)} />
+                <IngestionCell label="Aktif queue" value={formatNumber(ingestion.queue_depth)} />
                 <IngestionCell
                   label="Write queue"
                   value={formatNumber(ingestion.write_queue_depth)}

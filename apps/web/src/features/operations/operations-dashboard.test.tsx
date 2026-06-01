@@ -72,7 +72,9 @@ describe("OperationsDashboard", () => {
 
     render(<OperationsDashboard />);
 
-    expect(await screen.findByText(/Başarısız raw event var/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Retry edilebilir başarısız raw event var/i)
+    ).toBeInTheDocument();
     expect(screen.getByText("İnceleme gerekli")).toBeInTheDocument();
   });
 
@@ -107,6 +109,7 @@ describe("OperationsDashboard", () => {
     render(<OperationsDashboard />);
 
     expect(await screen.findByText("1.234")).toBeInTheDocument();
+    expect(screen.getByText("Aktif queue")).toBeInTheDocument();
     expect(screen.getByText("Kapalı")).toBeInTheDocument();
   });
 

@@ -2,7 +2,19 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue #23 — webhook inbox retention)
+## Latest (issue #23 — admin operations clarification)
+
+- Admin Operations copy now separates active SQLite queue state from all-time ClickHouse raw-event
+  history.
+- The Raw Event metric no longer labels ClickHouse archive counts as `pending`; active backlog is
+  shown under the Ingestion section as `Aktif queue`.
+- Failed raw-event UI copy now describes retryable failed events and notes that terminal ignored
+  events are intentionally excluded from the failed-event modal.
+- Data Management table rows now include the active `raw_event_queue`, webhook inbox, Kick event
+  subscription registry, and SQLite migration table counts so runtime SQLite state stays visible
+  after processed queue rows are pruned.
+
+## Previously Latest (issue #23 — webhook inbox retention)
 
 - Webhook processor now prunes old terminal SQLite inbox rows after processing ticks.
 - Retention applies only to `kick_webhook_events` rows with status `processed` or `ignored` and a

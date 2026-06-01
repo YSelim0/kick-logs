@@ -95,8 +95,8 @@ export function FailedEventsModal({
             Başarısız Raw Eventler
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            İşlenemeyen raw event kayıtları. Yeniden deneyebilir veya orphan attempt&apos;leri
-            temizleyebilirsin.
+            Retry edilebilir failed raw event kayıtları. Terminal ignored eventler bu listede
+            gösterilmez.
           </DialogDescription>
         </DialogHeader>
 

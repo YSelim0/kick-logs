@@ -60,6 +60,18 @@ This is a living implementation log. Add new entries for each meaningful project
 - Added repository and processor tests proving processed/ignored old rows are pruned while failed
   and recent terminal rows remain.
 
+## 2026-06-01 (issue #23 — admin operations clarification)
+
+- Updated Operations dashboard copy so ClickHouse raw-event history is not presented as active
+  SQLite queue backlog.
+- The active listener backlog is labeled as `Aktif queue` under the Ingestion section, while the
+  Raw Event metric is described as ClickHouse history.
+- Failed raw-event modal copy now states that it shows retryable failed events and excludes terminal
+  ignored events.
+- Data Management table summaries now include `raw_event_queue`, `kick_webhook_events`,
+  `kick_event_subscriptions`, and `schema_migrations` row counts so temporary/runtime SQLite state
+  remains visible after processed rows are deleted.
+
 ## 2026-06-01 (admin webhook status UI)
 
 - Updated the Operations Webhooks panel so channel subscription health is summarized per channel
