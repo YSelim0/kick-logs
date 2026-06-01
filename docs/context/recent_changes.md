@@ -4,6 +4,34 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest
 
+- Webhook subscription storage foundation (issue #22, Phase 2, branch `feat/issue-22-kick-subscription-webhooks`):
+  - `domain/models.go`: added `BroadcasterUserID int64` to `FollowedChannel`; new types
+    `KickWebhookEvent`, `KickEventSubscription`, `KickAPIEventSub`, `ChannelSubscriptionPeriod`,
+    `ChannelSubscriptionSummary`; webhook/event-subscription status constants.
+  - `ports/storage.go`: new `KickWebhookEventRepository`, `KickEventSubscriptionRepository`,
+    `SubscriptionPeriodRepository` interfaces; `GetByBroadcasterUserID` added to
+    `FollowedChannelRepository`.
+  - `ports/kick.go`: new `KickEventSubscriptionClient` interface (impl deferred to Phase 3).
+  - SQLite migrations v5 (`broadcaster_user_id` column on `followed_channels`), v6
+    (`kick_webhook_events` inbox with `INSERT OR IGNORE` idempotency), v7
+    (`kick_event_subscriptions` registry with UNIQUE upsert guard).
+  - `infra/sqlite/followed_channels.go`: all queries updated for `broadcaster_user_id`;
+    `GetByBroadcasterUserID` added.
+  - `infra/sqlite/kick_webhook_events.go`: inbox repo — idempotent insert, list pending,
+    mark processed/failed/ignored, count by status, latest received_at.
+  - `infra/sqlite/kick_event_subscriptions.go`: registry repo — ON CONFLICT upsert,
+    list/delete by channel, update sync error (soft-delete pattern).
+  - ClickHouse migration v5 (`channel_subscription_periods`,
+    `ReplacingMergeTree(ingested_at)` ORDER BY `id`, partitioned by month).
+  - `infra/clickhouse/subscription_periods.go`: batch insert + active summary
+    (`countDistinctIf` + `FINAL`).
+  - Tests: new SQLite repo tests for webhook inbox transitions, subscription upsert/delete;
+    new ClickHouse integration test for insert batch + active summary (gated on
+    `KICK_LOGS_RUN_CLICKHOUSE_TESTS=1`).
+  - Verification: `go build ./...`, `go vet ./...`, `go test ./...` all green.
+
+## Previously Latest
+
 - README refresh:
   - Replaced the long technical README with a shorter product-focused version.
   - Added a compact centered hero with logo + title, concise slogan, demo GIF, repository/status/

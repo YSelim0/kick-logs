@@ -5,9 +5,9 @@ implementation details, or working assumptions change.
 
 ## Current State
 
-- Branch: `feat/issue-19-client-side-prediction`.
-- Active plan: client-side Kick prediction migration (see `docs/implementation_plan.md`). Prediction
-  UI stays unchanged, while the data source moves out of the Go API and into the browser client.
+- Branch: `feat/issue-22-kick-subscription-webhooks`.
+- Active plan: Kick webhook subscription tracking (see `docs/implementation_plan.md`, issue #22).
+  Phase 2 (storage and domain foundation) complete. Phase 3 next.
 - Earlier: channels/users index search pages — `/channels` and `/users` search-first index pages
   added 2026-05-24.
 - Responsive polish pass is current through 2026-05-22: profile rows, admin navigation, admin
@@ -31,6 +31,21 @@ implementation details, or working assumptions change.
   - `chat_messages`: 123790
   - `raw_kick_events`: 121664
   - `raw_event_attempts`: 121664
+
+## Webhook Subscription Pipeline (issue #22, Phase 2 complete)
+
+- `domain.KickWebhookEvent` — webhook inbox model; status: `pending/processed/failed/ignored`
+- `domain.KickEventSubscription` — Kick event subscription registry; status: `active/deleted/error`
+- `domain.ChannelSubscriptionPeriod` — ClickHouse normalized subscription period; deterministic `id`
+- `domain.ChannelSubscriptionSummary` — active count aggregate returned by public API
+- `domain.KickAPIEventSub` — lightweight type for Kick API event subscription responses
+- `FollowedChannel.BroadcasterUserID int64` — Kick broadcaster user ID (0 = not yet resolved)
+- Port: `KickWebhookEventRepository` (SQLite inbox), `KickEventSubscriptionRepository` (SQLite registry)
+- Port: `SubscriptionPeriodRepository` (ClickHouse), `KickEventSubscriptionClient` (Phase 3 impl)
+- Port: `FollowedChannelRepository.GetByBroadcasterUserID` added
+- SQLite migrations v5 (broadcaster_user_id), v6 (kick_webhook_events), v7 (kick_event_subscriptions)
+- ClickHouse migration v5 (channel_subscription_periods, ReplacingMergeTree ORDER BY id)
+- Active count query uses `FINAL` + `countDistinctIf(subscriber_kick_user_id, expires_at > now())`
 
 ## Default Data Stores
 

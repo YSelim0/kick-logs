@@ -115,5 +115,36 @@ func ClickHouseMigrations() []ClickHouseMigration {
 				`ALTER TABLE raw_kick_events ADD COLUMN IF NOT EXISTS metadata_json String DEFAULT '{}';`,
 			},
 		},
+		{
+			Version: 5,
+			Name:    "create_channel_subscription_periods",
+			Statements: []string{
+				`CREATE TABLE IF NOT EXISTS channel_subscription_periods (
+					id String,
+					event_message_id String,
+					event_type LowCardinality(String),
+					followed_channel_id Int64,
+					broadcaster_user_id Int64,
+					channel_slug String,
+					channel_display_name String,
+					subscriber_kick_user_id Int64,
+					subscriber_username String,
+					subscriber_slug String,
+					subscriber_profile_image_url String DEFAULT '',
+					gifter_kick_user_id Nullable(Int64),
+					gifter_username Nullable(String),
+					gifter_slug Nullable(String),
+					gifter_profile_image_url Nullable(String),
+					is_gift UInt8 DEFAULT 0,
+					started_at DateTime64(3, 'UTC'),
+					expires_at DateTime64(3, 'UTC'),
+					raw_payload_json String DEFAULT '{}',
+					ingested_at DateTime64(3, 'UTC')
+				)
+				ENGINE = ReplacingMergeTree(ingested_at)
+				PARTITION BY toYYYYMM(started_at)
+				ORDER BY id;`,
+			},
+		},
 	}
 }
