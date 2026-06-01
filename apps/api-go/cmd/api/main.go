@@ -110,10 +110,17 @@ func main() {
 	} else {
 		logger.Warn("Kick client credentials not configured; webhook subscription sync is disabled")
 	}
-	if cfg.KickWebhookPublicKey == "" {
+	var webhookVerifier ports.KickWebhookVerifier
+	if cfg.KickWebhookPublicKey != "" {
+		v, err := kick.NewWebhookVerifier(cfg.KickWebhookPublicKey)
+		if err != nil {
+			logger.Warn("KICK_WEBHOOK_PUBLIC_KEY is invalid; POST /webhooks/kick will reject all requests", "error", err)
+		} else {
+			webhookVerifier = v
+		}
+	} else {
 		logger.Warn("KICK_WEBHOOK_PUBLIC_KEY not configured; POST /webhooks/kick will reject all requests")
 	}
-	_ = webhookEventRepo
 	var messageService *messagesusecase.Service
 	var analyticsService *analyticsusecase.Service
 	var profileService *profilesusecase.Service
@@ -134,17 +141,19 @@ func main() {
 		datamanagementinfra.NewRepository(sqliteDB, cfg.SQLitePath, clickHouseConn),
 	)
 	server := app.NewAPIServer(cfg, logger, routes.Dependencies{
-		Config:       cfg,
-		Auth:         authService,
-		Analytics:    analyticsService,
-		Channels:     channelService,
-		Messages:     messageService,
-		Profiles:     profileService,
-		Data:         dataManagementService,
-		KickSync:     kickSyncService,
-		Operations:   operationsRepo,
-		RateLimiter:  rateLimiter,
-		TokenService: tokenService,
+		Config:          cfg,
+		Auth:            authService,
+		Analytics:       analyticsService,
+		Channels:        channelService,
+		Messages:        messageService,
+		Profiles:        profileService,
+		Data:            dataManagementService,
+		KickSync:        kickSyncService,
+		WebhookEvents:   webhookEventRepo,
+		WebhookVerifier: webhookVerifier,
+		Operations:      operationsRepo,
+		RateLimiter:     rateLimiter,
+		TokenService:    tokenService,
 	})
 
 	errs := make(chan error, 1)

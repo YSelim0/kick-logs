@@ -18,6 +18,11 @@ type PusherClient interface {
 	Listen(ctx context.Context, channels []domain.ListenerChannel, handle func(string) error) error
 }
 
+// KickWebhookVerifier verifies the Ed25519 signature on incoming Kick webhook requests.
+type KickWebhookVerifier interface {
+	Verify(messageID, timestamp string, body []byte, signature string) error
+}
+
 type KickEventSubscriptionClient interface {
 	ResolveBroadcasterUserID(ctx context.Context, slug string) (int64, error)
 	ListEventSubscriptions(ctx context.Context) ([]domain.KickAPIEventSub, error)
