@@ -17,6 +17,15 @@ This is a living implementation log. Add new entries for each meaningful project
   - webhook inbox retention
   - admin operations clarification
 
+## 2026-06-01 (issue #23 — sender profile cache best-effort)
+
+- Changed listener raw-event processing so SQLite `sender_profiles` upsert failures no longer fail
+  chat message normalization.
+- The listener now logs sender cache upsert errors and continues with the sender snapshot from the
+  raw Kick payload.
+- Added coverage proving a sender profile cache failure still produces a visible chat message and a
+  processed raw-event attempt.
+
 ## 2026-06-01 (admin webhook status UI)
 
 - Updated the Operations Webhooks panel so channel subscription health is summarized per channel

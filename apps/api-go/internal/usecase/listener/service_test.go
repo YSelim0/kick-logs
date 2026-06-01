@@ -138,6 +138,48 @@ func TestRawEventProcessorNormalizesAndDeduplicatesMessages(t *testing.T) {
 	}
 }
 
+func TestRawEventProcessorKeepsMessageWhenSenderCacheFails(t *testing.T) {
+	unit := newFakeListenerUnit()
+	service := newTestService(unit, fakePusherClient{})
+	unit.senders.failUpsert = errors.New("sqlite busy")
+
+	payload := buildPayload("message-cache-failure")
+	enqueueRawEvent(t, unit, domain.RawKickEvent{
+		ID:            "raw-cache-failure",
+		EventName:     chatMessageEventName,
+		KickMessageID: "message-cache-failure",
+		ChatroomID:    123,
+		ChannelID:     1,
+		PayloadJSON:   rawPayloadJSON(payload),
+		Status:        "pending",
+		ReceivedAt:    time.Now().UTC(),
+	})
+
+	result, err := service.ProcessRawEventsOnce(context.Background())
+	if err != nil {
+		t.Fatalf("ProcessRawEventsOnce() error = %v", err)
+	}
+	if result.Claimed != 1 || result.Processed != 1 || result.Failed != 0 {
+		t.Fatalf("result = %#v", result)
+	}
+	if len(unit.messages.messages) != 1 {
+		t.Fatalf("messages = %#v", unit.messages.messages)
+	}
+	message := unit.messages.messages[0]
+	if message.KickMessageID != "message-cache-failure" || message.SenderKickID != 456 {
+		t.Fatalf("message = %#v", message)
+	}
+	if message.SenderID != message.SenderKickID {
+		t.Fatalf("sender id = %d, want payload kick id %d", message.SenderID, message.SenderKickID)
+	}
+	if len(unit.rawEvents.attempts) != 1 || unit.rawEvents.attempts[0].Status != "processed" {
+		t.Fatalf("attempts = %#v", unit.rawEvents.attempts)
+	}
+	if len(unit.senders.values) != 0 {
+		t.Fatalf("sender cache should not store failed upsert = %#v", unit.senders.values)
+	}
+}
+
 func TestRawEventProcessorSkipsAlreadyClaimedRawEvents(t *testing.T) {
 	unit := newFakeListenerUnit()
 	service := newTestService(unit, fakePusherClient{})
@@ -969,10 +1011,14 @@ func (repo *fakeMessageRepository) Search(_ context.Context, _ domain.MessageSea
 }
 
 type fakeSenderRepository struct {
-	values []domain.SenderProfile
+	values     []domain.SenderProfile
+	failUpsert error
 }
 
 func (repo *fakeSenderRepository) Upsert(_ context.Context, sender domain.SenderProfile) (domain.SenderProfile, error) {
+	if repo.failUpsert != nil {
+		return domain.SenderProfile{}, repo.failUpsert
+	}
 	for index, existing := range repo.values {
 		if existing.KickUserID == sender.KickUserID {
 			sender.ID = existing.ID

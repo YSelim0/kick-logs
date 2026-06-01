@@ -1,5 +1,16 @@
 # Decisions
 
+## 2026-06-01 (issue #23 — sender profile cache is best-effort)
+
+- **Sender profile cache writes must not block chat ingestion.** The listener now treats
+  `sender_profiles` as an optional cache. If SQLite upsert fails while processing a raw chat event,
+  the listener logs a warning and continues building the visible `chat_messages` row from the sender
+  snapshot already present in the raw Kick payload.
+- **Visible message identity comes from the raw payload first.** If the cache write fails, the
+  message still stores `sender_kick_id`, username, slug, color, badges, and profile-image hints from
+  the payload. `normalizeMessagePayload` falls back to the Kick user id when no SQLite sender row id
+  is available.
+
 ## 2026-06-01 (issue #22 — Kick webhook subscription tracking)
 
 - **`broadcaster_user_id` stored as `int64` with 0 = unresolved**, same pattern as `kick_channel_id`

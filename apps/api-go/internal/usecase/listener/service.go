@@ -509,9 +509,18 @@ func (service *Service) prepareMessage(ctx context.Context, rawEvent domain.RawK
 	if err != nil {
 		return domain.ChatMessage{}, false, err
 	}
-	sender, err = service.senders.Upsert(ctx, sender)
-	if err != nil {
-		return domain.ChatMessage{}, false, err
+	if service.senders != nil {
+		upserted, err := service.senders.Upsert(ctx, sender)
+		if err != nil {
+			service.logger.Warn(
+				"sender profile cache upsert failed; continuing with payload snapshot",
+				"raw_event_id", rawEvent.ID,
+				"sender_kick_user_id", sender.KickUserID,
+				"error", err,
+			)
+		} else {
+			sender = upserted
+		}
 	}
 
 	message, err := normalizeMessagePayload(payload, channel, sender)

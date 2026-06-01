@@ -2,7 +2,16 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue #23 — storage hot path hardening plan)
+## Latest (issue #23 — sender profile cache best-effort)
+
+- Listener raw-event processing no longer fails a chat message when SQLite `sender_profiles` upsert
+  fails.
+- The message is still built from the raw Kick payload sender snapshot and written to
+  `chat_messages`; the cache failure is logged for operations visibility.
+- Added listener test coverage for sender cache failure producing a processed attempt and visible
+  message.
+
+## Previously Latest (issue #23 — storage hot path hardening plan)
 
 - Active implementation plan now targets issue #23 storage hot-path hardening.
 - Locked the intended storage split:
