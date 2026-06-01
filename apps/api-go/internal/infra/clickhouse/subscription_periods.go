@@ -3,6 +3,7 @@ package clickhouse
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
@@ -82,10 +83,21 @@ func (r *SubscriptionPeriodRepository) ActiveSummary(ctx context.Context, follow
 	)
 
 	var summary domain.ChannelSubscriptionSummary
+	var activeCount uint64
+	var activeGiftedCount uint64
 	var latestEventAt time.Time
-	if err := row.Scan(&summary.ActiveCount, &summary.ActiveGiftedCount, &latestEventAt); err != nil {
+	if err := row.Scan(&activeCount, &activeGiftedCount, &latestEventAt); err != nil {
 		return domain.ChannelSubscriptionSummary{}, fmt.Errorf("active subscription summary: %w", err)
 	}
+	summary.ActiveCount = uint64ToInt64(activeCount)
+	summary.ActiveGiftedCount = uint64ToInt64(activeGiftedCount)
 	summary.LatestEventAt = latestEventAt
 	return summary, nil
+}
+
+func uint64ToInt64(value uint64) int64 {
+	if value > math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int64(value)
 }

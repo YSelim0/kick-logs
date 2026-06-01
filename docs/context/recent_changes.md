@@ -4,6 +4,11 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Latest (webhook sync contract fix)
 
+- Follow-up fix: `GET /channels/{slug}/subscription-summary` was returning zero even when
+  ClickHouse had active subscription periods. Root cause was scanning ClickHouse
+  `countDistinctIf(...)` (`UInt64`) into Go `int64`; the route swallowed the repository error and
+  returned the zero-value response. The repository now scans unsigned counts and safely converts
+  them. Local smoke: `/channels/levo/subscription-summary` returns `active_count: 1`.
 - Fixed Kick webhook subscription sync against the current Kick API contract:
   - create requests now send `events: [{name, version: 1}]` plus `method: webhook`, not the old
     single `type` field.

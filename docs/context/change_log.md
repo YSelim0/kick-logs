@@ -4,6 +4,11 @@ This is a living implementation log. Add new entries for each meaningful project
 
 ## 2026-06-01 (issue #22 — webhook sync contract fix)
 
+- Fixed channel subscription summary counts. ClickHouse `countDistinctIf(...)` returns `UInt64`;
+  scanning directly into Go `int64` caused the repository to error, and the route returned zero
+  counts. `SubscriptionPeriodRepository.ActiveSummary` now scans unsigned counts and converts them
+  safely. Verified `/channels/levo/subscription-summary` returns `active_count: 1` for the processed
+  renewal webhook.
 - Corrected the Kick event subscription client to match the current public API:
   - create uses batch `events: [{name, version: 1}]` and `method: webhook`
   - delete uses `DELETE /public/v1/events/subscriptions?id=<subscription_id>`
