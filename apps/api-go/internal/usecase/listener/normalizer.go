@@ -60,9 +60,7 @@ func normalizeMessagePayload(
 	if messageType == "" {
 		messageType = "message"
 	}
-	if sender.ID == 0 {
-		sender.ID = sender.KickUserID
-	}
+	senderKickID := asInt64(senderPayload["id"])
 	if sender.ProfileImageURL == "" {
 		sender.ProfileImageURL = firstCleanText(
 			senderPayload["profile_image_url"],
@@ -82,8 +80,8 @@ func normalizeMessagePayload(
 		ChannelProfileImageURL: channel.ProfileImageURL,
 		ChannelBannerImageURL:  channel.BannerImageURL,
 		ChannelPublicURL:       kickPublicURL(channel.Slug),
-		SenderID:               sender.ID,
-		SenderKickID:           asInt64(senderPayload["id"]),
+		SenderID:               senderKickID,
+		SenderKickID:           senderKickID,
 		SenderUsername:         senderUsername,
 		SenderSlug:             senderSlug,
 		SenderDisplayColor:     cleanText(identity["color"]),

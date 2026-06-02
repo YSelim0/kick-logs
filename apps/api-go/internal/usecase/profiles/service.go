@@ -38,6 +38,9 @@ func (service *Service) UserProfile(ctx context.Context, slug string) (domain.Us
 	if err != nil {
 		return domain.UserProfile{}, err
 	}
+	if sender.KickUserID > 0 {
+		sender.ID = sender.KickUserID
+	}
 
 	filter := domain.AnalyticsFilter{Sender: sender.Slug}
 	overview, err := service.analytics.Overview(ctx, filter)
@@ -56,7 +59,7 @@ func (service *Service) UserProfile(ctx context.Context, slug string) (domain.Us
 	if err != nil {
 		return domain.UserProfile{}, err
 	}
-	latestMessages, err := service.analytics.LatestMessages(ctx, filter, 10)
+	latestMessages, err := service.analytics.LatestMessages(ctx, filter, 20)
 	if err != nil {
 		return domain.UserProfile{}, err
 	}

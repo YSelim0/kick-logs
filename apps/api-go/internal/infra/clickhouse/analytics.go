@@ -25,13 +25,16 @@ func (repo *AnalyticsRepository) Overview(
 	where, args := analyticsWhere(filter)
 	query := fmt.Sprintf(`SELECT
 		count(),
-		uniqExactIf(sender_id, isNotNull(sender_id)),
+		uniqExactIf(
+			%s,
+			ifNull(sender_kick_id, 0) > 0 OR sender_slug_lower != '' OR sender_username_lower != ''
+		),
 		uniqExactIf(channel_id, isNotNull(channel_id)),
 		sum(emote_count),
 		min(message_created_at),
 		max(message_created_at)
 		FROM chat_messages
-		WHERE %s`, where)
+		WHERE %s`, senderIdentitySQL(), where)
 
 	var totalMessages uint64
 	var totalSenders uint64
@@ -111,19 +114,29 @@ func (repo *AnalyticsRepository) TopSenders(
 ) ([]domain.TopSenderAnalytics, error) {
 	where, args := topSendersWhere(filter)
 	query := fmt.Sprintf(`SELECT
-		ifNull(sender_id, 0) AS sender_id,
-		ifNull(sender_kick_id, 0) AS kick_user_id,
+		argMax(ifNull(sender_id, 0), message_created_at) AS sender_id,
+		argMax(ifNull(sender_kick_id, 0), message_created_at) AS kick_user_id,
 		argMax(sender_username, message_created_at) AS username,
 		argMax(sender_slug, message_created_at) AS slug,
 		argMax(ifNull(sender_profile_image_url, ''), message_created_at) AS profile_image_url,
 		count() AS message_count,
 		min(message_created_at) AS first_message_at,
 		max(message_created_at) AS latest_message_at
-		FROM chat_messages
-		WHERE %s
-		GROUP BY sender_id, kick_user_id
+		FROM (
+			SELECT
+				%s AS sender_identity,
+				sender_id,
+				sender_kick_id,
+				sender_username,
+				sender_slug,
+				sender_profile_image_url,
+				message_created_at
+			FROM chat_messages
+			WHERE %s
+		)
+		GROUP BY sender_identity
 		ORDER BY message_count DESC, latest_message_at DESC, slug ASC
-		LIMIT ?`, where)
+		LIMIT ?`, senderIdentitySQL(), where)
 	args = append(args, limitOrDefault(limit))
 
 	rows, err := repo.conn.Query(ctx, query, args...)
@@ -148,6 +161,9 @@ func (repo *AnalyticsRepository) TopSenders(
 		); err != nil {
 			return nil, fmt.Errorf("scan top sender: %w", err)
 		}
+		if sender.KickUserID > 0 {
+			sender.SenderID = sender.KickUserID
+		}
 		sender.MessageCount = int64(messageCount)
 		sender.FirstMessageAt = sender.FirstMessageAt.UTC()
 		sender.LatestMessageAt = sender.LatestMessageAt.UTC()
@@ -157,6 +173,16 @@ func (repo *AnalyticsRepository) TopSenders(
 		return nil, fmt.Errorf("iterate top senders: %w", err)
 	}
 	return senders, nil
+}
+
+func senderIdentitySQL() string {
+	return `multiIf(
+			ifNull(sender_kick_id, 0) > 0,
+			concat('kick:', toString(ifNull(sender_kick_id, 0))),
+			sender_slug_lower != '',
+			concat('slug:', sender_slug_lower),
+			concat('username:', sender_username_lower)
+		)`
 }
 
 func (repo *AnalyticsRepository) TopChannels(
