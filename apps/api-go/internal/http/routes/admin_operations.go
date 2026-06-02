@@ -62,7 +62,7 @@ func retryFailedEvents(response http.ResponseWriter, request *http.Request, deps
 		writeError(response, http.StatusInternalServerError, "Internal server error.")
 		return
 	}
-	writeJSON(response, http.StatusOK, map[string]any{"affected": affected, "message": "Failed events queued for retry."})
+	writeJSON(response, http.StatusOK, map[string]any{"affected": affected, "message": "JetStream redelivers failed events automatically."})
 }
 
 func clearFailedEvents(response http.ResponseWriter, request *http.Request, deps Dependencies) {

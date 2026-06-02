@@ -260,7 +260,7 @@ func (repo *Repository) fillClickHouseSummary(ctx context.Context, summary *doma
 	summary.Counts.Messages = int64(messages)
 
 	var rawEvents uint64
-	if err := repo.clickHouse.QueryRow(ctx, "SELECT count() FROM raw_kick_events").Scan(&rawEvents); err != nil {
+	if err := repo.clickHouse.QueryRow(ctx, "SELECT uniqExact(id) FROM raw_kick_events").Scan(&rawEvents); err != nil {
 		return fmt.Errorf("count clickhouse raw events: %w", err)
 	}
 	summary.Counts.RawEvents = int64(rawEvents)
@@ -350,23 +350,25 @@ func (repo *Repository) fillClickHouseSummary(ctx context.Context, summary *doma
 	if err := scanNullableTime(ctx, repo.clickHouse, "SELECT max(finished_at) FROM raw_event_attempts WHERE status = 'processed' AND finished_at IS NOT NULL", &summary.Timestamps.LatestRawEventProcessedAt); err != nil {
 		return err
 	}
-	if err := scanNullableTime(
-		ctx,
-		repo.clickHouse,
-		`SELECT min(received_at)
-		 FROM raw_kick_events
-		 WHERE id NOT IN (
-			SELECT raw_event_id FROM raw_event_attempts WHERE status = 'processed'
-		 )
-		   AND id NOT IN (
-			SELECT raw_event_id FROM raw_event_attempts WHERE status IN ('ignored', 'invalid')
-		 )
-		   AND id NOT IN (
-			SELECT raw_event_id FROM raw_event_attempts WHERE status = 'failed'
-		 )`,
-		&summary.Timestamps.OldestPendingRawEventReceivedAt,
-	); err != nil {
-		return err
+	if repo.rawStreamStats == nil {
+		if err := scanNullableTime(
+			ctx,
+			repo.clickHouse,
+			`SELECT min(received_at)
+			 FROM raw_kick_events
+			 WHERE id NOT IN (
+				SELECT raw_event_id FROM raw_event_attempts WHERE status = 'processed'
+			 )
+			   AND id NOT IN (
+				SELECT raw_event_id FROM raw_event_attempts WHERE status IN ('ignored', 'invalid')
+			 )
+			   AND id NOT IN (
+				SELECT raw_event_id FROM raw_event_attempts WHERE status = 'failed'
+			 )`,
+			&summary.Timestamps.OldestPendingRawEventReceivedAt,
+		); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -383,21 +385,32 @@ func (repo *Repository) ListFailedEvents(ctx context.Context, limit int) ([]doma
 		`SELECT
 			a.raw_event_id,
 			ifNull(e.channel_slug, ''),
-			ifNull(toString(a.error_message), ''),
-			toUInt16(count()),
-			min(e.received_at),
-			max(a.finished_at)
-		 FROM raw_event_attempts AS a
-		 LEFT JOIN raw_kick_events AS e ON e.id = a.raw_event_id
-		 WHERE a.status = 'failed'
-		   AND a.raw_event_id NOT IN (
-			SELECT raw_event_id FROM raw_event_attempts WHERE status = 'processed'
-		   )
-		   AND a.raw_event_id NOT IN (
-			SELECT raw_event_id FROM raw_event_attempts WHERE status IN ('ignored', 'invalid')
-		   )
-		 GROUP BY a.raw_event_id, e.channel_slug, a.error_message
-		 ORDER BY max(a.finished_at) DESC
+			ifNull(a.error_message, ''),
+			toUInt16(a.attempt_count),
+			ifNull(e.received_at, toDateTime(0)),
+			a.failed_at
+		 FROM (
+			SELECT
+				raw_event_id,
+				argMax(toString(error_message), finished_at) AS error_message,
+				count() AS attempt_count,
+				max(finished_at) AS failed_at
+			FROM raw_event_attempts
+			WHERE status = 'failed'
+			  AND raw_event_id NOT IN (
+				SELECT raw_event_id FROM raw_event_attempts WHERE status = 'processed'
+			  )
+			  AND raw_event_id NOT IN (
+				SELECT raw_event_id FROM raw_event_attempts WHERE status IN ('ignored', 'invalid')
+			  )
+			GROUP BY raw_event_id
+		 ) AS a
+		 LEFT JOIN (
+			SELECT id, any(channel_slug) AS channel_slug, min(received_at) AS received_at
+			FROM raw_kick_events
+			GROUP BY id
+		 ) AS e ON e.id = a.raw_event_id
+		 ORDER BY a.failed_at DESC
 		 LIMIT ?`,
 		limit,
 	)
@@ -428,21 +441,8 @@ func (repo *Repository) ListFailedEvents(ctx context.Context, limit int) ([]doma
 	return events, nil
 }
 
-func (repo *Repository) RetryFailedEvents(ctx context.Context) (int64, error) {
-	if repo.sqliteDB == nil {
-		return 0, nil
-	}
-	result, err := repo.sqliteDB.ExecContext(
-		ctx,
-		`UPDATE raw_event_queue
-		 SET status = 'pending', attempts = 0, last_error = '', updated_at = datetime('now')
-		 WHERE status = 'failed'`,
-	)
-	if err != nil {
-		return 0, fmt.Errorf("retry failed events: %w", err)
-	}
-	n, _ := result.RowsAffected()
-	return n, nil
+func (repo *Repository) RetryFailedEvents(_ context.Context) (int64, error) {
+	return 0, nil
 }
 
 func (repo *Repository) ClearFailedEvents(ctx context.Context) (int64, error) {

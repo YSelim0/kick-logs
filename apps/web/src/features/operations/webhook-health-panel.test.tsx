@@ -14,7 +14,6 @@ vi.mock("@/features/operations/api", () => ({
   ...opsMocks,
   getOperationsSummary: vi.fn(),
   getFailedEvents: vi.fn(),
-  retryFailedEvents: vi.fn(),
   clearFailedEvents: vi.fn()
 }));
 

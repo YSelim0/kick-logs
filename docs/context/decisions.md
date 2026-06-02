@@ -25,6 +25,10 @@
 
 ## 2026-06-01 (issue #23 — sender profile cache is best-effort)
 
+These decisions describe the short-lived SQLite queue hardening phase and are superseded for live
+chat ingestion by the 2026-06-02 JetStream decision above. They still apply to legacy queue code,
+sender profile cache behavior, and webhook inbox maintenance where noted.
+
 - **Sender profile cache writes must not block chat ingestion.** The listener now treats
   `sender_profiles` as an optional cache. If SQLite upsert fails while processing a raw chat event,
   the listener logs a warning and continues building the visible `chat_messages` row from the sender
@@ -38,10 +42,10 @@
   still writes immediately; repeated messages inside the TTL use the payload snapshot and avoid a
   SQLite write. Failed cache writes also consume the TTL window to prevent a busy SQLite cache from
   being hammered during high-volume chat.
-- **Processed raw-event queue rows are pruned from SQLite.** `raw_event_queue` is active work state,
-  not permanent history. After the worker writes the processed ClickHouse attempt, `MarkProcessed`
-  deletes the queue row. Startup backfill still relies on ClickHouse `raw_event_attempts` to avoid
-  re-enqueuing already processed raw events.
+- **Processed raw-event queue rows are pruned from SQLite (legacy queue mode).** The
+  `raw_event_queue` table is not permanent history. In the superseded SQLite queue mode, after the
+  worker wrote the processed ClickHouse attempt, `MarkProcessed` deleted the queue row. Active live
+  chat ingestion now uses JetStream instead of this SQLite queue.
 - **Attempt history is required before queue acknowledgement.** If `InsertAttemptsBatch` fails, the
   listener releases claimed queue rows back to pending instead of deleting them. `chat_messages`
   inserts are idempotent by `kick_message_id`, so retrying after an attempt-write failure preserves
@@ -49,16 +53,16 @@
 - **Permanent invalid raw events use terminal `ignored` attempts.** Malformed payloads, missing
   message ids, invalid sender/message shape, and known-unfollowed channel payloads are not retried
   until max attempts. They get a ClickHouse `raw_event_attempts.status = 'ignored'` record and are
-  removed from the active SQLite queue. Backfill and operations metrics treat `ignored`/`invalid` as
-  terminal statuses alongside `processed`.
+  removed from the legacy SQLite queue in the superseded queue mode. JetStream-era operations treat
+  `ignored`/`invalid` as terminal statuses alongside `processed`.
 - **Webhook inbox has short terminal retention.** `kick_webhook_events` remains the idempotent
   receiver inbox, but processed/ignored rows older than 7 days are pruned by the webhook processor.
   Pending and failed webhook rows are never pruned by this path because they still represent work or
   operator-visible failures. Subscription periods remain durable in ClickHouse.
-- **Admin Operations separates active queue from history.** Raw-event archive counts shown in admin
-  Operations come from ClickHouse history. SQLite `raw_event_queue` is surfaced as active ingestion
-  backlog only, and terminal ignored/invalid raw events are excluded from retryable failed-event
-  actions.
+- **Admin Operations separates active backlog from history.** Raw-event archive counts shown in
+  admin Operations come from ClickHouse history. JetStream pending + ack-pending is the active live
+  chat backlog; SQLite `raw_event_queue` is surfaced only as legacy/migration state. Terminal
+  ignored/invalid raw events are excluded from failed-event diagnostics.
 - **Admin Data Management summary must stay read-only after setup.** The summary endpoint should not
   perform opportunistic SQLite writes during normal reads. Retention settings are created only when
   missing, because live listener/webhook writes can otherwise make a harmless admin read fail with

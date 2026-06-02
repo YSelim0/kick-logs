@@ -14,10 +14,6 @@ export function getFailedEvents(client: ApiClient = apiClient) {
   return client.get<FailedRawEventsResponse>("/admin/operations/failed-events");
 }
 
-export function retryFailedEvents(client: ApiClient = apiClient) {
-  return client.post<FailedEventsActionResponse>("/admin/operations/failed-events/retry", {});
-}
-
 export function clearFailedEvents(client: ApiClient = apiClient) {
   return client.post<FailedEventsActionResponse>("/admin/operations/failed-events/clear", {});
 }

@@ -2,55 +2,25 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue #23 — JetStream durable ingestion plan)
+## Latest (issue #23 — JetStream operations contract cleanup)
 
-- Active issue #23 plan now targets NATS JetStream durable ingestion instead of treating the
-  in-process buffered writer plus SQLite `raw_event_queue` as the final hot-path architecture.
-- Target pipeline: `listener -> NATS JetStream -> processor -> ClickHouse`.
-- SQLite remains control-plane only after cutover. Existing `raw_event_queue` / `raw_event_claims`
-  tables are legacy migration/compatibility state, not the long-term live chat queue.
-- Listener must wait for JetStream PubAck before counting a reached Kick chat event as captured.
-  Processor workers ACK only after ClickHouse raw/message writes are durable.
-- Raw capture must happen before strict normalization so malformed or incomplete chat payloads can
-  be diagnosed instead of silently disappearing.
-- Phase 2 foundation is in progress/completed locally: NATS Go dependency, `infra/natsstream`
-  publisher/consumer/stats package, raw event stream ports, config/env/Compose wiring, and a
-  persistent `nats_data` volume were added. Listener behavior is not switched to JetStream yet.
-- Phase 3 raw capture update: `App\Events\ChatMessageEvent` payloads no longer need all normalized
-  message fields before raw capture. Incomplete payloads can be stored and later classified as
-  terminal ignored/invalid instead of disappearing at parser time.
-- Phase 4 listener publish update: the listener now publishes raw chat envelopes to JetStream and
-  waits for PubAck before counting an event as captured. With a stream publisher configured, the
-  legacy buffered writer, SQLite raw queue bootstrap, stale-claim recovery, and worker goroutines are
-  disabled in the listener process.
-- The listener binary no longer opens ClickHouse and Compose no longer waits for ClickHouse health
-  before starting the listener. ClickHouse batching moves to the upcoming processor service.
-- Phase 5 processor update: `cmd/processor` and the Compose `processor` service consume the
-  JetStream durable consumer, insert raw archive rows and normalized `chat_messages` in ClickHouse
-  batches, write attempt rows, and ACK/TERM/NACK only after the correct durable-write outcome.
-- Phase 6 idempotency update: analytics/profile ClickHouse queries now dedupe by latest
-  `kick_message_id` row before counting/grouping/listing, matching `/messages` search behavior
-  under JetStream redelivery.
-- Phase 7 loadgen update: `cmd/loadgen` now drives the active
-  `listener -> JetStream -> processor -> ClickHouse` path and reports JetStream backlog metrics
-  instead of legacy buffered-writer stats.
-- Phase 8 operations update: `GET /admin/operations/summary` now exposes processor heartbeat and
-  JetStream stream/consumer backlog metrics. The admin Operations panel shows stream pending,
-  ack-pending, redelivery, oldest pending age, processor freshness, and legacy SQLite queue depth as
-  separate concepts.
-- Phase 9 docs update: `docs/operations/backup_restore.md` now covers `.env`, SQLite, ClickHouse,
-  and NATS JetStream volume backup/restore expectations for self-hosted deployments.
-- `docs/operations/jetstream_cutover.md` now documents deploy, health checks, and rollback for the
-  new listener/processor/JetStream cutover.
-- Runtime smoke found and fixed a NATS client usage bug: `FetchContext` and `FetchMaxWait` cannot be
-  passed together. Processor now fetches with `FetchMaxWait`, consumes batches, and ACKs them.
-- Local smoke after rebuild: API health is OK; listener and processor heartbeats are fresh in
-  `/admin/operations/summary`; JetStream `queue_depth`, pending, ack-pending, redelivery, and
-  `stream_error` are zero after backlog drain.
-- Latest verification: `go test ./...`, `go vet ./...`, `pnpm --filter @kick-logs/web test`,
-  `pnpm --filter @kick-logs/web typecheck`, `pnpm --filter @kick-logs/web lint`,
-  `pnpm --filter @kick-logs/web build`, `pnpm format:check`, and
-  `docker compose config --quiet` passed.
+- Active live chat ingestion is now `listener -> NATS JetStream -> processor -> ClickHouse`.
+  SQLite `raw_event_queue` / `raw_event_claims` are legacy migration/compatibility tables, not the
+  active live chat queue.
+- Operations pending/backlog semantics are now explicit:
+  - live pending = JetStream consumer pending + ack-pending,
+  - `legacy_queue_depth` = old SQLite queue depth only,
+  - ClickHouse `raw_kick_events` / `raw_event_attempts` = historical archive/diagnostics, not active
+    queue state.
+- Backend operations summary now counts ClickHouse raw events by distinct raw event id and only
+  computes `oldest_pending_raw_event_received_at` in legacy non-JetStream mode.
+- Failed raw events in Operations are diagnostic ClickHouse failed attempt records. JetStream
+  redelivery is automatic; the frontend no longer exposes a manual retry action that would update
+  the old SQLite queue.
+- Failed-event listing now groups to one logical row per raw event id and keeps the latest error
+  message for display.
+- Docs and UI copy were refreshed so future agents do not learn the obsolete SQLite-active-queue
+  model from context/design files.
 
 ## Latest (issue #23 — listener reconnect and sender identity follow-up)
 
@@ -70,7 +40,7 @@ This file is the short handoff summary of the latest project changes. Keep it co
 - User profile latest messages now returns 20 rows to match the UI copy.
 - Listener startup ClickHouse raw-event archive bootstrap is disabled by default via
   `LISTENER_BOOTSTRAP_RAW_QUEUE_ON_STARTUP=false`; enable it only for one-off recovery. This avoids
-  expensive startup archive scans now that active raw-event work lives in SQLite `raw_event_queue`.
+  expensive startup archive scans now that active raw-event work lives in JetStream.
 - Verification: local Docker API/listener rebuild and restart succeeded; listener logs show
   `raw event queue bootstrap skipped`; `go test ./...`, `go vet ./...`, and `pnpm format:check`
   passed.
@@ -94,24 +64,25 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 - Architecture and project plan docs now describe the hardened storage split:
   - ClickHouse owns raw/message/attempt/subscription history.
-  - SQLite owns control-plane state plus temporary active queue/inbox rows.
+  - SQLite owns control-plane state, webhook inbox/registry state, and legacy queue compatibility
+    tables.
   - processed raw-event queue rows and old terminal webhook inbox rows do not live forever in
-    SQLite.
+    SQLite. Live chat backlog has moved to JetStream.
 - `docs/implementation_plan.md` is marked implemented for branch
   `feat/issue-23-storage-hot-path-hardening`.
 - Final validation for the branch is being run before the docs verification commit.
 
 ## Previously Latest (issue #23 — admin operations clarification)
 
-- Admin Operations copy now separates active SQLite queue state from all-time ClickHouse raw-event
-  history.
+- Admin Operations copy now separates active JetStream queue state from all-time ClickHouse
+  raw-event history and legacy SQLite queue compatibility state.
 - The Raw Event metric no longer labels ClickHouse archive counts as `pending`; active backlog is
   shown under the Ingestion section as `Aktif queue`.
-- Failed raw-event UI copy now describes retryable failed events and notes that terminal ignored
-  events are intentionally excluded from the failed-event modal.
-- Data Management table rows now include the active `raw_event_queue`, webhook inbox, Kick event
+- Failed raw-event UI copy now describes ClickHouse diagnostic failed attempts and notes that
+  terminal ignored events are intentionally excluded from the failed-event modal.
+- Data Management table rows now include the legacy `raw_event_queue`, webhook inbox, Kick event
   subscription registry, and SQLite migration table counts so runtime SQLite state stays visible
-  after processed queue rows are pruned.
+  without presenting SQLite as the live chat queue.
 
 ## Previously Latest (issue #23 — webhook inbox retention)
 
@@ -125,7 +96,8 @@ This file is the short handoff summary of the latest project changes. Keep it co
 ## Previously Latest (issue #23 — terminal invalid raw events)
 
 - Permanently invalid raw chat payloads now write a terminal ClickHouse attempt with status
-  `ignored` and are removed from active SQLite queue work instead of retrying until max attempts.
+  `ignored` and, in the superseded SQLite queue mode, are removed from legacy queue work instead of
+  retrying until max attempts.
 - Backfill now treats `processed`, `ignored`, and `invalid` raw-event attempts as terminal, so
   ignored malformed events do not re-enter the queue after restart.
 - Worker safety tightened: if the ClickHouse attempt batch insert fails, claimed queue rows are
@@ -135,8 +107,9 @@ This file is the short handoff summary of the latest project changes. Keep it co
 
 ## Previously Latest (issue #23 — raw event queue processed-row pruning)
 
-- SQLite `raw_event_queue` now behaves as active work state: successful `MarkProcessed` deletes the
-  queue row instead of storing a permanent `processed` row.
+- Superseded by JetStream cutover: SQLite `raw_event_queue` briefly behaved as active work state in
+  earlier hardening work. Successful `MarkProcessed` deleted the queue row instead of storing a
+  permanent `processed` row.
 - SQLite migration v8 prunes existing `processed` queue rows during deploy. This does not delete
   `chat_messages`, `raw_kick_events`, or ClickHouse `raw_event_attempts`.
 - Listener tests now expect successful raw events to disappear from the queue and include coverage
@@ -530,10 +503,9 @@ unless-stopped` + `mem_limit` on all four (clickhouse 1536m, web 768m, listener 
     brand + `/ admin` mono breadcrumb + user email + `SUPER ADMIN` pill + `Çıkış` button; all
     existing sections (OperationsDashboard, ChannelAdmin, UserAdmin, DataManagementPanel)
     rendered stacked in the main column; `bg-kick-background` and legacy tokens removed
-  - operations dashboard: 4-card metric row (MESAJ, RAW EVENT, BAŞARISIZ RAW, DB BOYUTU) with
-    mono labels and large values; status banner with Canlı/Bayat indicator; Ingestion panel
-    with 6-cell strip (Queue depth, Write queue, Drop count, Flush count, Son flush, CH
-    failures) and Kapalı/Açık breaker pill; all warning notices preserved
+  - operations dashboard: 4-card metric row and ingestion strip. This older v2 pass predated the
+    JetStream operations contract; the current panel uses JetStream backlog metrics instead of
+    buffered-writer queue labels.
   - channel admin: new v2 table (KANAL, DURUM, MESAJ, SON AKTİVİTE columns); inline add form
     with sr-only label; direct Devre dışı bırak button in action column
   - login: centered 380px card on bg-page; brand square + `kick logs` + subtitle; E-POSTA /
@@ -1129,8 +1101,9 @@ unless-stopped` + `mem_limit` on all four (clickhouse 1536m, web 768m, listener 
 - Implemented Post-MVP Feature 1 admin operations UI:
   - added typed `getOperationsSummary` frontend API wrapper
   - `/admin` now shows `OperationsDashboard` above channel/user management
-  - compact cards show listener status, DB size, message count, raw event count, failed raw,
-    pending raw, and last ingest time
+  - compact cards showed listener status, DB size, message count, raw event count, failed raw,
+    pending raw, and last ingest time in the original post-MVP implementation; current Operations
+    uses JetStream backlog for live pending state.
   - manual refresh, stale listener warning, failed raw warning, and API error states are tested
 - Verification:
   - `pnpm --filter @kick-logs/web test`: 10 files, 36 tests passed
@@ -1141,8 +1114,9 @@ unless-stopped` + `mem_limit` on all four (clickhouse 1536m, web 768m, listener 
   - added `worker_heartbeats` persistence and migration `20260513_0003`
   - listener writes a periodic `listener` heartbeat
   - added admin-only `GET /admin/operations/summary`
-  - summary includes listener freshness, row counts, raw event status counts, DB/table sizes,
-    latest ingest timestamps, and oldest pending raw event timestamp
+  - summary included listener freshness, row counts, raw event status counts, DB/table sizes, latest
+    ingest timestamps, and oldest pending raw event timestamp in the original post-MVP
+    implementation; current JetStream mode reports live pending through stream metrics.
   - `.env.example` and Compose expose listener heartbeat interval/staleness settings
 - Verification:
   - `python -m uv run alembic upgrade head`: applied `20260513_0003`

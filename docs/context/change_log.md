@@ -160,8 +160,8 @@ This is a living implementation log. Add new entries for each meaningful project
 ## 2026-06-01 (issue #23 — terminal invalid raw events)
 
 - Added terminal invalid raw-event handling for permanently malformed payloads. These events now
-  write ClickHouse attempts with status `ignored` and are removed from active SQLite queue work
-  instead of retrying until max attempts.
+  write ClickHouse attempts with status `ignored` and, in the superseded SQLite queue mode, are
+  removed from legacy queue work instead of retrying until max attempts.
 - Updated raw-event backfill queries to treat `processed`, `ignored`, and `invalid` attempts as
   terminal statuses.
 - Changed worker behavior so a failed `raw_event_attempts` batch insert releases queue claims back
@@ -1047,7 +1047,8 @@ intentionally deferred and tracked separately for a later discussion; not part o
   - added typed frontend operations API wrapper for `GET /admin/operations/summary`
   - mounted `OperationsDashboard` at the top of `/admin`
   - added compact cards for listener status, database size, message count, raw event count,
-    failed raw events, pending raw events, and last ingest time
+    failed raw events, pending raw events, and last ingest time in the original post-MVP
+    implementation; current Operations uses JetStream backlog for live pending state.
   - added manual refresh and warning/error states for stale listener heartbeat, failed raw
     events, and API failures
   - kept operations metrics visually separate from channel and user management

@@ -6,7 +6,7 @@ Kick Logs is a self-hosted Kick chat logging application. The default runtime is
 
 - Go HTTP API
 - Go Kick listener worker
-- NATS JetStream for the issue #23 durable raw-event ingestion backlog
+- NATS JetStream for the durable raw-event ingestion backlog
 - ClickHouse for chat messages, raw Kick events, exports, analytics, and profile aggregates
 - SQLite for admin/control-plane state
 - Next.js web UI
@@ -123,7 +123,7 @@ ClickHouse stores data-plane rows:
 reply metadata, emote arrays/image URLs, badges, raw payload JSON, message timestamps, and ingestion
 timestamps. Search, export, analytics, and profile pages should not join back to SQLite on hot paths.
 
-NATS JetStream is being introduced by issue #23 as the durable live chat ingestion backlog:
+NATS JetStream is the durable live chat ingestion backlog:
 
 - Stream: `KICK_RAW_EVENTS`
 - Subject: `kick.raw.chat`
@@ -131,8 +131,8 @@ NATS JetStream is being introduced by issue #23 as the durable live chat ingesti
 - Retention: work-queue style backlog for unacked raw chat events
 - Storage: file-backed JetStream volume
 
-After the cutover, live chat capture should publish reached raw events to JetStream before
-normalization. SQLite raw queue tables remain legacy/migration state until a later cleanup.
+Live chat capture publishes reached raw events to JetStream before normalization. SQLite raw queue
+tables remain legacy/migration state until a later cleanup.
 
 ## API Surface
 

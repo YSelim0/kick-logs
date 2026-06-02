@@ -2,11 +2,15 @@
 
 ## Summary
 
+Status: implemented on branch `feat/issue-23-storage-hot-path-hardening`. This file remains the
+reference for why the current JetStream architecture exists and what boundaries future changes must
+preserve.
+
 Issue 23 stays on branch `feat/issue-23-storage-hot-path-hardening`, but the implementation direction changes after the ingestion audit.
 
 The first hardening work reduced SQLite growth and clarified operational data, but it did not fully satisfy the core product rule: once a Kick chat event reaches the application, the application must not silently drop it because an in-memory buffer is full, a retry budget is exhausted, or a planned reconnect cycle runs.
 
-The long-term fix is to move the live chat ingestion hot path to NATS JetStream:
+The implemented long-term fix moves the live chat ingestion hot path to NATS JetStream:
 
 ```text
 Kick WebSocket listener -> NATS JetStream durable stream -> processor workers -> ClickHouse batch inserts

@@ -6,19 +6,20 @@ implementation details, or working assumptions change.
 ## Current State
 
 - Branch: `feat/issue-23-storage-hot-path-hardening`.
-- Active plan: JetStream durable ingestion (see `docs/implementation_plan.md`, issue #23).
-  The earlier SQLite hot-path hardening work is preliminary only. The final issue #23 target is to
-  move live chat ingestion to `listener -> NATS JetStream -> processor -> ClickHouse`, with SQLite
-  used for control-plane state only.
+- Active architecture: JetStream durable ingestion (see `docs/implementation_plan.md`, issue #23).
+  Live chat ingestion now runs as `listener -> NATS JetStream -> processor -> ClickHouse`, with
+  SQLite used for control-plane state only.
 - Earlier: channels/users index search pages — `/channels` and `/users` search-first index pages
   added 2026-05-24.
 - Responsive polish pass is current through 2026-05-22: profile rows, admin navigation, admin
   channel/user tables, operations dashboard, and data-management panels have mobile-specific
   layouts.
 - Default runtime is:
+  - `nats`
   - `clickhouse`
   - `api` built from `apps/api-go`
   - `listener` built from `apps/api-go`
+  - `processor` built from `apps/api-go`
   - `web`
 - Python/FastAPI/PostgreSQL runtime code has been removed from the repo.
 - `migrate-go` is under the `tools` profile and owns legacy PostgreSQL to SQLite/ClickHouse
@@ -58,8 +59,7 @@ implementation details, or working assumptions change.
   - sender profile cache (best-effort; must not block chat message persistence)
   - retention settings
   - worker heartbeats
-  - legacy raw-event work queue tables during migration only; live chat ingestion should move off
-    SQLite once the JetStream cutover is complete
+  - legacy raw-event work queue tables during migration/compatibility only
   - schema/data migration metadata
 - ClickHouse stores data-plane rows:
   - chat messages
@@ -71,9 +71,9 @@ implementation details, or working assumptions change.
 
 ## JetStream Durable Ingestion (issue #23)
 
-- The live chat hot path must move to NATS JetStream. Once a Kick websocket chat event reaches the
-  listener process, the listener must publish it durably to JetStream and wait for PubAck before
-  counting it as captured.
+- The live chat hot path is NATS JetStream. Once a Kick websocket chat event reaches the listener
+  process, the listener publishes it durably to JetStream and waits for PubAck before counting it as
+  captured.
 - SQLite `raw_event_queue` and `raw_event_claims` are legacy migration/compatibility tables after
   the cutover, not the current long-term queue design.
 - NATS JetStream owns temporary durable backlog for unacked raw chat events. Acked events should
@@ -252,10 +252,10 @@ admin/super-admin role.
 - Raw-event processing is at-least-once and idempotent; visible messages dedupe by
   `kick_message_id`.
 - Listener heartbeat state is stored in SQLite `worker_heartbeats`.
-- At startup the listener resets stale `claimed` rows older than `RawEventProcessingTimeout` back to
-  `pending`; a background loop repeats the stale-claim sweep. Historical ClickHouse raw-event
-  archive bootstrap is disabled by default and should only be enabled for one-off recovery with
-  `LISTENER_BOOTSTRAP_RAW_QUEUE_ON_STARTUP=true`.
+- Legacy SQLite queue mode resets stale `claimed` rows older than `RawEventProcessingTimeout` back
+  to `pending`; this path is not active when JetStream publishing is configured. Historical
+  ClickHouse raw-event archive bootstrap is disabled by default and should only be enabled for
+  one-off legacy recovery with `LISTENER_BOOTSTRAP_RAW_QUEUE_ON_STARTUP=true`.
 - Channel changes are checked every `LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS`. The Kick websocket
   stays connected while the enabled channel set is unchanged and reconnects only when that set
   changes, avoiding periodic blackout windows during high chat volume.

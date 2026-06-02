@@ -131,7 +131,7 @@ export function OperationsDashboard() {
           {failedRawEvents > 0 ? (
             <OperationsNotice
               icon={<TriangleAlert className="h-4 w-4" />}
-              message="Retry edilebilir başarısız raw event var. İşleme hatalarını backend loglarıyla incelemek gerekebilir."
+              message="ClickHouse failed raw event attempt kaydı var. JetStream redelivery otomatik; backend loglarını incelemek gerekebilir."
               tone="danger"
             />
           ) : null}

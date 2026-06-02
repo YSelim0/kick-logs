@@ -91,7 +91,7 @@ describe("OperationsDashboard", () => {
     render(<OperationsDashboard />);
 
     expect(
-      await screen.findByText(/Retry edilebilir başarısız raw event var/i)
+      await screen.findByText(/ClickHouse failed raw event attempt kaydı var/i)
     ).toBeInTheDocument();
     expect(screen.getByText("İnceleme gerekli")).toBeInTheDocument();
   });
