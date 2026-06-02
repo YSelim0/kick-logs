@@ -8,7 +8,8 @@ channels, storing them durably, and searching historical chat through a web UI.
 The default runtime is Go + NATS JetStream + ClickHouse + SQLite:
 
 - Go API serves the existing HTTP contract.
-- Go listener subscribes to Kick chat streams and persists raw events before normalization.
+- Go listener subscribes to Kick chat streams and publishes reached raw events to JetStream.
+- Go processor consumes JetStream batches and writes raw events plus normalized messages to ClickHouse.
 - NATS JetStream is being introduced as the durable live chat ingestion backlog for issue #23.
 - ClickHouse stores chat messages, raw Kick events, exports, analytics, and profile aggregates.
 - SQLite stores admin users, followed channels, sender profile cache, retention settings,
@@ -43,7 +44,7 @@ docker compose up --build -d
 
 ## Runtime Architecture
 
-- `apps/api-go`: Go backend, listener, migrator, ClickHouse/SQLite repositories.
+- `apps/api-go`: Go backend, listener, processor, migrator, ClickHouse/SQLite repositories.
 - `apps/web`: Next.js frontend using pnpm, Tailwind, shadcn/ui, and lucide-react.
 - `nats_data`: Docker volume that stores JetStream durable raw-event backlog.
 - `clickhouse`: default data-plane database.

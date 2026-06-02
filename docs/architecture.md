@@ -20,6 +20,7 @@ clickhouse
 nats
 api
 listener
+processor
 web
 ```
 
@@ -234,6 +235,22 @@ The listener does not normalize chat messages and no longer opens ClickHouse in 
 It keeps the Kick websocket open while the followed-channel set is unchanged and reconnects only on
 websocket failure or an actual enabled-channel set change. Visible message normalization and
 ClickHouse batch writes belong to the processor service.
+
+## Processor
+
+The Go processor owns the live chat normalization and ClickHouse write path:
+
+1. Pull a batch from the durable JetStream consumer.
+2. Insert the raw event archive rows into ClickHouse.
+3. Normalize valid chat payloads into `chat_messages`.
+4. Insert visible messages in a batch.
+5. Insert raw-event attempt audit rows.
+6. ACK processed events only after required ClickHouse writes succeed.
+7. TERM terminal invalid/ignored payloads only after diagnostic attempt rows are durable.
+8. NACK transient failures so JetStream redelivers them.
+
+The processor uses at-least-once delivery and relies on deterministic message identity plus
+read-side dedupe to keep public search/profile results stable under redelivery.
 
 ## Data Management
 

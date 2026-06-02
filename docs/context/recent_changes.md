@@ -25,6 +25,9 @@ This file is the short handoff summary of the latest project changes. Keep it co
   disabled in the listener process.
 - The listener binary no longer opens ClickHouse and Compose no longer waits for ClickHouse health
   before starting the listener. ClickHouse batching moves to the upcoming processor service.
+- Phase 5 processor update: `cmd/processor` and the Compose `processor` service consume the
+  JetStream durable consumer, insert raw archive rows and normalized `chat_messages` in ClickHouse
+  batches, write attempt rows, and ACK/TERM/NACK only after the correct durable-write outcome.
 - Verification for the foundation: `go test ./...`, `go vet ./...`, `pnpm format:check`, and
   `docker compose config --quiet` passed.
 

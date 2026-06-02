@@ -50,6 +50,17 @@ This is a living implementation log. Add new entries for each meaningful project
 - Docker Compose no longer makes the listener depend on ClickHouse health; listener depends on NATS
   and SQLite control-plane state only.
 
+## 2026-06-02 (issue #23 — JetStream processor service)
+
+- Added a `StreamProcessorService` that pulls raw chat events from the durable JetStream consumer.
+- Processor batches ClickHouse writes in this order: raw archive rows, normalized `chat_messages`,
+  and raw-event attempt audit rows.
+- Processor ACKs stream messages only after required ClickHouse writes succeed.
+- Terminal invalid payloads are recorded as ignored attempts and then terminated in JetStream.
+- Transient ClickHouse failures NACK fetched messages so JetStream can redeliver them.
+- Added `cmd/processor` and a default Docker Compose `processor` service.
+- Added tests for successful ACK, transient NACK, and terminal invalid TERM behavior.
+
 ## 2026-06-01 (issue #23 — storage hot path hardening plan)
 
 - Replaced the active implementation plan with the storage hot-path hardening plan for issue #23.
