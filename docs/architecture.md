@@ -226,15 +226,21 @@ The Go listener follows the durable-capture rule:
 1. Load enabled followed channels from SQLite.
 2. Resolve missing Kick channel metadata.
 3. Subscribe to Kick Pusher streams.
-4. Serialize reached `App\Events\ChatMessageEvent` payloads into raw chat envelopes.
-5. Publish those envelopes to NATS JetStream.
-6. Wait for JetStream PubAck before counting an event as captured.
-7. Record listener heartbeat in SQLite.
+4. Poll Kick's numeric channel recent-messages endpoint as a short backfill source.
+5. Serialize reached `App\Events\ChatMessageEvent` payloads into raw chat envelopes.
+6. Publish those envelopes to NATS JetStream.
+7. Wait for JetStream PubAck before counting an event as captured.
+8. Record listener heartbeat in SQLite.
 
 The listener does not normalize chat messages and no longer opens ClickHouse in the JetStream path.
 It keeps the Kick websocket open while the followed-channel set is unchanged and reconnects only on
-websocket failure or an actual enabled-channel set change. Visible message normalization and
-ClickHouse batch writes belong to the processor service.
+websocket failure or an actual enabled-channel set change. Recent-message polling uses
+`/api/v2/channels/{kick_channel_id}/messages?sort=desc`, injects the followed channel's
+`kick_chatroom_id`, and publishes through the same JetStream envelope/dedupe path as Pusher. Recent
+fetches use bounded concurrency so active chats do not outpace the endpoint page while the listener
+walks every enabled channel. A short in-memory seen set prevents quiet channels from republishing
+the same recent endpoint rows on every poll tick. Visible message normalization and ClickHouse batch
+writes belong to the processor service.
 
 ## Processor
 

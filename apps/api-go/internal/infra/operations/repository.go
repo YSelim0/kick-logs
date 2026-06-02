@@ -201,18 +201,21 @@ func applyIngestionMetadata(metadataJSON string, ingestion *domain.IngestionHeal
 	if err := json.Unmarshal([]byte(metadataJSON), &raw); err != nil {
 		return
 	}
-	ingestion.WriteQueueDepth = readInt64(raw, "write_queue_depth")
-	ingestion.WriteQueueHighWater = readInt64(raw, "write_queue_high_water_mark")
-	ingestion.WriteDropCount = readInt64(raw, "write_drop_count")
-	ingestion.WriteFlushCount = readInt64(raw, "write_flush_count")
-	ingestion.LastFlushSize = readInt64(raw, "last_flush_size")
-	ingestion.LastFlushMillis = readInt64(raw, "last_flush_millis")
-	ingestion.ClickHouseFailures = readInt64(raw, "clickhouse_insert_failures")
-	ingestion.QueueEnqueueFailures = readInt64(raw, "queue_enqueue_failures")
+	assignInt64(raw, "write_queue_depth", &ingestion.WriteQueueDepth)
+	assignInt64(raw, "write_queue_high_water_mark", &ingestion.WriteQueueHighWater)
+	assignInt64(raw, "write_drop_count", &ingestion.WriteDropCount)
+	assignInt64(raw, "write_flush_count", &ingestion.WriteFlushCount)
+	assignInt64(raw, "last_flush_size", &ingestion.LastFlushSize)
+	assignInt64(raw, "last_flush_millis", &ingestion.LastFlushMillis)
+	assignInt64(raw, "clickhouse_insert_failures", &ingestion.ClickHouseFailures)
+	assignInt64(raw, "queue_enqueue_failures", &ingestion.QueueEnqueueFailures)
+	assignInt64(raw, "captured_raw_events", &ingestion.CapturedRawEvents)
+	assignInt64(raw, "recent_message_poll_captured", &ingestion.RecentMessagePollCaptured)
+	assignInt64(raw, "recent_message_poll_errors", &ingestion.RecentMessagePollErrors)
 	if state, ok := raw["breaker_state"].(string); ok {
 		ingestion.BreakerState = state
 	}
-	ingestion.BreakerCurrentDelayMS = readInt64(raw, "breaker_current_delay_ms")
+	assignInt64(raw, "breaker_current_delay_ms", &ingestion.BreakerCurrentDelayMS)
 }
 
 func (repo *Repository) fillStreamSummary(ctx context.Context, summary *domain.OperationsSummary) error {
@@ -250,6 +253,13 @@ func readInt64(raw map[string]any, key string) int64 {
 		return int64(typed)
 	}
 	return 0
+}
+
+func assignInt64(raw map[string]any, key string, target *int64) {
+	if _, ok := raw[key]; !ok {
+		return
+	}
+	*target = readInt64(raw, key)
 }
 
 func (repo *Repository) fillClickHouseSummary(ctx context.Context, summary *domain.OperationsSummary) error {

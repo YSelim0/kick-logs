@@ -18,6 +18,9 @@ func TestLoadUsesDefaults(t *testing.T) {
 	t.Setenv("JWT_COOKIE_SAMESITE", "")
 	t.Setenv("SEED_SUPER_ADMIN_ON_STARTUP", "")
 	t.Setenv("LISTENER_HEARTBEAT_STALE_AFTER_SECONDS", "")
+	t.Setenv("LISTENER_RECENT_MESSAGE_POLL_ENABLED", "")
+	t.Setenv("LISTENER_RECENT_MESSAGE_POLL_INTERVAL_SECONDS", "")
+	t.Setenv("LISTENER_RECENT_MESSAGE_POLL_CONCURRENCY", "")
 	t.Setenv("SQLITE_PATH", "")
 	t.Setenv("CLICKHOUSE_ADDR", "")
 	t.Setenv("CLICKHOUSE_DATABASE", "")
@@ -95,6 +98,15 @@ func TestLoadUsesDefaults(t *testing.T) {
 	if cfg.ListenerStaleAfter != 45 {
 		t.Fatalf("ListenerStaleAfter = %d", cfg.ListenerStaleAfter)
 	}
+	if !cfg.ListenerRecentMessagePollEnabled {
+		t.Fatal("ListenerRecentMessagePollEnabled = false")
+	}
+	if cfg.ListenerRecentMessagePollInterval != 10 {
+		t.Fatalf("ListenerRecentMessagePollInterval = %f", cfg.ListenerRecentMessagePollInterval)
+	}
+	if cfg.ListenerRecentMessagePollConcurrency != 8 {
+		t.Fatalf("ListenerRecentMessagePollConcurrency = %d", cfg.ListenerRecentMessagePollConcurrency)
+	}
 	if cfg.SQLitePath != "var/kick-logs-go.sqlite3" {
 		t.Fatalf("SQLitePath = %q", cfg.SQLitePath)
 	}
@@ -160,6 +172,9 @@ func TestLoadParsesOverrides(t *testing.T) {
 	t.Setenv("JWT_COOKIE_SECURE", "true")
 	t.Setenv("SEED_SUPER_ADMIN_ON_STARTUP", "false")
 	t.Setenv("LISTENER_HEARTBEAT_STALE_AFTER_SECONDS", "99")
+	t.Setenv("LISTENER_RECENT_MESSAGE_POLL_ENABLED", "false")
+	t.Setenv("LISTENER_RECENT_MESSAGE_POLL_INTERVAL_SECONDS", "3.5")
+	t.Setenv("LISTENER_RECENT_MESSAGE_POLL_CONCURRENCY", "3")
 	t.Setenv("SQLITE_PATH", "tmp/app.sqlite3")
 	t.Setenv("CLICKHOUSE_ADDR", "clickhouse:9000")
 	t.Setenv("CLICKHOUSE_DATABASE", "custom_logs")
@@ -224,6 +239,15 @@ func TestLoadParsesOverrides(t *testing.T) {
 	}
 	if cfg.ListenerStaleAfter != 99 {
 		t.Fatalf("ListenerStaleAfter = %d", cfg.ListenerStaleAfter)
+	}
+	if cfg.ListenerRecentMessagePollEnabled {
+		t.Fatal("ListenerRecentMessagePollEnabled = true")
+	}
+	if cfg.ListenerRecentMessagePollInterval != 3.5 {
+		t.Fatalf("ListenerRecentMessagePollInterval = %f", cfg.ListenerRecentMessagePollInterval)
+	}
+	if cfg.ListenerRecentMessagePollConcurrency != 3 {
+		t.Fatalf("ListenerRecentMessagePollConcurrency = %d", cfg.ListenerRecentMessagePollConcurrency)
 	}
 	if cfg.SQLitePath != "tmp/app.sqlite3" {
 		t.Fatalf("SQLitePath = %q", cfg.SQLitePath)

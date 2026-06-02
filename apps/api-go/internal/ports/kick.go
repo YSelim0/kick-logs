@@ -18,6 +18,10 @@ type PusherClient interface {
 	Listen(ctx context.Context, channels []domain.ListenerChannel, handle func(string) error) error
 }
 
+type KickRecentMessagesClient interface {
+	FetchRecentMessages(ctx context.Context, channel domain.FollowedChannel) ([]domain.RawChatEventEnvelope, error)
+}
+
 // KickWebhookVerifier verifies the RSA-SHA256 signature on incoming Kick webhook requests.
 type KickWebhookVerifier interface {
 	Verify(messageID, timestamp string, body []byte, signature string) error

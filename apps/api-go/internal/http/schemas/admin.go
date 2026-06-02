@@ -86,6 +86,9 @@ type IngestionHealthResponse struct {
 	OldestPendingAgeSeconds        int64   `json:"oldest_pending_age_seconds"`
 	LegacyQueueDepth               int64   `json:"legacy_queue_depth"`
 	LegacyOldestPendingAgeSeconds  int64   `json:"legacy_oldest_pending_age_seconds"`
+	CapturedRawEvents              int64   `json:"captured_raw_events"`
+	RecentMessagePollCaptured      int64   `json:"recent_message_poll_captured"`
+	RecentMessagePollErrors        int64   `json:"recent_message_poll_errors"`
 	StreamMessages                 int64   `json:"stream_messages"`
 	StreamBytes                    int64   `json:"stream_bytes"`
 	StreamConsumerPending          int64   `json:"stream_consumer_pending"`

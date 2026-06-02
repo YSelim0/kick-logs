@@ -2,7 +2,37 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (analytics cache and landing resilience)
+## Latest (Kick recent-message backfill)
+
+- Root cause for `gokhanoner` missing chat rows: Kick Pusher is under-delivering compared with the
+  web chat. An independent Pusher subscriber matched the local listener's small message-id set, but
+  Kick's numeric `GET /api/v2/channels/{kick_channel_id}/messages?sort=desc` endpoint contained
+  extra recent messages visible on kick.com.
+- Listener now uses two capture sources:
+  - Pusher websocket (`chatrooms.{chatroom_id}.v2`, legacy `chatrooms.{chatroom_id}`, and
+    `channel.{kick_channel_id}`),
+  - numeric recent-message polling every `LISTENER_RECENT_MESSAGE_POLL_INTERVAL_SECONDS` while
+    `LISTENER_RECENT_MESSAGE_POLL_ENABLED=true`.
+- Recent-message fetches are bounded-concurrent (`LISTENER_RECENT_MESSAGE_POLL_CONCURRENCY=8` by
+  default). Sequentially polling all enabled channels was too slow for an active chat whose latest
+  endpoint page only covers a short message window.
+- Recent-message polling publishes through the same JetStream raw-event envelope path as Pusher.
+  Raw event ids stay `kick:{message_id}`, so duplicate overlap is safe and duplicate PubAck
+  responses are not counted as new captured events.
+- The listener also keeps a 1-hour in-memory seen set for successfully published recent raw event
+  ids. This avoids quiet channels republishing the same latest endpoint page every poll tick once
+  JetStream's duplicate window expires.
+- The recent-message client parses `metadata` when Kick returns it as a JSON string and injects the
+  followed channel's `kick_chatroom_id` into `chatroom_id`, because the endpoint's `chat_id` is the
+  numeric channel id, not the chatroom id expected by the normalizer.
+- Operations now surfaces recent-message poll counters:
+  `ingestion.recent_message_poll_captured` and `ingestion.recent_message_poll_errors`, alongside
+  existing `captured_raw_events`.
+- Previous Pusher health fixes remain in this worktree: protocol `pusher:ping` gets `pusher:pong`,
+  subscription bookkeeping is ignored before chat parsing, `pusher:error` fails the listener loop,
+  and both current + legacy chatroom channel names are subscribed.
+
+## Previously Latest (analytics cache and landing resilience)
 
 - Public/global analytics now uses an in-memory API cache for expensive aggregate reads:
   - fresh TTL: 1 hour,

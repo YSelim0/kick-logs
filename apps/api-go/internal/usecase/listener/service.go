@@ -10,6 +10,8 @@ import (
 	"log/slog"
 	"sort"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/domain"
@@ -17,46 +19,56 @@ import (
 )
 
 type Service struct {
-	channels        ports.FollowedChannelRepository
-	rawEvents       ports.RawEventRepository
-	queue           ports.RawEventQueueRepository
-	streamPublisher ports.RawEventStreamPublisher
-	messages        ports.MessageRepository
-	senders         ports.SenderProfileRepository
-	heartbeats      ports.WorkerHeartbeatRepository
-	channelResolver ports.KickChannelResolver
-	senderResolver  ports.KickSenderProfileResolver
-	pusher          ports.PusherClient
-	parser          EventParser
-	logger          *slog.Logger
-	config          ServiceConfig
-	writer          *bufferedRawWriter
-	breaker         *CircuitBreaker
-	senderCacheGate *senderProfileWriteGate
+	channels           ports.FollowedChannelRepository
+	rawEvents          ports.RawEventRepository
+	queue              ports.RawEventQueueRepository
+	streamPublisher    ports.RawEventStreamPublisher
+	messages           ports.MessageRepository
+	senders            ports.SenderProfileRepository
+	heartbeats         ports.WorkerHeartbeatRepository
+	channelResolver    ports.KickChannelResolver
+	senderResolver     ports.KickSenderProfileResolver
+	pusher             ports.PusherClient
+	recentMessages     ports.KickRecentMessagesClient
+	parser             EventParser
+	logger             *slog.Logger
+	config             ServiceConfig
+	writer             *bufferedRawWriter
+	breaker            *CircuitBreaker
+	senderCacheGate    *senderProfileWriteGate
+	capturedRawEvents  uint64
+	recentPollCaptured uint64
+	recentPollErrors   uint64
+	recentPollSeenMu   sync.Mutex
+	recentPollSeen     map[string]time.Time
 }
 
 type ServiceConfig struct {
-	WorkerCount               int
-	RawEventBatchSize         int
-	RawEventProcessingTimeout time.Duration
-	RawEventMaxAttempts       uint16
-	RawEventWorkerIdleDelay   time.Duration
-	ChannelResyncInterval     time.Duration
-	HeartbeatInterval         time.Duration
-	ReconnectInitialDelay     time.Duration
-	ReconnectMaxDelay         time.Duration
-	ReconnectMultiplier       float64
-	HeartbeatServiceName      string
-	WriteBatchSize            int
-	WriteFlushInterval        time.Duration
-	WriteQueueSize            int
-	WriteMaxRetries           int
-	BootstrapRawQueueOnStart  bool
-	ClickHouseBackoffInitial  time.Duration
-	ClickHouseBackoffMax      time.Duration
-	ClickHouseBackoffFactor   float64
-	ClickHouseBreakerThresh   int
-	SenderProfileCacheTTL     time.Duration
+	WorkerCount                  int
+	RawEventBatchSize            int
+	RawEventProcessingTimeout    time.Duration
+	RawEventMaxAttempts          uint16
+	RawEventWorkerIdleDelay      time.Duration
+	ChannelResyncInterval        time.Duration
+	HeartbeatInterval            time.Duration
+	ReconnectInitialDelay        time.Duration
+	ReconnectMaxDelay            time.Duration
+	ReconnectMultiplier          float64
+	HeartbeatServiceName         string
+	WriteBatchSize               int
+	WriteFlushInterval           time.Duration
+	WriteQueueSize               int
+	WriteMaxRetries              int
+	BootstrapRawQueueOnStart     bool
+	ClickHouseBackoffInitial     time.Duration
+	ClickHouseBackoffMax         time.Duration
+	ClickHouseBackoffFactor      float64
+	ClickHouseBreakerThresh      int
+	SenderProfileCacheTTL        time.Duration
+	RecentMessagePollEnabled     bool
+	RecentMessagePollInterval    time.Duration
+	RecentMessagePollDedupeTTL   time.Duration
+	RecentMessagePollConcurrency int
 }
 
 type Dependencies struct {
@@ -70,6 +82,7 @@ type Dependencies struct {
 	ChannelResolver ports.KickChannelResolver
 	SenderResolver  ports.KickSenderProfileResolver
 	Pusher          ports.PusherClient
+	RecentMessages  ports.KickRecentMessagesClient
 	Logger          *slog.Logger
 	Config          ServiceConfig
 }
@@ -80,6 +93,13 @@ type RawEventProcessingResult struct {
 	Ignored      int
 	Failed       int
 	PendingCount int64
+}
+
+type RecentMessagePollResult struct {
+	Channels   int
+	Published  int
+	Duplicates int
+	Errors     int
 }
 
 var errNoEnabledChannels = errors.New("no enabled Kick channels are ready for listener subscription")
@@ -108,11 +128,13 @@ func NewService(deps Dependencies) *Service {
 		channelResolver: deps.ChannelResolver,
 		senderResolver:  deps.SenderResolver,
 		pusher:          deps.Pusher,
+		recentMessages:  deps.RecentMessages,
 		parser:          NewEventParser(),
 		logger:          logger,
 		config:          cfg,
 		breaker:         breaker,
 		senderCacheGate: newSenderProfileWriteGate(cfg.SenderProfileCacheTTL),
+		recentPollSeen:  make(map[string]time.Time),
 	}
 	if deps.StreamPublisher == nil && deps.RawEvents != nil && deps.Queue != nil {
 		service.writer = newBufferedRawWriter(BufferedWriterConfig{
@@ -150,6 +172,9 @@ func (service *Service) RunForever(ctx context.Context) error {
 		go service.recoverStaleClaimsForever(ctx)
 	} else if service.streamPublisher != nil {
 		service.logger.Info("legacy raw event queue disabled; listener publishes to JetStream")
+	}
+	if service.config.RecentMessagePollEnabled && service.recentMessages != nil {
+		go service.pollRecentMessagesForever(ctx)
 	}
 	go service.recordHeartbeatForever(ctx)
 
@@ -230,37 +255,14 @@ func (service *Service) RunOnce(ctx context.Context) (int, error) {
 		}
 		receivedAt := time.Now().UTC()
 		envelope := rawChatEventEnvelopeFromEvent(event, channel, chatroomID, receivedAt)
-		rawEvent := rawKickEventFromEnvelope(envelope)
-		if service.streamPublisher != nil {
-			streamEvent, err := rawStreamEventFromEnvelope(envelope)
-			if err != nil {
-				return err
-			}
-			if _, err := service.streamPublisher.Publish(ctx, streamEvent); err != nil {
-				return fmt.Errorf("publish raw event stream: %w", err)
-			}
-		} else if service.writer != nil {
-			service.writer.Submit(rawEvent)
-		} else {
-			if service.rawEvents == nil {
-				return fmt.Errorf("raw event repository is not configured")
-			}
-			if err := service.rawEvents.InsertEvent(ctx, rawEvent); err != nil {
-				return err
-			}
-			if service.queue != nil {
-				if err := service.queue.Enqueue(ctx, domain.RawEventQueueItem{
-					RawEventID:    rawEvent.ID,
-					ChannelID:     rawEvent.ChannelID,
-					ChatroomID:    rawEvent.ChatroomID,
-					ChannelSlug:   rawEvent.ChannelSlug,
-					KickMessageID: rawEvent.KickMessageID,
-					EnqueuedAt:    rawEvent.ReceivedAt,
-				}); err != nil {
-					return fmt.Errorf("enqueue raw event: %w", err)
-				}
-			}
+		duplicate, err := service.publishRawEnvelope(ctx, envelope)
+		if err != nil {
+			return err
 		}
+		if duplicate {
+			return nil
+		}
+		atomic.AddUint64(&service.capturedRawEvents, 1)
 		storedCount++
 		return nil
 	})
@@ -282,6 +284,243 @@ func (service *Service) usesLegacyRawEventQueue() bool {
 		service.queue != nil &&
 		service.rawEvents != nil &&
 		service.messages != nil
+}
+
+func (service *Service) publishRawEnvelope(ctx context.Context, envelope domain.RawChatEventEnvelope) (bool, error) {
+	rawEvent := rawKickEventFromEnvelope(envelope)
+	if service.streamPublisher != nil {
+		streamEvent, err := rawStreamEventFromEnvelope(envelope)
+		if err != nil {
+			return false, err
+		}
+		ack, err := service.streamPublisher.Publish(ctx, streamEvent)
+		if err != nil {
+			return false, fmt.Errorf("publish raw event stream: %w", err)
+		}
+		return ack.Duplicate, nil
+	}
+	if service.writer != nil {
+		service.writer.Submit(rawEvent)
+		return false, nil
+	}
+	if service.rawEvents == nil {
+		return false, fmt.Errorf("raw event repository is not configured")
+	}
+	if err := service.rawEvents.InsertEvent(ctx, rawEvent); err != nil {
+		return false, err
+	}
+	if service.queue != nil {
+		if err := service.queue.Enqueue(ctx, domain.RawEventQueueItem{
+			RawEventID:    rawEvent.ID,
+			ChannelID:     rawEvent.ChannelID,
+			ChatroomID:    rawEvent.ChatroomID,
+			ChannelSlug:   rawEvent.ChannelSlug,
+			KickMessageID: rawEvent.KickMessageID,
+			EnqueuedAt:    rawEvent.ReceivedAt,
+		}); err != nil {
+			return false, fmt.Errorf("enqueue raw event: %w", err)
+		}
+	}
+	return false, nil
+}
+
+func (service *Service) PollRecentMessagesOnce(ctx context.Context) (RecentMessagePollResult, error) {
+	return service.pollRecentMessagesOnce(ctx)
+}
+
+func (service *Service) pollRecentMessagesOnce(ctx context.Context) (RecentMessagePollResult, error) {
+	if service.recentMessages == nil || !service.config.RecentMessagePollEnabled {
+		return RecentMessagePollResult{}, nil
+	}
+	channels, err := service.loadEnabledChannels(ctx)
+	if err != nil {
+		return RecentMessagePollResult{}, err
+	}
+
+	result := RecentMessagePollResult{Channels: len(channels)}
+	for _, fetched := range service.fetchRecentMessages(ctx, channels) {
+		channel := fetched.channel
+		if fetched.err != nil {
+			result.Errors++
+			atomic.AddUint64(&service.recentPollErrors, 1)
+			service.logger.Warn(
+				"Kick recent messages poll failed",
+				"channel_slug", channel.Slug,
+				"kick_channel_id", channel.KickChannelID,
+				"error", fetched.err,
+			)
+			continue
+		}
+		for _, envelope := range fetched.envelopes {
+			envelope = hydrateRecentEnvelope(envelope, channel)
+			if service.recentPollWasSeen(envelope.RawEventID) {
+				continue
+			}
+			duplicate, err := service.publishRawEnvelope(ctx, envelope)
+			if err != nil {
+				result.Errors++
+				atomic.AddUint64(&service.recentPollErrors, 1)
+				service.logger.Warn(
+					"Kick recent message publish failed",
+					"channel_slug", channel.Slug,
+					"raw_event_id", envelope.RawEventID,
+					"error", err,
+				)
+				continue
+			}
+			service.markRecentPollSeen(envelope.RawEventID)
+			if duplicate {
+				result.Duplicates++
+				continue
+			}
+			result.Published++
+			atomic.AddUint64(&service.capturedRawEvents, 1)
+			atomic.AddUint64(&service.recentPollCaptured, 1)
+		}
+	}
+	return result, nil
+}
+
+type recentMessageFetchResult struct {
+	channel   domain.FollowedChannel
+	envelopes []domain.RawChatEventEnvelope
+	err       error
+}
+
+func (service *Service) fetchRecentMessages(
+	ctx context.Context,
+	channels []domain.FollowedChannel,
+) []recentMessageFetchResult {
+	if len(channels) == 0 {
+		return nil
+	}
+
+	concurrency := service.config.RecentMessagePollConcurrency
+	if concurrency < 1 {
+		concurrency = 1
+	}
+	if concurrency > len(channels) {
+		concurrency = len(channels)
+	}
+
+	limit := make(chan struct{}, concurrency)
+	results := make(chan recentMessageFetchResult, len(channels))
+	var wg sync.WaitGroup
+	for _, channel := range channels {
+		channel := channel
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			select {
+			case limit <- struct{}{}:
+				defer func() { <-limit }()
+			case <-ctx.Done():
+				results <- recentMessageFetchResult{channel: channel, err: ctx.Err()}
+				return
+			}
+
+			envelopes, err := service.recentMessages.FetchRecentMessages(ctx, channel)
+			results <- recentMessageFetchResult{
+				channel:   channel,
+				envelopes: envelopes,
+				err:       err,
+			}
+		}()
+	}
+
+	wg.Wait()
+	close(results)
+
+	collected := make([]recentMessageFetchResult, 0, len(channels))
+	for result := range results {
+		collected = append(collected, result)
+	}
+	return collected
+}
+
+func hydrateRecentEnvelope(
+	envelope domain.RawChatEventEnvelope,
+	channel domain.FollowedChannel,
+) domain.RawChatEventEnvelope {
+	if envelope.FollowedChannelID == 0 {
+		envelope.FollowedChannelID = channel.ID
+	}
+	if envelope.ChannelSlug == "" {
+		envelope.ChannelSlug = channel.Slug
+	}
+	if envelope.KickChannelID == 0 {
+		envelope.KickChannelID = channel.KickChannelID
+	}
+	if envelope.KickChatroomID == 0 {
+		envelope.KickChatroomID = channel.KickChatroomID
+	}
+	if envelope.ReceivedAt.IsZero() {
+		envelope.ReceivedAt = time.Now().UTC()
+	}
+	return envelope
+}
+
+func (service *Service) recentPollWasSeen(rawEventID string) bool {
+	rawEventID = strings.TrimSpace(rawEventID)
+	if rawEventID == "" {
+		return false
+	}
+	now := time.Now().UTC()
+	service.recentPollSeenMu.Lock()
+	defer service.recentPollSeenMu.Unlock()
+
+	seenAt, ok := service.recentPollSeen[rawEventID]
+	if !ok {
+		return false
+	}
+	if now.Sub(seenAt) > service.config.RecentMessagePollDedupeTTL {
+		delete(service.recentPollSeen, rawEventID)
+		return false
+	}
+	return true
+}
+
+func (service *Service) markRecentPollSeen(rawEventID string) {
+	rawEventID = strings.TrimSpace(rawEventID)
+	if rawEventID == "" {
+		return
+	}
+	now := time.Now().UTC()
+	service.recentPollSeenMu.Lock()
+	defer service.recentPollSeenMu.Unlock()
+
+	for id, seenAt := range service.recentPollSeen {
+		if now.Sub(seenAt) > service.config.RecentMessagePollDedupeTTL {
+			delete(service.recentPollSeen, id)
+		}
+	}
+	service.recentPollSeen[rawEventID] = now
+}
+
+func (service *Service) pollRecentMessagesForever(ctx context.Context) {
+	for ctx.Err() == nil {
+		result, err := service.pollRecentMessagesOnce(ctx)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			atomic.AddUint64(&service.recentPollErrors, 1)
+			service.logger.Warn("Kick recent messages poll tick failed", "error", err)
+		} else if result.Published > 0 || result.Errors > 0 {
+			service.logger.Info(
+				"Kick recent messages poll completed",
+				"channels", result.Channels,
+				"published", result.Published,
+				"duplicates", result.Duplicates,
+				"errors", result.Errors,
+			)
+		}
+
+		timer := time.NewTimer(service.config.RecentMessagePollInterval)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return
+		case <-timer.C:
+		}
+	}
 }
 
 func listenerChannelsFromFollowed(
@@ -346,10 +585,14 @@ func rawChatEventEnvelopeFromEvent(
 }
 
 func rawKickEventFromEnvelope(envelope domain.RawChatEventEnvelope) domain.RawKickEvent {
+	eventType := "pusher"
+	if strings.HasPrefix(envelope.PusherChannel, "kick-api:") {
+		eventType = "kick_recent_messages"
+	}
 	return domain.RawKickEvent{
 		ID:            envelope.RawEventID,
 		ChannelSlug:   envelope.ChannelSlug,
-		EventType:     "pusher",
+		EventType:     eventType,
 		EventName:     envelope.EventName,
 		KickMessageID: envelope.KickMessageID,
 		ChatroomID:    envelope.KickChatroomID,
@@ -610,10 +853,15 @@ func (service *Service) rawEventClaimWorkerID(workerID int) string {
 
 func (service *Service) RecordHeartbeat(ctx context.Context) error {
 	metadata := map[string]any{
-		"raw_event_worker_count":              service.config.WorkerCount,
-		"raw_event_batch_size":                service.config.RawEventBatchSize,
-		"channel_resync_interval_seconds":     service.config.ChannelResyncInterval.Seconds(),
-		"raw_event_worker_idle_delay_seconds": service.config.RawEventWorkerIdleDelay.Seconds(),
+		"raw_event_worker_count":               service.config.WorkerCount,
+		"raw_event_batch_size":                 service.config.RawEventBatchSize,
+		"channel_resync_interval_seconds":      service.config.ChannelResyncInterval.Seconds(),
+		"raw_event_worker_idle_delay_seconds":  service.config.RawEventWorkerIdleDelay.Seconds(),
+		"captured_raw_events":                  int64(atomic.LoadUint64(&service.capturedRawEvents)),
+		"recent_message_poll_enabled":          service.config.RecentMessagePollEnabled,
+		"recent_message_poll_interval_seconds": service.config.RecentMessagePollInterval.Seconds(),
+		"recent_message_poll_captured":         int64(atomic.LoadUint64(&service.recentPollCaptured)),
+		"recent_message_poll_errors":           int64(atomic.LoadUint64(&service.recentPollErrors)),
 	}
 	if service.writer != nil {
 		stats := service.writer.Stats()
@@ -936,6 +1184,15 @@ func (cfg ServiceConfig) withDefaults() ServiceConfig {
 	}
 	if cfg.SenderProfileCacheTTL <= 0 {
 		cfg.SenderProfileCacheTTL = 10 * time.Minute
+	}
+	if cfg.RecentMessagePollInterval <= 0 {
+		cfg.RecentMessagePollInterval = 10 * time.Second
+	}
+	if cfg.RecentMessagePollDedupeTTL <= 0 {
+		cfg.RecentMessagePollDedupeTTL = time.Hour
+	}
+	if cfg.RecentMessagePollConcurrency < 1 {
+		cfg.RecentMessagePollConcurrency = 8
 	}
 	return cfg
 }

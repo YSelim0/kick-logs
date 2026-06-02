@@ -88,6 +88,9 @@ export type IngestionHealth = {
   oldest_pending_age_seconds: number;
   legacy_queue_depth: number;
   legacy_oldest_pending_age_seconds: number;
+  captured_raw_events: number;
+  recent_message_poll_captured: number;
+  recent_message_poll_errors: number;
   stream_messages: number;
   stream_bytes: number;
   stream_consumer_pending: number;

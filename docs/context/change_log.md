@@ -2,6 +2,41 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-06-02 (Kick recent-message backfill)
+
+- Added a Kick recent-message client for
+  `GET /api/v2/channels/{kick_channel_id}/messages?sort=desc`.
+- The client converts endpoint payloads into existing raw chat envelopes, including JSON-string
+  metadata parsing and followed-channel `chatroom_id` injection.
+- Wired the listener to poll recent messages for enabled channels and publish them through the same
+  JetStream PubAck path as Pusher.
+- Existing Kick message id based raw event ids keep overlap between Pusher and polling idempotent.
+  Duplicate JetStream PubAck responses are not counted as newly captured events.
+- Added a 1-hour in-memory recent-poll seen set so quiet channels do not republish the same latest
+  endpoint page after the JetStream duplicate window expires.
+- Added listener heartbeat metadata and Operations API fields for recent-message poll captures and
+  poll errors.
+- Added config/env/Compose wiring for `LISTENER_RECENT_MESSAGE_POLL_ENABLED` and
+  `LISTENER_RECENT_MESSAGE_POLL_INTERVAL_SECONDS`.
+- Recent-message endpoint fetches now run with bounded concurrency, configurable through
+  `LISTENER_RECENT_MESSAGE_POLL_CONCURRENCY` (default 8), so one active channel's recent page is
+  not missed while the listener sequentially walks every enabled channel.
+- Added focused tests for the Kick recent-message client, listener poll publishing, duplicate
+  PubAck accounting, config defaults/overrides, and Operations metadata preservation.
+
+## 2026-06-02 (Kick Pusher capture health)
+
+- Fixed the Go Kick Pusher websocket client so protocol heartbeat messages are handled before chat
+  parsing.
+- The client now replies to `pusher:ping` with `pusher:pong`, ignores connection/subscription
+  bookkeeping events, and treats `pusher:error` as a reconnect-worthy listener failure.
+- Expanded chat subscriptions to include both `chatrooms.{chatroom_id}.v2` and
+  `chatrooms.{chatroom_id}` alongside the existing channel stream.
+- Added a listener-side `captured_raw_events` heartbeat counter and surfaced it through
+  `GET /admin/operations/summary` as `ingestion.captured_raw_events`.
+- Added websocket regression coverage proving the client sends `pusher:pong` and continues passing
+  chat events to the listener handler.
+
 ## 2026-06-02 (analytics cache and landing resilience)
 
 - Added a small in-memory cache inside the Go analytics service for global aggregate analytics.

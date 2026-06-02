@@ -1,5 +1,48 @@
 # Decisions
 
+## 2026-06-02 (Kick recent-message backfill)
+
+- **Kick Pusher alone is not a complete capture source.** For `gokhanoner`, an independent Pusher
+  subscriber and the local listener saw the same small set of message ids, while Kick's numeric
+  `/api/v2/channels/{kick_channel_id}/messages?sort=desc` endpoint exposed additional recent
+  messages visible in the web chat. The missing rows were therefore upstream of `/search`,
+  JetStream, processor, and ClickHouse normalization.
+- **The listener must poll recent messages in addition to Pusher.** The listener now polls the
+  numeric channel messages endpoint for every enabled followed channel and publishes returned
+  messages through the same raw-event envelope and JetStream PubAck path as Pusher.
+- **Recent polling uses existing message-id idempotency.** Poll envelopes use `raw_event_id =
+kick:{message_id}`, so overlap between Pusher and polling is safe. JetStream duplicate PubAck is
+  not counted as a new captured event, and visible ClickHouse rows still dedupe by
+  `kick_message_id`.
+- **Recent polling also keeps a short in-memory seen set.** Quiet channels can return the same last
+  messages for a long time, eventually outliving JetStream's duplicate window. The listener keeps
+  successfully published recent raw event ids in memory for 1 hour so the endpoint does not inflate
+  `raw_kick_events` and attempt history by republishing the same page every poll tick.
+- **Kick recent payloads are normalized before capture envelope creation.** The endpoint returns
+  `metadata` as `null`, an object, or a JSON string, and returns the numeric channel id in `chat_id`.
+  The client converts metadata to an object and injects the followed channel's `kick_chatroom_id`
+  into `chatroom_id` so the existing processor normalizer can handle the payload unchanged.
+- **Poll cadence is configurable and enabled by default.** Defaults:
+  `LISTENER_RECENT_MESSAGE_POLL_ENABLED=true` and
+  `LISTENER_RECENT_MESSAGE_POLL_INTERVAL_SECONDS=10`. Recent fetches run with bounded concurrency
+  (`LISTENER_RECENT_MESSAGE_POLL_CONCURRENCY=8` by default) because polling enabled channels
+  sequentially can outlive the recent-message page window on active chats.
+
+## 2026-06-02 (Kick Pusher capture health)
+
+- **Kick/Pusher protocol heartbeats must be answered.** The listener websocket client treats
+  `pusher:ping` as a protocol message and replies with `pusher:pong`; otherwise the server can mark
+  the connection unhealthy or close it, creating capture gaps before JetStream or ClickHouse see an
+  event.
+- **Chat capture can subscribe to both current and legacy chatroom channel names.** The listener
+  subscribes to `chatrooms.{chatroom_id}.v2` and `chatrooms.{chatroom_id}`. Duplicate delivery is
+  acceptable because raw stream publish uses Kick message id based message ids and visible
+  `chat_messages` reads/writes dedupe by `kick_message_id`.
+- **Operations needs capture-side counters.** Processor pending/ack metrics only prove that received
+  events are being drained. Listener heartbeat metadata now carries `captured_raw_events` so an
+  operator can distinguish "Kick websocket did not deliver enough events" from "processor/ClickHouse
+  fell behind."
+
 ## 2026-06-02 (global analytics cache)
 
 - **Global public analytics may be stale for up to 1 hour.** Landing-page statistics are

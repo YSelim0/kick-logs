@@ -71,9 +71,9 @@ implementation details, or working assumptions change.
 
 ## JetStream Durable Ingestion (issue #23)
 
-- The live chat hot path is NATS JetStream. Once a Kick websocket chat event reaches the listener
-  process, the listener publishes it durably to JetStream and waits for PubAck before counting it as
-  captured.
+- The live chat hot path is NATS JetStream. Once a Kick websocket chat event or Kick recent-message
+  backfill event reaches the listener process, the listener publishes it durably to JetStream and
+  waits for PubAck before counting it as captured.
 - SQLite `raw_event_queue` and `raw_event_claims` are legacy migration/compatibility tables after
   the cutover, not the current long-term queue design.
 - NATS JetStream owns temporary durable backlog for unacked raw chat events. Acked events should
@@ -235,6 +235,18 @@ admin/super-admin role.
 - Webhook processor ignores events for disabled channels so stale remote subscriptions cannot pollute
   active subscriber counts.
 - It subscribes to `chatrooms.{chatroom_id}.v2` plus channel-level streams.
+- Kick Pusher is not treated as a complete source by itself. The listener also polls Kick's numeric
+  `/api/v2/channels/{kick_channel_id}/messages?sort=desc` endpoint every
+  `LISTENER_RECENT_MESSAGE_POLL_INTERVAL_SECONDS` when
+  `LISTENER_RECENT_MESSAGE_POLL_ENABLED=true` and publishes those recent messages through the same
+  JetStream raw-event envelope path. Fetches run with bounded concurrency
+  (`LISTENER_RECENT_MESSAGE_POLL_CONCURRENCY`, default 8) so one channel's recent page is not missed
+  while the listener walks every enabled channel.
+- Recent-message polling injects the followed channel's `kick_chatroom_id` because Kick's messages
+  endpoint returns the numeric channel id in `chat_id`, not the chatroom id expected by the
+  normalizer.
+- Recent-message polling keeps a 1-hour in-memory seen set after successful publish/duplicate PubAck
+  so quiet channels do not repeatedly publish the same latest endpoint rows.
 - Active live ingestion uses JetStream: the listener publishes reached raw chat events to JetStream,
   processor workers normalize and write ClickHouse batches, and SQLite remains control-plane only.
 - The old in-memory buffered writer and SQLite `raw_event_queue` code remains as legacy

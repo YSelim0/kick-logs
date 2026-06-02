@@ -35,6 +35,9 @@ type Config struct {
 	ListenerChannelResyncInterval        float64
 	ListenerHeartbeatInterval            float64
 	ListenerStaleAfter                   int
+	ListenerRecentMessagePollEnabled     bool
+	ListenerRecentMessagePollInterval    float64
+	ListenerRecentMessagePollConcurrency int
 	ListenerRawEventWriteBatchSize       int
 	ListenerRawEventWriteFlushIntervalMS int
 	ListenerRawEventWriteQueueSize       int
@@ -153,6 +156,21 @@ func Load() (Config, error) {
 	}
 
 	listenerStaleAfter, err := envInt("LISTENER_HEARTBEAT_STALE_AFTER_SECONDS", 45)
+	if err != nil {
+		return Config{}, err
+	}
+
+	recentMessagePollEnabled, err := envBool("LISTENER_RECENT_MESSAGE_POLL_ENABLED", true)
+	if err != nil {
+		return Config{}, err
+	}
+
+	recentMessagePollInterval, err := envFloat("LISTENER_RECENT_MESSAGE_POLL_INTERVAL_SECONDS", 10.0)
+	if err != nil {
+		return Config{}, err
+	}
+
+	recentMessagePollConcurrency, err := envInt("LISTENER_RECENT_MESSAGE_POLL_CONCURRENCY", 8)
 	if err != nil {
 		return Config{}, err
 	}
@@ -284,6 +302,9 @@ func Load() (Config, error) {
 		ListenerChannelResyncInterval:        channelResyncInterval,
 		ListenerHeartbeatInterval:            heartbeatInterval,
 		ListenerStaleAfter:                   listenerStaleAfter,
+		ListenerRecentMessagePollEnabled:     recentMessagePollEnabled,
+		ListenerRecentMessagePollInterval:    recentMessagePollInterval,
+		ListenerRecentMessagePollConcurrency: recentMessagePollConcurrency,
 		ListenerRawEventWriteBatchSize:       rawEventWriteBatchSize,
 		ListenerRawEventWriteFlushIntervalMS: rawEventWriteFlushIntervalMS,
 		ListenerRawEventWriteQueueSize:       rawEventWriteQueueSize,

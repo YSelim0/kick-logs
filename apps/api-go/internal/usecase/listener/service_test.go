@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -169,6 +170,120 @@ func TestListenerRunOnceDoesNotCountPublishFailure(t *testing.T) {
 	}
 	if len(unit.rawEvents.events) != 0 {
 		t.Fatalf("raw events should not use legacy repository on publish failure = %#v", unit.rawEvents.events)
+	}
+}
+
+func TestListenerPollsRecentMessagesToStream(t *testing.T) {
+	unit := newFakeListenerUnit()
+	publisher := &fakeRawEventStreamPublisher{}
+	recent := &fakeRecentMessagesClient{
+		envelopes: []domain.RawChatEventEnvelope{{
+			RawEventID:    "kick:recent-message",
+			KickMessageID: "recent-message",
+			EventName:     chatMessageEventName,
+			PusherChannel: "kick-api:channels.100.messages",
+			PayloadJSON:   rawPayloadJSON(buildPayload("recent-message")),
+			RawPusherJSON: "{}",
+		}},
+	}
+	service := newRecentPollingStreamTestService(unit, publisher, recent)
+
+	result, err := service.PollRecentMessagesOnce(context.Background())
+	if err != nil {
+		t.Fatalf("PollRecentMessagesOnce() error = %v", err)
+	}
+	if result.Channels != 1 || result.Published != 1 || result.Duplicates != 0 || result.Errors != 0 {
+		t.Fatalf("result = %#v", result)
+	}
+	if len(publisher.events) != 1 {
+		t.Fatalf("stream events = %#v", publisher.events)
+	}
+	if atomic.LoadUint64(&service.capturedRawEvents) != 1 {
+		t.Fatalf("captured raw events = %d", atomic.LoadUint64(&service.capturedRawEvents))
+	}
+	if atomic.LoadUint64(&service.recentPollCaptured) != 1 {
+		t.Fatalf("recent poll captured = %d", atomic.LoadUint64(&service.recentPollCaptured))
+	}
+
+	var envelope domain.RawChatEventEnvelope
+	if err := json.Unmarshal(publisher.events[0].Payload, &envelope); err != nil {
+		t.Fatalf("decode stream payload: %v", err)
+	}
+	if envelope.FollowedChannelID != 1 ||
+		envelope.ChannelSlug != "hype" ||
+		envelope.KickChannelID != 100 ||
+		envelope.KickChatroomID != 123 {
+		t.Fatalf("hydrated envelope = %#v", envelope)
+	}
+}
+
+func TestListenerPollDoesNotCountDuplicateStreamAck(t *testing.T) {
+	unit := newFakeListenerUnit()
+	publisher := &fakeRawEventStreamPublisher{duplicateIDs: map[string]bool{"kick:recent-duplicate": true}}
+	recent := &fakeRecentMessagesClient{
+		envelopes: []domain.RawChatEventEnvelope{{
+			RawEventID:        "kick:recent-duplicate",
+			KickMessageID:     "recent-duplicate",
+			EventName:         chatMessageEventName,
+			PusherChannel:     "kick-api:channels.100.messages",
+			FollowedChannelID: 1,
+			ChannelSlug:       "hype",
+			KickChannelID:     100,
+			KickChatroomID:    123,
+			PayloadJSON:       rawPayloadJSON(buildPayload("recent-duplicate")),
+			RawPusherJSON:     "{}",
+		}},
+	}
+	service := newRecentPollingStreamTestService(unit, publisher, recent)
+
+	result, err := service.PollRecentMessagesOnce(context.Background())
+	if err != nil {
+		t.Fatalf("PollRecentMessagesOnce() error = %v", err)
+	}
+	if result.Published != 0 || result.Duplicates != 1 || result.Errors != 0 {
+		t.Fatalf("result = %#v", result)
+	}
+	if atomic.LoadUint64(&service.capturedRawEvents) != 0 {
+		t.Fatalf("captured raw events = %d", atomic.LoadUint64(&service.capturedRawEvents))
+	}
+	if atomic.LoadUint64(&service.recentPollCaptured) != 0 {
+		t.Fatalf("recent poll captured = %d", atomic.LoadUint64(&service.recentPollCaptured))
+	}
+}
+
+func TestListenerPollSkipsRecentlySeenMessages(t *testing.T) {
+	unit := newFakeListenerUnit()
+	publisher := &fakeRawEventStreamPublisher{}
+	recent := &fakeRecentMessagesClient{
+		envelopes: []domain.RawChatEventEnvelope{{
+			RawEventID:        "kick:recent-seen",
+			KickMessageID:     "recent-seen",
+			EventName:         chatMessageEventName,
+			PusherChannel:     "kick-api:channels.100.messages",
+			FollowedChannelID: 1,
+			ChannelSlug:       "hype",
+			KickChannelID:     100,
+			KickChatroomID:    123,
+			PayloadJSON:       rawPayloadJSON(buildPayload("recent-seen")),
+			RawPusherJSON:     "{}",
+		}},
+	}
+	service := newRecentPollingStreamTestService(unit, publisher, recent)
+
+	first, err := service.PollRecentMessagesOnce(context.Background())
+	if err != nil {
+		t.Fatalf("first PollRecentMessagesOnce() error = %v", err)
+	}
+	second, err := service.PollRecentMessagesOnce(context.Background())
+	if err != nil {
+		t.Fatalf("second PollRecentMessagesOnce() error = %v", err)
+	}
+
+	if first.Published != 1 || second.Published != 0 || second.Duplicates != 0 {
+		t.Fatalf("first=%#v second=%#v", first, second)
+	}
+	if len(publisher.events) != 1 {
+		t.Fatalf("stream events = %#v", publisher.events)
 	}
 }
 
@@ -807,6 +922,36 @@ func newStreamTestService(unit *fakeListenerUnit, pusher fakePusher, publisher *
 	})
 }
 
+func newRecentPollingStreamTestService(
+	unit *fakeListenerUnit,
+	publisher *fakeRawEventStreamPublisher,
+	recent *fakeRecentMessagesClient,
+) *Service {
+	return NewService(Dependencies{
+		Channels:        unit.channels,
+		StreamPublisher: publisher,
+		Heartbeats:      unit.heartbeats,
+		ChannelResolver: fakeChannelResolver{},
+		RecentMessages:  recent,
+		Logger:          slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Config: ServiceConfig{
+			WorkerCount:               0,
+			RawEventBatchSize:         10,
+			RawEventMaxAttempts:       2,
+			RawEventProcessingTimeout: time.Minute,
+			ChannelResyncInterval:     time.Second,
+			RawEventWorkerIdleDelay:   time.Millisecond,
+			HeartbeatInterval:         time.Millisecond,
+			ReconnectInitialDelay:     time.Millisecond,
+			ReconnectMaxDelay:         time.Millisecond,
+			ReconnectMultiplier:       1,
+			HeartbeatServiceName:      "listener",
+			RecentMessagePollEnabled:  true,
+			RecentMessagePollInterval: time.Millisecond,
+		},
+	})
+}
+
 type fakePusher interface {
 	Listen(context.Context, []domain.ListenerChannel, func(string) error) error
 }
@@ -841,19 +986,44 @@ type fakeListenerUnit struct {
 }
 
 type fakeRawEventStreamPublisher struct {
-	events []domain.RawStreamEvent
-	fail   error
+	events       []domain.RawStreamEvent
+	fail         error
+	duplicateIDs map[string]bool
 }
 
 func (publisher *fakeRawEventStreamPublisher) Publish(_ context.Context, event domain.RawStreamEvent) (domain.RawStreamPublishAck, error) {
 	if publisher.fail != nil {
 		return domain.RawStreamPublishAck{}, publisher.fail
 	}
+	if publisher.duplicateIDs[event.ID] {
+		return domain.RawStreamPublishAck{
+			Stream:    "KICK_RAW_EVENTS",
+			Sequence:  uint64(len(publisher.events)),
+			Duplicate: true,
+		}, nil
+	}
 	publisher.events = append(publisher.events, event)
 	return domain.RawStreamPublishAck{
 		Stream:   "KICK_RAW_EVENTS",
 		Sequence: uint64(len(publisher.events)),
 	}, nil
+}
+
+type fakeRecentMessagesClient struct {
+	envelopes []domain.RawChatEventEnvelope
+	fail      error
+	calls     []domain.FollowedChannel
+}
+
+func (client *fakeRecentMessagesClient) FetchRecentMessages(
+	_ context.Context,
+	channel domain.FollowedChannel,
+) ([]domain.RawChatEventEnvelope, error) {
+	client.calls = append(client.calls, channel)
+	if client.fail != nil {
+		return nil, client.fail
+	}
+	return client.envelopes, nil
 }
 
 func newFakeListenerUnit() *fakeListenerUnit {

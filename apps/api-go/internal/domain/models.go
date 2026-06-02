@@ -338,6 +338,9 @@ type IngestionHealth struct {
 	OldestPendingAgeSeconds        int64
 	LegacyQueueDepth               int64
 	LegacyOldestPendingAgeSeconds  int64
+	CapturedRawEvents              int64
+	RecentMessagePollCaptured      int64
+	RecentMessagePollErrors        int64
 	StreamMessages                 int64
 	StreamBytes                    int64
 	StreamConsumerPending          int64
