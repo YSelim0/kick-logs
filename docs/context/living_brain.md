@@ -6,9 +6,10 @@ implementation details, or working assumptions change.
 ## Current State
 
 - Branch: `feat/issue-23-storage-hot-path-hardening`.
-- Active plan: Storage hot path hardening (see `docs/implementation_plan.md`, issue #23).
-  Implemented on this branch. The goal is to keep ClickHouse as data-plane history while returning
-  SQLite to control-plane and temporary queue/inbox responsibilities.
+- Active plan: JetStream durable ingestion (see `docs/implementation_plan.md`, issue #23).
+  The earlier SQLite hot-path hardening work is preliminary only. The final issue #23 target is to
+  move live chat ingestion to `listener -> NATS JetStream -> processor -> ClickHouse`, with SQLite
+  used for control-plane state only.
 - Earlier: channels/users index search pages — `/channels` and `/users` search-first index pages
   added 2026-05-24.
 - Responsive polish pass is current through 2026-05-22: profile rows, admin navigation, admin
@@ -57,7 +58,8 @@ implementation details, or working assumptions change.
   - sender profile cache (best-effort; must not block chat message persistence)
   - retention settings
   - worker heartbeats
-  - raw-event work queue (`raw_event_queue`) for pending/claimed/failed active work only
+  - legacy raw-event work queue tables during migration only; live chat ingestion should move off
+    SQLite once the JetStream cutover is complete
   - schema/data migration metadata
 - ClickHouse stores data-plane rows:
   - chat messages
@@ -67,21 +69,31 @@ implementation details, or working assumptions change.
 - `chat_messages` is denormalized for search/export/analytics/profile paths. Hot read paths should
   not join back to SQLite.
 
-## Storage Hot Path Hardening (issue #23)
+## JetStream Durable Ingestion (issue #23)
 
-- `raw_event_queue` should behave as an active work queue, not permanent processed history.
-  Processed queue rows can be removed after the ClickHouse processed attempt has been written.
-- Startup queue bootstrap must keep using ClickHouse `raw_event_attempts` to avoid re-enqueuing raw
-  events that already have a processed attempt.
+- The live chat hot path must move to NATS JetStream. Once a Kick websocket chat event reaches the
+  listener process, the listener must publish it durably to JetStream and wait for PubAck before
+  counting it as captured.
+- SQLite `raw_event_queue` and `raw_event_claims` are legacy migration/compatibility tables after
+  the cutover, not the current long-term queue design.
+- NATS JetStream owns temporary durable backlog for unacked raw chat events. Acked events should
+  leave the stream; long-term history stays in ClickHouse.
+- Processor workers pull JetStream batches, insert raw events and normalized messages into
+  ClickHouse, and ACK only after required durable writes succeed.
+- Delivery model is at-least-once with idempotent ClickHouse writes. Duplicate internal delivery is
+  acceptable only if search/profile/analytics rows remain deduplicated.
+- Parser/normalizer code must not discard a reached `ChatMessageEvent` before raw capture. Invalid
+  or incomplete payloads are captured first, then classified terminal ignored/invalid by the
+  processor.
 - Sender profile writes are cache updates only. A failed SQLite sender-profile upsert must not fail
   raw chat event processing or prevent a visible `chat_messages` row.
 - Sender profile cache writes should be TTL-gated so high-volume senders do not cause one SQLite
   write per message.
 - `kick_webhook_events` remains the webhook idempotency inbox, but processed/ignored rows should be
   pruned after a short retention window. Pending/failed rows must remain for processing/admin action.
-- Admin Operations must treat `raw_event_queue` as active backlog only. Raw-event archive/history
-  counts come from ClickHouse, and terminal ignored/invalid raw events are not retryable failed
-  backlog.
+- Admin Operations must show listener heartbeat, processor heartbeat, JetStream pending/ack-pending
+  and redelivery health, plus ClickHouse latest raw/message timestamps. Old SQLite queue metrics
+  must be labeled legacy once JetStream is live.
 
 ## Search Index Pages
 
@@ -220,17 +232,12 @@ admin/super-admin role.
 - Webhook processor ignores events for disabled channels so stale remote subscriptions cannot pollute
   active subscriber counts.
 - It subscribes to `chatrooms.{chatroom_id}.v2` plus channel-level streams.
-- Once a Kick websocket chat event reaches the process, submit it to the in-memory buffered
-  writer. The writer flushes batches to ClickHouse archive using `InsertEventsBatch` and then
-  enqueues the same batch into SQLite `raw_event_queue` in one logical step before treating
-  the batch as acknowledged. Buffered writes flush on `LISTENER_RAW_EVENT_WRITE_BATCH_SIZE`
-  events or `LISTENER_RAW_EVENT_WRITE_FLUSH_INTERVAL_MS` whichever first. Phase 1 moved the
-  work queue out of ClickHouse so the worker hot path no longer runs heavy
-  `raw_event_attempts` JOIN queries.
-- Workers list pending rows and claim them from SQLite, then load each raw payload from
-  ClickHouse by id, normalize in memory, and write the entire tick's chat messages and
-  raw-event attempts as one batch each. ClickHouse insert failure releases every claim back to
-  pending and the next tick retries.
+- Current legacy implementation still contains an in-memory buffered writer and SQLite
+  `raw_event_queue`. Issue #23 supersedes that path with the JetStream durable ingestion plan:
+  listener publishes reached raw chat events to JetStream, processor workers normalize and write
+  ClickHouse batches, and SQLite remains control-plane only.
+- The in-memory buffered writer's full-buffer drop behavior is historical implementation risk and
+  must not remain on the active live chat path after the JetStream cutover.
 - A single `CircuitBreaker` is shared by the buffered writer and the worker loop. Consecutive
   ClickHouse failures open the breaker; while open, every listener goroutine that calls
   `Wait` sleeps for the current backoff window before the next attempt. Successful operations
@@ -239,18 +246,19 @@ admin/super-admin role.
   the admin operations summary can surface ingestion health (queue backlog, oldest pending
   age, writer buffer depth, drops, flushes, ClickHouse insert failures, breaker state) without
   any cross-process call into the listener.
-- Synthetic ingestion load harness lives at `apps/api-go/cmd/loadgen`. It seeds channels with
-  slugs `loadgen-*`, emits configurable events-per-second through the real listener service,
-  and reports buffered-writer stats plus emitted counts. The procedure is documented in
-  `docs/operations/load_test.md`. External durable queues are deferred until a live load run
-  shows the in-process pipeline is insufficient.
+- Synthetic ingestion load harness lives at `apps/api-go/cmd/loadgen`. It should be updated during
+  issue #23 to exercise the JetStream capture/processor pipeline instead of treating buffered-writer
+  stats as the final ingestion health model.
 - Raw-event processing is at-least-once and idempotent; visible messages dedupe by
   `kick_message_id`.
 - Listener heartbeat state is stored in SQLite `worker_heartbeats`.
-- At startup the listener backfills any unprocessed ClickHouse raw events into the queue and
-  resets stale `claimed` rows older than `RawEventProcessingTimeout` back to `pending`; a
-  background loop repeats the stale-claim sweep.
-- Channel changes should take effect through periodic reconnect/resync without manual restart.
+- At startup the listener resets stale `claimed` rows older than `RawEventProcessingTimeout` back to
+  `pending`; a background loop repeats the stale-claim sweep. Historical ClickHouse raw-event
+  archive bootstrap is disabled by default and should only be enabled for one-off recovery with
+  `LISTENER_BOOTSTRAP_RAW_QUEUE_ON_STARTUP=true`.
+- Channel changes are checked every `LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS`. The Kick websocket
+  stays connected while the enabled channel set is unchanged and reconnects only when that set
+  changes, avoiding periodic blackout windows during high chat volume.
 
 ## Search Behavior
 

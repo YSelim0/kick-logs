@@ -1,5 +1,28 @@
 # Decisions
 
+## 2026-06-02 (issue #23 — JetStream durable ingestion)
+
+- **NATS JetStream is the long-term live chat ingestion queue.** The previous in-process buffered
+  writer plus SQLite `raw_event_queue` hardening is no longer considered the final design because it
+  still keeps intentional drop behavior and SQLite hot-path pressure in the architecture.
+- **Listener capture must be durable before success accounting.** A reached Kick
+  `ChatMessageEvent` is counted as captured only after JetStream PubAck. Publish failure is an
+  operational failure/backpressure condition, not a successful ingest.
+- **SQLite is control-plane only after cutover.** Admin users, followed channels, sender cache,
+  retention, heartbeats, webhook registry/inbox, and migration metadata remain in SQLite.
+  `raw_event_queue` and `raw_event_claims` become legacy migration/compatibility tables, not active
+  live chat queue state.
+- **Processor owns ClickHouse batch writes.** Processor workers pull JetStream batches, insert raw
+  archives and normalized `chat_messages` into ClickHouse, and ACK only after durable writes
+  succeed. Transient ClickHouse failures must leave messages unacked for redelivery.
+- **At-least-once plus idempotency is the contract.** Duplicate internal delivery is expected and
+  must not create duplicate visible search/profile rows. Visible message identity stays based on
+  Kick message id when available, with deterministic fallback identity for malformed/incomplete raw
+  diagnostics.
+- **Raw capture precedes strict normalization.** Parser/normalizer code must not discard a reached
+  chat event before raw capture. Invalid or incomplete payloads are captured first and then marked
+  terminal ignored/invalid by the processor.
+
 ## 2026-06-01 (issue #23 — sender profile cache is best-effort)
 
 - **Sender profile cache writes must not block chat ingestion.** The listener now treats

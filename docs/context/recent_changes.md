@@ -2,6 +2,41 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
+## Latest (issue #23 — JetStream durable ingestion plan)
+
+- Active issue #23 plan now targets NATS JetStream durable ingestion instead of treating the
+  in-process buffered writer plus SQLite `raw_event_queue` as the final hot-path architecture.
+- Target pipeline: `listener -> NATS JetStream -> processor -> ClickHouse`.
+- SQLite remains control-plane only after cutover. Existing `raw_event_queue` / `raw_event_claims`
+  tables are legacy migration/compatibility state, not the long-term live chat queue.
+- Listener must wait for JetStream PubAck before counting a reached Kick chat event as captured.
+  Processor workers ACK only after ClickHouse raw/message writes are durable.
+- Raw capture must happen before strict normalization so malformed or incomplete chat payloads can
+  be diagnosed instead of silently disappearing.
+
+## Latest (issue #23 — listener reconnect and sender identity follow-up)
+
+- Fixed local listener message gaps caused by forced websocket reconnects every
+  `LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS`. The listener now keeps the Kick stream open and only
+  reconnects when the enabled channel set actually changes.
+- `LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS` now controls the channel-set check cadence, not a
+  forced stream lifetime.
+- New chat message normalization stores `sender_id` and `sender_kick_id` from Kick's stable sender
+  id so future ClickHouse rows do not mix SQLite sender-profile ids with Kick user ids.
+- Analytics top-sender and sender-count queries now group by a stable identity:
+  `sender_kick_id` when present, then slug, then username. This collapses historical split rows like
+  one user appearing twice because older rows used a SQLite cache id and newer rows used Kick id.
+- Profile and message API responses normalize visible sender ids to Kick user id when
+  `sender_kick_id`/`kick_user_id` exists, so historical rows do not expose SQLite cache ids as user
+  ids.
+- User profile latest messages now returns 20 rows to match the UI copy.
+- Listener startup ClickHouse raw-event archive bootstrap is disabled by default via
+  `LISTENER_BOOTSTRAP_RAW_QUEUE_ON_STARTUP=false`; enable it only for one-off recovery. This avoids
+  expensive startup archive scans now that active raw-event work lives in SQLite `raw_event_queue`.
+- Verification: local Docker API/listener rebuild and restart succeeded; listener logs show
+  `raw event queue bootstrap skipped`; `go test ./...`, `go vet ./...`, and `pnpm format:check`
+  passed.
+
 ## Latest (issue #23 — SQLite lock follow-up)
 
 - Fixed admin Data Management summary returning `Internal server error` while the listener/API had

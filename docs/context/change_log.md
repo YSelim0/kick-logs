@@ -2,6 +2,18 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-06-02 (issue #23 — JetStream durable ingestion plan)
+
+- Replaced the active issue #23 plan with a NATS JetStream durable ingestion plan.
+- New target pipeline: `listener -> NATS JetStream -> processor -> ClickHouse`.
+- Locked the core rule that reached Kick chat events must not be silently dropped by memory pressure,
+  retry exhaustion, or planned reconnects.
+- Documented that SQLite returns to control-plane ownership only after the cutover; old raw queue
+  tables become legacy/migration state.
+- Planned feature-sized phases for NATS foundation, raw event envelopes, listener publishing,
+  processor workers, ClickHouse idempotency, old hot-path removal, operations visibility, and final
+  verification.
+
 ## 2026-06-01 (issue #23 — storage hot path hardening plan)
 
 - Replaced the active implementation plan with the storage hot-path hardening plan for issue #23.
