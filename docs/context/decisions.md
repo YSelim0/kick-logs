@@ -1,5 +1,31 @@
 # Decisions
 
+## 2026-06-02 (global analytics cache)
+
+- **Global public analytics may be stale for up to 1 hour.** Landing-page statistics are
+  informational, not live operational state, so `overview`, day-bucket volume, and top-list
+  analytics can be served from an in-memory API cache.
+- **Parameterized analytics searches bypass cache.** Requests with `q`, `sender`, or `channel` are
+  not cached so `/users` and `/channels` index searches do not create unbounded key churn.
+- **Stale cached analytics is preferable to blank analytics.** If a cached global aggregate is older
+  than the 1-hour fresh TTL but still within the 24-hour stale window, the API can return it when a
+  ClickHouse refresh fails.
+- **Operations data remains uncached.** Admin Operations must reflect current listener, processor,
+  JetStream, and ClickHouse health. `/admin/channels` may tolerate cached global message counts
+  because those counts are informational table decoration.
+- **Landing must render partial analytics.** One failed analytics endpoint must not hide successful
+  overview, volume, sender, channel, or emote data from the user.
+- **Profile analytics may also be stale for up to 1 hour.** Public
+  `/users/{slug}/analytics` and `/channels/{slug}/analytics` are statistical profile pages, so their
+  ClickHouse aggregate response is cached by exact profile slug with the same bounded in-memory
+  cache shape.
+- **Profile analytics must degrade partially.** A single channel/user aggregate failure, for
+  example a top-emotes memory-limit error, should not turn the whole profile into a 500. The API can
+  return the identity plus available sections and leave failed sections empty.
+- **Active subscription counts are never part of analytics cache.** Public
+  `/channels/{slug}/subscription-summary` stays uncached and queries active periods on every
+  request because the value can be used as live broadcaster-facing subscriber state.
+
 ## 2026-06-02 (issue #23 — JetStream durable ingestion)
 
 - **NATS JetStream is the long-term live chat ingestion queue.** The previous in-process buffered

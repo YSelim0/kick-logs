@@ -16,9 +16,10 @@ var (
 )
 
 type Service struct {
-	analytics ports.AnalyticsRepository
-	channels  ports.FollowedChannelRepository
-	senders   ports.SenderProfileRepository
+	analytics    ports.AnalyticsRepository
+	channels     ports.FollowedChannelRepository
+	senders      ports.SenderProfileRepository
+	profileCache *profileCache
 }
 
 func NewService(
@@ -27,9 +28,10 @@ func NewService(
 	senders ports.SenderProfileRepository,
 ) *Service {
 	return &Service{
-		analytics: analytics,
-		channels:  channels,
-		senders:   senders,
+		analytics:    analytics,
+		channels:     channels,
+		senders:      senders,
+		profileCache: newProfileCache(),
 	}
 }
 
@@ -42,28 +44,22 @@ func (service *Service) UserProfile(ctx context.Context, slug string) (domain.Us
 		sender.ID = sender.KickUserID
 	}
 
-	filter := domain.AnalyticsFilter{Sender: sender.Slug}
-	overview, err := service.analytics.Overview(ctx, filter)
-	if err != nil {
-		return domain.UserProfile{}, err
-	}
-	volume, err := service.analytics.MessageVolume(ctx, filter, domain.AnalyticsBucketDay)
-	if err != nil {
-		return domain.UserProfile{}, err
-	}
-	topChannels, err := service.analytics.TopChannels(ctx, filter, 5)
-	if err != nil {
-		return domain.UserProfile{}, err
-	}
-	topEmotes, err := service.analytics.TopEmotes(ctx, filter, 5)
-	if err != nil {
-		return domain.UserProfile{}, err
-	}
-	latestMessages, err := service.analytics.LatestMessages(ctx, filter, 20)
-	if err != nil {
-		return domain.UserProfile{}, err
-	}
+	cacheKey := profileCacheKey("user", sender.Slug)
+	return cachedProfileValue(ctx, service.profileCache, cacheKey, func(ctx context.Context) (domain.UserProfile, error) {
+		return service.buildUserProfile(ctx, sender)
+	})
+}
 
+func (service *Service) buildUserProfile(
+	ctx context.Context,
+	sender domain.SenderProfile,
+) (domain.UserProfile, error) {
+	filter := domain.AnalyticsFilter{Sender: sender.Slug}
+	overview := valueOrZero(service.analytics.Overview(ctx, filter))
+	volume := valueOrZero(service.analytics.MessageVolume(ctx, filter, domain.AnalyticsBucketDay))
+	topChannels := valueOrZero(service.analytics.TopChannels(ctx, filter, 5))
+	topEmotes := valueOrZero(service.analytics.TopEmotes(ctx, filter, 5))
+	latestMessages := valueOrZero(service.analytics.LatestMessages(ctx, filter, 20))
 	return domain.UserProfile{
 		Sender:         sender,
 		Overview:       overview,
@@ -83,28 +79,22 @@ func (service *Service) ChannelProfile(ctx context.Context, slug string) (domain
 		return domain.ChannelProfile{}, err
 	}
 
-	filter := domain.AnalyticsFilter{Channel: channel.Slug}
-	overview, err := service.analytics.Overview(ctx, filter)
-	if err != nil {
-		return domain.ChannelProfile{}, err
-	}
-	volume, err := service.analytics.MessageVolume(ctx, filter, domain.AnalyticsBucketDay)
-	if err != nil {
-		return domain.ChannelProfile{}, err
-	}
-	topSenders, err := service.analytics.TopSenders(ctx, filter, 5)
-	if err != nil {
-		return domain.ChannelProfile{}, err
-	}
-	topEmotes, err := service.analytics.TopEmotes(ctx, filter, 5)
-	if err != nil {
-		return domain.ChannelProfile{}, err
-	}
-	latestMessages, err := service.analytics.LatestMessages(ctx, filter, 10)
-	if err != nil {
-		return domain.ChannelProfile{}, err
-	}
+	cacheKey := profileCacheKey("channel", channel.Slug)
+	return cachedProfileValue(ctx, service.profileCache, cacheKey, func(ctx context.Context) (domain.ChannelProfile, error) {
+		return service.buildChannelProfile(ctx, channel)
+	})
+}
 
+func (service *Service) buildChannelProfile(
+	ctx context.Context,
+	channel domain.FollowedChannel,
+) (domain.ChannelProfile, error) {
+	filter := domain.AnalyticsFilter{Channel: channel.Slug}
+	overview := valueOrZero(service.analytics.Overview(ctx, filter))
+	volume := valueOrZero(service.analytics.MessageVolume(ctx, filter, domain.AnalyticsBucketDay))
+	topSenders := valueOrZero(service.analytics.TopSenders(ctx, filter, 5))
+	topEmotes := valueOrZero(service.analytics.TopEmotes(ctx, filter, 5))
+	latestMessages := valueOrZero(service.analytics.LatestMessages(ctx, filter, 10))
 	return domain.ChannelProfile{
 		Channel:        channel,
 		Overview:       overview,
@@ -113,6 +103,14 @@ func (service *Service) ChannelProfile(ctx context.Context, slug string) (domain
 		TopEmotes:      topEmotes,
 		LatestMessages: latestMessages,
 	}, nil
+}
+
+func valueOrZero[T any](value T, err error) T {
+	if err != nil {
+		var zero T
+		return zero
+	}
+	return value
 }
 
 func (service *Service) findSender(ctx context.Context, slug string) (domain.SenderProfile, error) {

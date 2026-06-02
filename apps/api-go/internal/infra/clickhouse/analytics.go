@@ -349,7 +349,56 @@ func (repo *AnalyticsRepository) LatestMessages(
 	filter domain.AnalyticsFilter,
 	limit uint64,
 ) ([]domain.ChatMessage, error) {
+	limit = limitOrDefault(limit)
 	where, args := analyticsWhere(filter)
+	candidateLimit := latestMessagesCandidateLimit(limit)
+	idQuery := fmt.Sprintf(`SELECT id
+		FROM (
+			SELECT
+				id,
+				kick_message_id,
+				message_created_at,
+				ingested_at,
+				%s
+			FROM (
+				SELECT
+					id,
+					kick_message_id,
+					message_created_at,
+					ingested_at
+				FROM chat_messages
+				WHERE %s
+				ORDER BY message_created_at DESC, id DESC
+				LIMIT ?
+			)
+		)
+		WHERE message_rank = 1
+		ORDER BY message_created_at DESC, id DESC
+		LIMIT ?`, messageRankSQL(), where)
+	idArgs := append([]any{}, args...)
+	idArgs = append(idArgs, candidateLimit, limit)
+
+	idRows, err := repo.conn.Query(ctx, idQuery, idArgs...)
+	if err != nil {
+		return nil, fmt.Errorf("query latest analytics message ids: %w", err)
+	}
+	defer idRows.Close()
+
+	messageIDs := make([]int64, 0, int(limit))
+	for idRows.Next() {
+		var id int64
+		if err := idRows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan latest analytics message id: %w", err)
+		}
+		messageIDs = append(messageIDs, id)
+	}
+	if err := idRows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate latest analytics message ids: %w", err)
+	}
+	if len(messageIDs) == 0 {
+		return []domain.ChatMessage{}, nil
+	}
+
 	query := fmt.Sprintf(`SELECT
 		id, kick_message_id, ifNull(channel_id, 0), ifNull(channel_kick_id, 0), ifNull(channel_chatroom_id, 0),
 		channel_slug, channel_display_name, ifNull(channel_profile_image_url, ''),
@@ -370,16 +419,16 @@ func (repo *AnalyticsRepository) LatestMessages(
 				sender_badges_json, message_type, content, emote_ids, emote_names, emote_tokens,
 				emote_image_urls, reply_to_sender, reply_to_content, reply_to_message_id,
 				thread_parent_id, reply_metadata_json, raw_payload_json, message_created_at, ingested_at,
+				is_deleted,
 				%s
 			FROM chat_messages
-			WHERE %s
+			WHERE id IN (?)
 		)
-		WHERE message_rank = 1
+		WHERE is_deleted = 0 AND message_rank = 1
 		ORDER BY message_created_at DESC, id DESC
-		LIMIT ?`, messageRankSQL(), where)
-	args = append(args, limitOrDefault(limit))
+		LIMIT ?`, messageRankSQL())
 
-	rows, err := repo.conn.Query(ctx, query, args...)
+	rows, err := repo.conn.Query(ctx, query, messageIDs, limit)
 	if err != nil {
 		return nil, fmt.Errorf("query latest analytics messages: %w", err)
 	}
@@ -397,6 +446,17 @@ func (repo *AnalyticsRepository) LatestMessages(
 		return nil, fmt.Errorf("iterate latest analytics messages: %w", err)
 	}
 	return messages, nil
+}
+
+func latestMessagesCandidateLimit(limit uint64) uint64 {
+	candidateLimit := limit * 100
+	if candidateLimit < 1000 {
+		return 1000
+	}
+	if candidateLimit > 5000 {
+		return 5000
+	}
+	return candidateLimit
 }
 
 func analyticsWhere(filter domain.AnalyticsFilter) (string, []any) {

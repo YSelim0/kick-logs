@@ -2,6 +2,34 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
+## Latest (analytics cache and landing resilience)
+
+- Public/global analytics now uses an in-memory API cache for expensive aggregate reads:
+  - fresh TTL: 1 hour,
+  - stale fallback: 24 hours when ClickHouse refresh fails,
+  - max entries: 128,
+  - same-key concurrent requests are coalesced so a burst does not fan out into duplicate ClickHouse
+    queries.
+- Cache applies only to global analytics calls where `q`, `sender`, and `channel` are empty.
+  Parameterized `/users` and `/channels` index searches bypass cache.
+- Admin Operations remains uncached. `/admin/channels` can receive cached global channel counts,
+  which is acceptable because those table counts are informational.
+- Landing page no longer fails all analytics panels when one endpoint fails. It loads analytics
+  requests one by one, keeps fulfilled results visible, and shows a partial-data banner when one
+  panel cannot be fetched.
+- Public user/channel profile analytics now has a separate slug-scoped in-memory cache with the
+  same 1-hour fresh / 24-hour stale / 128-entry shape. This protects `/users/{slug}/analytics` and
+  `/channels/{slug}/analytics` from repeated heavy ClickHouse aggregate reads.
+- Profile analytics responses are best-effort: if one aggregate such as top emotes hits ClickHouse
+  memory limits, the endpoint still returns the profile identity and the successful sections with
+  the failed section empty instead of returning 500.
+- Profile latest-message reads now use a narrow candidate-id query before fetching wide message
+  payload/emote columns, so the `Son mesajlar` panel can populate without doing a wide all-channel
+  window scan.
+- Active channel subscription counts remain uncached. `/channels/{slug}/subscription-summary`
+  continues to call `SubscriptionPeriods.ActiveSummary` on every request because it may be shown as
+  live broadcaster-facing state.
+
 ## Latest (issue #23 — JetStream operations contract cleanup)
 
 - Active live chat ingestion is now `listener -> NATS JetStream -> processor -> ClickHouse`.

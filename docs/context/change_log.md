@@ -2,6 +2,34 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-06-02 (analytics cache and landing resilience)
+
+- Added a small in-memory cache inside the Go analytics service for global aggregate analytics.
+- Cache policy:
+  - 1 hour fresh TTL,
+  - 24 hour stale fallback when ClickHouse refresh fails,
+  - 128 max entries,
+  - same-key request coalescing to prevent burst traffic from launching duplicate ClickHouse scans.
+- Cache is intentionally limited to global analytics requests with empty `q`, `sender`, and
+  `channel` values. Search/index/profile-scoped analytics bypass it.
+- `/admin/operations` remains uncached. `/admin/channels` may use cached global channel counts for
+  its informational message-count column.
+- Landing analytics now loads requests sequentially and treats each response independently, so one
+  failed analytics endpoint no longer clears already successful overview, volume, top-user, or
+  top-emote data.
+- Added a separate slug-scoped in-memory cache for `/users/{slug}/analytics` and
+  `/channels/{slug}/analytics` with 1 hour fresh TTL, 24 hour stale fallback, 128 max entries, and
+  same-key request coalescing.
+- User/channel profile analytics now degrades partially: a failed aggregate such as channel
+  top-emotes no longer turns the full profile endpoint into a 500; failed sections return empty
+  while available sections still render.
+- Profile latest-message queries now first select recent candidate ids using narrow columns, then
+  fetch wide message payload/emote fields only for those ids. This avoids a memory-heavy wide
+  window scan while keeping the channel/user `Son mesajlar` panels populated.
+- `/channels/{slug}/subscription-summary` remains uncached and continues to query active
+  subscription periods on every request so active subscriber counts stay fresh for broadcaster-facing
+  usage.
+
 ## 2026-06-02 (issue #23 — JetStream durable ingestion plan)
 
 - Replaced the active issue #23 plan with a NATS JetStream durable ingestion plan.

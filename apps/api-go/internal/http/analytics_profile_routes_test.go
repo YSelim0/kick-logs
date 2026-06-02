@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -97,20 +98,60 @@ func TestProfileRoutesReturnProfilesAndNotFound(t *testing.T) {
 	}
 }
 
+func TestProfileRoutesReturnPartialAnalyticsWhenAggregateFails(t *testing.T) {
+	handler, analyticsRepo := newAnalyticsProfileTestRouterWithRepo()
+	analyticsRepo.topEmotesErr = errors.New("clickhouse memory limit exceeded")
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/channels/hype/analytics", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d body = %s", response.Code, response.Body.String())
+	}
+	if !strings.Contains(response.Body.String(), `"display_name":"Hype"`) ||
+		!strings.Contains(response.Body.String(), `"top_senders"`) ||
+		!strings.Contains(response.Body.String(), `"top_emotes":[]`) {
+		t.Fatalf("body = %s", response.Body.String())
+	}
+}
+
+func TestProfileRoutesCacheChannelAnalyticsBySlug(t *testing.T) {
+	handler, analyticsRepo := newAnalyticsProfileTestRouterWithRepo()
+
+	for range 2 {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/channels/hype/analytics", nil))
+		if response.Code != http.StatusOK {
+			t.Fatalf("status = %d body = %s", response.Code, response.Body.String())
+		}
+	}
+
+	if analyticsRepo.topEmotesCalls != 1 {
+		t.Fatalf("top emotes calls = %d, want 1", analyticsRepo.topEmotesCalls)
+	}
+}
+
 func newAnalyticsProfileTestRouter() http.Handler {
+	handler, _ := newAnalyticsProfileTestRouterWithRepo()
+	return handler
+}
+
+func newAnalyticsProfileTestRouterWithRepo() (http.Handler, *fakeAnalyticsRepository) {
 	cfg := config.Config{BackendCORSOrigins: []string{"http://localhost:3000"}}
 	analyticsRepo := newFakeAnalyticsRepository()
 	channelRepo := newFakeProfileChannelRepository()
 	senderRepo := newFakeProfileSenderRepository()
-	return NewRouter(cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), routes.Dependencies{
+	handler := NewRouter(cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), routes.Dependencies{
 		Config:    cfg,
 		Analytics: analyticsusecase.NewService(analyticsRepo),
 		Profiles:  profilesusecase.NewService(analyticsRepo, channelRepo, senderRepo),
 	})
+	return handler, analyticsRepo
 }
 
 type fakeAnalyticsRepository struct {
-	now time.Time
+	now            time.Time
+	topEmotesErr   error
+	topEmotesCalls int
 }
 
 func newFakeAnalyticsRepository() *fakeAnalyticsRepository {
@@ -178,6 +219,10 @@ func (repo *fakeAnalyticsRepository) TopEmotes(
 	_ domain.AnalyticsFilter,
 	_ uint64,
 ) ([]domain.TopEmoteAnalytics, error) {
+	repo.topEmotesCalls++
+	if repo.topEmotesErr != nil {
+		return nil, repo.topEmotesErr
+	}
 	return []domain.TopEmoteAnalytics{{
 		ID:           "111",
 		Name:         "Kappa",
