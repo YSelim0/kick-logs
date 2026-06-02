@@ -30,10 +30,11 @@ describe("OperationsDashboard", () => {
 
     render(<OperationsDashboard />);
 
-    expect(await screen.findByText("Canlı")).toBeInTheDocument();
+    expect(await screen.findByText(/Listener: Canlı/i)).toBeInTheDocument();
+    expect(screen.getByText(/Processor: Canlı/i)).toBeInTheDocument();
     expect(screen.getByText("1 MB")).toBeInTheDocument();
     expect(screen.getByText("42")).toBeInTheDocument();
-    expect(screen.getByText("15")).toBeInTheDocument();
+    expect(screen.getByText("JETSTREAM BACKLOG")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /yenile/i }));
 
@@ -54,7 +55,24 @@ describe("OperationsDashboard", () => {
     render(<OperationsDashboard />);
 
     expect(await screen.findByText(/Listener heartbeat bayat/i)).toBeInTheDocument();
-    expect(screen.getByText("Bayat")).toBeInTheDocument();
+    expect(screen.getByText(/Listener: Bayat/i)).toBeInTheDocument();
+  });
+
+  it("shows a calm warning for stale processor heartbeat", async () => {
+    operationsApiMocks.getOperationsSummary.mockResolvedValue(
+      summaryFixture({
+        processor: {
+          ...summaryFixture().processor,
+          is_fresh: false,
+          seconds_since_last_seen: 120
+        }
+      })
+    );
+
+    render(<OperationsDashboard />);
+
+    expect(await screen.findByText(/Processor heartbeat bayat/i)).toBeInTheDocument();
+    expect(screen.getByText(/Processor: Bayat/i)).toBeInTheDocument();
   });
 
   it("shows a calm error state for failed raw events", async () => {
@@ -92,6 +110,17 @@ describe("OperationsDashboard", () => {
         ingestion: {
           queue_depth: 1234,
           oldest_pending_age_seconds: 90,
+          legacy_queue_depth: 5,
+          legacy_oldest_pending_age_seconds: 10,
+          stream_messages: 1234,
+          stream_bytes: 65536,
+          stream_consumer_pending: 1200,
+          stream_consumer_ack_pending: 34,
+          stream_consumer_redelivered: 2,
+          stream_oldest_pending_age_seconds: 90,
+          stream_latest_message_age_seconds: 1,
+          stream_latest_consumer_update_time: "2026-05-13T09:15:59Z",
+          stream_error: "",
           write_queue_depth: 50,
           write_queue_high_water_mark: 500,
           write_drop_count: 0,
@@ -108,8 +137,9 @@ describe("OperationsDashboard", () => {
 
     render(<OperationsDashboard />);
 
-    expect(await screen.findByText("1.234")).toBeInTheDocument();
-    expect(screen.getByText("Aktif queue")).toBeInTheDocument();
+    expect(await screen.findByText("1.200")).toBeInTheDocument();
+    expect(screen.getByText("Stream pending")).toBeInTheDocument();
+    expect(screen.getByText("Ack pending")).toBeInTheDocument();
     expect(screen.getByText("Kapalı")).toBeInTheDocument();
   });
 
@@ -119,6 +149,17 @@ describe("OperationsDashboard", () => {
         ingestion: {
           queue_depth: 4000,
           oldest_pending_age_seconds: 300,
+          legacy_queue_depth: 0,
+          legacy_oldest_pending_age_seconds: 0,
+          stream_messages: 4000,
+          stream_bytes: 1024,
+          stream_consumer_pending: 3900,
+          stream_consumer_ack_pending: 100,
+          stream_consumer_redelivered: 5,
+          stream_oldest_pending_age_seconds: 300,
+          stream_latest_message_age_seconds: 2,
+          stream_latest_consumer_update_time: "2026-05-13T09:16:00Z",
+          stream_error: "",
           write_queue_depth: 100,
           write_queue_high_water_mark: 1000,
           write_drop_count: 12,
@@ -137,6 +178,7 @@ describe("OperationsDashboard", () => {
 
     expect(await screen.findByText(/circuit breaker açık/i)).toBeInTheDocument();
     expect(screen.getByText(/event düşürdü/i)).toBeInTheDocument();
+    expect(screen.getByText(/redelivery bildiriyor/i)).toBeInTheDocument();
   });
 });
 
@@ -182,9 +224,27 @@ function summaryFixture(overrides: Partial<OperationsSummary> = {}): OperationsS
       stale_after_seconds: 45,
       seconds_since_last_seen: 5
     },
+    processor: {
+      service_name: "processor",
+      last_seen_at: "2026-05-13T09:16:00Z",
+      is_fresh: true,
+      stale_after_seconds: 45,
+      seconds_since_last_seen: 5
+    },
     ingestion: {
       queue_depth: 0,
       oldest_pending_age_seconds: 0,
+      legacy_queue_depth: 0,
+      legacy_oldest_pending_age_seconds: 0,
+      stream_messages: 0,
+      stream_bytes: 0,
+      stream_consumer_pending: 0,
+      stream_consumer_ack_pending: 0,
+      stream_consumer_redelivered: 0,
+      stream_oldest_pending_age_seconds: 0,
+      stream_latest_message_age_seconds: 0,
+      stream_latest_consumer_update_time: null,
+      stream_error: "",
       write_queue_depth: 0,
       write_queue_high_water_mark: 0,
       write_drop_count: 0,

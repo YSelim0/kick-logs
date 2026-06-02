@@ -48,8 +48,8 @@ docker compose up --build -d
 - `apps/web`: Next.js frontend using pnpm, Tailwind, shadcn/ui, and lucide-react.
 - `nats_data`: Docker volume that stores JetStream durable raw-event backlog.
 - `clickhouse`: default data-plane database.
-- `api_go_data`: Docker volume that stores SQLite control-plane data plus temporary
-  pending/failed queue and webhook inbox rows.
+- `api_go_data`: Docker volume that stores SQLite control-plane data, legacy queue state, and
+  webhook inbox rows.
 - `clickhouse_data`: Docker volume that stores ClickHouse data.
 
 Detailed structure lives in `docs/architecture.md`.
@@ -162,8 +162,10 @@ convert `_` to `-`.
 - operations health, storage growth, raw event status, and listener freshness
 - retention settings and guarded cleanup preview/confirm flows
 
-Operations treats SQLite queue depth as active work only. Processed raw-event history is read from
-ClickHouse attempts, while terminal ignored events are excluded from retryable failed-event actions.
+Operations treats JetStream pending and ack-pending counts as the active live chat backlog. SQLite
+raw-event queue depth is shown only as legacy/migration state. Processed raw-event history is read
+from ClickHouse attempts, while terminal ignored events are excluded from retryable failed-event
+actions.
 
 ## Data Management
 
@@ -184,9 +186,8 @@ Cleanup requires a dry-run preview and exact confirmation text before execution.
 uses mutations; logical rows are removed before the API returns, while physical disk reclamation may
 lag behind background merges.
 
-The listener and webhook inbox do not keep processed rows forever in SQLite. Processed raw-event
-queue rows are deleted after ClickHouse attempt history is written, and processed/ignored webhook
-inbox rows are pruned after the short retention window.
+The listener no longer uses SQLite as the live chat hot-path queue in the JetStream architecture.
+Processed/ignored webhook inbox rows are pruned after the short retention window.
 
 ## Legacy Data Migration
 

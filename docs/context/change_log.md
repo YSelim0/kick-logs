@@ -84,6 +84,21 @@ This is a living implementation log. Add new entries for each meaningful project
 - Updated the load-test runbook and living-brain notes to treat buffered-writer metrics as legacy
   history, not current issue #23 success criteria.
 
+## 2026-06-02 (issue #23 — admin operations follows JetStream)
+
+- API operations summary now reads NATS JetStream stream/consumer stats in addition to SQLite
+  heartbeats and ClickHouse storage counters.
+- Added processor heartbeat to the admin operations contract so admins can distinguish capture
+  health from ClickHouse processing health.
+- Active ingestion queue depth now comes from JetStream pending + ack-pending messages when stream
+  stats are available.
+- JetStream stats read failures are surfaced as `ingestion.stream_error` instead of turning the
+  whole operations summary into a 500 response.
+- Old SQLite `raw_event_queue` depth remains visible as a `legacy_*` metric instead of being
+  presented as the live chat queue.
+- Updated the Operations dashboard to show stream pending, ack-pending, redelivery, oldest pending
+  age, processor freshness, and legacy SQLite queue depth separately.
+
 ## 2026-06-01 (issue #23 — storage hot path hardening plan)
 
 - Replaced the active implementation plan with the storage hot-path hardening plan for issue #23.

@@ -329,22 +329,34 @@ type OperationsSummary struct {
 	StorageTables        []TableSize
 	Timestamps           OperationsTimestamps
 	Listener             ListenerHeartbeat
+	Processor            ListenerHeartbeat
 	Ingestion            IngestionHealth
 }
 
 type IngestionHealth struct {
-	QueueDepth              int64
-	OldestPendingAgeSeconds int64
-	WriteQueueDepth         int64
-	WriteQueueHighWater     int64
-	WriteDropCount          int64
-	WriteFlushCount         int64
-	LastFlushSize           int64
-	LastFlushMillis         int64
-	ClickHouseFailures      int64
-	QueueEnqueueFailures    int64
-	BreakerState            string
-	BreakerCurrentDelayMS   int64
+	QueueDepth                     int64
+	OldestPendingAgeSeconds        int64
+	LegacyQueueDepth               int64
+	LegacyOldestPendingAgeSeconds  int64
+	StreamMessages                 int64
+	StreamBytes                    int64
+	StreamConsumerPending          int64
+	StreamConsumerAckPending       int64
+	StreamConsumerRedelivered      int64
+	StreamOldestPendingAgeSeconds  int64
+	StreamLatestMessageAgeSeconds  int64
+	StreamLatestConsumerUpdateTime time.Time
+	StreamError                    string
+	WriteQueueDepth                int64
+	WriteQueueHighWater            int64
+	WriteDropCount                 int64
+	WriteFlushCount                int64
+	LastFlushSize                  int64
+	LastFlushMillis                int64
+	ClickHouseFailures             int64
+	QueueEnqueueFailures           int64
+	BreakerState                   string
+	BreakerCurrentDelayMS          int64
 }
 
 type FailedRawEvent struct {

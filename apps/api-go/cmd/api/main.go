@@ -19,6 +19,7 @@ import (
 	datamanagementinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/data_management"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/kick"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/migrations"
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/natsstream"
 	operationsinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/operations"
 	ratelimitinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/ratelimit"
 	sqliteinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/sqlite"
@@ -73,6 +74,14 @@ func main() {
 	} else if err := migrations.ApplyClickHouse(context.Background(), clickHouseConn); err != nil {
 		logger.Warn("ClickHouse migrations failed; operations summary will use SQLite-only data", "error", err)
 		clickHouseConn = nil
+	}
+	var rawStreamStats ports.RawEventStreamStatsRepository
+	rawEventStream, err := natsstream.Open(context.Background(), cfg)
+	if err != nil {
+		logger.Warn("NATS JetStream unavailable; operations summary will omit stream backlog data", "error", err)
+	} else {
+		defer rawEventStream.Close()
+		rawStreamStats = rawEventStream
 	}
 
 	channelRepo := sqliteinfra.NewFollowedChannelRepository(sqliteDB)
@@ -163,6 +172,7 @@ func main() {
 		cfg.SQLitePath,
 		clickHouseConn,
 		cfg.ListenerStaleAfter,
+		rawStreamStats,
 	)
 	dataManagementService := datamanagementusecase.NewService(
 		datamanagementinfra.NewRepository(sqliteDB, cfg.SQLitePath, clickHouseConn),

@@ -10,12 +10,14 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/domain"
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/ports"
 )
 
 type Repository struct {
 	sqliteDB           *sql.DB
 	sqlitePath         string
 	clickHouse         driver.Conn
+	rawStreamStats     ports.RawEventStreamStatsRepository
 	listenerStaleAfter int
 }
 
@@ -24,11 +26,13 @@ func NewRepository(
 	sqlitePath string,
 	clickHouse driver.Conn,
 	listenerStaleAfter int,
+	rawStreamStats ports.RawEventStreamStatsRepository,
 ) *Repository {
 	return &Repository{
 		sqliteDB:           sqliteDB,
 		sqlitePath:         sqlitePath,
 		clickHouse:         clickHouse,
+		rawStreamStats:     rawStreamStats,
 		listenerStaleAfter: listenerStaleAfter,
 	}
 }
@@ -42,10 +46,23 @@ func (repo *Repository) Summary(ctx context.Context) (domain.OperationsSummary, 
 			StaleAfterSeconds: repo.listenerStaleAfter,
 			IsFresh:           false,
 		},
+		Processor: domain.ListenerHeartbeat{
+			ServiceName:       "processor",
+			StaleAfterSeconds: repo.listenerStaleAfter,
+			IsFresh:           false,
+		},
+		Ingestion: domain.IngestionHealth{
+			BreakerState: "closed",
+		},
 	}
 
 	if err := repo.fillSQLiteSummary(ctx, &summary); err != nil {
 		return domain.OperationsSummary{}, err
+	}
+	if repo.rawStreamStats != nil {
+		if err := repo.fillStreamSummary(ctx, &summary); err != nil {
+			return domain.OperationsSummary{}, err
+		}
 	}
 	if repo.clickHouse != nil {
 		if err := repo.fillClickHouseSummary(ctx, &summary); err != nil {
@@ -82,41 +99,67 @@ func (repo *Repository) fillSQLiteSummary(ctx context.Context, summary *domain.O
 		})
 	}
 
-	var lastSeenAt string
-	var metadataJSON string
-	err = repo.sqliteDB.QueryRowContext(
-		ctx,
-		`SELECT last_seen_at, metadata_json FROM worker_heartbeats WHERE service_name = 'listener'`,
-	).Scan(&lastSeenAt, &metadataJSON)
-	if err != nil && err != sql.ErrNoRows {
-		return fmt.Errorf("read listener heartbeat: %w", err)
+	if err := repo.readHeartbeat(ctx, "listener", &summary.Listener); err != nil {
+		return err
 	}
-	if err == nil {
-		parsed := parseTime(lastSeenAt)
-		summary.Listener.LastSeenAt = parsed
-		summary.Listener.MetadataJSON = metadataJSON
-		if !parsed.IsZero() {
-			seconds := int64(time.Since(parsed).Seconds())
-			summary.Listener.SecondsSinceLastSeen = seconds
-			summary.Listener.IsFresh = seconds <= int64(repo.listenerStaleAfter)
-		}
-		if metadataJSON != "" {
-			applyIngestionMetadata(metadataJSON, &summary.Ingestion)
-		}
+	if summary.Listener.MetadataJSON != "" {
+		applyIngestionMetadata(summary.Listener.MetadataJSON, &summary.Ingestion)
+	}
+	if err := repo.readHeartbeat(ctx, "processor", &summary.Processor); err != nil {
+		return err
+	}
+	if summary.Processor.MetadataJSON != "" {
+		applyIngestionMetadata(summary.Processor.MetadataJSON, &summary.Ingestion)
 	}
 
 	queueDepth, err := repo.queueDepth(ctx)
 	if err != nil {
 		return err
 	}
-	summary.Ingestion.QueueDepth = queueDepth
+	summary.Ingestion.LegacyQueueDepth = queueDepth
+	if repo.rawStreamStats == nil {
+		summary.Ingestion.QueueDepth = queueDepth
+	}
 
 	oldestAge, err := repo.oldestPendingAgeSeconds(ctx)
 	if err != nil {
 		return err
 	}
-	summary.Ingestion.OldestPendingAgeSeconds = oldestAge
+	summary.Ingestion.LegacyOldestPendingAgeSeconds = oldestAge
+	if repo.rawStreamStats == nil {
+		summary.Ingestion.OldestPendingAgeSeconds = oldestAge
+	}
 
+	return nil
+}
+
+func (repo *Repository) readHeartbeat(ctx context.Context, serviceName string, heartbeat *domain.ListenerHeartbeat) error {
+	heartbeat.ServiceName = serviceName
+	heartbeat.StaleAfterSeconds = repo.listenerStaleAfter
+	heartbeat.IsFresh = false
+
+	var lastSeenAt string
+	var metadataJSON string
+	err := repo.sqliteDB.QueryRowContext(
+		ctx,
+		`SELECT last_seen_at, metadata_json FROM worker_heartbeats WHERE service_name = ?`,
+		serviceName,
+	).Scan(&lastSeenAt, &metadataJSON)
+	if err != nil && err != sql.ErrNoRows {
+		return fmt.Errorf("read %s heartbeat: %w", serviceName, err)
+	}
+	if err != nil {
+		return nil
+	}
+
+	parsed := parseTime(lastSeenAt)
+	heartbeat.LastSeenAt = parsed
+	heartbeat.MetadataJSON = metadataJSON
+	if !parsed.IsZero() {
+		seconds := int64(time.Since(parsed).Seconds())
+		heartbeat.SecondsSinceLastSeen = seconds
+		heartbeat.IsFresh = seconds <= int64(repo.listenerStaleAfter)
+	}
 	return nil
 }
 
@@ -170,6 +213,27 @@ func applyIngestionMetadata(metadataJSON string, ingestion *domain.IngestionHeal
 		ingestion.BreakerState = state
 	}
 	ingestion.BreakerCurrentDelayMS = readInt64(raw, "breaker_current_delay_ms")
+}
+
+func (repo *Repository) fillStreamSummary(ctx context.Context, summary *domain.OperationsSummary) error {
+	stats, err := repo.rawStreamStats.Stats(ctx)
+	if err != nil {
+		summary.Ingestion.StreamError = err.Error()
+		return nil
+	}
+
+	summary.Ingestion.StreamMessages = stats.Messages
+	summary.Ingestion.StreamBytes = stats.Bytes
+	summary.Ingestion.StreamConsumerPending = stats.ConsumerPending
+	summary.Ingestion.StreamConsumerAckPending = stats.ConsumerAckPending
+	summary.Ingestion.StreamConsumerRedelivered = stats.ConsumerRedelivered
+	summary.Ingestion.StreamOldestPendingAgeSeconds = stats.OldestPendingAgeSeconds
+	summary.Ingestion.StreamLatestMessageAgeSeconds = stats.LatestMessageAgeSeconds
+	summary.Ingestion.StreamLatestConsumerUpdateTime = stats.LatestConsumerUpdateTime
+
+	summary.Ingestion.QueueDepth = stats.ConsumerPending + stats.ConsumerAckPending
+	summary.Ingestion.OldestPendingAgeSeconds = stats.OldestPendingAgeSeconds
+	return nil
 }
 
 func readInt64(raw map[string]any, key string) int64 {

@@ -94,6 +94,9 @@ implementation details, or working assumptions change.
 - Admin Operations must show listener heartbeat, processor heartbeat, JetStream pending/ack-pending
   and redelivery health, plus ClickHouse latest raw/message timestamps. Old SQLite queue metrics
   must be labeled legacy once JetStream is live.
+- `GET /admin/operations/summary` now includes `processor` heartbeat and `stream_*` ingestion
+  fields. `ingestion.queue_depth` represents JetStream pending + ack-pending when stream stats are
+  available; `legacy_queue_depth` is the old SQLite `raw_event_queue` depth.
 
 ## Search Index Pages
 

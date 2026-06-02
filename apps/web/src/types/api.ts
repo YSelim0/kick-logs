@@ -86,6 +86,17 @@ export type ListenerHeartbeat = {
 export type IngestionHealth = {
   queue_depth: number;
   oldest_pending_age_seconds: number;
+  legacy_queue_depth: number;
+  legacy_oldest_pending_age_seconds: number;
+  stream_messages: number;
+  stream_bytes: number;
+  stream_consumer_pending: number;
+  stream_consumer_ack_pending: number;
+  stream_consumer_redelivered: number;
+  stream_oldest_pending_age_seconds: number;
+  stream_latest_message_age_seconds: number;
+  stream_latest_consumer_update_time: string | null;
+  stream_error: string;
   write_queue_depth: number;
   write_queue_high_water_mark: number;
   write_drop_count: number;
@@ -104,6 +115,7 @@ export type OperationsSummary = {
   storage: OperationsStorage;
   timestamps: OperationsTimestamps;
   listener: ListenerHeartbeat;
+  processor: ListenerHeartbeat;
   ingestion: IngestionHealth;
 };
 

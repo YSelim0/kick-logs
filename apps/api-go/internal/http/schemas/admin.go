@@ -77,22 +77,34 @@ type OperationsSummaryResponse struct {
 	Storage              OperationsStorageResponse    `json:"storage"`
 	Timestamps           OperationsTimestampsResponse `json:"timestamps"`
 	Listener             ListenerHeartbeatResponse    `json:"listener"`
+	Processor            ListenerHeartbeatResponse    `json:"processor"`
 	Ingestion            IngestionHealthResponse      `json:"ingestion"`
 }
 
 type IngestionHealthResponse struct {
-	QueueDepth              int64  `json:"queue_depth"`
-	OldestPendingAgeSeconds int64  `json:"oldest_pending_age_seconds"`
-	WriteQueueDepth         int64  `json:"write_queue_depth"`
-	WriteQueueHighWater     int64  `json:"write_queue_high_water_mark"`
-	WriteDropCount          int64  `json:"write_drop_count"`
-	WriteFlushCount         int64  `json:"write_flush_count"`
-	LastFlushSize           int64  `json:"last_flush_size"`
-	LastFlushMillis         int64  `json:"last_flush_millis"`
-	ClickHouseFailures      int64  `json:"clickhouse_insert_failures"`
-	QueueEnqueueFailures    int64  `json:"queue_enqueue_failures"`
-	BreakerState            string `json:"breaker_state"`
-	BreakerCurrentDelayMS   int64  `json:"breaker_current_delay_ms"`
+	QueueDepth                     int64   `json:"queue_depth"`
+	OldestPendingAgeSeconds        int64   `json:"oldest_pending_age_seconds"`
+	LegacyQueueDepth               int64   `json:"legacy_queue_depth"`
+	LegacyOldestPendingAgeSeconds  int64   `json:"legacy_oldest_pending_age_seconds"`
+	StreamMessages                 int64   `json:"stream_messages"`
+	StreamBytes                    int64   `json:"stream_bytes"`
+	StreamConsumerPending          int64   `json:"stream_consumer_pending"`
+	StreamConsumerAckPending       int64   `json:"stream_consumer_ack_pending"`
+	StreamConsumerRedelivered      int64   `json:"stream_consumer_redelivered"`
+	StreamOldestPendingAgeSeconds  int64   `json:"stream_oldest_pending_age_seconds"`
+	StreamLatestMessageAgeSeconds  int64   `json:"stream_latest_message_age_seconds"`
+	StreamLatestConsumerUpdateTime *string `json:"stream_latest_consumer_update_time"`
+	StreamError                    string  `json:"stream_error"`
+	WriteQueueDepth                int64   `json:"write_queue_depth"`
+	WriteQueueHighWater            int64   `json:"write_queue_high_water_mark"`
+	WriteDropCount                 int64   `json:"write_drop_count"`
+	WriteFlushCount                int64   `json:"write_flush_count"`
+	LastFlushSize                  int64   `json:"last_flush_size"`
+	LastFlushMillis                int64   `json:"last_flush_millis"`
+	ClickHouseFailures             int64   `json:"clickhouse_insert_failures"`
+	QueueEnqueueFailures           int64   `json:"queue_enqueue_failures"`
+	BreakerState                   string  `json:"breaker_state"`
+	BreakerCurrentDelayMS          int64   `json:"breaker_current_delay_ms"`
 }
 
 type FailedRawEventResponse struct {

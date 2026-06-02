@@ -196,6 +196,12 @@ func TestOperationsSummaryRoute(t *testing.T) {
 	if !strings.Contains(response.Body.String(), `"raw_event_status_counts":{}`) {
 		t.Fatalf("body = %s", response.Body.String())
 	}
+	if !strings.Contains(response.Body.String(), `"processor"`) {
+		t.Fatalf("body = %s", response.Body.String())
+	}
+	if !strings.Contains(response.Body.String(), `"legacy_queue_depth"`) {
+		t.Fatalf("body = %s", response.Body.String())
+	}
 }
 
 func TestDataManagementRoutes(t *testing.T) {
@@ -287,7 +293,7 @@ func newAdminTestRouter(t *testing.T) http.Handler {
 		tokenService,
 	)
 	channelService := channelsusecase.NewService(channelRepo, fakeChannelResolver{})
-	operationsRepo := operationsinfra.NewRepository(db, dbPath, nil, cfg.ListenerStaleAfter)
+	operationsRepo := operationsinfra.NewRepository(db, dbPath, nil, cfg.ListenerStaleAfter, nil)
 	dataManagementService := datamanagementusecase.NewService(datamanagementinfra.NewRepository(db, dbPath, nil))
 
 	return NewRouter(cfg, slog.New(slog.NewTextHandler(io.Discard, nil)), routes.Dependencies{

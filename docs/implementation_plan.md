@@ -350,6 +350,8 @@ Exit criteria:
 
 ### Phase 8 - Admin Operations Update
 
+Status: implemented in this branch.
+
 - Add JetStream and processor health to admin Operations.
 - Show backlog size, ack-pending count, redelivery count, oldest pending age, and processor heartbeat.
 - Remove misleading active-queue wording for old SQLite raw queue tables.

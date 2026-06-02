@@ -107,7 +107,7 @@ SQLite stores control-plane data:
 - `sender_profiles` as a best-effort cache
 - `retention_settings`
 - `worker_heartbeats`
-- `raw_event_queue` for active pending/claimed/failed listener work
+- `raw_event_queue` as legacy/migration state after the JetStream cutover
 - `kick_webhook_events` as a short-retention webhook inbox
 - `kick_event_subscriptions`
 - schema/data migration bookkeeping
@@ -256,10 +256,12 @@ read-side dedupe to keep public search/profile results stable under redelivery.
 
 Admin data-management endpoints operate against SQLite settings and ClickHouse rows.
 
-Operations/data-management views distinguish active SQLite runtime state from ClickHouse history:
+Operations/data-management views distinguish JetStream live backlog, legacy SQLite runtime state,
+and ClickHouse history:
 
-- `raw_event_queue` row counts represent active pending/claimed/failed listener work, not all-time
-  processed event history.
+- JetStream pending and ack-pending counts represent the active live chat backlog.
+- `raw_event_queue` row counts are legacy/migration state after the JetStream cutover, not the
+  active live chat queue.
 - `raw_kick_events` and `raw_event_attempts` remain the durable raw-event archive/audit history.
 - processed/ignored webhook inbox rows are pruned from SQLite after the short retention window,
   while normalized subscription periods stay in ClickHouse.

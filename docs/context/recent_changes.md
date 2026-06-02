@@ -34,7 +34,13 @@ This file is the short handoff summary of the latest project changes. Keep it co
 - Phase 7 loadgen update: `cmd/loadgen` now drives the active
   `listener -> JetStream -> processor -> ClickHouse` path and reports JetStream backlog metrics
   instead of legacy buffered-writer stats.
-- Verification for the foundation: `go test ./...`, `go vet ./...`, `pnpm format:check`, and
+- Phase 8 operations update: `GET /admin/operations/summary` now exposes processor heartbeat and
+  JetStream stream/consumer backlog metrics. The admin Operations panel shows stream pending,
+  ack-pending, redelivery, oldest pending age, processor freshness, and legacy SQLite queue depth as
+  separate concepts.
+- Latest verification: `go test ./...`, `go vet ./...`, `pnpm --filter @kick-logs/web test`,
+  `pnpm --filter @kick-logs/web typecheck`, `pnpm --filter @kick-logs/web lint`,
+  `pnpm --filter @kick-logs/web build`, `pnpm format:check`, and
   `docker compose config --quiet` passed.
 
 ## Latest (issue #23 — listener reconnect and sender identity follow-up)
