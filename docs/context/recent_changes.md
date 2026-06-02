@@ -31,6 +31,9 @@ This file is the short handoff summary of the latest project changes. Keep it co
 - Phase 6 idempotency update: analytics/profile ClickHouse queries now dedupe by latest
   `kick_message_id` row before counting/grouping/listing, matching `/messages` search behavior
   under JetStream redelivery.
+- Phase 7 loadgen update: `cmd/loadgen` now drives the active
+  `listener -> JetStream -> processor -> ClickHouse` path and reports JetStream backlog metrics
+  instead of legacy buffered-writer stats.
 - Verification for the foundation: `go test ./...`, `go vet ./...`, `pnpm format:check`, and
   `docker compose config --quiet` passed.
 

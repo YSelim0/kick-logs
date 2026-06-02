@@ -73,6 +73,17 @@ This is a living implementation log. Add new entries for each meaningful project
 - Verified the new window-dedupe and array-join query shapes directly against the local ClickHouse
   container.
 
+## 2026-06-02 (issue #23 — loadgen uses JetStream pipeline)
+
+- Updated `cmd/loadgen` so synthetic events use the active listener JetStream publisher path instead
+  of the legacy buffered writer and SQLite raw-event queue path.
+- Loadgen now starts a processor service in the same process, so the load test exercises
+  `listener -> JetStream -> processor -> ClickHouse`.
+- Loadgen snapshots now report JetStream messages, consumer pending, ack-pending, redelivery, and
+  oldest pending age instead of buffered-writer drop/flush counters.
+- Updated the load-test runbook and living-brain notes to treat buffered-writer metrics as legacy
+  history, not current issue #23 success criteria.
+
 ## 2026-06-01 (issue #23 — storage hot path hardening plan)
 
 - Replaced the active implementation plan with the storage hot-path hardening plan for issue #23.

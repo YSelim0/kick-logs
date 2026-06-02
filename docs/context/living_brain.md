@@ -232,23 +232,20 @@ admin/super-admin role.
 - Webhook processor ignores events for disabled channels so stale remote subscriptions cannot pollute
   active subscriber counts.
 - It subscribes to `chatrooms.{chatroom_id}.v2` plus channel-level streams.
-- Current legacy implementation still contains an in-memory buffered writer and SQLite
-  `raw_event_queue`. Issue #23 supersedes that path with the JetStream durable ingestion plan:
-  listener publishes reached raw chat events to JetStream, processor workers normalize and write
-  ClickHouse batches, and SQLite remains control-plane only.
-- The in-memory buffered writer's full-buffer drop behavior is historical implementation risk and
-  must not remain on the active live chat path after the JetStream cutover.
-- A single `CircuitBreaker` is shared by the buffered writer and the worker loop. Consecutive
-  ClickHouse failures open the breaker; while open, every listener goroutine that calls
-  `Wait` sleeps for the current backoff window before the next attempt. Successful operations
-  close the breaker and reset the backoff.
-- Listener heartbeat metadata JSON carries buffered-writer stats and circuit-breaker state so
-  the admin operations summary can surface ingestion health (queue backlog, oldest pending
-  age, writer buffer depth, drops, flushes, ClickHouse insert failures, breaker state) without
-  any cross-process call into the listener.
-- Synthetic ingestion load harness lives at `apps/api-go/cmd/loadgen`. It should be updated during
-  issue #23 to exercise the JetStream capture/processor pipeline instead of treating buffered-writer
-  stats as the final ingestion health model.
+- Active live ingestion uses JetStream: the listener publishes reached raw chat events to JetStream,
+  processor workers normalize and write ClickHouse batches, and SQLite remains control-plane only.
+- The old in-memory buffered writer and SQLite `raw_event_queue` code remains as legacy
+  compatibility/test code for now, but it is not wired into the live listener binary when the
+  JetStream publisher is configured.
+- The processor owns the ClickHouse circuit breaker around raw/message/attempt batch writes.
+  Consecutive ClickHouse failures open the breaker; while open, processor loops sleep for the
+  current backoff window before the next attempt. Successful operations close the breaker and reset
+  the backoff.
+- Listener heartbeat metadata now describes capture configuration only. Processor heartbeat
+  metadata carries processor batch/circuit-breaker state.
+- Synthetic ingestion load harness lives at `apps/api-go/cmd/loadgen`. It exercises the JetStream
+  capture/processor pipeline and reports stream pending/ack-pending/redelivery metrics instead of
+  buffered-writer stats.
 - Raw-event processing is at-least-once and idempotent; visible messages dedupe by
   `kick_message_id`.
 - Listener heartbeat state is stored in SQLite `worker_heartbeats`.

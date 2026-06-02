@@ -1,15 +1,15 @@
 // Command loadgen drives the Kick listener with a synthetic chat-event stream
-// to exercise the buffered writer, SQLite work queue, batched worker output,
-// and ClickHouse circuit breaker introduced in GitHub issue #9.
+// to exercise the JetStream durable capture path, processor batch output, and
+// ClickHouse circuit breaker.
 //
 // Usage example:
 //
 //	go run ./cmd/loadgen -events-per-second=2000 -duration=60s -channels=5
 //
-// Loadgen wires the same listener.Service used by cmd/listener but replaces the
-// real Pusher client with a deterministic event emitter. ClickHouse and SQLite
-// migrations are applied at startup; followed channels listed under -channels
-// are upserted as enabled channels with synthetic Kick ids.
+// Loadgen wires the same listener and processor services used by the runtime,
+// but replaces the real Pusher client with a deterministic event emitter.
+// ClickHouse and SQLite migrations are applied at startup; followed channels
+// listed under -channels are upserted as enabled channels with synthetic Kick ids.
 package main
 
 import (
@@ -32,7 +32,9 @@ import (
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/domain"
 	clickhouseinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/clickhouse"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/migrations"
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/natsstream"
 	sqliteinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/sqlite"
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/ports"
 	listenerusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/listener"
 )
 
@@ -75,6 +77,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	rawEventStream, err := natsstream.Open(ctx, cfg)
+	if err != nil {
+		logger.Error("open NATS JetStream", "error", err)
+		os.Exit(1)
+	}
+	defer rawEventStream.Close()
+
 	channels := make([]domain.FollowedChannel, 0, *channelCount)
 	channelRepo := sqliteinfra.NewFollowedChannelRepository(sqliteDB)
 	for i := 0; i < *channelCount; i++ {
@@ -100,13 +109,9 @@ func main() {
 
 	service := listenerusecase.NewService(listenerusecase.Dependencies{
 		Channels:        channelRepo,
-		RawEvents:       clickhouseinfra.NewRawEventRepository(clickHouseConn),
-		Queue:           sqliteinfra.NewRawEventQueueRepository(sqliteDB),
-		Messages:        clickhouseinfra.NewMessageRepository(clickHouseConn),
-		Senders:         sqliteinfra.NewSenderProfileRepository(sqliteDB),
+		StreamPublisher: rawEventStream,
 		Heartbeats:      sqliteinfra.NewWorkerHeartbeatRepository(sqliteDB),
 		ChannelResolver: passthroughChannelResolver{},
-		SenderResolver:  noopSenderResolver{},
 		Pusher:          emitter,
 		Logger:          logger,
 		Config: listenerusecase.ServiceConfig{
@@ -132,6 +137,27 @@ func main() {
 			ClickHouseBreakerThresh:   cfg.ListenerClickHouseBreakerThreshold,
 		},
 	})
+	processor := listenerusecase.NewStreamProcessorService(listenerusecase.StreamProcessorDependencies{
+		Stream:     rawEventStream,
+		RawEvents:  clickhouseinfra.NewRawEventRepository(clickHouseConn),
+		Messages:   clickhouseinfra.NewMessageRepository(clickHouseConn),
+		Channels:   channelRepo,
+		Senders:    sqliteinfra.NewSenderProfileRepository(sqliteDB),
+		Heartbeats: sqliteinfra.NewWorkerHeartbeatRepository(sqliteDB),
+		Logger:     logger,
+		Config: listenerusecase.StreamProcessorConfig{
+			BatchSize:                cfg.NATSRawEventFetchBatchSize,
+			IdleDelay:                durationFromSeconds(cfg.ListenerRawEventWorkerIdleDelay),
+			HeartbeatInterval:        durationFromSeconds(cfg.ListenerHeartbeatInterval),
+			HeartbeatServiceName:     "loadgen-processor",
+			NakDelay:                 durationFromSeconds(cfg.ListenerReconnectInitialDelaySeconds),
+			SenderProfileCacheTTL:    10 * time.Minute,
+			ClickHouseBackoffInitial: time.Duration(cfg.ListenerClickHouseBackoffInitialMS) * time.Millisecond,
+			ClickHouseBackoffMax:     time.Duration(cfg.ListenerClickHouseBackoffMaxMS) * time.Millisecond,
+			ClickHouseBackoffFactor:  cfg.ListenerClickHouseBackoffMultiplier,
+			ClickHouseBreakerThresh:  cfg.ListenerClickHouseBreakerThreshold,
+		},
+	})
 
 	logger.Info(
 		"loadgen starting",
@@ -144,29 +170,36 @@ func main() {
 	runCtx, cancelRun := context.WithTimeout(ctx, *duration+10*time.Second)
 	defer cancelRun()
 
-	go reportStats(runCtx, service, emitter, *reportEvery, logger)
+	go func() {
+		if err := processor.RunForever(runCtx); err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+			logger.Error("loadgen processor failed", "error", err)
+			cancelRun()
+		}
+	}()
+	go reportStats(runCtx, rawEventStream, emitter, *reportEvery, logger)
 
 	if err := service.RunForever(runCtx); err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 		logger.Error("loadgen run failed", "error", err)
 		os.Exit(1)
 	}
 
-	final := service.WriterStats()
+	final, err := rawEventStream.Stats(context.Background())
+	if err != nil {
+		logger.Warn("loadgen final stream stats unavailable", "error", err)
+	}
 	logger.Info(
 		"loadgen finished",
 		"emitted", emitter.Emitted(),
-		"writer_queue_depth", final.QueueDepth,
-		"writer_high_water_mark", final.QueueHighWaterMark,
-		"writer_drops", final.DropCount,
-		"writer_flushes", final.FlushCount,
-		"clickhouse_failures", final.ClickHouseFailures,
-		"sqlite_enqueue_failures", final.QueueEnqueueFails,
+		"stream_messages", final.Messages,
+		"consumer_pending", final.ConsumerPending,
+		"consumer_ack_pending", final.ConsumerAckPending,
+		"consumer_redelivered", final.ConsumerRedelivered,
 	)
 }
 
 func reportStats(
 	ctx context.Context,
-	service *listenerusecase.Service,
+	streamStats ports.RawEventStreamStatsRepository,
 	emitter *syntheticPusher,
 	interval time.Duration,
 	logger *slog.Logger,
@@ -178,16 +211,20 @@ func reportStats(
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			stats := service.WriterStats()
+			stats, err := streamStats.Stats(ctx)
+			if err != nil {
+				logger.Warn("loadgen stream stats unavailable", "error", err)
+				continue
+			}
 			logger.Info(
 				"loadgen snapshot",
 				"emitted", emitter.Emitted(),
-				"writer_queue_depth", stats.QueueDepth,
-				"writer_drops", stats.DropCount,
-				"writer_flushes", stats.FlushCount,
-				"last_flush_size", stats.LastFlushSize,
-				"last_flush_ms", stats.LastFlushNanos/int64(time.Millisecond),
-				"clickhouse_failures", stats.ClickHouseFailures,
+				"stream_messages", stats.Messages,
+				"stream_bytes", stats.Bytes,
+				"consumer_pending", stats.ConsumerPending,
+				"consumer_ack_pending", stats.ConsumerAckPending,
+				"consumer_redelivered", stats.ConsumerRedelivered,
+				"oldest_pending_age_seconds", stats.OldestPendingAgeSeconds,
 			)
 		}
 	}
@@ -299,10 +336,4 @@ func (passthroughChannelResolver) ResolveChannel(_ context.Context, slug string)
 		Slug:        slug,
 		DisplayName: strings.ToUpper(slug),
 	}, nil
-}
-
-type noopSenderResolver struct{}
-
-func (noopSenderResolver) ResolveSender(_ context.Context, _ string) (domain.SenderProfile, error) {
-	return domain.SenderProfile{}, errors.New("noop")
 }
