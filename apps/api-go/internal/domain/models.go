@@ -210,6 +210,32 @@ type RawKickEvent struct {
 	ErrorMessage        string
 }
 
+type RawStreamEvent struct {
+	ID      string
+	Subject string
+	Payload []byte
+	Headers map[string]string
+}
+
+type RawStreamPublishAck struct {
+	Stream    string
+	Sequence  uint64
+	Duplicate bool
+}
+
+type RawStreamStats struct {
+	StreamName               string
+	ConsumerName             string
+	Messages                 int64
+	Bytes                    int64
+	ConsumerPending          int64
+	ConsumerAckPending       int64
+	ConsumerRedelivered      int64
+	OldestPendingAgeSeconds  int64
+	LatestMessageAgeSeconds  int64
+	LatestConsumerUpdateTime time.Time
+}
+
 type RawEventAttempt struct {
 	ID           string
 	RawEventID   string

@@ -1,4 +1,11 @@
 services:
+  nats:
+    image: nats:2.11-alpine
+    restart: unless-stopped
+    command: ["--jetstream", "--store_dir", "/data/jetstream"]
+    volumes:
+      - nats_data:/data
+
   clickhouse:
     image: clickhouse/clickhouse-server:24.8-alpine
     restart: unless-stopped
@@ -62,6 +69,13 @@ services:
       CLICKHOUSE_USERNAME: ${CLICKHOUSE_USERNAME:-kick_logs}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-kick_logs}
       CLICKHOUSE_DEBUG: ${CLICKHOUSE_DEBUG:-false}
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
+      NATS_RAW_EVENT_STREAM: ${NATS_RAW_EVENT_STREAM:-KICK_RAW_EVENTS}
+      NATS_RAW_EVENT_SUBJECT: ${NATS_RAW_EVENT_SUBJECT:-kick.raw.chat}
+      NATS_RAW_EVENT_CONSUMER: ${NATS_RAW_EVENT_CONSUMER:-kick-raw-event-processor}
+      NATS_RAW_EVENT_ACK_WAIT_SECONDS: ${NATS_RAW_EVENT_ACK_WAIT_SECONDS:-60}
+      NATS_RAW_EVENT_FETCH_BATCH_SIZE: ${NATS_RAW_EVENT_FETCH_BATCH_SIZE:-500}
+      NATS_RAW_EVENT_FETCH_TIMEOUT_SECONDS: ${NATS_RAW_EVENT_FETCH_TIMEOUT_SECONDS:-2}
       DEFAULT_SUPER_ADMIN_EMAIL: ${DEFAULT_SUPER_ADMIN_EMAIL:-admin@kicklogs.local}
       DEFAULT_SUPER_ADMIN_PASSWORD: ${DEFAULT_SUPER_ADMIN_PASSWORD:-admin123}
       RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
@@ -88,6 +102,8 @@ services:
       # Local debug escape hatch only. Keep false in every real deployment.
       KICK_WEBHOOK_SKIP_VERIFICATION: ${KICK_WEBHOOK_SKIP_VERIFICATION:-false}
     depends_on:
+      nats:
+        condition: service_started
       clickhouse:
         condition: service_healthy
     # Loopback by default: the API is meant to sit behind a reverse proxy on the
@@ -124,6 +140,9 @@ services:
       # Flush stays at 1.5s (not higher) to keep the crash-loss window small with the 50k queue.
       LISTENER_RAW_EVENT_WRITE_BATCH_SIZE: ${LISTENER_RAW_EVENT_WRITE_BATCH_SIZE:-1000}
       LISTENER_RAW_EVENT_WRITE_FLUSH_INTERVAL_MS: ${LISTENER_RAW_EVENT_WRITE_FLUSH_INTERVAL_MS:-1500}
+      # Disabled by default: active raw-event work lives in SQLite. Enable only
+      # for one-off recovery from an old ClickHouse raw-event archive.
+      LISTENER_BOOTSTRAP_RAW_QUEUE_ON_STARTUP: ${LISTENER_BOOTSTRAP_RAW_QUEUE_ON_STARTUP:-false}
       LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS: ${LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS:-60}
       LISTENER_HEARTBEAT_INTERVAL_SECONDS: ${LISTENER_HEARTBEAT_INTERVAL_SECONDS:-15}
       LISTENER_HEARTBEAT_STALE_AFTER_SECONDS: ${LISTENER_HEARTBEAT_STALE_AFTER_SECONDS:-45}
@@ -133,7 +152,16 @@ services:
       CLICKHOUSE_USERNAME: ${CLICKHOUSE_USERNAME:-kick_logs}
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-kick_logs}
       CLICKHOUSE_DEBUG: ${CLICKHOUSE_DEBUG:-false}
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
+      NATS_RAW_EVENT_STREAM: ${NATS_RAW_EVENT_STREAM:-KICK_RAW_EVENTS}
+      NATS_RAW_EVENT_SUBJECT: ${NATS_RAW_EVENT_SUBJECT:-kick.raw.chat}
+      NATS_RAW_EVENT_CONSUMER: ${NATS_RAW_EVENT_CONSUMER:-kick-raw-event-processor}
+      NATS_RAW_EVENT_ACK_WAIT_SECONDS: ${NATS_RAW_EVENT_ACK_WAIT_SECONDS:-60}
+      NATS_RAW_EVENT_FETCH_BATCH_SIZE: ${NATS_RAW_EVENT_FETCH_BATCH_SIZE:-500}
+      NATS_RAW_EVENT_FETCH_TIMEOUT_SECONDS: ${NATS_RAW_EVENT_FETCH_TIMEOUT_SECONDS:-2}
     depends_on:
+      nats:
+        condition: service_started
       clickhouse:
         condition: service_healthy
     volumes:
@@ -185,5 +213,6 @@ services:
       - api_go_data:/data
 
 volumes:
+  nats_data:
   clickhouse_data:
   api_go_data:

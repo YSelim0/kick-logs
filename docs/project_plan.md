@@ -5,10 +5,11 @@
 Kick Logs is a self-hosted application for collecting public Kick chat messages from followed
 channels, storing them durably, and searching historical chat through a web UI.
 
-The default runtime is Go + ClickHouse + SQLite:
+The default runtime is Go + NATS JetStream + ClickHouse + SQLite:
 
 - Go API serves the existing HTTP contract.
 - Go listener subscribes to Kick chat streams and persists raw events before normalization.
+- NATS JetStream is being introduced as the durable live chat ingestion backlog for issue #23.
 - ClickHouse stores chat messages, raw Kick events, exports, analytics, and profile aggregates.
 - SQLite stores admin users, followed channels, sender profile cache, retention settings,
   heartbeats, temporary queue/inbox state, and migration metadata.
@@ -44,6 +45,7 @@ docker compose up --build -d
 
 - `apps/api-go`: Go backend, listener, migrator, ClickHouse/SQLite repositories.
 - `apps/web`: Next.js frontend using pnpm, Tailwind, shadcn/ui, and lucide-react.
+- `nats_data`: Docker volume that stores JetStream durable raw-event backlog.
 - `clickhouse`: default data-plane database.
 - `api_go_data`: Docker volume that stores SQLite control-plane data plus temporary
   pending/failed queue and webhook inbox rows.

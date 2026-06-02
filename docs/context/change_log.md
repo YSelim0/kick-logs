@@ -14,6 +14,17 @@ This is a living implementation log. Add new entries for each meaningful project
   processor workers, ClickHouse idempotency, old hot-path removal, operations visibility, and final
   verification.
 
+## 2026-06-02 (issue #23 — NATS foundation)
+
+- Added the NATS Go client dependency and a new `infra/natsstream` package using the current
+  `jetstream` API.
+- Added raw event stream domain/port types for publish, fetch, ack/nak/term, and stats without
+  coupling use cases to NATS-specific types.
+- Added config/env/Compose wiring for the JetStream raw event stream, subject, durable consumer, ack
+  wait, fetch batch size, and fetch timeout.
+- Added a `nats` Compose service with JetStream enabled and a persistent `nats_data` volume.
+- Added focused tests for NATS config defaults/overrides and durable stream/consumer settings.
+
 ## 2026-06-01 (issue #23 — storage hot path hardening plan)
 
 - Replaced the active implementation plan with the storage hot-path hardening plan for issue #23.

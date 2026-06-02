@@ -39,6 +39,13 @@ func TestLoadUsesDefaults(t *testing.T) {
 	t.Setenv("KICK_WEBHOOK_EVENTS", "")
 	t.Setenv("KICK_WEBHOOK_PROCESS_BATCH_SIZE", "")
 	t.Setenv("KICK_WEBHOOK_PROCESS_MAX_ATTEMPTS", "")
+	t.Setenv("NATS_URL", "")
+	t.Setenv("NATS_RAW_EVENT_STREAM", "")
+	t.Setenv("NATS_RAW_EVENT_SUBJECT", "")
+	t.Setenv("NATS_RAW_EVENT_CONSUMER", "")
+	t.Setenv("NATS_RAW_EVENT_ACK_WAIT_SECONDS", "")
+	t.Setenv("NATS_RAW_EVENT_FETCH_BATCH_SIZE", "")
+	t.Setenv("NATS_RAW_EVENT_FETCH_TIMEOUT_SECONDS", "")
 
 	cfg, err := Load()
 	if err != nil {
@@ -119,6 +126,27 @@ func TestLoadUsesDefaults(t *testing.T) {
 	if cfg.KickWebhookProcessMaxAttempts != 5 {
 		t.Fatalf("KickWebhookProcessMaxAttempts = %d", cfg.KickWebhookProcessMaxAttempts)
 	}
+	if cfg.NATSURL != "nats://127.0.0.1:4222" {
+		t.Fatalf("NATSURL = %q", cfg.NATSURL)
+	}
+	if cfg.NATSRawEventStream != "KICK_RAW_EVENTS" {
+		t.Fatalf("NATSRawEventStream = %q", cfg.NATSRawEventStream)
+	}
+	if cfg.NATSRawEventSubject != "kick.raw.chat" {
+		t.Fatalf("NATSRawEventSubject = %q", cfg.NATSRawEventSubject)
+	}
+	if cfg.NATSRawEventConsumer != "kick-raw-event-processor" {
+		t.Fatalf("NATSRawEventConsumer = %q", cfg.NATSRawEventConsumer)
+	}
+	if cfg.NATSRawEventAckWaitSeconds != 60 {
+		t.Fatalf("NATSRawEventAckWaitSeconds = %d", cfg.NATSRawEventAckWaitSeconds)
+	}
+	if cfg.NATSRawEventFetchBatchSize != 500 {
+		t.Fatalf("NATSRawEventFetchBatchSize = %d", cfg.NATSRawEventFetchBatchSize)
+	}
+	if cfg.NATSRawEventFetchTimeoutSeconds != 2 {
+		t.Fatalf("NATSRawEventFetchTimeoutSeconds = %d", cfg.NATSRawEventFetchTimeoutSeconds)
+	}
 }
 
 func TestLoadParsesOverrides(t *testing.T) {
@@ -144,6 +172,13 @@ func TestLoadParsesOverrides(t *testing.T) {
 	t.Setenv("RATE_LIMIT_STORE_MAX_KEYS", "1234")
 	t.Setenv("RATE_LIMIT_TRUST_PROXY", "false")
 	t.Setenv("RATE_LIMIT_CLIENT_IP_HEADER", "X-Real-IP")
+	t.Setenv("NATS_URL", "nats://nats:4222")
+	t.Setenv("NATS_RAW_EVENT_STREAM", "CUSTOM_RAW_EVENTS")
+	t.Setenv("NATS_RAW_EVENT_SUBJECT", "custom.raw.chat")
+	t.Setenv("NATS_RAW_EVENT_CONSUMER", "custom-processor")
+	t.Setenv("NATS_RAW_EVENT_ACK_WAIT_SECONDS", "90")
+	t.Setenv("NATS_RAW_EVENT_FETCH_BATCH_SIZE", "250")
+	t.Setenv("NATS_RAW_EVENT_FETCH_TIMEOUT_SECONDS", "5")
 
 	cfg, err := Load()
 	if err != nil {
@@ -210,6 +245,27 @@ func TestLoadParsesOverrides(t *testing.T) {
 	}
 	if cfg.DefaultAdminEmail != "root@example.test" {
 		t.Fatalf("DefaultAdminEmail = %q", cfg.DefaultAdminEmail)
+	}
+	if cfg.NATSURL != "nats://nats:4222" {
+		t.Fatalf("NATSURL = %q", cfg.NATSURL)
+	}
+	if cfg.NATSRawEventStream != "CUSTOM_RAW_EVENTS" {
+		t.Fatalf("NATSRawEventStream = %q", cfg.NATSRawEventStream)
+	}
+	if cfg.NATSRawEventSubject != "custom.raw.chat" {
+		t.Fatalf("NATSRawEventSubject = %q", cfg.NATSRawEventSubject)
+	}
+	if cfg.NATSRawEventConsumer != "custom-processor" {
+		t.Fatalf("NATSRawEventConsumer = %q", cfg.NATSRawEventConsumer)
+	}
+	if cfg.NATSRawEventAckWaitSeconds != 90 {
+		t.Fatalf("NATSRawEventAckWaitSeconds = %d", cfg.NATSRawEventAckWaitSeconds)
+	}
+	if cfg.NATSRawEventFetchBatchSize != 250 {
+		t.Fatalf("NATSRawEventFetchBatchSize = %d", cfg.NATSRawEventFetchBatchSize)
+	}
+	if cfg.NATSRawEventFetchTimeoutSeconds != 5 {
+		t.Fatalf("NATSRawEventFetchTimeoutSeconds = %d", cfg.NATSRawEventFetchTimeoutSeconds)
 	}
 }
 

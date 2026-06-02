@@ -13,6 +13,11 @@ This file is the short handoff summary of the latest project changes. Keep it co
   Processor workers ACK only after ClickHouse raw/message writes are durable.
 - Raw capture must happen before strict normalization so malformed or incomplete chat payloads can
   be diagnosed instead of silently disappearing.
+- Phase 2 foundation is in progress/completed locally: NATS Go dependency, `infra/natsstream`
+  publisher/consumer/stats package, raw event stream ports, config/env/Compose wiring, and a
+  persistent `nats_data` volume were added. Listener behavior is not switched to JetStream yet.
+- Verification for the foundation: `go test ./...`, `go vet ./...`, `pnpm format:check`, and
+  `docker compose config --quiet` passed.
 
 ## Latest (issue #23 — listener reconnect and sender identity follow-up)
 
