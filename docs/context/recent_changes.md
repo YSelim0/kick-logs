@@ -16,6 +16,9 @@ This file is the short handoff summary of the latest project changes. Keep it co
 - Phase 2 foundation is in progress/completed locally: NATS Go dependency, `infra/natsstream`
   publisher/consumer/stats package, raw event stream ports, config/env/Compose wiring, and a
   persistent `nats_data` volume were added. Listener behavior is not switched to JetStream yet.
+- Phase 3 raw capture update: `App\Events\ChatMessageEvent` payloads no longer need all normalized
+  message fields before raw capture. Incomplete payloads can be stored and later classified as
+  terminal ignored/invalid instead of disappearing at parser time.
 - Verification for the foundation: `go test ./...`, `go vet ./...`, `pnpm format:check`, and
   `docker compose config --quiet` passed.
 

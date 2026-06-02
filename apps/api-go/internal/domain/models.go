@@ -236,6 +236,20 @@ type RawStreamStats struct {
 	LatestConsumerUpdateTime time.Time
 }
 
+type RawChatEventEnvelope struct {
+	RawEventID        string
+	KickMessageID     string
+	EventName         string
+	PusherChannel     string
+	FollowedChannelID int64
+	ChannelSlug       string
+	KickChannelID     int64
+	KickChatroomID    int64
+	ReceivedAt        time.Time
+	PayloadJSON       string
+	RawPusherJSON     string
+}
+
 type RawEventAttempt struct {
 	ID           string
 	RawEventID   string

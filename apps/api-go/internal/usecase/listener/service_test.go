@@ -52,8 +52,12 @@ func TestEventParserCoversChatRepliesEmotesAndMissingFields(t *testing.T) {
 		t.Fatal("malformed JSON parsed")
 	}
 	incomplete := map[string]any{"id": "message-1"}
-	if _, ok := parser.Parse(buildPusherEvent(incomplete)); ok {
-		t.Fatal("incomplete payload parsed")
+	incompleteEvent, ok := parser.Parse(buildPusherEvent(incomplete))
+	if !ok {
+		t.Fatal("incomplete payload should still be captured as a raw chat event")
+	}
+	if incompleteEvent.Payload["id"] != "message-1" {
+		t.Fatalf("incomplete payload = %#v", incompleteEvent.Payload)
 	}
 }
 
@@ -74,7 +78,8 @@ func TestListenerRunOnceStoresRawEventBeforeNormalization(t *testing.T) {
 	if len(unit.messages.messages) != 0 {
 		t.Fatalf("messages should not be normalized inline = %#v", unit.messages.messages)
 	}
-	if unit.rawEvents.events[0].KickMessageID != "message-1" ||
+	if unit.rawEvents.events[0].ID != "kick:message-1" ||
+		unit.rawEvents.events[0].KickMessageID != "message-1" ||
 		unit.rawEvents.events[0].ChatroomID != 123 ||
 		unit.rawEvents.events[0].ChannelID != 1 {
 		t.Fatalf("stored raw event = %#v", unit.rawEvents.events[0])
@@ -85,6 +90,28 @@ func TestListenerRunOnceStoresRawEventBeforeNormalization(t *testing.T) {
 	}
 	if len(enqueued) != 1 || enqueued[0].RawEventID != unit.rawEvents.events[0].ID {
 		t.Fatalf("queue did not receive enqueue = %#v", enqueued)
+	}
+}
+
+func TestListenerRunOnceCapturesIncompletePayload(t *testing.T) {
+	unit := newFakeListenerUnit()
+	service := newTestService(unit, fakePusherClient{
+		events: []string{buildPusherEvent(map[string]any{"id": "incomplete-message"})},
+	})
+
+	stored, err := service.RunOnce(context.Background())
+	if err != nil {
+		t.Fatalf("RunOnce() error = %v", err)
+	}
+	if stored != 1 {
+		t.Fatalf("stored = %d", stored)
+	}
+	if len(unit.rawEvents.events) != 1 {
+		t.Fatalf("raw events = %#v", unit.rawEvents.events)
+	}
+	rawEvent := unit.rawEvents.events[0]
+	if rawEvent.KickMessageID != "incomplete-message" || rawEvent.ChatroomID != 123 || rawEvent.ChannelID != 1 {
+		t.Fatalf("raw event = %#v", rawEvent)
 	}
 }
 

@@ -6,12 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"log/slog"
 	"sort"
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
 
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/domain"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/ports"
@@ -209,16 +208,24 @@ func (service *Service) RunOnce(ctx context.Context) (int, error) {
 			return nil
 		}
 		chatroomID := asInt64(event.Payload["chatroom_id"])
+		if chatroomID == 0 {
+			chatroomID = chatroomIDFromPusherChannel(event.PusherChannel)
+		}
 		channel := channelsByChatroomID[chatroomID]
-		if channel.ID == 0 {
+		if channel.ID == 0 && chatroomID > 0 {
 			var err error
 			channel, err = service.channels.GetByChatroomID(ctx, chatroomID)
 			if err != nil {
-				return fmt.Errorf("resolve raw event channel: %w", err)
+				service.logger.Warn(
+					"failed to resolve raw event channel; capturing payload without channel metadata",
+					"chatroom_id", chatroomID,
+					"error", err,
+				)
 			}
 		}
+		receivedAt := time.Now().UTC()
 		rawEvent := domain.RawKickEvent{
-			ID:            uuid.NewString(),
+			ID:            rawEventIDFromChatEvent(event, receivedAt),
 			ChannelSlug:   channel.Slug,
 			EventType:     "pusher",
 			EventName:     event.EventName,
@@ -227,7 +234,7 @@ func (service *Service) RunOnce(ctx context.Context) (int, error) {
 			ChannelID:     channel.ID,
 			PayloadJSON:   rawPayloadJSON(event.Payload),
 			Status:        "pending",
-			ReceivedAt:    time.Now().UTC(),
+			ReceivedAt:    receivedAt,
 		}
 		if service.writer != nil {
 			service.writer.Submit(rawEvent)
@@ -280,6 +287,25 @@ func listenerChannelsFromFollowed(
 		channelsByChatroomID[channel.KickChatroomID] = channel
 	}
 	return listenerChannels, channelsByChatroomID
+}
+
+func rawEventIDFromChatEvent(event ChatMessageEvent, receivedAt time.Time) string {
+	kickMessageID := cleanText(event.Payload["id"])
+	if kickMessageID != "" {
+		return "kick:" + kickMessageID
+	}
+	hash := fnv.New64a()
+	_, _ = hash.Write([]byte(event.EventName))
+	_, _ = hash.Write([]byte{0})
+	_, _ = hash.Write([]byte(event.PusherChannel))
+	_, _ = hash.Write([]byte{0})
+	_, _ = hash.Write([]byte(event.RawJSON))
+	if receivedAt.IsZero() {
+		receivedAt = time.Now().UTC()
+	}
+	_, _ = hash.Write([]byte{0})
+	_, _ = hash.Write([]byte(receivedAt.UTC().Format(time.RFC3339Nano)))
+	return fmt.Sprintf("raw:%x", hash.Sum64())
 }
 
 func listenerChannelSignature(channels []domain.ListenerChannel) string {

@@ -2,6 +2,7 @@ package listener
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 )
 
@@ -11,6 +12,7 @@ type ChatMessageEvent struct {
 	EventName     string
 	PusherChannel string
 	Payload       map[string]any
+	RawJSON       string
 }
 
 type EventParser struct{}
@@ -29,7 +31,7 @@ func (EventParser) Parse(raw string) (ChatMessageEvent, bool) {
 		return ChatMessageEvent{}, false
 	}
 	payload, ok := readJSONValueObject(envelope["data"])
-	if !ok || !hasRequiredMessageFields(payload) {
+	if !ok {
 		return ChatMessageEvent{}, false
 	}
 
@@ -38,6 +40,7 @@ func (EventParser) Parse(raw string) (ChatMessageEvent, bool) {
 		EventName:     eventName,
 		PusherChannel: strings.TrimSpace(channel),
 		Payload:       payload,
+		RawJSON:       raw,
 	}, true
 }
 
@@ -78,4 +81,13 @@ func hasRequiredMessageFields(payload map[string]any) bool {
 func payloadHasContent(payload map[string]any) bool {
 	_, ok := payload["content"]
 	return ok
+}
+
+func chatroomIDFromPusherChannel(channel string) int64 {
+	parts := strings.Split(strings.TrimSpace(channel), ".")
+	if len(parts) < 2 || parts[0] != "chatrooms" {
+		return 0
+	}
+	value, _ := strconv.ParseInt(parts[1], 10, 64)
+	return value
 }

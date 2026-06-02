@@ -25,6 +25,17 @@ This is a living implementation log. Add new entries for each meaningful project
 - Added a `nats` Compose service with JetStream enabled and a persistent `nats_data` volume.
 - Added focused tests for NATS config defaults/overrides and durable stream/consumer settings.
 
+## 2026-06-02 (issue #23 — raw capture before normalization)
+
+- Changed the Kick Pusher chat parser so `App\Events\ChatMessageEvent` payloads no longer need all
+  normalized message fields before capture.
+- Incomplete chat payloads are now accepted as raw chat events and can be classified later as
+  terminal ignored/invalid by processing logic.
+- Raw event ids now use a deterministic `kick:{message_id}` identity when Kick message id exists,
+  with a hashed raw fallback for malformed/incomplete events without a message id.
+- Listener capture now derives `chatroom_id` from the Pusher channel name when the payload omits it,
+  which preserves channel metadata for incomplete events.
+
 ## 2026-06-01 (issue #23 — storage hot path hardening plan)
 
 - Replaced the active implementation plan with the storage hot-path hardening plan for issue #23.
