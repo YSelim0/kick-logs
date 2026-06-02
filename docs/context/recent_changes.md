@@ -2,6 +2,27 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
+## Latest (channel index aggregate hardening)
+
+- Root cause for `/channels` search failing on high-volume channels such as `hype`: the endpoint
+  calls `GET /analytics/top-channels?q=...`, and `TopChannels` used a
+  `row_number() OVER (PARTITION BY kick_message_id ...)` dedupe window before grouping. Large
+  channel result sets could exceed ClickHouse memory, while low-volume channels still worked.
+- `/admin/channels` used the same `TopChannels` aggregate for its informational message-count
+  column, so when the aggregate failed, the API kept the channel list available but rendered counts
+  as zero/empty.
+- `Overview`, `MessageVolume`, `TopSenders`, `TopChannels`, and `TopEmotes` now avoid the window
+  scan and read from `chat_messages FINAL`. Live rows use deterministic ids derived from
+  `kick_message_id`, and local data has no same-message rows with divergent ids, so `FINAL`
+  preserves duplicate redelivery dedupe without the high-memory window/sort shape.
+- Parameterized `/channels` and `/users` index searches still bypass cache; this fix changes the
+  ClickHouse query shape instead of caching arbitrary `q` values.
+- Local verification after rebuilding the API:
+  - `GET /analytics/overview`, `message-volume`, `top-emotes`, and `top-senders` returned 200.
+  - `GET /analytics/top-channels?q=hype&limit=20` returned 200 with the `hype` count populated.
+  - `GET /channels/hype/analytics` returned 200 with profile sections populated.
+  - Authenticated `GET /admin/channels` returned 200 with message counts populated.
+
 ## Latest (Kick recent-message backfill)
 
 - Root cause for `gokhanoner` missing chat rows: Kick Pusher is under-delivering compared with the

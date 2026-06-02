@@ -2,6 +2,24 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-06-02 (channel index aggregate hardening)
+
+- Reworked ClickHouse analytics aggregates to avoid
+  `row_number() OVER (PARTITION BY kick_message_id ...)` window scans.
+- `Overview`, `MessageVolume`, `TopSenders`, `TopChannels`, and `TopEmotes` now read from
+  `chat_messages FINAL`. Live rows use deterministic ids derived from `kick_message_id`, so `FINAL`
+  preserves duplicate redelivery dedupe without the high-memory window/sort shape.
+- This fixes high-volume channel lookup paths such as `/channels` searching for `hype` and restores
+  `/admin/channels` informational message counts when the old aggregate query exceeded ClickHouse
+  memory.
+- Added ClickHouse repository coverage that duplicate message rows do not inflate top-channel
+  counts or top-emote counts.
+- Local smoke after API rebuild:
+  - `GET /analytics/overview`, `message-volume`, `top-emotes`, and `top-senders` returned 200.
+  - `GET /analytics/top-channels?q=hype&limit=20` returned 200 with `hype` count populated.
+  - `GET /channels/hype/analytics` returned 200 with profile sections populated.
+  - Authenticated `GET /admin/channels` returned 200 with message counts populated.
+
 ## 2026-06-02 (Kick recent-message backfill)
 
 - Added a Kick recent-message client for

@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-06-02 (channel/user top-list aggregate hardening)
+
+- **Channel index and admin channel counts must avoid window scans.** `/channels` search and the
+  `/admin/channels` message-count column both depend on `TopChannels`. The old implementation used
+  `row_number() OVER (PARTITION BY kick_message_id ...)` before grouping, which could hit
+  ClickHouse memory limits for high-volume channels such as `hype`.
+- **Analytics aggregates now dedupe through `ReplacingMergeTree FINAL`.** New live messages use a
+  deterministic id derived from `kick_message_id`, and local data has no same-message rows with
+  divergent ids. `Overview`, `MessageVolume`, `TopSenders`, `TopChannels`, and `TopEmotes` now read
+  `chat_messages FINAL` instead of materializing a per-message window or full-table
+  `GROUP BY kick_message_id`. This keeps duplicate redeliveries from inflating counts while avoiding
+  the expensive sort/window and large hash-aggregate shapes.
+- **Parameterized `/channels` and `/users` searches still bypass cache.** The fix is query-shape
+  hardening, not unbounded query-param caching.
+
 ## 2026-06-02 (Kick recent-message backfill)
 
 - **Kick Pusher alone is not a complete capture source.** For `gokhanoner`, an independent Pusher

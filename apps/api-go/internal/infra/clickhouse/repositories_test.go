@@ -273,6 +273,28 @@ func TestClickHouseMigrationsAndRepositories(t *testing.T) {
 	if len(dedupedTopSenders) != 1 || dedupedTopSenders[0].MessageCount != 2 {
 		t.Fatalf("deduped top senders = %#v", dedupedTopSenders)
 	}
+	dedupedTopChannels, err := analyticsRepo.TopChannels(ctx, analyticsFilter, 5)
+	if err != nil {
+		t.Fatalf("analyticsRepo.TopChannels(deduped) error = %v", err)
+	}
+	if len(dedupedTopChannels) != 2 {
+		t.Fatalf("deduped top channels = %#v", dedupedTopChannels)
+	}
+	for _, channel := range dedupedTopChannels {
+		if channel.MessageCount != 1 {
+			t.Fatalf("deduped top channel count = %#v", dedupedTopChannels)
+		}
+	}
+	dedupedTopEmotes, err := analyticsRepo.TopEmotes(ctx, domain.AnalyticsFilter{Channel: message.ChannelSlug}, 5)
+	if err != nil {
+		t.Fatalf("analyticsRepo.TopEmotes(deduped) error = %v", err)
+	}
+	if len(dedupedTopEmotes) != 1 ||
+		dedupedTopEmotes[0].ID != "1" ||
+		dedupedTopEmotes[0].UsageCount != 1 ||
+		dedupedTopEmotes[0].MessageCount != 1 {
+		t.Fatalf("deduped top emotes = %#v", dedupedTopEmotes)
+	}
 	dedupedLatestMessages, err := analyticsRepo.LatestMessages(ctx, analyticsFilter, 10)
 	if err != nil {
 		t.Fatalf("analyticsRepo.LatestMessages(deduped) error = %v", err)
