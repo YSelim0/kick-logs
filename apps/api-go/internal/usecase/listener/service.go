@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -49,6 +51,7 @@ type ServiceConfig struct {
 	WriteFlushInterval        time.Duration
 	WriteQueueSize            int
 	WriteMaxRetries           int
+	BootstrapRawQueueOnStart  bool
 	ClickHouseBackoffInitial  time.Duration
 	ClickHouseBackoffMax      time.Duration
 	ClickHouseBackoffFactor   float64
@@ -79,6 +82,7 @@ type RawEventProcessingResult struct {
 }
 
 var errNoEnabledChannels = errors.New("no enabled Kick channels are ready for listener subscription")
+var errChannelSetChanged = errors.New("enabled Kick channel set changed")
 
 func NewService(deps Dependencies) *Service {
 	cfg := deps.Config.withDefaults()
@@ -124,8 +128,12 @@ func (service *Service) RunForever(ctx context.Context) error {
 	if service.writer != nil {
 		go service.writer.Run(ctx)
 	}
-	if err := service.bootstrapQueue(ctx); err != nil && !errors.Is(err, context.Canceled) {
-		service.logger.Error("raw event queue bootstrap failed", "error", err)
+	if service.config.BootstrapRawQueueOnStart {
+		if err := service.bootstrapQueue(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			service.logger.Error("raw event queue bootstrap failed", "error", err)
+		}
+	} else {
+		service.logger.Info("raw event queue bootstrap skipped")
 	}
 	if service.queue != nil {
 		if recovered, err := service.queue.RecoverStaleClaims(ctx, service.config.RawEventProcessingTimeout); err != nil {
@@ -145,7 +153,11 @@ func (service *Service) RunForever(ctx context.Context) error {
 	for ctx.Err() == nil {
 		stored, err := service.RunOnce(ctx)
 		delay := service.reconnectDelay(attempt)
-		if errors.Is(err, errNoEnabledChannels) {
+		if errors.Is(err, errChannelSetChanged) {
+			service.logger.Info("Kick listener channel set changed; reconnecting stream", "stored_raw_events", stored)
+			attempt = 1
+			delay = 0
+		} else if errors.Is(err, errNoEnabledChannels) {
 			service.logger.Info(errNoEnabledChannels.Error())
 			attempt = 1
 			delay = service.config.ChannelResyncInterval
@@ -180,24 +192,18 @@ func (service *Service) RunOnce(ctx context.Context) (int, error) {
 		return 0, fmt.Errorf("pusher client is not configured")
 	}
 
-	listenerChannels := make([]domain.ListenerChannel, 0, len(channels))
-	channelsByChatroomID := make(map[int64]domain.FollowedChannel, len(channels))
-	for _, channel := range channels {
-		listenerChannels = append(listenerChannels, domain.ListenerChannel{
-			ID:             channel.ID,
-			KickChannelID:  channel.KickChannelID,
-			KickChatroomID: channel.KickChatroomID,
-			Slug:           channel.Slug,
-			DisplayName:    channel.DisplayName,
-		})
-		channelsByChatroomID[channel.KickChatroomID] = channel
-	}
+	listenerChannels, channelsByChatroomID := listenerChannelsFromFollowed(channels)
 
-	resyncCtx, cancel := context.WithTimeout(ctx, service.config.ChannelResyncInterval)
+	listenCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	channelSetChanged := service.watchChannelSetChanges(
+		listenCtx,
+		cancel,
+		listenerChannelSignature(listenerChannels),
+	)
 
 	storedCount := 0
-	err = service.pusher.Listen(resyncCtx, listenerChannels, func(raw string) error {
+	err = service.pusher.Listen(listenCtx, listenerChannels, func(raw string) error {
 		event, ok := service.parser.Parse(raw)
 		if !ok {
 			return nil
@@ -245,10 +251,84 @@ func (service *Service) RunOnce(ctx context.Context) (int, error) {
 		storedCount++
 		return nil
 	})
+	if errors.Is(err, context.Canceled) && ctx.Err() == nil {
+		select {
+		case <-channelSetChanged:
+			return storedCount, errChannelSetChanged
+		default:
+		}
+	}
 	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 		return storedCount, nil
 	}
 	return storedCount, err
+}
+
+func listenerChannelsFromFollowed(
+	channels []domain.FollowedChannel,
+) ([]domain.ListenerChannel, map[int64]domain.FollowedChannel) {
+	listenerChannels := make([]domain.ListenerChannel, 0, len(channels))
+	channelsByChatroomID := make(map[int64]domain.FollowedChannel, len(channels))
+	for _, channel := range channels {
+		listenerChannels = append(listenerChannels, domain.ListenerChannel{
+			ID:             channel.ID,
+			KickChannelID:  channel.KickChannelID,
+			KickChatroomID: channel.KickChatroomID,
+			Slug:           channel.Slug,
+			DisplayName:    channel.DisplayName,
+		})
+		channelsByChatroomID[channel.KickChatroomID] = channel
+	}
+	return listenerChannels, channelsByChatroomID
+}
+
+func listenerChannelSignature(channels []domain.ListenerChannel) string {
+	parts := make([]string, 0, len(channels))
+	for _, channel := range channels {
+		parts = append(parts, fmt.Sprintf(
+			"%d:%d:%d:%s",
+			channel.ID,
+			channel.KickChannelID,
+			channel.KickChatroomID,
+			channel.Slug,
+		))
+	}
+	sort.Strings(parts)
+	return strings.Join(parts, "|")
+}
+
+func (service *Service) watchChannelSetChanges(
+	ctx context.Context,
+	cancel context.CancelFunc,
+	initialSignature string,
+) <-chan struct{} {
+	changed := make(chan struct{})
+	go func() {
+		timer := time.NewTicker(service.config.ChannelResyncInterval)
+		defer timer.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-timer.C:
+			}
+
+			channels, err := service.loadEnabledChannels(ctx)
+			if err != nil {
+				service.logger.Warn("failed to check Kick listener channel set", "error", err)
+				continue
+			}
+			nextChannels, _ := listenerChannelsFromFollowed(channels)
+			if listenerChannelSignature(nextChannels) == initialSignature {
+				continue
+			}
+
+			close(changed)
+			cancel()
+			return
+		}
+	}()
+	return changed
 }
 
 func (service *Service) ProcessRawEventsOnce(ctx context.Context) (RawEventProcessingResult, error) {

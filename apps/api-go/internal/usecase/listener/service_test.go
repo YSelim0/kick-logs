@@ -562,13 +562,24 @@ func TestRawEventProcessorIgnoresPermanentInvalidPayload(t *testing.T) {
 	}
 }
 
-func TestListenerRunOnceReturnsAfterResyncContext(t *testing.T) {
+func TestListenerRunOnceReturnsWhenChannelSetChanges(t *testing.T) {
 	unit := newFakeListenerUnit()
 	service := newTestService(unit, blockingPusherClient{})
 	service.config.ChannelResyncInterval = time.Millisecond
 
+	go func() {
+		time.Sleep(5 * time.Millisecond)
+		channel := testChannel()
+		channel.ID = 2
+		channel.KickChannelID = 200
+		channel.KickChatroomID = 456
+		channel.Slug = "second"
+		channel.DisplayName = "Second"
+		unit.channels.channels = append(unit.channels.channels, channel)
+	}()
+
 	stored, err := service.RunOnce(context.Background())
-	if err != nil {
+	if !errors.Is(err, errChannelSetChanged) {
 		t.Fatalf("RunOnce() error = %v", err)
 	}
 	if stored != 0 {
