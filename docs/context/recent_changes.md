@@ -28,6 +28,9 @@ This file is the short handoff summary of the latest project changes. Keep it co
 - Phase 5 processor update: `cmd/processor` and the Compose `processor` service consume the
   JetStream durable consumer, insert raw archive rows and normalized `chat_messages` in ClickHouse
   batches, write attempt rows, and ACK/TERM/NACK only after the correct durable-write outcome.
+- Phase 6 idempotency update: analytics/profile ClickHouse queries now dedupe by latest
+  `kick_message_id` row before counting/grouping/listing, matching `/messages` search behavior
+  under JetStream redelivery.
 - Verification for the foundation: `go test ./...`, `go vet ./...`, `pnpm format:check`, and
   `docker compose config --quiet` passed.
 

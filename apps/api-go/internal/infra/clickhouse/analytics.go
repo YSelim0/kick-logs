@@ -26,15 +26,27 @@ func (repo *AnalyticsRepository) Overview(
 	query := fmt.Sprintf(`SELECT
 		count(),
 		uniqExactIf(
-			%s,
+			sender_identity,
 			ifNull(sender_kick_id, 0) > 0 OR sender_slug_lower != '' OR sender_username_lower != ''
 		),
 		uniqExactIf(channel_id, isNotNull(channel_id)),
 		sum(emote_count),
 		min(message_created_at),
 		max(message_created_at)
-		FROM chat_messages
-		WHERE %s`, senderIdentitySQL(), where)
+		FROM (
+			SELECT
+				%s AS sender_identity,
+				sender_kick_id,
+				sender_slug_lower,
+				sender_username_lower,
+				channel_id,
+				emote_count,
+				message_created_at,
+				%s
+			FROM chat_messages
+			WHERE %s
+		)
+		WHERE message_rank = 1`, senderIdentitySQL(), messageRankSQL(), where)
 
 	var totalMessages uint64
 	var totalSenders uint64
@@ -79,10 +91,16 @@ func (repo *AnalyticsRepository) MessageVolume(
 	query := fmt.Sprintf(`SELECT
 		%s(message_created_at) AS bucket_start,
 		count() AS message_count
-		FROM chat_messages
-		WHERE %s
+		FROM (
+			SELECT
+				message_created_at,
+				%s
+			FROM chat_messages
+			WHERE %s
+		)
+		WHERE message_rank = 1
 		GROUP BY bucket_start
-		ORDER BY bucket_start ASC`, bucketFunction, where)
+		ORDER BY bucket_start ASC`, bucketFunction, messageRankSQL(), where)
 
 	rows, err := repo.conn.Query(ctx, query, args...)
 	if err != nil {
@@ -130,13 +148,15 @@ func (repo *AnalyticsRepository) TopSenders(
 				sender_username,
 				sender_slug,
 				sender_profile_image_url,
-				message_created_at
+				message_created_at,
+				%s
 			FROM chat_messages
 			WHERE %s
 		)
+		WHERE message_rank = 1
 		GROUP BY sender_identity
 		ORDER BY message_count DESC, latest_message_at DESC, slug ASC
-		LIMIT ?`, senderIdentitySQL(), where)
+		LIMIT ?`, senderIdentitySQL(), messageRankSQL(), where)
 	args = append(args, limitOrDefault(limit))
 
 	rows, err := repo.conn.Query(ctx, query, args...)
@@ -185,6 +205,13 @@ func senderIdentitySQL() string {
 		)`
 }
 
+func messageRankSQL() string {
+	return `row_number() OVER (
+			PARTITION BY kick_message_id
+			ORDER BY ingested_at DESC, message_created_at DESC, id DESC
+		) AS message_rank`
+}
+
 func (repo *AnalyticsRepository) TopChannels(
 	ctx context.Context,
 	filter domain.AnalyticsFilter,
@@ -200,11 +227,22 @@ func (repo *AnalyticsRepository) TopChannels(
 		count() AS message_count,
 		min(message_created_at) AS first_message_at,
 		max(message_created_at) AS latest_message_at
-		FROM chat_messages
-		WHERE %s
+		FROM (
+			SELECT
+				channel_id,
+				channel_slug,
+				channel_display_name,
+				channel_profile_image_url,
+				channel_banner_image_url,
+				message_created_at,
+				%s
+			FROM chat_messages
+			WHERE %s
+		)
+		WHERE message_rank = 1
 		GROUP BY channel_id
 		ORDER BY message_count DESC, latest_message_at DESC, slug ASC
-		LIMIT ?`, where)
+		LIMIT ?`, messageRankSQL(), where)
 	args = append(args, limitOrDefault(limit))
 
 	rows, err := repo.conn.Query(ctx, query, args...)
@@ -253,16 +291,26 @@ func (repo *AnalyticsRepository) TopEmotes(
 		emote_image_url,
 		count() AS usage_count,
 		uniqExact(kick_message_id) AS message_count
-		FROM chat_messages
+		FROM (
+			SELECT
+				kick_message_id,
+				emote_ids,
+				emote_names,
+				emote_tokens,
+				emote_image_urls,
+				%s
+			FROM chat_messages
+			WHERE %s
+		)
 		ARRAY JOIN
 			emote_ids AS emote_id,
 			emote_names AS emote_name,
 			emote_tokens AS emote_token,
 			emote_image_urls AS emote_image_url
-		WHERE %s
+		WHERE message_rank = 1
 		GROUP BY emote_id, emote_name, emote_token, emote_image_url
 		ORDER BY usage_count DESC, message_count DESC, emote_name ASC
-		LIMIT ?`, where)
+		LIMIT ?`, messageRankSQL(), where)
 	args = append(args, limitOrDefault(limit))
 
 	rows, err := repo.conn.Query(ctx, query, args...)
@@ -312,10 +360,23 @@ func (repo *AnalyticsRepository) LatestMessages(
 		emote_image_urls, ifNull(reply_to_sender, ''), ifNull(reply_to_content, ''),
 		ifNull(reply_to_message_id, ''), ifNull(thread_parent_id, ''), reply_metadata_json,
 		raw_payload_json, message_created_at, ingested_at
-		FROM chat_messages
-		WHERE %s
+		FROM (
+			SELECT
+				id, kick_message_id, channel_id, channel_kick_id, channel_chatroom_id,
+				channel_slug, channel_display_name, channel_profile_image_url,
+				channel_banner_image_url, channel_public_url,
+				sender_id, sender_kick_id, sender_username, sender_slug,
+				sender_display_color, sender_profile_image_url, sender_public_url,
+				sender_badges_json, message_type, content, emote_ids, emote_names, emote_tokens,
+				emote_image_urls, reply_to_sender, reply_to_content, reply_to_message_id,
+				thread_parent_id, reply_metadata_json, raw_payload_json, message_created_at, ingested_at,
+				%s
+			FROM chat_messages
+			WHERE %s
+		)
+		WHERE message_rank = 1
 		ORDER BY message_created_at DESC, id DESC
-		LIMIT ?`, where)
+		LIMIT ?`, messageRankSQL(), where)
 	args = append(args, limitOrDefault(limit))
 
 	rows, err := repo.conn.Query(ctx, query, args...)

@@ -61,6 +61,18 @@ This is a living implementation log. Add new entries for each meaningful project
 - Added `cmd/processor` and a default Docker Compose `processor` service.
 - Added tests for successful ACK, transient NACK, and terminal invalid TERM behavior.
 
+## 2026-06-02 (issue #23 — ClickHouse redelivery idempotency)
+
+- Search already deduped visible messages by `kick_message_id`; analytics/profile queries now use
+  the same latest-row ranking behavior.
+- Analytics overview, message volume, top senders, top channels, top emotes, and latest profile
+  messages now read from a `row_number() OVER (PARTITION BY kick_message_id ...)` source and keep
+  only `message_rank = 1`.
+- Added gated ClickHouse repository coverage proving duplicate redelivery rows do not inflate
+  analytics counts or duplicate profile latest messages.
+- Verified the new window-dedupe and array-join query shapes directly against the local ClickHouse
+  container.
+
 ## 2026-06-01 (issue #23 — storage hot path hardening plan)
 
 - Replaced the active implementation plan with the storage hot-path hardening plan for issue #23.
