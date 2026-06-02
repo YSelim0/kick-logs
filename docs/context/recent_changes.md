@@ -38,6 +38,10 @@ This file is the short handoff summary of the latest project changes. Keep it co
   JetStream stream/consumer backlog metrics. The admin Operations panel shows stream pending,
   ack-pending, redelivery, oldest pending age, processor freshness, and legacy SQLite queue depth as
   separate concepts.
+- Phase 9 docs update: `docs/operations/backup_restore.md` now covers `.env`, SQLite, ClickHouse,
+  and NATS JetStream volume backup/restore expectations for self-hosted deployments.
+- `docs/operations/jetstream_cutover.md` now documents deploy, health checks, and rollback for the
+  new listener/processor/JetStream cutover.
 - Latest verification: `go test ./...`, `go vet ./...`, `pnpm --filter @kick-logs/web test`,
   `pnpm --filter @kick-logs/web typecheck`, `pnpm --filter @kick-logs/web lint`,
   `pnpm --filter @kick-logs/web build`, `pnpm format:check`, and

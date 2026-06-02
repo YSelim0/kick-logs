@@ -99,6 +99,17 @@ This is a living implementation log. Add new entries for each meaningful project
 - Updated the Operations dashboard to show stream pending, ack-pending, redelivery, oldest pending
   age, processor freshness, and legacy SQLite queue depth separately.
 
+## 2026-06-02 (issue #23 — JetStream operations docs)
+
+- Added `docs/operations/backup_restore.md` covering the three runtime volumes:
+  `api_go_data`, `clickhouse_data`, and `nats_data`.
+- Added `docs/operations/jetstream_cutover.md` with deploy, verification, and rollback steps for
+  the `listener -> JetStream -> processor -> ClickHouse` runtime.
+- Documented that `nats_data` is temporary backlog rather than long-term history, but it must be
+  backed up when exact resume from pending unprocessed events matters.
+- Updated README runtime wording so self-host readers see NATS JetStream as part of the default
+  Docker Compose stack.
+
 ## 2026-06-01 (issue #23 — storage hot path hardening plan)
 
 - Replaced the active implementation plan with the storage hot-path hardening plan for issue #23.

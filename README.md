@@ -64,8 +64,8 @@ own their Kick chat archive instead of depending on short-lived browser chat his
 - Public user and channel profile pages with activity summaries.
 - Prediction pages that run client-side and do not store prediction data.
 - Admin dashboard for followed channels, users, listener health, storage, and cleanup previews.
-- Durable ingestion: raw events are saved before message normalization.
-- Docker Compose runtime with Go, Next.js, ClickHouse, and SQLite.
+- Durable ingestion: raw events pass through NATS JetStream before ClickHouse normalization.
+- Docker Compose runtime with Go, Next.js, NATS JetStream, ClickHouse, and SQLite.
 
 ## Product Shape
 
@@ -148,6 +148,8 @@ Stop the app:
 ```bash
 docker compose down
 ```
+
+Backup and restore notes live in [`docs/operations/backup_restore.md`](./docs/operations/backup_restore.md).
 
 Remove all stored local data:
 
