@@ -42,6 +42,11 @@ This file is the short handoff summary of the latest project changes. Keep it co
   and NATS JetStream volume backup/restore expectations for self-hosted deployments.
 - `docs/operations/jetstream_cutover.md` now documents deploy, health checks, and rollback for the
   new listener/processor/JetStream cutover.
+- Runtime smoke found and fixed a NATS client usage bug: `FetchContext` and `FetchMaxWait` cannot be
+  passed together. Processor now fetches with `FetchMaxWait`, consumes batches, and ACKs them.
+- Local smoke after rebuild: API health is OK; listener and processor heartbeats are fresh in
+  `/admin/operations/summary`; JetStream `queue_depth`, pending, ack-pending, redelivery, and
+  `stream_error` are zero after backlog drain.
 - Latest verification: `go test ./...`, `go vet ./...`, `pnpm --filter @kick-logs/web test`,
   `pnpm --filter @kick-logs/web typecheck`, `pnpm --filter @kick-logs/web lint`,
   `pnpm --filter @kick-logs/web build`, `pnpm format:check`, and

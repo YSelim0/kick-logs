@@ -180,7 +180,6 @@ func (client *Client) Fetch(ctx context.Context, limit int) ([]ports.RawEventStr
 
 	batch, err := consumer.Fetch(
 		limit,
-		jetstream.FetchContext(ctx),
 		jetstream.FetchMaxWait(client.cfg.FetchTimeout),
 	)
 	if err != nil {

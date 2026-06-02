@@ -110,6 +110,17 @@ This is a living implementation log. Add new entries for each meaningful project
 - Updated README runtime wording so self-host readers see NATS JetStream as part of the default
   Docker Compose stack.
 
+## 2026-06-02 (issue #23 — JetStream runtime smoke fix)
+
+- Fixed the NATS JetStream consumer fetch call. The previous code passed both `FetchContext` and
+  `FetchMaxWait`, which the current NATS client rejects at runtime.
+- Rebuilt API/listener/processor locally and verified the new path:
+  - listener starts with `legacy raw event queue disabled; listener publishes to JetStream`
+  - processor consumes JetStream batches and ACKs them
+  - `/admin/operations/summary` reports fresh listener and processor heartbeats
+  - JetStream `queue_depth`, pending, ack-pending, redelivery, and `stream_error` were all zero
+    after the backlog drained.
+
 ## 2026-06-01 (issue #23 — storage hot path hardening plan)
 
 - Replaced the active implementation plan with the storage hot-path hardening plan for issue #23.
