@@ -220,22 +220,20 @@ Rules:
 
 ## Listener
 
-The Go listener follows the durable-inbox rule:
+The Go listener follows the durable-capture rule:
 
 1. Load enabled followed channels from SQLite.
 2. Resolve missing Kick channel metadata.
 3. Subscribe to Kick Pusher streams.
-4. Persist received `App\Events\ChatMessageEvent` payloads to ClickHouse `raw_kick_events`.
-5. Enqueue active work in SQLite `raw_event_queue`.
-6. Normalize queue items into visible `chat_messages`.
-7. Upsert sender profile cache in SQLite only as a throttled best-effort cache.
-8. Append raw-event attempt history in ClickHouse.
-9. Delete processed queue rows from SQLite after attempt history is durable.
-10. Record listener heartbeat in SQLite.
+4. Serialize reached `App\Events\ChatMessageEvent` payloads into raw chat envelopes.
+5. Publish those envelopes to NATS JetStream.
+6. Wait for JetStream PubAck before counting an event as captured.
+7. Record listener heartbeat in SQLite.
 
-The listener reconnects/resyncs periodically so admin channel changes take effect without a manual
-restart. Visible message inserts remain idempotent by `kick_message_id`. Permanent invalid payloads
-write terminal ignored attempts and leave the active queue instead of retrying forever.
+The listener does not normalize chat messages and no longer opens ClickHouse in the JetStream path.
+It keeps the Kick websocket open while the followed-channel set is unchanged and reconnects only on
+websocket failure or an actual enabled-channel set change. Visible message normalization and
+ClickHouse batch writes belong to the processor service.
 
 ## Data Management
 

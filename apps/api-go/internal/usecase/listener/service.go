@@ -20,6 +20,7 @@ type Service struct {
 	channels        ports.FollowedChannelRepository
 	rawEvents       ports.RawEventRepository
 	queue           ports.RawEventQueueRepository
+	streamPublisher ports.RawEventStreamPublisher
 	messages        ports.MessageRepository
 	senders         ports.SenderProfileRepository
 	heartbeats      ports.WorkerHeartbeatRepository
@@ -62,6 +63,7 @@ type Dependencies struct {
 	Channels        ports.FollowedChannelRepository
 	RawEvents       ports.RawEventRepository
 	Queue           ports.RawEventQueueRepository
+	StreamPublisher ports.RawEventStreamPublisher
 	Messages        ports.MessageRepository
 	Senders         ports.SenderProfileRepository
 	Heartbeats      ports.WorkerHeartbeatRepository
@@ -99,6 +101,7 @@ func NewService(deps Dependencies) *Service {
 		channels:        deps.Channels,
 		rawEvents:       deps.RawEvents,
 		queue:           deps.Queue,
+		streamPublisher: deps.StreamPublisher,
 		messages:        deps.Messages,
 		senders:         deps.Senders,
 		heartbeats:      deps.Heartbeats,
@@ -111,7 +114,7 @@ func NewService(deps Dependencies) *Service {
 		breaker:         breaker,
 		senderCacheGate: newSenderProfileWriteGate(cfg.SenderProfileCacheTTL),
 	}
-	if deps.RawEvents != nil && deps.Queue != nil {
+	if deps.StreamPublisher == nil && deps.RawEvents != nil && deps.Queue != nil {
 		service.writer = newBufferedRawWriter(BufferedWriterConfig{
 			BatchSize:     cfg.WriteBatchSize,
 			FlushInterval: cfg.WriteFlushInterval,
@@ -127,26 +130,28 @@ func (service *Service) RunForever(ctx context.Context) error {
 	if service.writer != nil {
 		go service.writer.Run(ctx)
 	}
-	if service.config.BootstrapRawQueueOnStart {
-		if err := service.bootstrapQueue(ctx); err != nil && !errors.Is(err, context.Canceled) {
-			service.logger.Error("raw event queue bootstrap failed", "error", err)
+	if service.usesLegacyRawEventQueue() {
+		if service.config.BootstrapRawQueueOnStart {
+			if err := service.bootstrapQueue(ctx); err != nil && !errors.Is(err, context.Canceled) {
+				service.logger.Error("raw event queue bootstrap failed", "error", err)
+			}
+		} else {
+			service.logger.Info("raw event queue bootstrap skipped")
 		}
-	} else {
-		service.logger.Info("raw event queue bootstrap skipped")
-	}
-	if service.queue != nil {
 		if recovered, err := service.queue.RecoverStaleClaims(ctx, service.config.RawEventProcessingTimeout); err != nil {
 			service.logger.Error("raw event stale claim recovery failed", "error", err)
 		} else if recovered > 0 {
 			service.logger.Info("recovered stale raw event claims at startup", "count", recovered)
 		}
-	}
 
-	for workerID := 1; workerID <= service.config.WorkerCount; workerID++ {
-		go service.processRawEventsForever(ctx, workerID)
+		for workerID := 1; workerID <= service.config.WorkerCount; workerID++ {
+			go service.processRawEventsForever(ctx, workerID)
+		}
+		go service.recoverStaleClaimsForever(ctx)
+	} else if service.streamPublisher != nil {
+		service.logger.Info("legacy raw event queue disabled; listener publishes to JetStream")
 	}
 	go service.recordHeartbeatForever(ctx)
-	go service.recoverStaleClaimsForever(ctx)
 
 	attempt := 1
 	for ctx.Err() == nil {
@@ -224,21 +229,22 @@ func (service *Service) RunOnce(ctx context.Context) (int, error) {
 			}
 		}
 		receivedAt := time.Now().UTC()
-		rawEvent := domain.RawKickEvent{
-			ID:            rawEventIDFromChatEvent(event, receivedAt),
-			ChannelSlug:   channel.Slug,
-			EventType:     "pusher",
-			EventName:     event.EventName,
-			KickMessageID: cleanText(event.Payload["id"]),
-			ChatroomID:    chatroomID,
-			ChannelID:     channel.ID,
-			PayloadJSON:   rawPayloadJSON(event.Payload),
-			Status:        "pending",
-			ReceivedAt:    receivedAt,
-		}
-		if service.writer != nil {
+		envelope := rawChatEventEnvelopeFromEvent(event, channel, chatroomID, receivedAt)
+		rawEvent := rawKickEventFromEnvelope(envelope)
+		if service.streamPublisher != nil {
+			streamEvent, err := rawStreamEventFromEnvelope(envelope)
+			if err != nil {
+				return err
+			}
+			if _, err := service.streamPublisher.Publish(ctx, streamEvent); err != nil {
+				return fmt.Errorf("publish raw event stream: %w", err)
+			}
+		} else if service.writer != nil {
 			service.writer.Submit(rawEvent)
 		} else {
+			if service.rawEvents == nil {
+				return fmt.Errorf("raw event repository is not configured")
+			}
 			if err := service.rawEvents.InsertEvent(ctx, rawEvent); err != nil {
 				return err
 			}
@@ -269,6 +275,13 @@ func (service *Service) RunOnce(ctx context.Context) (int, error) {
 		return storedCount, nil
 	}
 	return storedCount, err
+}
+
+func (service *Service) usesLegacyRawEventQueue() bool {
+	return service.streamPublisher == nil &&
+		service.queue != nil &&
+		service.rawEvents != nil &&
+		service.messages != nil
 }
 
 func listenerChannelsFromFollowed(
@@ -306,6 +319,66 @@ func rawEventIDFromChatEvent(event ChatMessageEvent, receivedAt time.Time) strin
 	_, _ = hash.Write([]byte{0})
 	_, _ = hash.Write([]byte(receivedAt.UTC().Format(time.RFC3339Nano)))
 	return fmt.Sprintf("raw:%x", hash.Sum64())
+}
+
+func rawChatEventEnvelopeFromEvent(
+	event ChatMessageEvent,
+	channel domain.FollowedChannel,
+	chatroomID int64,
+	receivedAt time.Time,
+) domain.RawChatEventEnvelope {
+	if receivedAt.IsZero() {
+		receivedAt = time.Now().UTC()
+	}
+	return domain.RawChatEventEnvelope{
+		RawEventID:        rawEventIDFromChatEvent(event, receivedAt),
+		KickMessageID:     cleanText(event.Payload["id"]),
+		EventName:         event.EventName,
+		PusherChannel:     event.PusherChannel,
+		FollowedChannelID: channel.ID,
+		ChannelSlug:       channel.Slug,
+		KickChannelID:     channel.KickChannelID,
+		KickChatroomID:    chatroomID,
+		ReceivedAt:        receivedAt.UTC(),
+		PayloadJSON:       rawPayloadJSON(event.Payload),
+		RawPusherJSON:     event.RawJSON,
+	}
+}
+
+func rawKickEventFromEnvelope(envelope domain.RawChatEventEnvelope) domain.RawKickEvent {
+	return domain.RawKickEvent{
+		ID:            envelope.RawEventID,
+		ChannelSlug:   envelope.ChannelSlug,
+		EventType:     "pusher",
+		EventName:     envelope.EventName,
+		KickMessageID: envelope.KickMessageID,
+		ChatroomID:    envelope.KickChatroomID,
+		ChannelID:     envelope.FollowedChannelID,
+		PayloadJSON:   envelope.PayloadJSON,
+		Status:        "pending",
+		ReceivedAt:    envelope.ReceivedAt.UTC(),
+	}
+}
+
+func rawStreamEventFromEnvelope(envelope domain.RawChatEventEnvelope) (domain.RawStreamEvent, error) {
+	payload, err := json.Marshal(envelope)
+	if err != nil {
+		return domain.RawStreamEvent{}, fmt.Errorf("encode raw stream event envelope: %w", err)
+	}
+	headers := map[string]string{
+		"event_name": envelope.EventName,
+	}
+	if envelope.KickMessageID != "" {
+		headers["kick_message_id"] = envelope.KickMessageID
+	}
+	if envelope.ChannelSlug != "" {
+		headers["channel_slug"] = envelope.ChannelSlug
+	}
+	return domain.RawStreamEvent{
+		ID:      envelope.RawEventID,
+		Payload: payload,
+		Headers: headers,
+	}, nil
 }
 
 func listenerChannelSignature(channels []domain.ListenerChannel) string {

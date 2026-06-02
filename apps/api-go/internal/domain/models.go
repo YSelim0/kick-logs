@@ -237,17 +237,17 @@ type RawStreamStats struct {
 }
 
 type RawChatEventEnvelope struct {
-	RawEventID        string
-	KickMessageID     string
-	EventName         string
-	PusherChannel     string
-	FollowedChannelID int64
-	ChannelSlug       string
-	KickChannelID     int64
-	KickChatroomID    int64
-	ReceivedAt        time.Time
-	PayloadJSON       string
-	RawPusherJSON     string
+	RawEventID        string    `json:"raw_event_id"`
+	KickMessageID     string    `json:"kick_message_id"`
+	EventName         string    `json:"event_name"`
+	PusherChannel     string    `json:"pusher_channel"`
+	FollowedChannelID int64     `json:"followed_channel_id"`
+	ChannelSlug       string    `json:"channel_slug"`
+	KickChannelID     int64     `json:"kick_channel_id"`
+	KickChatroomID    int64     `json:"kick_chatroom_id"`
+	ReceivedAt        time.Time `json:"received_at"`
+	PayloadJSON       string    `json:"payload_json"`
+	RawPusherJSON     string    `json:"raw_pusher_json"`
 }
 
 type RawEventAttempt struct {

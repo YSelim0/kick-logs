@@ -115,6 +115,63 @@ func TestListenerRunOnceCapturesIncompletePayload(t *testing.T) {
 	}
 }
 
+func TestListenerRunOncePublishesRawEventToStream(t *testing.T) {
+	unit := newFakeListenerUnit()
+	publisher := &fakeRawEventStreamPublisher{}
+	service := newStreamTestService(unit, fakePusherClient{
+		events: []string{buildPusherEvent(buildPayload("message-stream"))},
+	}, publisher)
+
+	stored, err := service.RunOnce(context.Background())
+	if err != nil {
+		t.Fatalf("RunOnce() error = %v", err)
+	}
+	if stored != 1 {
+		t.Fatalf("stored = %d", stored)
+	}
+	if len(publisher.events) != 1 {
+		t.Fatalf("stream events = %#v", publisher.events)
+	}
+	if len(unit.rawEvents.events) != 0 {
+		t.Fatalf("raw events should not be stored through legacy repository = %#v", unit.rawEvents.events)
+	}
+	if pending, _ := unit.queue.ListPending(context.Background(), 10, 5); len(pending) != 0 {
+		t.Fatalf("legacy queue should not receive stream-published events = %#v", pending)
+	}
+
+	var envelope domain.RawChatEventEnvelope
+	if err := json.Unmarshal(publisher.events[0].Payload, &envelope); err != nil {
+		t.Fatalf("decode stream payload: %v", err)
+	}
+	if envelope.RawEventID != "kick:message-stream" ||
+		envelope.KickMessageID != "message-stream" ||
+		envelope.FollowedChannelID != 1 ||
+		envelope.ChannelSlug != "hype" ||
+		envelope.KickChatroomID != 123 ||
+		envelope.RawPusherJSON == "" {
+		t.Fatalf("envelope = %#v", envelope)
+	}
+}
+
+func TestListenerRunOnceDoesNotCountPublishFailure(t *testing.T) {
+	unit := newFakeListenerUnit()
+	publisher := &fakeRawEventStreamPublisher{fail: errors.New("nats unavailable")}
+	service := newStreamTestService(unit, fakePusherClient{
+		events: []string{buildPusherEvent(buildPayload("message-stream-fail"))},
+	}, publisher)
+
+	stored, err := service.RunOnce(context.Background())
+	if err == nil {
+		t.Fatal("expected publish failure")
+	}
+	if stored != 0 {
+		t.Fatalf("stored = %d, want 0 when publish fails", stored)
+	}
+	if len(unit.rawEvents.events) != 0 {
+		t.Fatalf("raw events should not use legacy repository on publish failure = %#v", unit.rawEvents.events)
+	}
+}
+
 func TestRawEventProcessorNormalizesAndDeduplicatesMessages(t *testing.T) {
 	unit := newFakeListenerUnit()
 	service := newTestService(unit, fakePusherClient{})
@@ -726,6 +783,30 @@ func newTestService(unit *fakeListenerUnit, pusher fakePusher) *Service {
 	return service
 }
 
+func newStreamTestService(unit *fakeListenerUnit, pusher fakePusher, publisher *fakeRawEventStreamPublisher) *Service {
+	return NewService(Dependencies{
+		Channels:        unit.channels,
+		StreamPublisher: publisher,
+		Heartbeats:      unit.heartbeats,
+		ChannelResolver: fakeChannelResolver{},
+		Pusher:          pusher,
+		Logger:          slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Config: ServiceConfig{
+			WorkerCount:               0,
+			RawEventBatchSize:         10,
+			RawEventMaxAttempts:       2,
+			RawEventProcessingTimeout: time.Minute,
+			ChannelResyncInterval:     time.Second,
+			RawEventWorkerIdleDelay:   time.Millisecond,
+			HeartbeatInterval:         time.Millisecond,
+			ReconnectInitialDelay:     time.Millisecond,
+			ReconnectMaxDelay:         time.Millisecond,
+			ReconnectMultiplier:       1,
+			HeartbeatServiceName:      "listener",
+		},
+	})
+}
+
 type fakePusher interface {
 	Listen(context.Context, []domain.ListenerChannel, func(string) error) error
 }
@@ -757,6 +838,22 @@ type fakeListenerUnit struct {
 	messages   *fakeMessageRepository
 	senders    *fakeSenderRepository
 	heartbeats *fakeHeartbeatRepository
+}
+
+type fakeRawEventStreamPublisher struct {
+	events []domain.RawStreamEvent
+	fail   error
+}
+
+func (publisher *fakeRawEventStreamPublisher) Publish(_ context.Context, event domain.RawStreamEvent) (domain.RawStreamPublishAck, error) {
+	if publisher.fail != nil {
+		return domain.RawStreamPublishAck{}, publisher.fail
+	}
+	publisher.events = append(publisher.events, event)
+	return domain.RawStreamPublishAck{
+		Stream:   "KICK_RAW_EVENTS",
+		Sequence: uint64(len(publisher.events)),
+	}, nil
 }
 
 func newFakeListenerUnit() *fakeListenerUnit {

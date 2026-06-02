@@ -19,6 +19,12 @@ This file is the short handoff summary of the latest project changes. Keep it co
 - Phase 3 raw capture update: `App\Events\ChatMessageEvent` payloads no longer need all normalized
   message fields before raw capture. Incomplete payloads can be stored and later classified as
   terminal ignored/invalid instead of disappearing at parser time.
+- Phase 4 listener publish update: the listener now publishes raw chat envelopes to JetStream and
+  waits for PubAck before counting an event as captured. With a stream publisher configured, the
+  legacy buffered writer, SQLite raw queue bootstrap, stale-claim recovery, and worker goroutines are
+  disabled in the listener process.
+- The listener binary no longer opens ClickHouse and Compose no longer waits for ClickHouse health
+  before starting the listener. ClickHouse batching moves to the upcoming processor service.
 - Verification for the foundation: `go test ./...`, `go vet ./...`, `pnpm format:check`, and
   `docker compose config --quiet` passed.
 

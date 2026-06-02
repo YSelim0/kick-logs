@@ -147,11 +147,6 @@ services:
       LISTENER_HEARTBEAT_INTERVAL_SECONDS: ${LISTENER_HEARTBEAT_INTERVAL_SECONDS:-15}
       LISTENER_HEARTBEAT_STALE_AFTER_SECONDS: ${LISTENER_HEARTBEAT_STALE_AFTER_SECONDS:-45}
       SQLITE_PATH: ${SQLITE_PATH:-/data/kick-logs-go.sqlite3}
-      CLICKHOUSE_ADDR: ${CLICKHOUSE_ADDR:-clickhouse:9000}
-      CLICKHOUSE_DATABASE: ${CLICKHOUSE_DATABASE:-kick_logs}
-      CLICKHOUSE_USERNAME: ${CLICKHOUSE_USERNAME:-kick_logs}
-      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-kick_logs}
-      CLICKHOUSE_DEBUG: ${CLICKHOUSE_DEBUG:-false}
       NATS_URL: ${NATS_URL:-nats://nats:4222}
       NATS_RAW_EVENT_STREAM: ${NATS_RAW_EVENT_STREAM:-KICK_RAW_EVENTS}
       NATS_RAW_EVENT_SUBJECT: ${NATS_RAW_EVENT_SUBJECT:-kick.raw.chat}
@@ -162,8 +157,6 @@ services:
     depends_on:
       nats:
         condition: service_started
-      clickhouse:
-        condition: service_healthy
     volumes:
       - api_go_data:/data
 

@@ -11,9 +11,9 @@ import (
 
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/app"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/config"
-	clickhouseinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/clickhouse"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/kick"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/migrations"
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/natsstream"
 	sqliteinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/sqlite"
 	listenerusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/listener"
 )
@@ -40,25 +40,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	clickHouseConn, err := clickhouseinfra.Open(ctx, cfg)
+	rawEventStream, err := natsstream.Open(ctx, cfg)
 	if err != nil {
-		logger.Error("failed to open clickhouse", "error", err)
+		logger.Error("failed to open NATS JetStream", "error", err)
 		os.Exit(1)
 	}
-	if err := migrations.ApplyClickHouse(ctx, clickHouseConn); err != nil {
-		logger.Error("failed to apply clickhouse migrations", "error", err)
-		os.Exit(1)
-	}
+	defer rawEventStream.Close()
 
 	service := listenerusecase.NewService(listenerusecase.Dependencies{
 		Channels:        sqliteinfra.NewFollowedChannelRepository(sqliteDB),
-		RawEvents:       clickhouseinfra.NewRawEventRepository(clickHouseConn),
-		Queue:           sqliteinfra.NewRawEventQueueRepository(sqliteDB),
-		Messages:        clickhouseinfra.NewMessageRepository(clickHouseConn),
-		Senders:         sqliteinfra.NewSenderProfileRepository(sqliteDB),
+		StreamPublisher: rawEventStream,
 		Heartbeats:      sqliteinfra.NewWorkerHeartbeatRepository(sqliteDB),
 		ChannelResolver: kick.NewWebChannelResolver(),
-		SenderResolver:  kick.NewWebSenderProfileResolver(),
 		Pusher:          kick.NewPusherClient(cfg.KickPusherURL),
 		Logger:          logger,
 		Config: listenerusecase.ServiceConfig{

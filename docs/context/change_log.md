@@ -36,6 +36,20 @@ This is a living implementation log. Add new entries for each meaningful project
 - Listener capture now derives `chatroom_id` from the Pusher channel name when the payload omits it,
   which preserves channel metadata for incomplete events.
 
+## 2026-06-02 (issue #23 — listener publishes to JetStream)
+
+- Added a raw-event stream publisher dependency to the listener service.
+- The live listener path now serializes the raw chat envelope and waits for JetStream PubAck before
+  incrementing the captured-event counter.
+- Publish failure now surfaces as a listener error instead of being counted as a successful capture.
+- When a stream publisher is configured, the listener disables the legacy buffered writer, SQLite
+  queue bootstrap, stale-claim recovery, and raw-event worker goroutines.
+- The listener binary now opens NATS JetStream and no longer opens ClickHouse, so ClickHouse write
+  pressure cannot stop the websocket capture service from publishing reached events into the
+  durable stream.
+- Docker Compose no longer makes the listener depend on ClickHouse health; listener depends on NATS
+  and SQLite control-plane state only.
+
 ## 2026-06-01 (issue #23 — storage hot path hardening plan)
 
 - Replaced the active implementation plan with the storage hot-path hardening plan for issue #23.
