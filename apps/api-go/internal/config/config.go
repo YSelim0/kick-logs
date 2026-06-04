@@ -35,14 +35,25 @@ type Config struct {
 	ListenerChannelResyncInterval        float64
 	ListenerHeartbeatInterval            float64
 	ListenerStaleAfter                   int
+	ListenerRecentMessagePollEnabled     bool
+	ListenerRecentMessagePollInterval    float64
+	ListenerRecentMessagePollConcurrency int
 	ListenerRawEventWriteBatchSize       int
 	ListenerRawEventWriteFlushIntervalMS int
 	ListenerRawEventWriteQueueSize       int
 	ListenerRawEventWriteMaxRetries      int
+	ListenerBootstrapRawQueueOnStartup   bool
 	ListenerClickHouseBackoffInitialMS   int
 	ListenerClickHouseBackoffMaxMS       int
 	ListenerClickHouseBackoffMultiplier  float64
 	ListenerClickHouseBreakerThreshold   int
+	NATSURL                              string
+	NATSRawEventStream                   string
+	NATSRawEventSubject                  string
+	NATSRawEventConsumer                 string
+	NATSRawEventAckWaitSeconds           int
+	NATSRawEventFetchBatchSize           int
+	NATSRawEventFetchTimeoutSeconds      int
 	SQLitePath                           string
 	ClickHouseAddr                       string
 	ClickHouseDatabase                   string
@@ -149,6 +160,21 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	recentMessagePollEnabled, err := envBool("LISTENER_RECENT_MESSAGE_POLL_ENABLED", true)
+	if err != nil {
+		return Config{}, err
+	}
+
+	recentMessagePollInterval, err := envFloat("LISTENER_RECENT_MESSAGE_POLL_INTERVAL_SECONDS", 10.0)
+	if err != nil {
+		return Config{}, err
+	}
+
+	recentMessagePollConcurrency, err := envInt("LISTENER_RECENT_MESSAGE_POLL_CONCURRENCY", 8)
+	if err != nil {
+		return Config{}, err
+	}
+
 	rawEventWriteBatchSize, err := envInt("LISTENER_RAW_EVENT_WRITE_BATCH_SIZE", 500)
 	if err != nil {
 		return Config{}, err
@@ -169,6 +195,11 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	bootstrapRawQueueOnStartup, err := envBool("LISTENER_BOOTSTRAP_RAW_QUEUE_ON_STARTUP", false)
+	if err != nil {
+		return Config{}, err
+	}
+
 	clickHouseBackoffInitialMS, err := envInt("LISTENER_CLICKHOUSE_BACKOFF_INITIAL_MS", 1000)
 	if err != nil {
 		return Config{}, err
@@ -185,6 +216,21 @@ func Load() (Config, error) {
 	}
 
 	clickHouseBreakerThreshold, err := envInt("LISTENER_CLICKHOUSE_BREAKER_FAILURE_THRESHOLD", 5)
+	if err != nil {
+		return Config{}, err
+	}
+
+	natsRawEventAckWaitSeconds, err := envInt("NATS_RAW_EVENT_ACK_WAIT_SECONDS", 60)
+	if err != nil {
+		return Config{}, err
+	}
+
+	natsRawEventFetchBatchSize, err := envInt("NATS_RAW_EVENT_FETCH_BATCH_SIZE", 500)
+	if err != nil {
+		return Config{}, err
+	}
+
+	natsRawEventFetchTimeoutSeconds, err := envInt("NATS_RAW_EVENT_FETCH_TIMEOUT_SECONDS", 2)
 	if err != nil {
 		return Config{}, err
 	}
@@ -256,14 +302,25 @@ func Load() (Config, error) {
 		ListenerChannelResyncInterval:        channelResyncInterval,
 		ListenerHeartbeatInterval:            heartbeatInterval,
 		ListenerStaleAfter:                   listenerStaleAfter,
+		ListenerRecentMessagePollEnabled:     recentMessagePollEnabled,
+		ListenerRecentMessagePollInterval:    recentMessagePollInterval,
+		ListenerRecentMessagePollConcurrency: recentMessagePollConcurrency,
 		ListenerRawEventWriteBatchSize:       rawEventWriteBatchSize,
 		ListenerRawEventWriteFlushIntervalMS: rawEventWriteFlushIntervalMS,
 		ListenerRawEventWriteQueueSize:       rawEventWriteQueueSize,
 		ListenerRawEventWriteMaxRetries:      rawEventWriteMaxRetries,
+		ListenerBootstrapRawQueueOnStartup:   bootstrapRawQueueOnStartup,
 		ListenerClickHouseBackoffInitialMS:   clickHouseBackoffInitialMS,
 		ListenerClickHouseBackoffMaxMS:       clickHouseBackoffMaxMS,
 		ListenerClickHouseBackoffMultiplier:  clickHouseBackoffMultiplier,
 		ListenerClickHouseBreakerThreshold:   clickHouseBreakerThreshold,
+		NATSURL:                              envString("NATS_URL", "nats://127.0.0.1:4222"),
+		NATSRawEventStream:                   envString("NATS_RAW_EVENT_STREAM", "KICK_RAW_EVENTS"),
+		NATSRawEventSubject:                  envString("NATS_RAW_EVENT_SUBJECT", "kick.raw.chat"),
+		NATSRawEventConsumer:                 envString("NATS_RAW_EVENT_CONSUMER", "kick-raw-event-processor"),
+		NATSRawEventAckWaitSeconds:           natsRawEventAckWaitSeconds,
+		NATSRawEventFetchBatchSize:           natsRawEventFetchBatchSize,
+		NATSRawEventFetchTimeoutSeconds:      natsRawEventFetchTimeoutSeconds,
 		SQLitePath:                           envString("SQLITE_PATH", "var/kick-logs-go.sqlite3"),
 		ClickHouseAddr:                       envString("CLICKHOUSE_ADDR", "127.0.0.1:9000"),
 		ClickHouseDatabase:                   envString("CLICKHOUSE_DATABASE", "kick_logs"),

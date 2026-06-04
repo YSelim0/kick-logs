@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Loader2, RefreshCcw, Trash2 } from "lucide-react";
+import { AlertTriangle, Loader2, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
-import { clearFailedEvents, getFailedEvents, retryFailedEvents } from "@/features/operations/api";
+import { clearFailedEvents, getFailedEvents } from "@/features/operations/api";
 import type { FailedRawEvent } from "@/types/api";
 
 type ActionState = "idle" | "loading" | "success" | "error";
@@ -29,7 +29,6 @@ export function FailedEventsModal({
   const [events, setEvents] = useState<FailedRawEvent[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [retryState, setRetryState] = useState<ActionState>("idle");
   const [clearState, setClearState] = useState<ActionState>("idle");
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
@@ -49,26 +48,10 @@ export function FailedEventsModal({
   useEffect(() => {
     if (open) {
       void load();
-      setRetryState("idle");
       setClearState("idle");
       setActionMessage(null);
     }
   }, [open, load]);
-
-  const handleRetry = async () => {
-    setRetryState("loading");
-    setActionMessage(null);
-    try {
-      const res = await retryFailedEvents();
-      setRetryState("success");
-      setActionMessage(`${res.affected} event yeniden kuyruğa alındı.`);
-      onActionComplete?.();
-      void load();
-    } catch {
-      setRetryState("error");
-      setActionMessage("Yeniden deneme başarısız.");
-    }
-  };
 
   const handleClear = async () => {
     setClearState("loading");
@@ -95,28 +78,19 @@ export function FailedEventsModal({
             Başarısız Raw Eventler
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            İşlenemeyen raw event kayıtları. Yeniden deneyebilir veya orphan attempt&apos;leri
-            temizleyebilirsin.
+            ClickHouse diagnostic failed raw event kayıtları. Terminal ignored eventler bu listede
+            gösterilmez.
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 overflow-hidden">
+          <p className="rounded-md border border-border bg-elevated px-3 py-2 text-xs text-muted-foreground">
+            JetStream failed eventleri otomatik redelivery ile tekrar işler. Bu liste yalnızca
+            ClickHouse üzerinde kalan diagnostic failed attempt kayıtlarını gösterir.
+          </p>
           <div className="flex flex-wrap items-center gap-2">
             <Button
-              disabled={retryState === "loading" || clearState === "loading" || total === 0}
-              onClick={() => void handleRetry()}
-              size="sm"
-              variant="outline"
-            >
-              {retryState === "loading" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCcw className="h-4 w-4" />
-              )}
-              Yeniden Dene
-            </Button>
-            <Button
-              disabled={retryState === "loading" || clearState === "loading" || total === 0}
+              disabled={clearState === "loading" || total === 0}
               onClick={() => void handleClear()}
               size="sm"
               variant="outline"
@@ -130,7 +104,7 @@ export function FailedEventsModal({
             </Button>
             {actionMessage ? (
               <span
-                className={`text-xs ${retryState === "error" || clearState === "error" ? "text-accent" : "text-primary"}`}
+                className={`text-xs ${clearState === "error" ? "text-accent" : "text-primary"}`}
               >
                 {actionMessage}
               </span>

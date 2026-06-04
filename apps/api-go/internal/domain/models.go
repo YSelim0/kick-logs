@@ -210,6 +210,46 @@ type RawKickEvent struct {
 	ErrorMessage        string
 }
 
+type RawStreamEvent struct {
+	ID      string
+	Subject string
+	Payload []byte
+	Headers map[string]string
+}
+
+type RawStreamPublishAck struct {
+	Stream    string
+	Sequence  uint64
+	Duplicate bool
+}
+
+type RawStreamStats struct {
+	StreamName               string
+	ConsumerName             string
+	Messages                 int64
+	Bytes                    int64
+	ConsumerPending          int64
+	ConsumerAckPending       int64
+	ConsumerRedelivered      int64
+	OldestPendingAgeSeconds  int64
+	LatestMessageAgeSeconds  int64
+	LatestConsumerUpdateTime time.Time
+}
+
+type RawChatEventEnvelope struct {
+	RawEventID        string    `json:"raw_event_id"`
+	KickMessageID     string    `json:"kick_message_id"`
+	EventName         string    `json:"event_name"`
+	PusherChannel     string    `json:"pusher_channel"`
+	FollowedChannelID int64     `json:"followed_channel_id"`
+	ChannelSlug       string    `json:"channel_slug"`
+	KickChannelID     int64     `json:"kick_channel_id"`
+	KickChatroomID    int64     `json:"kick_chatroom_id"`
+	ReceivedAt        time.Time `json:"received_at"`
+	PayloadJSON       string    `json:"payload_json"`
+	RawPusherJSON     string    `json:"raw_pusher_json"`
+}
+
 type RawEventAttempt struct {
 	ID           string
 	RawEventID   string
@@ -289,22 +329,37 @@ type OperationsSummary struct {
 	StorageTables        []TableSize
 	Timestamps           OperationsTimestamps
 	Listener             ListenerHeartbeat
+	Processor            ListenerHeartbeat
 	Ingestion            IngestionHealth
 }
 
 type IngestionHealth struct {
-	QueueDepth              int64
-	OldestPendingAgeSeconds int64
-	WriteQueueDepth         int64
-	WriteQueueHighWater     int64
-	WriteDropCount          int64
-	WriteFlushCount         int64
-	LastFlushSize           int64
-	LastFlushMillis         int64
-	ClickHouseFailures      int64
-	QueueEnqueueFailures    int64
-	BreakerState            string
-	BreakerCurrentDelayMS   int64
+	QueueDepth                     int64
+	OldestPendingAgeSeconds        int64
+	LegacyQueueDepth               int64
+	LegacyOldestPendingAgeSeconds  int64
+	CapturedRawEvents              int64
+	RecentMessagePollCaptured      int64
+	RecentMessagePollErrors        int64
+	StreamMessages                 int64
+	StreamBytes                    int64
+	StreamConsumerPending          int64
+	StreamConsumerAckPending       int64
+	StreamConsumerRedelivered      int64
+	StreamOldestPendingAgeSeconds  int64
+	StreamLatestMessageAgeSeconds  int64
+	StreamLatestConsumerUpdateTime time.Time
+	StreamError                    string
+	WriteQueueDepth                int64
+	WriteQueueHighWater            int64
+	WriteDropCount                 int64
+	WriteFlushCount                int64
+	LastFlushSize                  int64
+	LastFlushMillis                int64
+	ClickHouseFailures             int64
+	QueueEnqueueFailures           int64
+	BreakerState                   string
+	BreakerCurrentDelayMS          int64
 }
 
 type FailedRawEvent struct {

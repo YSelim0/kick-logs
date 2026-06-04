@@ -98,6 +98,27 @@ func (r *KickWebhookEventRepository) MarkIgnored(ctx context.Context, messageID 
 	return nil
 }
 
+func (r *KickWebhookEventRepository) PruneTerminalBefore(ctx context.Context, cutoff time.Time) (int64, error) {
+	if cutoff.IsZero() {
+		return 0, nil
+	}
+	result, err := r.db.ExecContext(ctx, `
+		DELETE FROM kick_webhook_events
+		WHERE status IN ('processed', 'ignored')
+		  AND processed_at != ''
+		  AND processed_at < ?`,
+		formatTime(cutoff.UTC()),
+	)
+	if err != nil {
+		return 0, fmt.Errorf("prune terminal webhook events: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("read prune terminal webhook events result: %w", err)
+	}
+	return affected, nil
+}
+
 func (r *KickWebhookEventRepository) CountByStatus(ctx context.Context) (map[string]int64, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT status, COUNT(*) FROM kick_webhook_events GROUP BY status`)

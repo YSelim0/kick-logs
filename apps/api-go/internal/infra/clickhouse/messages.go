@@ -390,5 +390,8 @@ func scanMessage(scanner messageScanner) (domain.ChatMessage, error) {
 		return domain.ChatMessage{}, fmt.Errorf("scan chat message: %w", err)
 	}
 	message.Emotes = joinEmotes(emoteIDs, emoteNames, emoteTokens, emoteImageURLs)
+	if message.SenderKickID > 0 {
+		message.SenderID = message.SenderKickID
+	}
 	return message, nil
 }

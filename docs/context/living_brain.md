@@ -5,18 +5,21 @@ implementation details, or working assumptions change.
 
 ## Current State
 
-- Branch: `feat/issue-22-kick-subscription-webhooks`.
-- Active plan: Kick webhook subscription tracking (see `docs/implementation_plan.md`, issue #22).
-  Phase 6 (backend query APIs) complete. Phase 7 next (docs and smoke).
+- Branch: `feat/issue-23-storage-hot-path-hardening`.
+- Active architecture: JetStream durable ingestion (see `docs/implementation_plan.md`, issue #23).
+  Live chat ingestion now runs as `listener -> NATS JetStream -> processor -> ClickHouse`, with
+  SQLite used for control-plane state only.
 - Earlier: channels/users index search pages — `/channels` and `/users` search-first index pages
   added 2026-05-24.
 - Responsive polish pass is current through 2026-05-22: profile rows, admin navigation, admin
   channel/user tables, operations dashboard, and data-management panels have mobile-specific
   layouts.
 - Default runtime is:
+  - `nats`
   - `clickhouse`
   - `api` built from `apps/api-go`
   - `listener` built from `apps/api-go`
+  - `processor` built from `apps/api-go`
   - `web`
 - Python/FastAPI/PostgreSQL runtime code has been removed from the repo.
 - `migrate-go` is under the `tools` profile and owns legacy PostgreSQL to SQLite/ClickHouse
@@ -53,17 +56,47 @@ implementation details, or working assumptions change.
 - SQLite stores control-plane data:
   - admin users
   - followed channels
-  - sender profile cache
+  - sender profile cache (best-effort; must not block chat message persistence)
   - retention settings
   - worker heartbeats
-  - raw-event work queue (`raw_event_queue`)
+  - legacy raw-event work queue tables during migration/compatibility only
   - schema/data migration metadata
 - ClickHouse stores data-plane rows:
   - chat messages
   - raw Kick events
   - raw-event processing attempts
+  - normalized channel subscription periods
 - `chat_messages` is denormalized for search/export/analytics/profile paths. Hot read paths should
   not join back to SQLite.
+
+## JetStream Durable Ingestion (issue #23)
+
+- The live chat hot path is NATS JetStream. Once a Kick websocket chat event or Kick recent-message
+  backfill event reaches the listener process, the listener publishes it durably to JetStream and
+  waits for PubAck before counting it as captured.
+- SQLite `raw_event_queue` and `raw_event_claims` are legacy migration/compatibility tables after
+  the cutover, not the current long-term queue design.
+- NATS JetStream owns temporary durable backlog for unacked raw chat events. Acked events should
+  leave the stream; long-term history stays in ClickHouse.
+- Processor workers pull JetStream batches, insert raw events and normalized messages into
+  ClickHouse, and ACK only after required durable writes succeed.
+- Delivery model is at-least-once with idempotent ClickHouse writes. Duplicate internal delivery is
+  acceptable only if search/profile/analytics rows remain deduplicated.
+- Parser/normalizer code must not discard a reached `ChatMessageEvent` before raw capture. Invalid
+  or incomplete payloads are captured first, then classified terminal ignored/invalid by the
+  processor.
+- Sender profile writes are cache updates only. A failed SQLite sender-profile upsert must not fail
+  raw chat event processing or prevent a visible `chat_messages` row.
+- Sender profile cache writes should be TTL-gated so high-volume senders do not cause one SQLite
+  write per message.
+- `kick_webhook_events` remains the webhook idempotency inbox, but processed/ignored rows should be
+  pruned after a short retention window. Pending/failed rows must remain for processing/admin action.
+- Admin Operations must show listener heartbeat, processor heartbeat, JetStream pending/ack-pending
+  and redelivery health, plus ClickHouse latest raw/message timestamps. Old SQLite queue metrics
+  must be labeled legacy once JetStream is live.
+- `GET /admin/operations/summary` now includes `processor` heartbeat and `stream_*` ingestion
+  fields. `ingestion.queue_depth` represents JetStream pending + ack-pending when stream stats are
+  available; `legacy_queue_depth` is the old SQLite `raw_event_queue` depth.
 
 ## Search Index Pages
 
@@ -202,37 +235,42 @@ admin/super-admin role.
 - Webhook processor ignores events for disabled channels so stale remote subscriptions cannot pollute
   active subscriber counts.
 - It subscribes to `chatrooms.{chatroom_id}.v2` plus channel-level streams.
-- Once a Kick websocket chat event reaches the process, submit it to the in-memory buffered
-  writer. The writer flushes batches to ClickHouse archive using `InsertEventsBatch` and then
-  enqueues the same batch into SQLite `raw_event_queue` in one logical step before treating
-  the batch as acknowledged. Buffered writes flush on `LISTENER_RAW_EVENT_WRITE_BATCH_SIZE`
-  events or `LISTENER_RAW_EVENT_WRITE_FLUSH_INTERVAL_MS` whichever first. Phase 1 moved the
-  work queue out of ClickHouse so the worker hot path no longer runs heavy
-  `raw_event_attempts` JOIN queries.
-- Workers list pending rows and claim them from SQLite, then load each raw payload from
-  ClickHouse by id, normalize in memory, and write the entire tick's chat messages and
-  raw-event attempts as one batch each. ClickHouse insert failure releases every claim back to
-  pending and the next tick retries.
-- A single `CircuitBreaker` is shared by the buffered writer and the worker loop. Consecutive
-  ClickHouse failures open the breaker; while open, every listener goroutine that calls
-  `Wait` sleeps for the current backoff window before the next attempt. Successful operations
-  close the breaker and reset the backoff.
-- Listener heartbeat metadata JSON carries buffered-writer stats and circuit-breaker state so
-  the admin operations summary can surface ingestion health (queue backlog, oldest pending
-  age, writer buffer depth, drops, flushes, ClickHouse insert failures, breaker state) without
-  any cross-process call into the listener.
-- Synthetic ingestion load harness lives at `apps/api-go/cmd/loadgen`. It seeds channels with
-  slugs `loadgen-*`, emits configurable events-per-second through the real listener service,
-  and reports buffered-writer stats plus emitted counts. The procedure is documented in
-  `docs/operations/load_test.md`. External durable queues are deferred until a live load run
-  shows the in-process pipeline is insufficient.
+- Kick Pusher is not treated as a complete source by itself. The listener also polls Kick's numeric
+  `/api/v2/channels/{kick_channel_id}/messages?sort=desc` endpoint every
+  `LISTENER_RECENT_MESSAGE_POLL_INTERVAL_SECONDS` when
+  `LISTENER_RECENT_MESSAGE_POLL_ENABLED=true` and publishes those recent messages through the same
+  JetStream raw-event envelope path. Fetches run with bounded concurrency
+  (`LISTENER_RECENT_MESSAGE_POLL_CONCURRENCY`, default 8) so one channel's recent page is not missed
+  while the listener walks every enabled channel.
+- Recent-message polling injects the followed channel's `kick_chatroom_id` because Kick's messages
+  endpoint returns the numeric channel id in `chat_id`, not the chatroom id expected by the
+  normalizer.
+- Recent-message polling keeps a 1-hour in-memory seen set after successful publish/duplicate PubAck
+  so quiet channels do not repeatedly publish the same latest endpoint rows.
+- Active live ingestion uses JetStream: the listener publishes reached raw chat events to JetStream,
+  processor workers normalize and write ClickHouse batches, and SQLite remains control-plane only.
+- The old in-memory buffered writer and SQLite `raw_event_queue` code remains as legacy
+  compatibility/test code for now, but it is not wired into the live listener binary when the
+  JetStream publisher is configured.
+- The processor owns the ClickHouse circuit breaker around raw/message/attempt batch writes.
+  Consecutive ClickHouse failures open the breaker; while open, processor loops sleep for the
+  current backoff window before the next attempt. Successful operations close the breaker and reset
+  the backoff.
+- Listener heartbeat metadata now describes capture configuration only. Processor heartbeat
+  metadata carries processor batch/circuit-breaker state.
+- Synthetic ingestion load harness lives at `apps/api-go/cmd/loadgen`. It exercises the JetStream
+  capture/processor pipeline and reports stream pending/ack-pending/redelivery metrics instead of
+  buffered-writer stats.
 - Raw-event processing is at-least-once and idempotent; visible messages dedupe by
   `kick_message_id`.
 - Listener heartbeat state is stored in SQLite `worker_heartbeats`.
-- At startup the listener backfills any unprocessed ClickHouse raw events into the queue and
-  resets stale `claimed` rows older than `RawEventProcessingTimeout` back to `pending`; a
-  background loop repeats the stale-claim sweep.
-- Channel changes should take effect through periodic reconnect/resync without manual restart.
+- Legacy SQLite queue mode resets stale `claimed` rows older than `RawEventProcessingTimeout` back
+  to `pending`; this path is not active when JetStream publishing is configured. Historical
+  ClickHouse raw-event archive bootstrap is disabled by default and should only be enabled for
+  one-off legacy recovery with `LISTENER_BOOTSTRAP_RAW_QUEUE_ON_STARTUP=true`.
+- Channel changes are checked every `LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS`. The Kick websocket
+  stays connected while the enabled channel set is unchanged and reconnects only when that set
+  changes, avoiding periodic blackout windows during high chat volume.
 
 ## Search Behavior
 

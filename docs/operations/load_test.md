@@ -1,21 +1,22 @@
 # Ingestion Load Test
 
 This document describes how to run the synthetic ingestion load test introduced as part of the
-issue #9 work. The harness exercises the full listener pipeline (buffered ClickHouse writer,
-SQLite raw-event work queue, batched worker output, and ClickHouse circuit breaker) using a
-deterministic event emitter so peak throughput can be measured without depending on live Kick
-streams.
+issue #23 JetStream ingestion work. The harness exercises the listener capture path, JetStream
+durable backlog, processor batch output, and ClickHouse circuit breaker using a deterministic event
+emitter so peak throughput can be measured without depending on live Kick streams.
 
 The harness lives at `apps/api-go/cmd/loadgen`. It wires the real listener service with the same
-SQLite and ClickHouse repositories used by `cmd/listener`, but replaces the Pusher websocket
-client with an in-process emitter that produces synthetic chat events at a configurable rate.
+JetStream publisher used by `cmd/listener` and the same processor service used by `cmd/processor`,
+but replaces the Pusher websocket client with an in-process emitter that produces synthetic chat
+events at a configurable rate.
 
 ## Prerequisites
 
-- Local ClickHouse and SQLite are reachable. The simplest setup is the default Docker stack:
+- Local NATS JetStream, ClickHouse, and SQLite are reachable. The simplest setup is the default
+  Docker stack:
 
   ```powershell
-  docker compose up --build -d clickhouse
+  docker compose up --build -d nats clickhouse
   ```
 
 - The Go toolchain is installed and `apps/api-go` builds cleanly:
@@ -25,9 +26,9 @@ client with an in-process emitter that produces synthetic chat events at a confi
   go build ./...
   ```
 
-- ClickHouse and SQLite configuration follows the standard `.env`/`.env.example` values. The
-  loadgen binary reuses `config.Load` so it honors every `LISTENER_*` and `CLICKHOUSE_*`
-  variable.
+- NATS, ClickHouse, and SQLite configuration follows the standard `.env`/`.env.example` values. The
+  loadgen binary reuses `config.Load` so it honors `NATS_*`, `LISTENER_*`, and `CLICKHOUSE_*`
+  variables.
 
 ## Run
 
@@ -56,16 +57,17 @@ Flag reference:
   log stream.
 
 The loadgen seeds channels with slugs `loadgen-1`, `loadgen-2`, ... and Kick ids in the
-`1_000_000+` range so it does not collide with real production channels. Its heartbeat is
-recorded under `service_name = 'loadgen'` so the production listener heartbeat is left alone.
+`1_000_000+` range so it does not collide with real production channels. Its listener heartbeat is
+recorded under `service_name = 'loadgen'`, while its processor heartbeat is recorded under
+`service_name = 'loadgen-processor'`.
 
 ## What to watch
 
 While the load is running:
 
 - Tail the loadgen logs for the `loadgen snapshot` info lines. They report emitted event count,
-  buffered writer queue depth, drop count, flush count, last flush size, last flush latency in
-  ms, and ClickHouse insert failure count.
+  JetStream message count, consumer pending count, ack-pending count, redelivery count, and oldest
+  pending event age.
 - Open `/admin` in a browser. The operations dashboard surfaces the same fields plus queue
   backlog and oldest pending age (see `GET /admin/operations/summary` and the `ingestion`
   block).
@@ -78,15 +80,16 @@ server misbehaving` under burst load; that error should not reappear.
 A successful run satisfies all of the following:
 
 - No API `5xx` responses on `/health`, `/messages`, or `/analytics/overview` during the run.
-- Listener log lines show ClickHouse insert batches sized in the hundreds (matching
-  `LISTENER_RAW_EVENT_WRITE_BATCH_SIZE`) rather than single-row inserts.
-- The buffered writer drop count remains `0` for the configured `events-per-second` baseline.
-  Drops are acceptable during the burst window only if the configured
-  `LISTENER_RAW_EVENT_WRITE_QUEUE_SIZE` is intentionally smaller than the burst arrival rate.
+- Listener log lines show successful JetStream publish capture. Processor log lines show ClickHouse
+  insert batches sized in the hundreds (matching `NATS_RAW_EVENT_FETCH_BATCH_SIZE`) rather than
+  single-row inserts.
+- JetStream backlog may grow during the burst window, but it must drain after the emitter stops.
+- There is no acceptable event-drop counter in the JetStream path. A non-zero drop/error metric is
+  a bug or infrastructure failure.
 - The ClickHouse circuit breaker stays `closed`. If it opens, the configured backoff should
   recover automatically and the breaker should close on the next probe.
-- Pending backlog (`raw_event_queue` row count) returns to near zero within `2x` the run
-  duration after the loadgen stops.
+- JetStream consumer pending count returns to near zero within `2x` the run duration after the
+  loadgen stops.
 - No `lookup clickhouse on 127.0.0.11:53: server misbehaving` errors in any container log.
 
 ## Cleanup

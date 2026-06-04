@@ -74,6 +74,28 @@ func TestChannelSubscriptionSummary(t *testing.T) {
 			t.Errorf("expected 0 active count, got %d", resp.ActiveCount)
 		}
 	})
+
+	t.Run("subscription summary stays uncached", func(t *testing.T) {
+		periodRepo := &fakeSubPeriodRepo{
+			summary: domain.ChannelSubscriptionSummary{ActiveCount: 5},
+		}
+		r := httpapi.NewRouter(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)), routes.Dependencies{
+			Channels:            channelSvc,
+			SubscriptionPeriods: periodRepo,
+		})
+
+		for range 2 {
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/channels/hype/subscription-summary", nil))
+			if w.Code != http.StatusOK {
+				t.Fatalf("status = %d", w.Code)
+			}
+		}
+
+		if periodRepo.activeSummaryCalls != 2 {
+			t.Fatalf("active summary calls = %d, want 2", periodRepo.activeSummaryCalls)
+		}
+	})
 }
 
 func TestWebhookHealthRequiresAuth(t *testing.T) {
@@ -131,7 +153,8 @@ func TestWebhookSyncNoSyncServiceReturns503(t *testing.T) {
 // --- fakeSubPeriodRepo ---
 
 type fakeSubPeriodRepo struct {
-	summary domain.ChannelSubscriptionSummary
+	summary            domain.ChannelSubscriptionSummary
+	activeSummaryCalls int
 }
 
 func (r *fakeSubPeriodRepo) InsertBatch(_ context.Context, _ []domain.ChannelSubscriptionPeriod) error {
@@ -139,6 +162,7 @@ func (r *fakeSubPeriodRepo) InsertBatch(_ context.Context, _ []domain.ChannelSub
 }
 
 func (r *fakeSubPeriodRepo) ActiveSummary(_ context.Context, _ int64) (domain.ChannelSubscriptionSummary, error) {
+	r.activeSummaryCalls++
 	return r.summary, nil
 }
 
@@ -161,6 +185,9 @@ func (r *fakeInboxRepo) ListPending(_ context.Context, _ int, _ int) ([]domain.K
 func (r *fakeInboxRepo) MarkProcessed(_ context.Context, _ string) error               { return nil }
 func (r *fakeInboxRepo) MarkFailed(_ context.Context, _ string, _ string, _ int) error { return nil }
 func (r *fakeInboxRepo) MarkIgnored(_ context.Context, _ string, _ string) error       { return nil }
+func (r *fakeInboxRepo) PruneTerminalBefore(_ context.Context, _ time.Time) (int64, error) {
+	return 0, nil
+}
 func (r *fakeInboxRepo) CountByStatus(_ context.Context) (map[string]int64, error) {
 	return r.counts, nil
 }

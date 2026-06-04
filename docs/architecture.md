@@ -6,6 +6,7 @@ Kick Logs is a self-hosted Kick chat logging application. The default runtime is
 
 - Go HTTP API
 - Go Kick listener worker
+- NATS JetStream for the durable raw-event ingestion backlog
 - ClickHouse for chat messages, raw Kick events, exports, analytics, and profile aggregates
 - SQLite for admin/control-plane state
 - Next.js web UI
@@ -16,8 +17,10 @@ Default `docker compose up --build -d` services:
 
 ```text
 clickhouse
+nats
 api
 listener
+processor
 web
 ```
 
@@ -101,9 +104,12 @@ SQLite stores control-plane data:
 
 - `admin_users`
 - `followed_channels`
-- `sender_profiles`
+- `sender_profiles` as a best-effort cache
 - `retention_settings`
 - `worker_heartbeats`
+- `raw_event_queue` as legacy/migration state after the JetStream cutover
+- `kick_webhook_events` as a short-retention webhook inbox
+- `kick_event_subscriptions`
 - schema/data migration bookkeeping
 
 ClickHouse stores data-plane rows:
@@ -111,10 +117,22 @@ ClickHouse stores data-plane rows:
 - `chat_messages`
 - `raw_kick_events`
 - `raw_event_attempts`
+- `channel_subscription_periods`
 
 `chat_messages` is denormalized. It includes sender/channel snapshots, normalized helper columns,
 reply metadata, emote arrays/image URLs, badges, raw payload JSON, message timestamps, and ingestion
 timestamps. Search, export, analytics, and profile pages should not join back to SQLite on hot paths.
+
+NATS JetStream is the durable live chat ingestion backlog:
+
+- Stream: `KICK_RAW_EVENTS`
+- Subject: `kick.raw.chat`
+- Consumer: `kick-raw-event-processor`
+- Retention: work-queue style backlog for unacked raw chat events
+- Storage: file-backed JetStream volume
+
+Live chat capture publishes reached raw events to JetStream before normalization. SQLite raw queue
+tables remain legacy/migration state until a later cleanup.
 
 ## API Surface
 
@@ -203,23 +221,56 @@ Rules:
 
 ## Listener
 
-The Go listener follows the durable-inbox rule:
+The Go listener follows the durable-capture rule:
 
 1. Load enabled followed channels from SQLite.
 2. Resolve missing Kick channel metadata.
 3. Subscribe to Kick Pusher streams.
-4. Persist received `App\Events\ChatMessageEvent` payloads to ClickHouse `raw_kick_events`.
-5. Normalize raw events into visible `chat_messages`.
-6. Upsert sender profile cache in SQLite when available.
-7. Append raw-event attempt history.
+4. Poll Kick's numeric channel recent-messages endpoint as a short backfill source.
+5. Serialize reached `App\Events\ChatMessageEvent` payloads into raw chat envelopes.
+6. Publish those envelopes to NATS JetStream.
+7. Wait for JetStream PubAck before counting an event as captured.
 8. Record listener heartbeat in SQLite.
 
-The listener reconnects/resyncs periodically so admin channel changes take effect without a manual
-restart. Visible message inserts remain idempotent by `kick_message_id`.
+The listener does not normalize chat messages and no longer opens ClickHouse in the JetStream path.
+It keeps the Kick websocket open while the followed-channel set is unchanged and reconnects only on
+websocket failure or an actual enabled-channel set change. Recent-message polling uses
+`/api/v2/channels/{kick_channel_id}/messages?sort=desc`, injects the followed channel's
+`kick_chatroom_id`, and publishes through the same JetStream envelope/dedupe path as Pusher. Recent
+fetches use bounded concurrency so active chats do not outpace the endpoint page while the listener
+walks every enabled channel. A short in-memory seen set prevents quiet channels from republishing
+the same recent endpoint rows on every poll tick. Visible message normalization and ClickHouse batch
+writes belong to the processor service.
+
+## Processor
+
+The Go processor owns the live chat normalization and ClickHouse write path:
+
+1. Pull a batch from the durable JetStream consumer.
+2. Insert the raw event archive rows into ClickHouse.
+3. Normalize valid chat payloads into `chat_messages`.
+4. Insert visible messages in a batch.
+5. Insert raw-event attempt audit rows.
+6. ACK processed events only after required ClickHouse writes succeed.
+7. TERM terminal invalid/ignored payloads only after diagnostic attempt rows are durable.
+8. NACK transient failures so JetStream redelivers them.
+
+The processor uses at-least-once delivery and relies on deterministic message identity plus
+read-side dedupe to keep public search/profile results stable under redelivery.
 
 ## Data Management
 
 Admin data-management endpoints operate against SQLite settings and ClickHouse rows.
+
+Operations/data-management views distinguish JetStream live backlog, legacy SQLite runtime state,
+and ClickHouse history:
+
+- JetStream pending and ack-pending counts represent the active live chat backlog.
+- `raw_event_queue` row counts are legacy/migration state after the JetStream cutover, not the
+  active live chat queue.
+- `raw_kick_events` and `raw_event_attempts` remain the durable raw-event archive/audit history.
+- processed/ignored webhook inbox rows are pruned from SQLite after the short retention window,
+  while normalized subscription periods stay in ClickHouse.
 
 Retention settings:
 

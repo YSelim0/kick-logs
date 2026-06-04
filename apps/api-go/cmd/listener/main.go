@@ -11,9 +11,9 @@ import (
 
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/app"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/config"
-	clickhouseinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/clickhouse"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/kick"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/migrations"
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/natsstream"
 	sqliteinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/sqlite"
 	listenerusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/listener"
 )
@@ -40,47 +40,45 @@ func main() {
 		os.Exit(1)
 	}
 
-	clickHouseConn, err := clickhouseinfra.Open(ctx, cfg)
+	rawEventStream, err := natsstream.Open(ctx, cfg)
 	if err != nil {
-		logger.Error("failed to open clickhouse", "error", err)
+		logger.Error("failed to open NATS JetStream", "error", err)
 		os.Exit(1)
 	}
-	if err := migrations.ApplyClickHouse(ctx, clickHouseConn); err != nil {
-		logger.Error("failed to apply clickhouse migrations", "error", err)
-		os.Exit(1)
-	}
+	defer rawEventStream.Close()
 
 	service := listenerusecase.NewService(listenerusecase.Dependencies{
 		Channels:        sqliteinfra.NewFollowedChannelRepository(sqliteDB),
-		RawEvents:       clickhouseinfra.NewRawEventRepository(clickHouseConn),
-		Queue:           sqliteinfra.NewRawEventQueueRepository(sqliteDB),
-		Messages:        clickhouseinfra.NewMessageRepository(clickHouseConn),
-		Senders:         sqliteinfra.NewSenderProfileRepository(sqliteDB),
+		StreamPublisher: rawEventStream,
 		Heartbeats:      sqliteinfra.NewWorkerHeartbeatRepository(sqliteDB),
 		ChannelResolver: kick.NewWebChannelResolver(),
-		SenderResolver:  kick.NewWebSenderProfileResolver(),
 		Pusher:          kick.NewPusherClient(cfg.KickPusherURL),
+		RecentMessages:  kick.NewRecentMessagesClient(),
 		Logger:          logger,
 		Config: listenerusecase.ServiceConfig{
-			WorkerCount:               cfg.ListenerWorkerCount,
-			RawEventBatchSize:         cfg.ListenerRawEventBatchSize,
-			RawEventProcessingTimeout: time.Duration(cfg.ListenerRawEventProcessingTimeout) * time.Second,
-			RawEventMaxAttempts:       uint16(cfg.ListenerRawEventMaxAttempts),
-			RawEventWorkerIdleDelay:   durationFromSeconds(cfg.ListenerRawEventWorkerIdleDelay),
-			ChannelResyncInterval:     durationFromSeconds(cfg.ListenerChannelResyncInterval),
-			HeartbeatInterval:         durationFromSeconds(cfg.ListenerHeartbeatInterval),
-			ReconnectInitialDelay:     durationFromSeconds(cfg.ListenerReconnectInitialDelaySeconds),
-			ReconnectMaxDelay:         durationFromSeconds(cfg.ListenerReconnectMaxDelaySeconds),
-			ReconnectMultiplier:       cfg.ListenerReconnectMultiplier,
-			HeartbeatServiceName:      "listener",
-			WriteBatchSize:            cfg.ListenerRawEventWriteBatchSize,
-			WriteFlushInterval:        time.Duration(cfg.ListenerRawEventWriteFlushIntervalMS) * time.Millisecond,
-			WriteQueueSize:            cfg.ListenerRawEventWriteQueueSize,
-			WriteMaxRetries:           cfg.ListenerRawEventWriteMaxRetries,
-			ClickHouseBackoffInitial:  time.Duration(cfg.ListenerClickHouseBackoffInitialMS) * time.Millisecond,
-			ClickHouseBackoffMax:      time.Duration(cfg.ListenerClickHouseBackoffMaxMS) * time.Millisecond,
-			ClickHouseBackoffFactor:   cfg.ListenerClickHouseBackoffMultiplier,
-			ClickHouseBreakerThresh:   cfg.ListenerClickHouseBreakerThreshold,
+			WorkerCount:                  cfg.ListenerWorkerCount,
+			RawEventBatchSize:            cfg.ListenerRawEventBatchSize,
+			RawEventProcessingTimeout:    time.Duration(cfg.ListenerRawEventProcessingTimeout) * time.Second,
+			RawEventMaxAttempts:          uint16(cfg.ListenerRawEventMaxAttempts),
+			RawEventWorkerIdleDelay:      durationFromSeconds(cfg.ListenerRawEventWorkerIdleDelay),
+			ChannelResyncInterval:        durationFromSeconds(cfg.ListenerChannelResyncInterval),
+			HeartbeatInterval:            durationFromSeconds(cfg.ListenerHeartbeatInterval),
+			ReconnectInitialDelay:        durationFromSeconds(cfg.ListenerReconnectInitialDelaySeconds),
+			ReconnectMaxDelay:            durationFromSeconds(cfg.ListenerReconnectMaxDelaySeconds),
+			ReconnectMultiplier:          cfg.ListenerReconnectMultiplier,
+			RecentMessagePollEnabled:     cfg.ListenerRecentMessagePollEnabled,
+			RecentMessagePollInterval:    durationFromSeconds(cfg.ListenerRecentMessagePollInterval),
+			RecentMessagePollConcurrency: cfg.ListenerRecentMessagePollConcurrency,
+			HeartbeatServiceName:         "listener",
+			WriteBatchSize:               cfg.ListenerRawEventWriteBatchSize,
+			WriteFlushInterval:           time.Duration(cfg.ListenerRawEventWriteFlushIntervalMS) * time.Millisecond,
+			WriteQueueSize:               cfg.ListenerRawEventWriteQueueSize,
+			WriteMaxRetries:              cfg.ListenerRawEventWriteMaxRetries,
+			BootstrapRawQueueOnStart:     cfg.ListenerBootstrapRawQueueOnStartup,
+			ClickHouseBackoffInitial:     time.Duration(cfg.ListenerClickHouseBackoffInitialMS) * time.Millisecond,
+			ClickHouseBackoffMax:         time.Duration(cfg.ListenerClickHouseBackoffMaxMS) * time.Millisecond,
+			ClickHouseBackoffFactor:      cfg.ListenerClickHouseBackoffMultiplier,
+			ClickHouseBreakerThresh:      cfg.ListenerClickHouseBreakerThreshold,
 		},
 	})
 

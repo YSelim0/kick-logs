@@ -33,9 +33,11 @@ describe("DataManagementPanel", () => {
     render(<DataManagementPanel />);
 
     expect(await screen.findByRole("heading", { name: "Veri Yönetimi" })).toBeInTheDocument();
-    expect(screen.getByText("Veritabanı")).toBeInTheDocument();
+    expect(await screen.findByText("Veritabanı")).toBeInTheDocument();
     expect(screen.getByText("chat_messages")).toBeInTheDocument();
     expect(screen.getByText("raw_kick_events")).toBeInTheDocument();
+    expect(screen.getByText("raw_event_queue")).toBeInTheDocument();
+    expect(screen.getByText("kick_webhook_events")).toBeInTheDocument();
     expect(screen.getByText("raw_event_claims")).toBeInTheDocument();
     expect(screen.getByLabelText("Mesajlar")).toHaveValue("forever");
     expect(screen.getByLabelText("Raw Eventler")).toHaveValue("90");
@@ -133,6 +135,8 @@ function summaryFixture(): DataManagementSummary {
     tables: [
       { table_name: "chat_messages", row_count: 1200, total_bytes: 512000 },
       { table_name: "raw_kick_events", row_count: 1400, total_bytes: 600000 },
+      { table_name: "raw_event_queue", row_count: 4, total_bytes: 0 },
+      { table_name: "kick_webhook_events", row_count: 8, total_bytes: 0 },
       { table_name: "raw_event_claims", row_count: 1200, total_bytes: 0 }
     ]
   };

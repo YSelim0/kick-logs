@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -52,8 +53,12 @@ func TestEventParserCoversChatRepliesEmotesAndMissingFields(t *testing.T) {
 		t.Fatal("malformed JSON parsed")
 	}
 	incomplete := map[string]any{"id": "message-1"}
-	if _, ok := parser.Parse(buildPusherEvent(incomplete)); ok {
-		t.Fatal("incomplete payload parsed")
+	incompleteEvent, ok := parser.Parse(buildPusherEvent(incomplete))
+	if !ok {
+		t.Fatal("incomplete payload should still be captured as a raw chat event")
+	}
+	if incompleteEvent.Payload["id"] != "message-1" {
+		t.Fatalf("incomplete payload = %#v", incompleteEvent.Payload)
 	}
 }
 
@@ -74,7 +79,8 @@ func TestListenerRunOnceStoresRawEventBeforeNormalization(t *testing.T) {
 	if len(unit.messages.messages) != 0 {
 		t.Fatalf("messages should not be normalized inline = %#v", unit.messages.messages)
 	}
-	if unit.rawEvents.events[0].KickMessageID != "message-1" ||
+	if unit.rawEvents.events[0].ID != "kick:message-1" ||
+		unit.rawEvents.events[0].KickMessageID != "message-1" ||
 		unit.rawEvents.events[0].ChatroomID != 123 ||
 		unit.rawEvents.events[0].ChannelID != 1 {
 		t.Fatalf("stored raw event = %#v", unit.rawEvents.events[0])
@@ -85,6 +91,199 @@ func TestListenerRunOnceStoresRawEventBeforeNormalization(t *testing.T) {
 	}
 	if len(enqueued) != 1 || enqueued[0].RawEventID != unit.rawEvents.events[0].ID {
 		t.Fatalf("queue did not receive enqueue = %#v", enqueued)
+	}
+}
+
+func TestListenerRunOnceCapturesIncompletePayload(t *testing.T) {
+	unit := newFakeListenerUnit()
+	service := newTestService(unit, fakePusherClient{
+		events: []string{buildPusherEvent(map[string]any{"id": "incomplete-message"})},
+	})
+
+	stored, err := service.RunOnce(context.Background())
+	if err != nil {
+		t.Fatalf("RunOnce() error = %v", err)
+	}
+	if stored != 1 {
+		t.Fatalf("stored = %d", stored)
+	}
+	if len(unit.rawEvents.events) != 1 {
+		t.Fatalf("raw events = %#v", unit.rawEvents.events)
+	}
+	rawEvent := unit.rawEvents.events[0]
+	if rawEvent.KickMessageID != "incomplete-message" || rawEvent.ChatroomID != 123 || rawEvent.ChannelID != 1 {
+		t.Fatalf("raw event = %#v", rawEvent)
+	}
+}
+
+func TestListenerRunOncePublishesRawEventToStream(t *testing.T) {
+	unit := newFakeListenerUnit()
+	publisher := &fakeRawEventStreamPublisher{}
+	service := newStreamTestService(unit, fakePusherClient{
+		events: []string{buildPusherEvent(buildPayload("message-stream"))},
+	}, publisher)
+
+	stored, err := service.RunOnce(context.Background())
+	if err != nil {
+		t.Fatalf("RunOnce() error = %v", err)
+	}
+	if stored != 1 {
+		t.Fatalf("stored = %d", stored)
+	}
+	if len(publisher.events) != 1 {
+		t.Fatalf("stream events = %#v", publisher.events)
+	}
+	if len(unit.rawEvents.events) != 0 {
+		t.Fatalf("raw events should not be stored through legacy repository = %#v", unit.rawEvents.events)
+	}
+	if pending, _ := unit.queue.ListPending(context.Background(), 10, 5); len(pending) != 0 {
+		t.Fatalf("legacy queue should not receive stream-published events = %#v", pending)
+	}
+
+	var envelope domain.RawChatEventEnvelope
+	if err := json.Unmarshal(publisher.events[0].Payload, &envelope); err != nil {
+		t.Fatalf("decode stream payload: %v", err)
+	}
+	if envelope.RawEventID != "kick:message-stream" ||
+		envelope.KickMessageID != "message-stream" ||
+		envelope.FollowedChannelID != 1 ||
+		envelope.ChannelSlug != "hype" ||
+		envelope.KickChatroomID != 123 ||
+		envelope.RawPusherJSON == "" {
+		t.Fatalf("envelope = %#v", envelope)
+	}
+}
+
+func TestListenerRunOnceDoesNotCountPublishFailure(t *testing.T) {
+	unit := newFakeListenerUnit()
+	publisher := &fakeRawEventStreamPublisher{fail: errors.New("nats unavailable")}
+	service := newStreamTestService(unit, fakePusherClient{
+		events: []string{buildPusherEvent(buildPayload("message-stream-fail"))},
+	}, publisher)
+
+	stored, err := service.RunOnce(context.Background())
+	if err == nil {
+		t.Fatal("expected publish failure")
+	}
+	if stored != 0 {
+		t.Fatalf("stored = %d, want 0 when publish fails", stored)
+	}
+	if len(unit.rawEvents.events) != 0 {
+		t.Fatalf("raw events should not use legacy repository on publish failure = %#v", unit.rawEvents.events)
+	}
+}
+
+func TestListenerPollsRecentMessagesToStream(t *testing.T) {
+	unit := newFakeListenerUnit()
+	publisher := &fakeRawEventStreamPublisher{}
+	recent := &fakeRecentMessagesClient{
+		envelopes: []domain.RawChatEventEnvelope{{
+			RawEventID:    "kick:recent-message",
+			KickMessageID: "recent-message",
+			EventName:     chatMessageEventName,
+			PusherChannel: "kick-api:channels.100.messages",
+			PayloadJSON:   rawPayloadJSON(buildPayload("recent-message")),
+			RawPusherJSON: "{}",
+		}},
+	}
+	service := newRecentPollingStreamTestService(unit, publisher, recent)
+
+	result, err := service.PollRecentMessagesOnce(context.Background())
+	if err != nil {
+		t.Fatalf("PollRecentMessagesOnce() error = %v", err)
+	}
+	if result.Channels != 1 || result.Published != 1 || result.Duplicates != 0 || result.Errors != 0 {
+		t.Fatalf("result = %#v", result)
+	}
+	if len(publisher.events) != 1 {
+		t.Fatalf("stream events = %#v", publisher.events)
+	}
+	if atomic.LoadUint64(&service.capturedRawEvents) != 1 {
+		t.Fatalf("captured raw events = %d", atomic.LoadUint64(&service.capturedRawEvents))
+	}
+	if atomic.LoadUint64(&service.recentPollCaptured) != 1 {
+		t.Fatalf("recent poll captured = %d", atomic.LoadUint64(&service.recentPollCaptured))
+	}
+
+	var envelope domain.RawChatEventEnvelope
+	if err := json.Unmarshal(publisher.events[0].Payload, &envelope); err != nil {
+		t.Fatalf("decode stream payload: %v", err)
+	}
+	if envelope.FollowedChannelID != 1 ||
+		envelope.ChannelSlug != "hype" ||
+		envelope.KickChannelID != 100 ||
+		envelope.KickChatroomID != 123 {
+		t.Fatalf("hydrated envelope = %#v", envelope)
+	}
+}
+
+func TestListenerPollDoesNotCountDuplicateStreamAck(t *testing.T) {
+	unit := newFakeListenerUnit()
+	publisher := &fakeRawEventStreamPublisher{duplicateIDs: map[string]bool{"kick:recent-duplicate": true}}
+	recent := &fakeRecentMessagesClient{
+		envelopes: []domain.RawChatEventEnvelope{{
+			RawEventID:        "kick:recent-duplicate",
+			KickMessageID:     "recent-duplicate",
+			EventName:         chatMessageEventName,
+			PusherChannel:     "kick-api:channels.100.messages",
+			FollowedChannelID: 1,
+			ChannelSlug:       "hype",
+			KickChannelID:     100,
+			KickChatroomID:    123,
+			PayloadJSON:       rawPayloadJSON(buildPayload("recent-duplicate")),
+			RawPusherJSON:     "{}",
+		}},
+	}
+	service := newRecentPollingStreamTestService(unit, publisher, recent)
+
+	result, err := service.PollRecentMessagesOnce(context.Background())
+	if err != nil {
+		t.Fatalf("PollRecentMessagesOnce() error = %v", err)
+	}
+	if result.Published != 0 || result.Duplicates != 1 || result.Errors != 0 {
+		t.Fatalf("result = %#v", result)
+	}
+	if atomic.LoadUint64(&service.capturedRawEvents) != 0 {
+		t.Fatalf("captured raw events = %d", atomic.LoadUint64(&service.capturedRawEvents))
+	}
+	if atomic.LoadUint64(&service.recentPollCaptured) != 0 {
+		t.Fatalf("recent poll captured = %d", atomic.LoadUint64(&service.recentPollCaptured))
+	}
+}
+
+func TestListenerPollSkipsRecentlySeenMessages(t *testing.T) {
+	unit := newFakeListenerUnit()
+	publisher := &fakeRawEventStreamPublisher{}
+	recent := &fakeRecentMessagesClient{
+		envelopes: []domain.RawChatEventEnvelope{{
+			RawEventID:        "kick:recent-seen",
+			KickMessageID:     "recent-seen",
+			EventName:         chatMessageEventName,
+			PusherChannel:     "kick-api:channels.100.messages",
+			FollowedChannelID: 1,
+			ChannelSlug:       "hype",
+			KickChannelID:     100,
+			KickChatroomID:    123,
+			PayloadJSON:       rawPayloadJSON(buildPayload("recent-seen")),
+			RawPusherJSON:     "{}",
+		}},
+	}
+	service := newRecentPollingStreamTestService(unit, publisher, recent)
+
+	first, err := service.PollRecentMessagesOnce(context.Background())
+	if err != nil {
+		t.Fatalf("first PollRecentMessagesOnce() error = %v", err)
+	}
+	second, err := service.PollRecentMessagesOnce(context.Background())
+	if err != nil {
+		t.Fatalf("second PollRecentMessagesOnce() error = %v", err)
+	}
+
+	if first.Published != 1 || second.Published != 0 || second.Duplicates != 0 {
+		t.Fatalf("first=%#v second=%#v", first, second)
+	}
+	if len(publisher.events) != 1 {
+		t.Fatalf("stream events = %#v", publisher.events)
 	}
 }
 
@@ -135,6 +334,81 @@ func TestRawEventProcessorNormalizesAndDeduplicatesMessages(t *testing.T) {
 	}
 	if len(unit.senders.values) != 1 {
 		t.Fatalf("senders = %#v", unit.senders.values)
+	}
+}
+
+func TestRawEventProcessorKeepsMessageWhenSenderCacheFails(t *testing.T) {
+	unit := newFakeListenerUnit()
+	service := newTestService(unit, fakePusherClient{})
+	unit.senders.failUpsert = errors.New("sqlite busy")
+
+	payload := buildPayload("message-cache-failure")
+	enqueueRawEvent(t, unit, domain.RawKickEvent{
+		ID:            "raw-cache-failure",
+		EventName:     chatMessageEventName,
+		KickMessageID: "message-cache-failure",
+		ChatroomID:    123,
+		ChannelID:     1,
+		PayloadJSON:   rawPayloadJSON(payload),
+		Status:        "pending",
+		ReceivedAt:    time.Now().UTC(),
+	})
+
+	result, err := service.ProcessRawEventsOnce(context.Background())
+	if err != nil {
+		t.Fatalf("ProcessRawEventsOnce() error = %v", err)
+	}
+	if result.Claimed != 1 || result.Processed != 1 || result.Failed != 0 {
+		t.Fatalf("result = %#v", result)
+	}
+	if len(unit.messages.messages) != 1 {
+		t.Fatalf("messages = %#v", unit.messages.messages)
+	}
+	message := unit.messages.messages[0]
+	if message.KickMessageID != "message-cache-failure" || message.SenderKickID != 456 {
+		t.Fatalf("message = %#v", message)
+	}
+	if message.SenderID != message.SenderKickID {
+		t.Fatalf("sender id = %d, want payload kick id %d", message.SenderID, message.SenderKickID)
+	}
+	if len(unit.rawEvents.attempts) != 1 || unit.rawEvents.attempts[0].Status != "processed" {
+		t.Fatalf("attempts = %#v", unit.rawEvents.attempts)
+	}
+	if len(unit.senders.values) != 0 {
+		t.Fatalf("sender cache should not store failed upsert = %#v", unit.senders.values)
+	}
+}
+
+func TestRawEventProcessorThrottlesSenderCacheWrites(t *testing.T) {
+	unit := newFakeListenerUnit()
+	service := newTestService(unit, fakePusherClient{})
+
+	for index, messageID := range []string{"message-cache-1", "message-cache-2"} {
+		payload := buildPayload(messageID)
+		enqueueRawEvent(t, unit, domain.RawKickEvent{
+			ID:            "raw-cache-" + idAt(index),
+			EventName:     chatMessageEventName,
+			KickMessageID: messageID,
+			ChatroomID:    123,
+			ChannelID:     1,
+			PayloadJSON:   rawPayloadJSON(payload),
+			Status:        "pending",
+			ReceivedAt:    time.Now().UTC(),
+		})
+	}
+
+	result, err := service.ProcessRawEventsOnce(context.Background())
+	if err != nil {
+		t.Fatalf("ProcessRawEventsOnce() error = %v", err)
+	}
+	if result.Claimed != 2 || result.Processed != 2 || result.Failed != 0 {
+		t.Fatalf("result = %#v", result)
+	}
+	if len(unit.messages.messages) != 2 {
+		t.Fatalf("messages = %#v", unit.messages.messages)
+	}
+	if unit.senders.upsertCalls != 1 {
+		t.Fatalf("sender cache upsert calls = %d, want 1", unit.senders.upsertCalls)
 	}
 }
 
@@ -195,12 +469,8 @@ func TestRawEventProcessorClaimsDuplicateRowsOnce(t *testing.T) {
 	if len(unit.messages.messages) != 1 || len(unit.rawEvents.attempts) != 1 {
 		t.Fatalf("messages=%#v attempts=%#v", unit.messages.messages, unit.rawEvents.attempts)
 	}
-	item, err := unit.queue.GetByID(context.Background(), "raw-same")
-	if err != nil {
-		t.Fatalf("queue GetByID() error = %v", err)
-	}
-	if item.Status != domain.RawEventQueueStatusProcessed {
-		t.Fatalf("queue status = %q, want processed", item.Status)
+	if _, err := unit.queue.GetByID(context.Background(), "raw-same"); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("queue GetByID() error = %v, want sql.ErrNoRows", err)
 	}
 }
 
@@ -225,10 +495,10 @@ func TestRawEventProcessorDoesNotRetryDuplicateRowsInSameBatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ProcessRawEventsOnce() error = %v", err)
 	}
-	if result.Claimed != 1 || result.Processed != 0 || result.Failed != 1 {
+	if result.Claimed != 1 || result.Processed != 0 || result.Ignored != 1 || result.Failed != 0 {
 		t.Fatalf("result = %#v", result)
 	}
-	if len(unit.rawEvents.attempts) != 1 || unit.rawEvents.attempts[0].Status != "failed" {
+	if len(unit.rawEvents.attempts) != 1 || unit.rawEvents.attempts[0].Status != "ignored" {
 		t.Fatalf("attempts = %#v", unit.rawEvents.attempts)
 	}
 }
@@ -301,7 +571,7 @@ func TestRawEventProcessorMixesProcessedAndFailedInOneTick(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ProcessRawEventsOnce() error = %v", err)
 	}
-	if result.Claimed != 2 || result.Processed != 1 || result.Failed != 1 {
+	if result.Claimed != 2 || result.Processed != 1 || result.Ignored != 1 || result.Failed != 0 {
 		t.Fatalf("result = %#v", result)
 	}
 	if len(unit.messages.batchCallSizes) != 1 || unit.messages.batchCallSizes[0] != 1 {
@@ -310,19 +580,11 @@ func TestRawEventProcessorMixesProcessedAndFailedInOneTick(t *testing.T) {
 	if len(unit.rawEvents.attemptBatchSizes) != 1 || unit.rawEvents.attemptBatchSizes[0] != 2 {
 		t.Fatalf("attempt batch calls = %#v", unit.rawEvents.attemptBatchSizes)
 	}
-	good, err := unit.queue.GetByID(context.Background(), "raw-good")
-	if err != nil {
-		t.Fatalf("GetByID good error = %v", err)
+	if _, err := unit.queue.GetByID(context.Background(), "raw-good"); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("GetByID good error = %v, want sql.ErrNoRows", err)
 	}
-	if good.Status != domain.RawEventQueueStatusProcessed {
-		t.Fatalf("good status = %q", good.Status)
-	}
-	bad, err := unit.queue.GetByID(context.Background(), "raw-bad")
-	if err != nil {
-		t.Fatalf("GetByID bad error = %v", err)
-	}
-	if bad.Status != domain.RawEventQueueStatusPending || bad.Attempts != 1 {
-		t.Fatalf("bad item = %#v", bad)
+	if _, err := unit.queue.GetByID(context.Background(), "raw-bad"); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("GetByID bad error = %v, want sql.ErrNoRows", err)
 	}
 }
 
@@ -361,11 +623,82 @@ func TestRawEventProcessorReleasesClaimsWhenBatchInsertFails(t *testing.T) {
 	}
 }
 
+func TestRawEventProcessorReleasesClaimsWhenAttemptInsertFails(t *testing.T) {
+	unit := newFakeListenerUnit()
+	service := newTestService(unit, fakePusherClient{})
+	unit.rawEvents.failAttemptBatch = errors.New("clickhouse attempts unavailable")
+
+	payload := buildPayload("message-attempt-fail")
+	enqueueRawEvent(t, unit, domain.RawKickEvent{
+		ID:            "raw-attempt-fail",
+		EventName:     chatMessageEventName,
+		KickMessageID: "message-attempt-fail",
+		ChatroomID:    123,
+		ChannelID:     1,
+		PayloadJSON:   rawPayloadJSON(payload),
+		Status:        "pending",
+		ReceivedAt:    time.Now().UTC(),
+	})
+
+	_, err := service.ProcessRawEventsOnce(context.Background())
+	if err == nil {
+		t.Fatal("expected attempt batch insert failure to surface as error")
+	}
+	item, err := unit.queue.GetByID(context.Background(), "raw-attempt-fail")
+	if err != nil {
+		t.Fatalf("GetByID() error = %v", err)
+	}
+	if item.Status != domain.RawEventQueueStatusPending {
+		t.Fatalf("status = %q, want pending after attempt insert failure", item.Status)
+	}
+	if len(unit.messages.messages) != 1 {
+		t.Fatalf("message insert should remain idempotent for retry = %#v", unit.messages.messages)
+	}
+}
+
+func TestRawEventQueueBootstrapSkipsProcessedAttempts(t *testing.T) {
+	unit := newFakeListenerUnit()
+	service := newTestService(unit, fakePusherClient{})
+
+	if err := unit.rawEvents.InsertEvent(context.Background(), domain.RawKickEvent{
+		ID:            "raw-processed-before-start",
+		EventName:     chatMessageEventName,
+		KickMessageID: "message-processed-before-start",
+		ChatroomID:    123,
+		ChannelID:     1,
+		PayloadJSON:   rawPayloadJSON(buildPayload("message-processed-before-start")),
+		Status:        "pending",
+		ReceivedAt:    time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("InsertEvent() error = %v", err)
+	}
+	if err := unit.rawEvents.InsertAttempt(context.Background(), domain.RawEventAttempt{
+		RawEventID: "raw-processed-before-start",
+		Attempt:    1,
+		Status:     "processed",
+		StartedAt:  time.Now().UTC(),
+		FinishedAt: time.Now().UTC(),
+	}); err != nil {
+		t.Fatalf("InsertAttempt() error = %v", err)
+	}
+
+	if err := service.bootstrapQueue(context.Background()); err != nil {
+		t.Fatalf("bootstrapQueue() error = %v", err)
+	}
+	pending, err := unit.queue.ListPending(context.Background(), 10, 5)
+	if err != nil {
+		t.Fatalf("ListPending() error = %v", err)
+	}
+	if len(pending) != 0 {
+		t.Fatalf("pending = %#v, want none", pending)
+	}
+}
+
 func TestRawEventProcessorMarksFailuresAndHeartbeat(t *testing.T) {
 	unit := newFakeListenerUnit()
 	service := newTestService(unit, fakePusherClient{})
+	unit.channels.getByChatroomErr = errors.New("sqlite unavailable")
 	payload := buildPayload("message-failure")
-	payload["chatroom_id"] = 999
 	enqueueRawEvent(t, unit, domain.RawKickEvent{
 		ID:            "raw-fail",
 		EventName:     chatMessageEventName,
@@ -383,7 +716,7 @@ func TestRawEventProcessorMarksFailuresAndHeartbeat(t *testing.T) {
 	if result.Failed != 1 || len(unit.rawEvents.attempts) != 1 || unit.rawEvents.attempts[0].Status != "failed" {
 		t.Fatalf("failed result=%#v attempts=%#v", result, unit.rawEvents.attempts)
 	}
-	if !strings.Contains(unit.rawEvents.attempts[0].ErrorMessage, "not followed") {
+	if !strings.Contains(unit.rawEvents.attempts[0].ErrorMessage, "sqlite unavailable") {
 		t.Fatalf("error = %q", unit.rawEvents.attempts[0].ErrorMessage)
 	}
 
@@ -395,13 +728,57 @@ func TestRawEventProcessorMarksFailuresAndHeartbeat(t *testing.T) {
 	}
 }
 
-func TestListenerRunOnceReturnsAfterResyncContext(t *testing.T) {
+func TestRawEventProcessorIgnoresPermanentInvalidPayload(t *testing.T) {
+	unit := newFakeListenerUnit()
+	service := newTestService(unit, fakePusherClient{})
+	payload := buildPayload("message-invalid")
+	delete(payload, "id")
+	enqueueRawEvent(t, unit, domain.RawKickEvent{
+		ID:          "raw-invalid",
+		EventName:   chatMessageEventName,
+		ChatroomID:  123,
+		ChannelID:   1,
+		PayloadJSON: rawPayloadJSON(payload),
+		Status:      "pending",
+		ReceivedAt:  time.Now().UTC(),
+	})
+
+	result, err := service.ProcessRawEventsOnce(context.Background())
+	if err != nil {
+		t.Fatalf("ProcessRawEventsOnce() error = %v", err)
+	}
+	if result.Ignored != 1 || result.Failed != 0 || result.Processed != 0 {
+		t.Fatalf("result = %#v", result)
+	}
+	if len(unit.rawEvents.attempts) != 1 || unit.rawEvents.attempts[0].Status != "ignored" {
+		t.Fatalf("attempts = %#v", unit.rawEvents.attempts)
+	}
+	if !strings.Contains(unit.rawEvents.attempts[0].ErrorMessage, "missing message id") {
+		t.Fatalf("error = %q", unit.rawEvents.attempts[0].ErrorMessage)
+	}
+	if _, err := unit.queue.GetByID(context.Background(), "raw-invalid"); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("GetByID() error = %v, want sql.ErrNoRows", err)
+	}
+}
+
+func TestListenerRunOnceReturnsWhenChannelSetChanges(t *testing.T) {
 	unit := newFakeListenerUnit()
 	service := newTestService(unit, blockingPusherClient{})
 	service.config.ChannelResyncInterval = time.Millisecond
 
+	go func() {
+		time.Sleep(5 * time.Millisecond)
+		channel := testChannel()
+		channel.ID = 2
+		channel.KickChannelID = 200
+		channel.KickChatroomID = 456
+		channel.Slug = "second"
+		channel.DisplayName = "Second"
+		unit.channels.channels = append(unit.channels.channels, channel)
+	}()
+
 	stored, err := service.RunOnce(context.Background())
-	if err != nil {
+	if !errors.Is(err, errChannelSetChanged) {
 		t.Fatalf("RunOnce() error = %v", err)
 	}
 	if stored != 0 {
@@ -521,6 +898,60 @@ func newTestService(unit *fakeListenerUnit, pusher fakePusher) *Service {
 	return service
 }
 
+func newStreamTestService(unit *fakeListenerUnit, pusher fakePusher, publisher *fakeRawEventStreamPublisher) *Service {
+	return NewService(Dependencies{
+		Channels:        unit.channels,
+		StreamPublisher: publisher,
+		Heartbeats:      unit.heartbeats,
+		ChannelResolver: fakeChannelResolver{},
+		Pusher:          pusher,
+		Logger:          slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Config: ServiceConfig{
+			WorkerCount:               0,
+			RawEventBatchSize:         10,
+			RawEventMaxAttempts:       2,
+			RawEventProcessingTimeout: time.Minute,
+			ChannelResyncInterval:     time.Second,
+			RawEventWorkerIdleDelay:   time.Millisecond,
+			HeartbeatInterval:         time.Millisecond,
+			ReconnectInitialDelay:     time.Millisecond,
+			ReconnectMaxDelay:         time.Millisecond,
+			ReconnectMultiplier:       1,
+			HeartbeatServiceName:      "listener",
+		},
+	})
+}
+
+func newRecentPollingStreamTestService(
+	unit *fakeListenerUnit,
+	publisher *fakeRawEventStreamPublisher,
+	recent *fakeRecentMessagesClient,
+) *Service {
+	return NewService(Dependencies{
+		Channels:        unit.channels,
+		StreamPublisher: publisher,
+		Heartbeats:      unit.heartbeats,
+		ChannelResolver: fakeChannelResolver{},
+		RecentMessages:  recent,
+		Logger:          slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Config: ServiceConfig{
+			WorkerCount:               0,
+			RawEventBatchSize:         10,
+			RawEventMaxAttempts:       2,
+			RawEventProcessingTimeout: time.Minute,
+			ChannelResyncInterval:     time.Second,
+			RawEventWorkerIdleDelay:   time.Millisecond,
+			HeartbeatInterval:         time.Millisecond,
+			ReconnectInitialDelay:     time.Millisecond,
+			ReconnectMaxDelay:         time.Millisecond,
+			ReconnectMultiplier:       1,
+			HeartbeatServiceName:      "listener",
+			RecentMessagePollEnabled:  true,
+			RecentMessagePollInterval: time.Millisecond,
+		},
+	})
+}
+
 type fakePusher interface {
 	Listen(context.Context, []domain.ListenerChannel, func(string) error) error
 }
@@ -554,6 +985,47 @@ type fakeListenerUnit struct {
 	heartbeats *fakeHeartbeatRepository
 }
 
+type fakeRawEventStreamPublisher struct {
+	events       []domain.RawStreamEvent
+	fail         error
+	duplicateIDs map[string]bool
+}
+
+func (publisher *fakeRawEventStreamPublisher) Publish(_ context.Context, event domain.RawStreamEvent) (domain.RawStreamPublishAck, error) {
+	if publisher.fail != nil {
+		return domain.RawStreamPublishAck{}, publisher.fail
+	}
+	if publisher.duplicateIDs[event.ID] {
+		return domain.RawStreamPublishAck{
+			Stream:    "KICK_RAW_EVENTS",
+			Sequence:  uint64(len(publisher.events)),
+			Duplicate: true,
+		}, nil
+	}
+	publisher.events = append(publisher.events, event)
+	return domain.RawStreamPublishAck{
+		Stream:   "KICK_RAW_EVENTS",
+		Sequence: uint64(len(publisher.events)),
+	}, nil
+}
+
+type fakeRecentMessagesClient struct {
+	envelopes []domain.RawChatEventEnvelope
+	fail      error
+	calls     []domain.FollowedChannel
+}
+
+func (client *fakeRecentMessagesClient) FetchRecentMessages(
+	_ context.Context,
+	channel domain.FollowedChannel,
+) ([]domain.RawChatEventEnvelope, error) {
+	client.calls = append(client.calls, channel)
+	if client.fail != nil {
+		return nil, client.fail
+	}
+	return client.envelopes, nil
+}
+
 func newFakeListenerUnit() *fakeListenerUnit {
 	return &fakeListenerUnit{
 		channels:   &fakeChannelRepository{channels: []domain.FollowedChannel{testChannel()}},
@@ -566,7 +1038,8 @@ func newFakeListenerUnit() *fakeListenerUnit {
 }
 
 type fakeChannelRepository struct {
-	channels []domain.FollowedChannel
+	channels         []domain.FollowedChannel
+	getByChatroomErr error
 }
 
 func (repo *fakeChannelRepository) Upsert(_ context.Context, channel domain.FollowedChannel) (domain.FollowedChannel, error) {
@@ -596,6 +1069,9 @@ func (repo *fakeChannelRepository) GetBySlug(_ context.Context, slug string) (do
 }
 
 func (repo *fakeChannelRepository) GetByChatroomID(_ context.Context, kickChatroomID int64) (domain.FollowedChannel, error) {
+	if repo.getByChatroomErr != nil {
+		return domain.FollowedChannel{}, repo.getByChatroomErr
+	}
 	for _, channel := range repo.channels {
 		if channel.KickChatroomID == kickChatroomID {
 			return channel, nil
@@ -641,6 +1117,7 @@ type fakeRawEventRepository struct {
 	events            []domain.RawKickEvent
 	attempts          []domain.RawEventAttempt
 	attemptBatchSizes []int
+	failAttemptBatch  error
 }
 
 func (repo *fakeRawEventRepository) InsertEvent(_ context.Context, event domain.RawKickEvent) error {
@@ -669,21 +1146,24 @@ func (repo *fakeRawEventRepository) InsertAttempt(_ context.Context, attempt dom
 }
 
 func (repo *fakeRawEventRepository) InsertAttemptsBatch(_ context.Context, attempts []domain.RawEventAttempt) error {
+	if repo.failAttemptBatch != nil {
+		return repo.failAttemptBatch
+	}
 	repo.attemptBatchSizes = append(repo.attemptBatchSizes, len(attempts))
 	repo.attempts = append(repo.attempts, attempts...)
 	return nil
 }
 
 func (repo *fakeRawEventRepository) ListUnprocessed(_ context.Context, limit uint64, maxAttempts uint16) ([]domain.RawKickEvent, error) {
-	processed := make(map[string]bool)
+	terminal := make(map[string]bool)
 	for _, attempt := range repo.attempts {
-		if attempt.Status == "processed" {
-			processed[attempt.RawEventID] = true
+		if attempt.Status == "processed" || attempt.Status == "ignored" || attempt.Status == "invalid" {
+			terminal[attempt.RawEventID] = true
 		}
 	}
 	events := make([]domain.RawKickEvent, 0)
 	for _, event := range repo.events {
-		if processed[event.ID] {
+		if terminal[event.ID] {
 			continue
 		}
 		event.Attempts = repo.attemptsFor(event.ID)
@@ -829,15 +1309,7 @@ func (repo *fakeRawEventQueueRepository) MarkProcessed(_ context.Context, rawEve
 	repo.mu.Lock()
 	defer repo.mu.Unlock()
 
-	item := repo.items[rawEventID]
-	if item == nil {
-		return nil
-	}
-	item.Status = domain.RawEventQueueStatusProcessed
-	item.Attempts++
-	item.ClaimedBy = ""
-	item.ClaimedAt = time.Time{}
-	item.LastError = ""
+	delete(repo.items, rawEventID)
 	return nil
 }
 
@@ -969,10 +1441,16 @@ func (repo *fakeMessageRepository) Search(_ context.Context, _ domain.MessageSea
 }
 
 type fakeSenderRepository struct {
-	values []domain.SenderProfile
+	values      []domain.SenderProfile
+	failUpsert  error
+	upsertCalls int
 }
 
 func (repo *fakeSenderRepository) Upsert(_ context.Context, sender domain.SenderProfile) (domain.SenderProfile, error) {
+	repo.upsertCalls++
+	if repo.failUpsert != nil {
+		return domain.SenderProfile{}, repo.failUpsert
+	}
 	for index, existing := range repo.values {
 		if existing.KickUserID == sender.KickUserID {
 			sender.ID = existing.ID

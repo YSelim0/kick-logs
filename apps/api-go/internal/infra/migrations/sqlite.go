@@ -181,5 +181,12 @@ func SQLiteMigrations() []SQLiteMigration {
 				`CREATE INDEX IF NOT EXISTS idx_kick_event_subscriptions_channel ON kick_event_subscriptions (followed_channel_id, status);`,
 			},
 		},
+		{
+			Version: 8,
+			Name:    "prune_processed_raw_event_queue_rows",
+			Statements: []string{
+				`DELETE FROM raw_event_queue WHERE status = 'processed';`,
+			},
+		},
 	}
 }

@@ -335,18 +335,23 @@ Login required.
 
 ### Operations Section
 
-- Header: `Operations` (22/600) + sub `Listener sağlığı, ingestion durumu, depolama özeti`. Right:
-  `Yenile` outline button.
-- Status banner panel: accent dot, two-line status (line 1 listener freshness, line 2 failed-events
-  count in `danger` when > 0). Right: UTC timestamp mono.
-- 4-cell metric row: `Mesaj`, `Raw event`, `Başarısız raw`, `DB boyutu`. Each cell has a top mono
-  label + lucide icon (icon color follows severity), big metric value, sub-caption (caption color
-  follows severity).
-- `Başarısız raw` card's sub-caption `İnceleme gerekli` is clickable and opens the existing failed
-  events modal. The retry/clear modal stays as-is.
-- Ingestion panel: header `Ingestion` + mono sub `queue, breaker, flush`; right pill
-  `BREAKER CLOSED` / `OPEN` with accent or danger dot. Below: 6-cell mono metric strip
-  (`Queue depth`, `Write queue`, `Drop count`, `Flush count`, `Son flush`, `CH failures`).
+- Header: `Operations` (22/600) + sub text `Listener, processor, JetStream backlog,
+ClickHouse geçmişi, depolama özeti`. Right: `Yenile` outline button.
+- Warning notices appear above metrics when listener/processor heartbeat is stale, JetStream
+  redelivery is non-zero, ClickHouse breaker is open, legacy writer drop count is non-zero, or
+  ClickHouse failed attempt diagnostics exist.
+- 4-cell metric row: `MESAJ`, `JETSTREAM BACKLOG`, `BAŞARISIZ RAW`, `DB BOYUTU`. Each cell has a
+  top mono label + lucide icon (icon color follows severity), big metric value, sub-caption
+  (caption color follows severity).
+- `JETSTREAM BACKLOG` is the active live-chat pending value: stream consumer pending + ack-pending.
+  ClickHouse raw-event counts are historical/diagnostic and must not be labeled as active pending.
+- `Başarısız raw` card's sub-caption `İnceleme gerekli` is clickable and opens the failed-events
+  diagnostic modal. JetStream redelivery is automatic; the modal does not expose manual retry. It may
+  clear ClickHouse diagnostic failed attempt records after operator review.
+- Ingestion panel: header `Aktif Ingestion` + mono sub
+  `JetStream consumer, processor breaker, legacy SQLite queue`; right pill `Kapalı` / `Açık` with
+  accent or danger dot. Below: 6-cell mono metric strip (`Stream pending`, `Ack pending`,
+  `Redelivery`, `En eski`, `Legacy SQLite`, `CH failures`).
 - Webhooks panel channel subscriptions render one compact status action per channel instead of one
   table row per event. Summary states:
   - `aktif`: all configured subscription events are active and error-free.

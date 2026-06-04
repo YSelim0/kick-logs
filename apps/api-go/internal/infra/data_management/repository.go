@@ -44,9 +44,21 @@ func (repo *Repository) Summary(ctx context.Context) (domain.DataManagementSumma
 }
 
 func (repo *Repository) GetRetentionSettings(ctx context.Context) (domain.RetentionSettings, error) {
+	settings, err := repo.readRetentionSettings(ctx)
+	if err == nil {
+		return settings, nil
+	}
+	if err != sql.ErrNoRows {
+		return domain.RetentionSettings{}, err
+	}
+
 	if err := repo.ensureRetentionSettings(ctx); err != nil {
 		return domain.RetentionSettings{}, err
 	}
+	return repo.readRetentionSettings(ctx)
+}
+
+func (repo *Repository) readRetentionSettings(ctx context.Context) (domain.RetentionSettings, error) {
 	row := repo.sqliteDB.QueryRowContext(
 		ctx,
 		`SELECT id, message_retention_days, raw_event_retention_days, created_at, updated_at
@@ -217,7 +229,19 @@ func (repo *Repository) tableSizes(ctx context.Context) ([]domain.TableSize, int
 			BytesOnDisk: stat.Size(),
 		})
 	}
-	for _, table := range []string{"admin_users", "followed_channels", "sender_profiles", "retention_settings", "worker_heartbeats", "raw_event_claims", "data_migration_runs"} {
+	for _, table := range []string{
+		"admin_users",
+		"followed_channels",
+		"sender_profiles",
+		"retention_settings",
+		"worker_heartbeats",
+		"raw_event_queue",
+		"raw_event_claims",
+		"kick_webhook_events",
+		"kick_event_subscriptions",
+		"data_migration_runs",
+		"schema_migrations",
+	} {
 		rows, err := countSQLiteRows(ctx, repo.sqliteDB, table)
 		if err != nil {
 			return nil, 0, err

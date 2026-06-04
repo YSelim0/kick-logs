@@ -2,7 +2,224 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (admin webhook status UI)
+## Latest (channel index aggregate hardening)
+
+- Root cause for `/channels` search failing on high-volume channels such as `hype`: the endpoint
+  calls `GET /analytics/top-channels?q=...`, and `TopChannels` used a
+  `row_number() OVER (PARTITION BY kick_message_id ...)` dedupe window before grouping. Large
+  channel result sets could exceed ClickHouse memory, while low-volume channels still worked.
+- `/admin/channels` used the same `TopChannels` aggregate for its informational message-count
+  column, so when the aggregate failed, the API kept the channel list available but rendered counts
+  as zero/empty.
+- `Overview`, `MessageVolume`, `TopSenders`, `TopChannels`, and `TopEmotes` now avoid the window
+  scan and read from `chat_messages FINAL`. Live rows use deterministic ids derived from
+  `kick_message_id`, and local data has no same-message rows with divergent ids, so `FINAL`
+  preserves duplicate redelivery dedupe without the high-memory window/sort shape.
+- Parameterized `/channels` and `/users` index searches still bypass cache; this fix changes the
+  ClickHouse query shape instead of caching arbitrary `q` values.
+- Local verification after rebuilding the API:
+  - `GET /analytics/overview`, `message-volume`, `top-emotes`, and `top-senders` returned 200.
+  - `GET /analytics/top-channels?q=hype&limit=20` returned 200 with the `hype` count populated.
+  - `GET /channels/hype/analytics` returned 200 with profile sections populated.
+  - Authenticated `GET /admin/channels` returned 200 with message counts populated.
+
+## Latest (Kick recent-message backfill)
+
+- Root cause for `gokhanoner` missing chat rows: Kick Pusher is under-delivering compared with the
+  web chat. An independent Pusher subscriber matched the local listener's small message-id set, but
+  Kick's numeric `GET /api/v2/channels/{kick_channel_id}/messages?sort=desc` endpoint contained
+  extra recent messages visible on kick.com.
+- Listener now uses two capture sources:
+  - Pusher websocket (`chatrooms.{chatroom_id}.v2`, legacy `chatrooms.{chatroom_id}`, and
+    `channel.{kick_channel_id}`),
+  - numeric recent-message polling every `LISTENER_RECENT_MESSAGE_POLL_INTERVAL_SECONDS` while
+    `LISTENER_RECENT_MESSAGE_POLL_ENABLED=true`.
+- Recent-message fetches are bounded-concurrent (`LISTENER_RECENT_MESSAGE_POLL_CONCURRENCY=8` by
+  default). Sequentially polling all enabled channels was too slow for an active chat whose latest
+  endpoint page only covers a short message window.
+- Recent-message polling publishes through the same JetStream raw-event envelope path as Pusher.
+  Raw event ids stay `kick:{message_id}`, so duplicate overlap is safe and duplicate PubAck
+  responses are not counted as new captured events.
+- The listener also keeps a 1-hour in-memory seen set for successfully published recent raw event
+  ids. This avoids quiet channels republishing the same latest endpoint page every poll tick once
+  JetStream's duplicate window expires.
+- The recent-message client parses `metadata` when Kick returns it as a JSON string and injects the
+  followed channel's `kick_chatroom_id` into `chatroom_id`, because the endpoint's `chat_id` is the
+  numeric channel id, not the chatroom id expected by the normalizer.
+- Operations now surfaces recent-message poll counters:
+  `ingestion.recent_message_poll_captured` and `ingestion.recent_message_poll_errors`, alongside
+  existing `captured_raw_events`.
+- Previous Pusher health fixes remain in this worktree: protocol `pusher:ping` gets `pusher:pong`,
+  subscription bookkeeping is ignored before chat parsing, `pusher:error` fails the listener loop,
+  and both current + legacy chatroom channel names are subscribed.
+
+## Previously Latest (analytics cache and landing resilience)
+
+- Public/global analytics now uses an in-memory API cache for expensive aggregate reads:
+  - fresh TTL: 1 hour,
+  - stale fallback: 24 hours when ClickHouse refresh fails,
+  - max entries: 128,
+  - same-key concurrent requests are coalesced so a burst does not fan out into duplicate ClickHouse
+    queries.
+- Cache applies only to global analytics calls where `q`, `sender`, and `channel` are empty.
+  Parameterized `/users` and `/channels` index searches bypass cache.
+- Admin Operations remains uncached. `/admin/channels` can receive cached global channel counts,
+  which is acceptable because those table counts are informational.
+- Landing page no longer fails all analytics panels when one endpoint fails. It loads analytics
+  requests one by one, keeps fulfilled results visible, and shows a partial-data banner when one
+  panel cannot be fetched.
+- Public user/channel profile analytics now has a separate slug-scoped in-memory cache with the
+  same 1-hour fresh / 24-hour stale / 128-entry shape. This protects `/users/{slug}/analytics` and
+  `/channels/{slug}/analytics` from repeated heavy ClickHouse aggregate reads.
+- Profile analytics responses are best-effort: if one aggregate such as top emotes hits ClickHouse
+  memory limits, the endpoint still returns the profile identity and the successful sections with
+  the failed section empty instead of returning 500.
+- Profile latest-message reads now use a narrow candidate-id query before fetching wide message
+  payload/emote columns, so the `Son mesajlar` panel can populate without doing a wide all-channel
+  window scan.
+- Active channel subscription counts remain uncached. `/channels/{slug}/subscription-summary`
+  continues to call `SubscriptionPeriods.ActiveSummary` on every request because it may be shown as
+  live broadcaster-facing state.
+
+## Latest (issue #23 — JetStream operations contract cleanup)
+
+- Active live chat ingestion is now `listener -> NATS JetStream -> processor -> ClickHouse`.
+  SQLite `raw_event_queue` / `raw_event_claims` are legacy migration/compatibility tables, not the
+  active live chat queue.
+- Operations pending/backlog semantics are now explicit:
+  - live pending = JetStream consumer pending + ack-pending,
+  - `legacy_queue_depth` = old SQLite queue depth only,
+  - ClickHouse `raw_kick_events` / `raw_event_attempts` = historical archive/diagnostics, not active
+    queue state.
+- Backend operations summary now counts ClickHouse raw events by distinct raw event id and only
+  computes `oldest_pending_raw_event_received_at` in legacy non-JetStream mode.
+- Failed raw events in Operations are diagnostic ClickHouse failed attempt records. JetStream
+  redelivery is automatic; the frontend no longer exposes a manual retry action that would update
+  the old SQLite queue.
+- Failed-event listing now groups to one logical row per raw event id and keeps the latest error
+  message for display.
+- Docs and UI copy were refreshed so future agents do not learn the obsolete SQLite-active-queue
+  model from context/design files.
+
+## Latest (issue #23 — listener reconnect and sender identity follow-up)
+
+- Fixed local listener message gaps caused by forced websocket reconnects every
+  `LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS`. The listener now keeps the Kick stream open and only
+  reconnects when the enabled channel set actually changes.
+- `LISTENER_CHANNEL_RESYNC_INTERVAL_SECONDS` now controls the channel-set check cadence, not a
+  forced stream lifetime.
+- New chat message normalization stores `sender_id` and `sender_kick_id` from Kick's stable sender
+  id so future ClickHouse rows do not mix SQLite sender-profile ids with Kick user ids.
+- Analytics top-sender and sender-count queries now group by a stable identity:
+  `sender_kick_id` when present, then slug, then username. This collapses historical split rows like
+  one user appearing twice because older rows used a SQLite cache id and newer rows used Kick id.
+- Profile and message API responses normalize visible sender ids to Kick user id when
+  `sender_kick_id`/`kick_user_id` exists, so historical rows do not expose SQLite cache ids as user
+  ids.
+- User profile latest messages now returns 20 rows to match the UI copy.
+- Listener startup ClickHouse raw-event archive bootstrap is disabled by default via
+  `LISTENER_BOOTSTRAP_RAW_QUEUE_ON_STARTUP=false`; enable it only for one-off recovery. This avoids
+  expensive startup archive scans now that active raw-event work lives in JetStream.
+- Verification: local Docker API/listener rebuild and restart succeeded; listener logs show
+  `raw event queue bootstrap skipped`; `go test ./...`, `go vet ./...`, and `pnpm format:check`
+  passed.
+
+## Latest (issue #23 — SQLite lock follow-up)
+
+- Fixed admin Data Management summary returning `Internal server error` while the listener/API had
+  concurrent SQLite writers.
+- Root cause: `GET /admin/data-management/summary` called `GetRetentionSettings`, which attempted
+  an `INSERT ... ON CONFLICT DO NOTHING` even when the settings row already existed. Under live
+  listener writes this could hit `SQLITE_BUSY`.
+- `GetRetentionSettings` now reads first and only creates the default row on `sql.ErrNoRows`, so the
+  summary path stays read-only after first setup.
+- Webhook inbox terminal pruning is now throttled to avoid attempting a SQLite `DELETE` every 5
+  seconds during normal processor ticks. A failed prune attempt is also throttled before retrying, so
+  lock warnings do not spam logs.
+- Added regression coverage for Data Management summary under a concurrent SQLite writer and
+  webhook prune throttling.
+
+## Previously Latest (issue #23 — docs and verification)
+
+- Architecture and project plan docs now describe the hardened storage split:
+  - ClickHouse owns raw/message/attempt/subscription history.
+  - SQLite owns control-plane state, webhook inbox/registry state, and legacy queue compatibility
+    tables.
+  - processed raw-event queue rows and old terminal webhook inbox rows do not live forever in
+    SQLite. Live chat backlog has moved to JetStream.
+- `docs/implementation_plan.md` is marked implemented for branch
+  `feat/issue-23-storage-hot-path-hardening`.
+- Final validation for the branch is being run before the docs verification commit.
+
+## Previously Latest (issue #23 — admin operations clarification)
+
+- Admin Operations copy now separates active JetStream queue state from all-time ClickHouse
+  raw-event history and legacy SQLite queue compatibility state.
+- The Raw Event metric no longer labels ClickHouse archive counts as `pending`; active backlog is
+  shown under the Ingestion section as `Aktif queue`.
+- Failed raw-event UI copy now describes ClickHouse diagnostic failed attempts and notes that
+  terminal ignored events are intentionally excluded from the failed-event modal.
+- Data Management table rows now include the legacy `raw_event_queue`, webhook inbox, Kick event
+  subscription registry, and SQLite migration table counts so runtime SQLite state stays visible
+  without presenting SQLite as the live chat queue.
+
+## Previously Latest (issue #23 — webhook inbox retention)
+
+- Webhook processor now prunes old terminal SQLite inbox rows after processing ticks.
+- Retention applies only to `kick_webhook_events` rows with status `processed` or `ignored` and a
+  `processed_at` older than 7 days.
+- Pending and failed webhook inbox rows are preserved for processing/admin visibility; normalized
+  subscription periods remain durable in ClickHouse.
+- Added SQLite repository and webhook processor tests for retention behavior.
+
+## Previously Latest (issue #23 — terminal invalid raw events)
+
+- Permanently invalid raw chat payloads now write a terminal ClickHouse attempt with status
+  `ignored` and, in the superseded SQLite queue mode, are removed from legacy queue work instead of
+  retrying until max attempts.
+- Backfill now treats `processed`, `ignored`, and `invalid` raw-event attempts as terminal, so
+  ignored malformed events do not re-enter the queue after restart.
+- Worker safety tightened: if the ClickHouse attempt batch insert fails, claimed queue rows are
+  released back to pending instead of being acknowledged without attempt history.
+- Operations status counts now include `ignored` and exclude terminal ignored/invalid rows from
+  pending/failed calculations.
+
+## Previously Latest (issue #23 — raw event queue processed-row pruning)
+
+- Superseded by JetStream cutover: SQLite `raw_event_queue` briefly behaved as active work state in
+  earlier hardening work. Successful `MarkProcessed` deleted the queue row instead of storing a
+  permanent `processed` row.
+- SQLite migration v8 prunes existing `processed` queue rows during deploy. This does not delete
+  `chat_messages`, `raw_kick_events`, or ClickHouse `raw_event_attempts`.
+- Listener tests now expect successful raw events to disappear from the queue and include coverage
+  that startup bootstrap skips raw events with existing ClickHouse `processed` attempts.
+
+## Previously Latest (issue #23 — sender profile cache throttling)
+
+- Listener raw-event processing no longer fails a chat message when SQLite `sender_profiles` upsert
+  fails.
+- The message is still built from the raw Kick payload sender snapshot and written to
+  `chat_messages`; the cache failure is logged for operations visibility.
+- Sender profile cache writes are now TTL-gated in memory: at most one SQLite upsert per Kick user
+  id every 10 minutes.
+- Added listener and gate tests for cache failure, first write, TTL expiry, per-sender separation,
+  and repeated messages from the same sender avoiding repeated cache writes.
+
+## Previously Latest (issue #23 — storage hot path hardening plan)
+
+- Active implementation plan now targets issue #23 storage hot-path hardening.
+- Locked the intended storage split:
+  - ClickHouse owns durable data-plane history (`chat_messages`, `raw_kick_events`,
+    `raw_event_attempts`, `channel_subscription_periods`).
+  - SQLite owns control-plane state plus temporary queue/inbox rows.
+- Planned safe production changes:
+  - sender profile cache upserts become best-effort and TTL-gated
+  - processed `raw_event_queue` rows are removed after successful ClickHouse processed attempts
+  - permanent invalid raw events stop retrying forever
+  - processed/ignored webhook inbox rows get short retention
+  - admin Operations copy/metrics clarify active queue state versus historical ClickHouse data
+
+## Previously Latest (admin webhook status UI)
 
 - Operations Webhooks panel now summarizes each channel's subscription state in one row instead of
   rendering three event rows inline. The summary is clickable:
@@ -365,10 +582,9 @@ unless-stopped` + `mem_limit` on all four (clickhouse 1536m, web 768m, listener 
     brand + `/ admin` mono breadcrumb + user email + `SUPER ADMIN` pill + `Çıkış` button; all
     existing sections (OperationsDashboard, ChannelAdmin, UserAdmin, DataManagementPanel)
     rendered stacked in the main column; `bg-kick-background` and legacy tokens removed
-  - operations dashboard: 4-card metric row (MESAJ, RAW EVENT, BAŞARISIZ RAW, DB BOYUTU) with
-    mono labels and large values; status banner with Canlı/Bayat indicator; Ingestion panel
-    with 6-cell strip (Queue depth, Write queue, Drop count, Flush count, Son flush, CH
-    failures) and Kapalı/Açık breaker pill; all warning notices preserved
+  - operations dashboard: 4-card metric row and ingestion strip. This older v2 pass predated the
+    JetStream operations contract; the current panel uses JetStream backlog metrics instead of
+    buffered-writer queue labels.
   - channel admin: new v2 table (KANAL, DURUM, MESAJ, SON AKTİVİTE columns); inline add form
     with sr-only label; direct Devre dışı bırak button in action column
   - login: centered 380px card on bg-page; brand square + `kick logs` + subtitle; E-POSTA /
@@ -964,8 +1180,9 @@ unless-stopped` + `mem_limit` on all four (clickhouse 1536m, web 768m, listener 
 - Implemented Post-MVP Feature 1 admin operations UI:
   - added typed `getOperationsSummary` frontend API wrapper
   - `/admin` now shows `OperationsDashboard` above channel/user management
-  - compact cards show listener status, DB size, message count, raw event count, failed raw,
-    pending raw, and last ingest time
+  - compact cards showed listener status, DB size, message count, raw event count, failed raw,
+    pending raw, and last ingest time in the original post-MVP implementation; current Operations
+    uses JetStream backlog for live pending state.
   - manual refresh, stale listener warning, failed raw warning, and API error states are tested
 - Verification:
   - `pnpm --filter @kick-logs/web test`: 10 files, 36 tests passed
@@ -976,8 +1193,9 @@ unless-stopped` + `mem_limit` on all four (clickhouse 1536m, web 768m, listener 
   - added `worker_heartbeats` persistence and migration `20260513_0003`
   - listener writes a periodic `listener` heartbeat
   - added admin-only `GET /admin/operations/summary`
-  - summary includes listener freshness, row counts, raw event status counts, DB/table sizes,
-    latest ingest timestamps, and oldest pending raw event timestamp
+  - summary included listener freshness, row counts, raw event status counts, DB/table sizes, latest
+    ingest timestamps, and oldest pending raw event timestamp in the original post-MVP
+    implementation; current JetStream mode reports live pending through stream metrics.
   - `.env.example` and Compose expose listener heartbeat interval/staleness settings
 - Verification:
   - `python -m uv run alembic upgrade head`: applied `20260513_0003`

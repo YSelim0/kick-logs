@@ -25,13 +25,16 @@ func (repo *AnalyticsRepository) Overview(
 	where, args := analyticsWhere(filter)
 	query := fmt.Sprintf(`SELECT
 		count(),
-		uniqExactIf(sender_id, isNotNull(sender_id)),
+		uniqExactIf(
+			%s,
+			ifNull(sender_kick_id, 0) > 0 OR sender_slug_lower != '' OR sender_username_lower != ''
+		),
 		uniqExactIf(channel_id, isNotNull(channel_id)),
 		sum(emote_count),
 		min(message_created_at),
 		max(message_created_at)
-		FROM chat_messages
-		WHERE %s`, where)
+		FROM chat_messages FINAL
+		WHERE %s`, senderIdentitySQL(), where)
 
 	var totalMessages uint64
 	var totalSenders uint64
@@ -76,7 +79,7 @@ func (repo *AnalyticsRepository) MessageVolume(
 	query := fmt.Sprintf(`SELECT
 		%s(message_created_at) AS bucket_start,
 		count() AS message_count
-		FROM chat_messages
+		FROM chat_messages FINAL
 		WHERE %s
 		GROUP BY bucket_start
 		ORDER BY bucket_start ASC`, bucketFunction, where)
@@ -111,19 +114,32 @@ func (repo *AnalyticsRepository) TopSenders(
 ) ([]domain.TopSenderAnalytics, error) {
 	where, args := topSendersWhere(filter)
 	query := fmt.Sprintf(`SELECT
-		ifNull(sender_id, 0) AS sender_id,
-		ifNull(sender_kick_id, 0) AS kick_user_id,
-		argMax(sender_username, message_created_at) AS username,
-		argMax(sender_slug, message_created_at) AS slug,
-		argMax(ifNull(sender_profile_image_url, ''), message_created_at) AS profile_image_url,
+		argMax(ifNull(sender_id, 0), tuple(message_created_at, ingested_at, id)) AS sender_id,
+		argMax(ifNull(sender_kick_id, 0), tuple(message_created_at, ingested_at, id)) AS kick_user_id,
+		argMax(sender_username, tuple(message_created_at, ingested_at, id)) AS username,
+		argMax(sender_slug, tuple(message_created_at, ingested_at, id)) AS slug,
+		argMax(ifNull(sender_profile_image_url, ''), tuple(message_created_at, ingested_at, id)) AS profile_image_url,
 		count() AS message_count,
 		min(message_created_at) AS first_message_at,
 		max(message_created_at) AS latest_message_at
-		FROM chat_messages
-		WHERE %s
-		GROUP BY sender_id, kick_user_id
+		FROM (
+			SELECT
+				%s AS sender_identity,
+				id,
+				kick_message_id,
+				sender_id,
+				sender_kick_id,
+				sender_username,
+				sender_slug,
+				sender_profile_image_url,
+				message_created_at,
+				ingested_at
+			FROM chat_messages FINAL
+			WHERE %s
+		)
+		GROUP BY sender_identity
 		ORDER BY message_count DESC, latest_message_at DESC, slug ASC
-		LIMIT ?`, where)
+		LIMIT ?`, senderIdentitySQL(), where)
 	args = append(args, limitOrDefault(limit))
 
 	rows, err := repo.conn.Query(ctx, query, args...)
@@ -148,6 +164,9 @@ func (repo *AnalyticsRepository) TopSenders(
 		); err != nil {
 			return nil, fmt.Errorf("scan top sender: %w", err)
 		}
+		if sender.KickUserID > 0 {
+			sender.SenderID = sender.KickUserID
+		}
 		sender.MessageCount = int64(messageCount)
 		sender.FirstMessageAt = sender.FirstMessageAt.UTC()
 		sender.LatestMessageAt = sender.LatestMessageAt.UTC()
@@ -159,6 +178,23 @@ func (repo *AnalyticsRepository) TopSenders(
 	return senders, nil
 }
 
+func senderIdentitySQL() string {
+	return `multiIf(
+			ifNull(sender_kick_id, 0) > 0,
+			concat('kick:', toString(ifNull(sender_kick_id, 0))),
+			sender_slug_lower != '',
+			concat('slug:', sender_slug_lower),
+			concat('username:', sender_username_lower)
+		)`
+}
+
+func messageRankSQL() string {
+	return `row_number() OVER (
+			PARTITION BY kick_message_id
+			ORDER BY ingested_at DESC, message_created_at DESC, id DESC
+		) AS message_rank`
+}
+
 func (repo *AnalyticsRepository) TopChannels(
 	ctx context.Context,
 	filter domain.AnalyticsFilter,
@@ -166,16 +202,28 @@ func (repo *AnalyticsRepository) TopChannels(
 ) ([]domain.TopChannelAnalytics, error) {
 	where, args := topChannelsWhere(filter)
 	query := fmt.Sprintf(`SELECT
-		ifNull(channel_id, 0) AS channel_id,
-		argMax(channel_slug, message_created_at) AS slug,
-		argMax(channel_display_name, message_created_at) AS display_name,
-		argMax(ifNull(channel_profile_image_url, ''), message_created_at) AS profile_image_url,
-		argMax(ifNull(channel_banner_image_url, ''), message_created_at) AS banner_image_url,
+		channel_id,
+		argMax(channel_slug, tuple(message_created_at, ingested_at, id)) AS slug,
+		argMax(channel_display_name, tuple(message_created_at, ingested_at, id)) AS display_name,
+		argMax(ifNull(channel_profile_image_url, ''), tuple(message_created_at, ingested_at, id)) AS profile_image_url,
+		argMax(ifNull(channel_banner_image_url, ''), tuple(message_created_at, ingested_at, id)) AS banner_image_url,
 		count() AS message_count,
 		min(message_created_at) AS first_message_at,
 		max(message_created_at) AS latest_message_at
-		FROM chat_messages
-		WHERE %s
+		FROM (
+			SELECT
+				id,
+				kick_message_id,
+				ifNull(channel_id, 0) AS channel_id,
+				channel_slug,
+				channel_display_name,
+				channel_profile_image_url,
+				channel_banner_image_url,
+				message_created_at,
+				ingested_at
+			FROM chat_messages FINAL
+			WHERE %s
+		)
 		GROUP BY channel_id
 		ORDER BY message_count DESC, latest_message_at DESC, slug ASC
 		LIMIT ?`, where)
@@ -227,13 +275,21 @@ func (repo *AnalyticsRepository) TopEmotes(
 		emote_image_url,
 		count() AS usage_count,
 		uniqExact(kick_message_id) AS message_count
-		FROM chat_messages
+		FROM (
+			SELECT
+				kick_message_id,
+				emote_ids AS latest_emote_ids,
+				emote_names AS latest_emote_names,
+				emote_tokens AS latest_emote_tokens,
+				emote_image_urls AS latest_emote_image_urls
+			FROM chat_messages FINAL
+			WHERE %s
+		)
 		ARRAY JOIN
-			emote_ids AS emote_id,
-			emote_names AS emote_name,
-			emote_tokens AS emote_token,
-			emote_image_urls AS emote_image_url
-		WHERE %s
+			latest_emote_ids AS emote_id,
+			latest_emote_names AS emote_name,
+			latest_emote_tokens AS emote_token,
+			latest_emote_image_urls AS emote_image_url
 		GROUP BY emote_id, emote_name, emote_token, emote_image_url
 		ORDER BY usage_count DESC, message_count DESC, emote_name ASC
 		LIMIT ?`, where)
@@ -275,7 +331,56 @@ func (repo *AnalyticsRepository) LatestMessages(
 	filter domain.AnalyticsFilter,
 	limit uint64,
 ) ([]domain.ChatMessage, error) {
+	limit = limitOrDefault(limit)
 	where, args := analyticsWhere(filter)
+	candidateLimit := latestMessagesCandidateLimit(limit)
+	idQuery := fmt.Sprintf(`SELECT id
+		FROM (
+			SELECT
+				id,
+				kick_message_id,
+				message_created_at,
+				ingested_at,
+				%s
+			FROM (
+				SELECT
+					id,
+					kick_message_id,
+					message_created_at,
+					ingested_at
+				FROM chat_messages
+				WHERE %s
+				ORDER BY message_created_at DESC, id DESC
+				LIMIT ?
+			)
+		)
+		WHERE message_rank = 1
+		ORDER BY message_created_at DESC, id DESC
+		LIMIT ?`, messageRankSQL(), where)
+	idArgs := append([]any{}, args...)
+	idArgs = append(idArgs, candidateLimit, limit)
+
+	idRows, err := repo.conn.Query(ctx, idQuery, idArgs...)
+	if err != nil {
+		return nil, fmt.Errorf("query latest analytics message ids: %w", err)
+	}
+	defer idRows.Close()
+
+	messageIDs := make([]int64, 0, int(limit))
+	for idRows.Next() {
+		var id int64
+		if err := idRows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan latest analytics message id: %w", err)
+		}
+		messageIDs = append(messageIDs, id)
+	}
+	if err := idRows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate latest analytics message ids: %w", err)
+	}
+	if len(messageIDs) == 0 {
+		return []domain.ChatMessage{}, nil
+	}
+
 	query := fmt.Sprintf(`SELECT
 		id, kick_message_id, ifNull(channel_id, 0), ifNull(channel_kick_id, 0), ifNull(channel_chatroom_id, 0),
 		channel_slug, channel_display_name, ifNull(channel_profile_image_url, ''),
@@ -286,13 +391,26 @@ func (repo *AnalyticsRepository) LatestMessages(
 		emote_image_urls, ifNull(reply_to_sender, ''), ifNull(reply_to_content, ''),
 		ifNull(reply_to_message_id, ''), ifNull(thread_parent_id, ''), reply_metadata_json,
 		raw_payload_json, message_created_at, ingested_at
-		FROM chat_messages
-		WHERE %s
+		FROM (
+			SELECT
+				id, kick_message_id, channel_id, channel_kick_id, channel_chatroom_id,
+				channel_slug, channel_display_name, channel_profile_image_url,
+				channel_banner_image_url, channel_public_url,
+				sender_id, sender_kick_id, sender_username, sender_slug,
+				sender_display_color, sender_profile_image_url, sender_public_url,
+				sender_badges_json, message_type, content, emote_ids, emote_names, emote_tokens,
+				emote_image_urls, reply_to_sender, reply_to_content, reply_to_message_id,
+				thread_parent_id, reply_metadata_json, raw_payload_json, message_created_at, ingested_at,
+				is_deleted,
+				%s
+			FROM chat_messages
+			WHERE id IN (?)
+		)
+		WHERE is_deleted = 0 AND message_rank = 1
 		ORDER BY message_created_at DESC, id DESC
-		LIMIT ?`, where)
-	args = append(args, limitOrDefault(limit))
+		LIMIT ?`, messageRankSQL())
 
-	rows, err := repo.conn.Query(ctx, query, args...)
+	rows, err := repo.conn.Query(ctx, query, messageIDs, limit)
 	if err != nil {
 		return nil, fmt.Errorf("query latest analytics messages: %w", err)
 	}
@@ -310,6 +428,17 @@ func (repo *AnalyticsRepository) LatestMessages(
 		return nil, fmt.Errorf("iterate latest analytics messages: %w", err)
 	}
 	return messages, nil
+}
+
+func latestMessagesCandidateLimit(limit uint64) uint64 {
+	candidateLimit := limit * 100
+	if candidateLimit < 1000 {
+		return 1000
+	}
+	if candidateLimit > 5000 {
+		return 5000
+	}
+	return candidateLimit
 }
 
 func analyticsWhere(filter domain.AnalyticsFilter) (string, []any) {

@@ -276,6 +276,9 @@ func (s *inMemoryWebhookStore) MarkFailed(_ context.Context, _ string, _ string,
 	return nil
 }
 func (s *inMemoryWebhookStore) MarkIgnored(_ context.Context, _ string, _ string) error { return nil }
+func (s *inMemoryWebhookStore) PruneTerminalBefore(_ context.Context, _ time.Time) (int64, error) {
+	return 0, nil
+}
 func (s *inMemoryWebhookStore) CountByStatus(_ context.Context) (map[string]int64, error) {
 	return nil, nil
 }

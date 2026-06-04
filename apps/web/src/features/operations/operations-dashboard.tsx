@@ -19,6 +19,20 @@ import type { IngestionHealth, OperationsSummary } from "@/types/api";
 const EMPTY_INGESTION: IngestionHealth = {
   queue_depth: 0,
   oldest_pending_age_seconds: 0,
+  legacy_queue_depth: 0,
+  legacy_oldest_pending_age_seconds: 0,
+  captured_raw_events: 0,
+  recent_message_poll_captured: 0,
+  recent_message_poll_errors: 0,
+  stream_messages: 0,
+  stream_bytes: 0,
+  stream_consumer_pending: 0,
+  stream_consumer_ack_pending: 0,
+  stream_consumer_redelivered: 0,
+  stream_oldest_pending_age_seconds: 0,
+  stream_latest_message_age_seconds: 0,
+  stream_latest_consumer_update_time: null,
+  stream_error: "",
   write_queue_depth: 0,
   write_queue_high_water_mark: 0,
   write_drop_count: 0,
@@ -62,7 +76,6 @@ export function OperationsDashboard() {
 
   const ingestion = summary?.ingestion ?? EMPTY_INGESTION;
   const failedRawEvents = summary ? getStatusCount(summary, "failed") : 0;
-  const pendingRawEvents = summary ? getStatusCount(summary, "pending") : 0;
   const isBreakerOpen = ingestion.breaker_state === "open";
 
   return (
@@ -71,7 +84,7 @@ export function OperationsDashboard() {
         <div className="flex flex-col gap-1">
           <h2 className="text-[22px] font-semibold tracking-tight text-foreground">Operations</h2>
           <p className="font-sans text-[13px] text-muted-foreground">
-            Listener sağlığı, ingestion durumu, depolama özeti
+            Listener, processor, JetStream backlog, ClickHouse geçmişi, depolama özeti
           </p>
         </div>
         <Button
@@ -111,10 +124,17 @@ export function OperationsDashboard() {
               tone="warning"
             />
           ) : null}
+          {!summary.processor.is_fresh ? (
+            <OperationsNotice
+              icon={<TriangleAlert className="h-4 w-4" />}
+              message="Processor heartbeat bayat. JetStream backlog ClickHouse'a yazılamıyor olabilir."
+              tone="warning"
+            />
+          ) : null}
           {failedRawEvents > 0 ? (
             <OperationsNotice
               icon={<TriangleAlert className="h-4 w-4" />}
-              message="Başarısız raw event var. İşleme hatalarını backend loglarıyla incelemek gerekebilir."
+              message="ClickHouse failed raw event attempt kaydı var. JetStream redelivery otomatik; backend loglarını incelemek gerekebilir."
               tone="danger"
             />
           ) : null}
@@ -128,29 +148,29 @@ export function OperationsDashboard() {
           {ingestion.write_drop_count > 0 ? (
             <OperationsNotice
               icon={<TriangleAlert className="h-4 w-4" />}
-              message={`Buffered writer ${formatNumber(ingestion.write_drop_count)} event düşürdü. Pusher trafiği buffer kapasitesini aştı.`}
+              message={`Legacy buffered writer ${formatNumber(ingestion.write_drop_count)} event düşürdü. Bu metrik yeni JetStream hot path'te sıfır kalmalı.`}
+              tone="warning"
+            />
+          ) : null}
+          {ingestion.stream_consumer_redelivered > 0 ? (
+            <OperationsNotice
+              icon={<TriangleAlert className="h-4 w-4" />}
+              message={`JetStream ${formatNumber(ingestion.stream_consumer_redelivered)} redelivery bildiriyor. Processor yavaşlaması veya geçici ClickHouse hatası olabilir.`}
+              tone="warning"
+            />
+          ) : null}
+          {ingestion.stream_error ? (
+            <OperationsNotice
+              icon={<TriangleAlert className="h-4 w-4" />}
+              message={`JetStream metrikleri okunamadı: ${ingestion.stream_error}`}
               tone="warning"
             />
           ) : null}
 
-          <div className="flex items-center gap-3 rounded-lg border border-border bg-panel px-4 py-3">
-            <span
-              className={`h-2 w-2 shrink-0 rounded-full ${summary.listener.is_fresh ? "bg-accent" : "bg-warning"}`}
-            />
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="text-[13px] font-medium text-foreground">
-                <span>{summary.listener.is_fresh ? "Canlı" : "Bayat"}</span>
-                {" · son sinyal "}
-                {summary.listener.seconds_since_last_seen !== null
-                  ? `${summary.listener.seconds_since_last_seen}s`
-                  : "yok"}
-                {" önce"}
-              </span>
-              {failedRawEvents > 0 ? (
-                <span className="text-[12px] text-danger">
-                  {formatNumber(failedRawEvents)} başarısız raw event — İnceleme gerekli
-                </span>
-              ) : null}
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-panel px-4 py-3">
+            <div className="grid flex-1 gap-2 md:grid-cols-2">
+              <HeartbeatSummary label="Listener" heartbeat={summary.listener} />
+              <HeartbeatSummary label="Processor" heartbeat={summary.processor} />
             </div>
             <span className="shrink-0 font-mono text-[11px] text-faint">
               {new Date().toISOString().slice(11, 19)} UTC
@@ -166,11 +186,11 @@ export function OperationsDashboard() {
               value={formatNumber(summary.counts.messages)}
             />
             <MetricCard
-              detail={`pending ${formatNumber(pendingRawEvents)}`}
+              detail={`ack bekleyen ${formatNumber(ingestion.stream_consumer_ack_pending)}`}
               icon={<HardDrive className="h-3.5 w-3.5" />}
               iconTone="muted"
-              label="RAW EVENT"
-              value={formatNumber(summary.counts.raw_events)}
+              label="JETSTREAM BACKLOG"
+              value={formatNumber(ingestion.queue_depth)}
             />
             <MetricCard
               detail={failedRawEvents > 0 ? "İnceleme gerekli" : "Temiz"}
@@ -193,8 +213,10 @@ export function OperationsDashboard() {
           <div className="rounded-lg border border-border bg-panel p-5">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex flex-col gap-0.5">
-                <span className="text-[14px] font-semibold text-foreground">Ingestion</span>
-                <span className="font-mono text-[11px] text-faint">queue, breaker, flush</span>
+                <span className="text-[14px] font-semibold text-foreground">Aktif Ingestion</span>
+                <span className="font-mono text-[11px] text-faint">
+                  JetStream consumer, processor breaker, legacy SQLite queue
+                </span>
               </div>
               <div
                 className={`flex items-center gap-1.5 rounded-full bg-elevated px-2.5 py-1 font-mono text-[10px] font-semibold tracking-[0.8px] ${
@@ -208,27 +230,30 @@ export function OperationsDashboard() {
               </div>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
-              <div className="flex min-w-[480px] divide-x divide-border">
-                <IngestionCell label="Queue depth" value={formatNumber(ingestion.queue_depth)} />
+              <div className="flex min-w-[720px] divide-x divide-border">
                 <IngestionCell
-                  label="Write queue"
-                  value={formatNumber(ingestion.write_queue_depth)}
+                  label="Stream pending"
+                  value={formatNumber(ingestion.stream_consumer_pending)}
                 />
                 <IngestionCell
-                  label="Drop count"
-                  value={formatNumber(ingestion.write_drop_count)}
+                  label="Ack pending"
+                  value={formatNumber(ingestion.stream_consumer_ack_pending)}
                 />
                 <IngestionCell
-                  label="Flush count"
-                  value={formatNumber(ingestion.write_flush_count)}
+                  label="Redelivery"
+                  value={formatNumber(ingestion.stream_consumer_redelivered)}
                 />
                 <IngestionCell
-                  label="Son flush"
+                  label="En eski"
                   value={
-                    ingestion.last_flush_millis > 0
-                      ? `${formatNumber(ingestion.last_flush_millis)}ms`
+                    ingestion.stream_oldest_pending_age_seconds > 0
+                      ? `${formatNumber(ingestion.stream_oldest_pending_age_seconds)}s`
                       : "—"
                   }
+                />
+                <IngestionCell
+                  label="Legacy SQLite"
+                  value={formatNumber(ingestion.legacy_queue_depth)}
                 />
                 <IngestionCell
                   label="CH failures"
@@ -246,6 +271,30 @@ export function OperationsDashboard() {
         onActionComplete={() => void loadSummary("refresh")}
       />
     </section>
+  );
+}
+
+function HeartbeatSummary({
+  heartbeat,
+  label
+}: {
+  heartbeat: OperationsSummary["listener"];
+  label: string;
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-2">
+      <span
+        className={`h-2 w-2 shrink-0 rounded-full ${heartbeat.is_fresh ? "bg-accent" : "bg-warning"}`}
+      />
+      <span className="min-w-0 truncate text-[13px] font-medium text-foreground">
+        {label}: {heartbeat.is_fresh ? "Canlı" : "Bayat"}
+        {" · son sinyal "}
+        {heartbeat.seconds_since_last_seen !== null
+          ? `${heartbeat.seconds_since_last_seen}s`
+          : "yok"}
+        {" önce"}
+      </span>
+    </div>
   );
 }
 

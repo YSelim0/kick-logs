@@ -3,6 +3,7 @@ package analytics
 import (
 	"context"
 	"errors"
+	"strconv"
 
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/domain"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/ports"
@@ -12,10 +13,14 @@ var ErrInvalidRange = errors.New("invalid analytics date range")
 
 type Service struct {
 	repository ports.AnalyticsRepository
+	cache      *analyticsCache
 }
 
 func NewService(repository ports.AnalyticsRepository) *Service {
-	return &Service{repository: repository}
+	return &Service{
+		repository: repository,
+		cache:      newAnalyticsCache(),
+	}
 }
 
 func (service *Service) Overview(
@@ -25,7 +30,13 @@ func (service *Service) Overview(
 	if err := validateFilter(filter); err != nil {
 		return domain.AnalyticsOverview{}, err
 	}
-	return service.repository.Overview(ctx, filter)
+	if !globalAnalyticsCacheable(filter) {
+		return service.repository.Overview(ctx, filter)
+	}
+	key := "overview:" + analyticsFilterCacheKey(filter)
+	return cachedAnalyticsValue(ctx, service.cache, key, func(ctx context.Context) (domain.AnalyticsOverview, error) {
+		return service.repository.Overview(ctx, filter)
+	})
 }
 
 func (service *Service) MessageVolume(
@@ -42,7 +53,13 @@ func (service *Service) MessageVolume(
 	if bucket != domain.AnalyticsBucketHour && bucket != domain.AnalyticsBucketDay {
 		return nil, errors.New("invalid analytics bucket")
 	}
-	return service.repository.MessageVolume(ctx, filter, bucket)
+	if !globalAnalyticsCacheable(filter) {
+		return service.repository.MessageVolume(ctx, filter, bucket)
+	}
+	key := "message-volume:" + string(bucket) + ":" + analyticsFilterCacheKey(filter)
+	return cachedAnalyticsValue(ctx, service.cache, key, func(ctx context.Context) ([]domain.MessageVolumePoint, error) {
+		return service.repository.MessageVolume(ctx, filter, bucket)
+	})
 }
 
 func (service *Service) TopSenders(
@@ -53,7 +70,14 @@ func (service *Service) TopSenders(
 	if err := validateFilter(filter); err != nil {
 		return nil, err
 	}
-	return service.repository.TopSenders(ctx, filter, normalizeLimit(limit))
+	normalizedLimit := normalizeLimit(limit)
+	if !globalAnalyticsCacheable(filter) {
+		return service.repository.TopSenders(ctx, filter, normalizedLimit)
+	}
+	key := "top-senders:" + analyticsFilterCacheKey(filter) + ":limit=" + limitCacheKey(normalizedLimit)
+	return cachedAnalyticsValue(ctx, service.cache, key, func(ctx context.Context) ([]domain.TopSenderAnalytics, error) {
+		return service.repository.TopSenders(ctx, filter, normalizedLimit)
+	})
 }
 
 func (service *Service) TopChannels(
@@ -64,7 +88,14 @@ func (service *Service) TopChannels(
 	if err := validateFilter(filter); err != nil {
 		return nil, err
 	}
-	return service.repository.TopChannels(ctx, filter, normalizeLimit(limit))
+	normalizedLimit := normalizeLimit(limit)
+	if !globalAnalyticsCacheable(filter) {
+		return service.repository.TopChannels(ctx, filter, normalizedLimit)
+	}
+	key := "top-channels:" + analyticsFilterCacheKey(filter) + ":limit=" + limitCacheKey(normalizedLimit)
+	return cachedAnalyticsValue(ctx, service.cache, key, func(ctx context.Context) ([]domain.TopChannelAnalytics, error) {
+		return service.repository.TopChannels(ctx, filter, normalizedLimit)
+	})
 }
 
 func (service *Service) TopEmotes(
@@ -75,7 +106,14 @@ func (service *Service) TopEmotes(
 	if err := validateFilter(filter); err != nil {
 		return nil, err
 	}
-	return service.repository.TopEmotes(ctx, filter, normalizeLimit(limit))
+	normalizedLimit := normalizeLimit(limit)
+	if !globalAnalyticsCacheable(filter) {
+		return service.repository.TopEmotes(ctx, filter, normalizedLimit)
+	}
+	key := "top-emotes:" + analyticsFilterCacheKey(filter) + ":limit=" + limitCacheKey(normalizedLimit)
+	return cachedAnalyticsValue(ctx, service.cache, key, func(ctx context.Context) ([]domain.TopEmoteAnalytics, error) {
+		return service.repository.TopEmotes(ctx, filter, normalizedLimit)
+	})
 }
 
 func validateFilter(filter domain.AnalyticsFilter) error {
@@ -93,4 +131,8 @@ func normalizeLimit(limit uint64) uint64 {
 		return 100
 	}
 	return limit
+}
+
+func limitCacheKey(limit uint64) string {
+	return strconv.FormatUint(limit, 10)
 }

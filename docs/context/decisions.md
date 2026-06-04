@@ -1,5 +1,160 @@
 # Decisions
 
+## 2026-06-02 (channel/user top-list aggregate hardening)
+
+- **Channel index and admin channel counts must avoid window scans.** `/channels` search and the
+  `/admin/channels` message-count column both depend on `TopChannels`. The old implementation used
+  `row_number() OVER (PARTITION BY kick_message_id ...)` before grouping, which could hit
+  ClickHouse memory limits for high-volume channels such as `hype`.
+- **Analytics aggregates now dedupe through `ReplacingMergeTree FINAL`.** New live messages use a
+  deterministic id derived from `kick_message_id`, and local data has no same-message rows with
+  divergent ids. `Overview`, `MessageVolume`, `TopSenders`, `TopChannels`, and `TopEmotes` now read
+  `chat_messages FINAL` instead of materializing a per-message window or full-table
+  `GROUP BY kick_message_id`. This keeps duplicate redeliveries from inflating counts while avoiding
+  the expensive sort/window and large hash-aggregate shapes.
+- **Parameterized `/channels` and `/users` searches still bypass cache.** The fix is query-shape
+  hardening, not unbounded query-param caching.
+
+## 2026-06-02 (Kick recent-message backfill)
+
+- **Kick Pusher alone is not a complete capture source.** For `gokhanoner`, an independent Pusher
+  subscriber and the local listener saw the same small set of message ids, while Kick's numeric
+  `/api/v2/channels/{kick_channel_id}/messages?sort=desc` endpoint exposed additional recent
+  messages visible in the web chat. The missing rows were therefore upstream of `/search`,
+  JetStream, processor, and ClickHouse normalization.
+- **The listener must poll recent messages in addition to Pusher.** The listener now polls the
+  numeric channel messages endpoint for every enabled followed channel and publishes returned
+  messages through the same raw-event envelope and JetStream PubAck path as Pusher.
+- **Recent polling uses existing message-id idempotency.** Poll envelopes use `raw_event_id =
+kick:{message_id}`, so overlap between Pusher and polling is safe. JetStream duplicate PubAck is
+  not counted as a new captured event, and visible ClickHouse rows still dedupe by
+  `kick_message_id`.
+- **Recent polling also keeps a short in-memory seen set.** Quiet channels can return the same last
+  messages for a long time, eventually outliving JetStream's duplicate window. The listener keeps
+  successfully published recent raw event ids in memory for 1 hour so the endpoint does not inflate
+  `raw_kick_events` and attempt history by republishing the same page every poll tick.
+- **Kick recent payloads are normalized before capture envelope creation.** The endpoint returns
+  `metadata` as `null`, an object, or a JSON string, and returns the numeric channel id in `chat_id`.
+  The client converts metadata to an object and injects the followed channel's `kick_chatroom_id`
+  into `chatroom_id` so the existing processor normalizer can handle the payload unchanged.
+- **Poll cadence is configurable and enabled by default.** Defaults:
+  `LISTENER_RECENT_MESSAGE_POLL_ENABLED=true` and
+  `LISTENER_RECENT_MESSAGE_POLL_INTERVAL_SECONDS=10`. Recent fetches run with bounded concurrency
+  (`LISTENER_RECENT_MESSAGE_POLL_CONCURRENCY=8` by default) because polling enabled channels
+  sequentially can outlive the recent-message page window on active chats.
+
+## 2026-06-02 (Kick Pusher capture health)
+
+- **Kick/Pusher protocol heartbeats must be answered.** The listener websocket client treats
+  `pusher:ping` as a protocol message and replies with `pusher:pong`; otherwise the server can mark
+  the connection unhealthy or close it, creating capture gaps before JetStream or ClickHouse see an
+  event.
+- **Chat capture can subscribe to both current and legacy chatroom channel names.** The listener
+  subscribes to `chatrooms.{chatroom_id}.v2` and `chatrooms.{chatroom_id}`. Duplicate delivery is
+  acceptable because raw stream publish uses Kick message id based message ids and visible
+  `chat_messages` reads/writes dedupe by `kick_message_id`.
+- **Operations needs capture-side counters.** Processor pending/ack metrics only prove that received
+  events are being drained. Listener heartbeat metadata now carries `captured_raw_events` so an
+  operator can distinguish "Kick websocket did not deliver enough events" from "processor/ClickHouse
+  fell behind."
+
+## 2026-06-02 (global analytics cache)
+
+- **Global public analytics may be stale for up to 1 hour.** Landing-page statistics are
+  informational, not live operational state, so `overview`, day-bucket volume, and top-list
+  analytics can be served from an in-memory API cache.
+- **Parameterized analytics searches bypass cache.** Requests with `q`, `sender`, or `channel` are
+  not cached so `/users` and `/channels` index searches do not create unbounded key churn.
+- **Stale cached analytics is preferable to blank analytics.** If a cached global aggregate is older
+  than the 1-hour fresh TTL but still within the 24-hour stale window, the API can return it when a
+  ClickHouse refresh fails.
+- **Operations data remains uncached.** Admin Operations must reflect current listener, processor,
+  JetStream, and ClickHouse health. `/admin/channels` may tolerate cached global message counts
+  because those counts are informational table decoration.
+- **Landing must render partial analytics.** One failed analytics endpoint must not hide successful
+  overview, volume, sender, channel, or emote data from the user.
+- **Profile analytics may also be stale for up to 1 hour.** Public
+  `/users/{slug}/analytics` and `/channels/{slug}/analytics` are statistical profile pages, so their
+  ClickHouse aggregate response is cached by exact profile slug with the same bounded in-memory
+  cache shape.
+- **Profile analytics must degrade partially.** A single channel/user aggregate failure, for
+  example a top-emotes memory-limit error, should not turn the whole profile into a 500. The API can
+  return the identity plus available sections and leave failed sections empty.
+- **Active subscription counts are never part of analytics cache.** Public
+  `/channels/{slug}/subscription-summary` stays uncached and queries active periods on every
+  request because the value can be used as live broadcaster-facing subscriber state.
+
+## 2026-06-02 (issue #23 — JetStream durable ingestion)
+
+- **NATS JetStream is the long-term live chat ingestion queue.** The previous in-process buffered
+  writer plus SQLite `raw_event_queue` hardening is no longer considered the final design because it
+  still keeps intentional drop behavior and SQLite hot-path pressure in the architecture.
+- **Listener capture must be durable before success accounting.** A reached Kick
+  `ChatMessageEvent` is counted as captured only after JetStream PubAck. Publish failure is an
+  operational failure/backpressure condition, not a successful ingest.
+- **SQLite is control-plane only after cutover.** Admin users, followed channels, sender cache,
+  retention, heartbeats, webhook registry/inbox, and migration metadata remain in SQLite.
+  `raw_event_queue` and `raw_event_claims` become legacy migration/compatibility tables, not active
+  live chat queue state.
+- **Processor owns ClickHouse batch writes.** Processor workers pull JetStream batches, insert raw
+  archives and normalized `chat_messages` into ClickHouse, and ACK only after durable writes
+  succeed. Transient ClickHouse failures must leave messages unacked for redelivery.
+- **At-least-once plus idempotency is the contract.** Duplicate internal delivery is expected and
+  must not create duplicate visible search/profile rows. Visible message identity stays based on
+  Kick message id when available, with deterministic fallback identity for malformed/incomplete raw
+  diagnostics.
+- **Raw capture precedes strict normalization.** Parser/normalizer code must not discard a reached
+  chat event before raw capture. Invalid or incomplete payloads are captured first and then marked
+  terminal ignored/invalid by the processor.
+
+## 2026-06-01 (issue #23 — sender profile cache is best-effort)
+
+These decisions describe the short-lived SQLite queue hardening phase and are superseded for live
+chat ingestion by the 2026-06-02 JetStream decision above. They still apply to legacy queue code,
+sender profile cache behavior, and webhook inbox maintenance where noted.
+
+- **Sender profile cache writes must not block chat ingestion.** The listener now treats
+  `sender_profiles` as an optional cache. If SQLite upsert fails while processing a raw chat event,
+  the listener logs a warning and continues building the visible `chat_messages` row from the sender
+  snapshot already present in the raw Kick payload.
+- **Visible message identity comes from the raw payload first.** If the cache write fails, the
+  message still stores `sender_kick_id`, username, slug, color, badges, and profile-image hints from
+  the payload. `normalizeMessagePayload` falls back to the Kick user id when no SQLite sender row id
+  is available.
+- **Sender profile cache writes are TTL-gated in memory.** The listener attempts at most one
+  `sender_profiles` write per Kick user id every 10 minutes. The first observed message for a sender
+  still writes immediately; repeated messages inside the TTL use the payload snapshot and avoid a
+  SQLite write. Failed cache writes also consume the TTL window to prevent a busy SQLite cache from
+  being hammered during high-volume chat.
+- **Processed raw-event queue rows are pruned from SQLite (legacy queue mode).** The
+  `raw_event_queue` table is not permanent history. In the superseded SQLite queue mode, after the
+  worker wrote the processed ClickHouse attempt, `MarkProcessed` deleted the queue row. Active live
+  chat ingestion now uses JetStream instead of this SQLite queue.
+- **Attempt history is required before queue acknowledgement.** If `InsertAttemptsBatch` fails, the
+  listener releases claimed queue rows back to pending instead of deleting them. `chat_messages`
+  inserts are idempotent by `kick_message_id`, so retrying after an attempt-write failure preserves
+  the audit/backfill guard without duplicating visible messages.
+- **Permanent invalid raw events use terminal `ignored` attempts.** Malformed payloads, missing
+  message ids, invalid sender/message shape, and known-unfollowed channel payloads are not retried
+  until max attempts. They get a ClickHouse `raw_event_attempts.status = 'ignored'` record and are
+  removed from the legacy SQLite queue in the superseded queue mode. JetStream-era operations treat
+  `ignored`/`invalid` as terminal statuses alongside `processed`.
+- **Webhook inbox has short terminal retention.** `kick_webhook_events` remains the idempotent
+  receiver inbox, but processed/ignored rows older than 7 days are pruned by the webhook processor.
+  Pending and failed webhook rows are never pruned by this path because they still represent work or
+  operator-visible failures. Subscription periods remain durable in ClickHouse.
+- **Admin Operations separates active backlog from history.** Raw-event archive counts shown in
+  admin Operations come from ClickHouse history. JetStream pending + ack-pending is the active live
+  chat backlog; SQLite `raw_event_queue` is surfaced only as legacy/migration state. Terminal
+  ignored/invalid raw events are excluded from failed-event diagnostics.
+- **Admin Data Management summary must stay read-only after setup.** The summary endpoint should not
+  perform opportunistic SQLite writes during normal reads. Retention settings are created only when
+  missing, because live listener/webhook writes can otherwise make a harmless admin read fail with
+  `SQLITE_BUSY`.
+- **Webhook inbox pruning is periodic maintenance, not per-tick work.** Terminal inbox cleanup is
+  throttled so the processor does not compete with live webhook inserts/listener SQLite writes every
+  5 seconds.
+
 ## 2026-06-01 (issue #22 — Kick webhook subscription tracking)
 
 - **`broadcaster_user_id` stored as `int64` with 0 = unresolved**, same pattern as `kick_channel_id`

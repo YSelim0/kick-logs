@@ -101,10 +101,10 @@ func (repo *RawEventRepository) ListUnprocessed(
 		 LEFT JOIN (
 			SELECT raw_event_id
 			FROM raw_event_attempts
-			WHERE status = 'processed'
+			WHERE status IN ('processed', 'ignored', 'invalid')
 			GROUP BY raw_event_id
-		 ) AS processed ON processed.raw_event_id = e.id
-		 WHERE processed.raw_event_id = '' AND ifNull(a.attempts, 0) < ?
+		 ) AS terminal ON terminal.raw_event_id = e.id
+		 WHERE terminal.raw_event_id = '' AND ifNull(a.attempts, 0) < ?
 		 ORDER BY e.received_at ASC
 		 LIMIT ?`,
 		maxAttempts,
@@ -145,10 +145,10 @@ func (repo *RawEventRepository) CountUnprocessed(ctx context.Context, maxAttempt
 			LEFT JOIN (
 				SELECT raw_event_id
 				FROM raw_event_attempts
-				WHERE status = 'processed'
+				WHERE status IN ('processed', 'ignored', 'invalid')
 				GROUP BY raw_event_id
-			) AS processed ON processed.raw_event_id = e.id
-			WHERE processed.raw_event_id = '' AND attempts < ?
+			) AS terminal ON terminal.raw_event_id = e.id
+			WHERE terminal.raw_event_id = '' AND attempts < ?
 		 )`,
 		maxAttempts,
 	).Scan(&count); err != nil {

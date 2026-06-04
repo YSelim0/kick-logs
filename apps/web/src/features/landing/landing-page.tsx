@@ -43,7 +43,7 @@ const EMPTY_OVERVIEW: AnalyticsOverview = {
 
 export function LandingPage() {
   const [analytics, setAnalytics] = useState<LandingAnalyticsState | null>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "ready" | "partial" | "error">("loading");
 
   useEffect(() => {
     let isMounted = true;
@@ -53,26 +53,39 @@ export function LandingPage() {
 
       try {
         const recentRange = getRecentVolumeRange();
-        const [overview, volume, topChannels, topEmotes, topSenders] = await Promise.all([
-          getAnalyticsOverview(),
-          getMessageVolume({ bucket: "day", end: recentRange.end, start: recentRange.start }),
-          getTopChannels({ limit: 5 }),
-          getTopEmotes({ limit: 5 }),
-          getTopSenders({ limit: 5 })
-        ]);
+        const overview = await settle(getAnalyticsOverview());
+        const volume = await settle(
+          getMessageVolume({ bucket: "day", end: recentRange.end, start: recentRange.start })
+        );
+        const topChannels = await settle(getTopChannels({ limit: 5 }));
+        const topEmotes = await settle(getTopEmotes({ limit: 5 }));
+        const topSenders = await settle(getTopSenders({ limit: 5 }));
 
         if (!isMounted) {
           return;
         }
 
+        const fulfilledCount = [
+          overview.status,
+          volume.status,
+          topChannels.status,
+          topEmotes.status,
+          topSenders.status
+        ].filter((resultStatus) => resultStatus === "fulfilled").length;
+        if (fulfilledCount === 0) {
+          setAnalytics(null);
+          setStatus("error");
+          return;
+        }
+
         setAnalytics({
-          overview,
-          volume: volume.items,
-          topChannels: topChannels.items,
-          topEmotes: topEmotes.items,
-          topSenders: topSenders.items
+          overview: valueOr(overview, EMPTY_OVERVIEW),
+          volume: itemsOrEmpty(volume),
+          topChannels: itemsOrEmpty(topChannels),
+          topEmotes: itemsOrEmpty(topEmotes),
+          topSenders: itemsOrEmpty(topSenders)
         });
-        setStatus("ready");
+        setStatus(fulfilledCount === 5 ? "ready" : "partial");
       } catch {
         if (isMounted) {
           setAnalytics(null);
@@ -374,7 +387,7 @@ function TopList({ rows, emptyText }: { rows: TopRow[]; emptyText: string }) {
   );
 }
 
-function StatusBanner({ status }: { status: "loading" | "ready" | "error" }) {
+function StatusBanner({ status }: { status: "loading" | "ready" | "partial" | "error" }) {
   if (status === "ready") {
     return null;
   }
@@ -383,7 +396,9 @@ function StatusBanner({ status }: { status: "loading" | "ready" | "error" }) {
     <div className="rounded-md border border-border bg-panel px-4 py-3 text-sm text-muted-foreground">
       {status === "loading"
         ? "Analytics verileri yükleniyor…"
-        : "Analytics verileri şu anda alınamadı. Arama ve admin bağlantıları kullanılabilir."}
+        : status === "partial"
+          ? "Bazı analytics panelleri şu anda alınamadı. Mevcut veriler gösteriliyor."
+          : "Analytics verileri şu anda alınamadı. Arama ve admin bağlantıları kullanılabilir."}
     </div>
   );
 }
@@ -397,11 +412,28 @@ function getRecentVolumeRange() {
   const start = new Date(end);
   start.setDate(start.getDate() - 13);
   start.setHours(0, 0, 0, 0);
+  end.setHours(23, 59, 59, 999);
 
   return {
     end: end.toISOString(),
     start: start.toISOString()
   };
+}
+
+function settle<T>(promise: Promise<T>) {
+  return Promise.allSettled([promise]).then((results) => results[0]);
+}
+
+function isFulfilled<T>(result: PromiseSettledResult<T>): result is PromiseFulfilledResult<T> {
+  return result.status === "fulfilled";
+}
+
+function valueOr<T>(result: PromiseSettledResult<T>, fallback: T): T {
+  return isFulfilled(result) ? result.value : fallback;
+}
+
+function itemsOrEmpty<T>(result: PromiseSettledResult<{ items: T[] }>): T[] {
+  return isFulfilled(result) ? result.value.items : [];
 }
 
 const COMPACT_FORMATTER = new Intl.NumberFormat("tr-TR", {
