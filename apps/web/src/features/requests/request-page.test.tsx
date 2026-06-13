@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -36,10 +36,16 @@ describe("RequestPage", () => {
     const user = userEvent.setup();
     render(<RequestPage />);
 
-    await user.type(screen.getByLabelText("Kanal adı"), "kick.com/NuriBen");
-    await user.type(screen.getByLabelText("Başlık"), "Kanal takip edilsin");
-    await user.type(screen.getByLabelText("Mesaj"), "Bu kanal listede olursa iyi olur.");
-    await user.type(screen.getByLabelText(/İletişim/), "mod@example.com");
+    fireEvent.change(screen.getByLabelText("Kanal adı"), { target: { value: "kick.com/NuriBen" } });
+    fireEvent.change(screen.getByLabelText("Başlık"), {
+      target: { value: "Kanal takip edilsin" }
+    });
+    fireEvent.change(screen.getByLabelText("Mesaj"), {
+      target: { value: "Bu kanal listede olursa iyi olur." }
+    });
+    fireEvent.change(screen.getByLabelText(/İletişim/), {
+      target: { value: "mod@example.com" }
+    });
     await user.click(screen.getByRole("button", { name: "Gönder" }));
 
     await waitFor(() => expect(apiMocks.createUserRequest).toHaveBeenCalledTimes(1));
@@ -64,8 +70,12 @@ describe("RequestPage", () => {
 
     expect(screen.queryByLabelText("Kanal adı")).not.toBeInTheDocument();
 
-    await user.type(screen.getByLabelText("Başlık"), "Yeni filtre önerisi");
-    await user.type(screen.getByLabelText("Mesaj"), "Arama ekranına yeni bir filtre eklenebilir.");
+    fireEvent.change(screen.getByLabelText("Başlık"), {
+      target: { value: "Yeni filtre önerisi" }
+    });
+    fireEvent.change(screen.getByLabelText("Mesaj"), {
+      target: { value: "Arama ekranına yeni bir filtre eklenebilir." }
+    });
     await user.click(screen.getByRole("button", { name: "Gönder" }));
 
     await waitFor(() => expect(apiMocks.createUserRequest).toHaveBeenCalledTimes(1));

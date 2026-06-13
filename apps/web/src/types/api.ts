@@ -33,6 +33,14 @@ export type CreateAdminUserRequest = {
 
 export type UserRequestType = "channel_request" | "feedback";
 
+export type UserRequestStatus =
+  | "new"
+  | "reviewing"
+  | "approved"
+  | "rejected"
+  | "done"
+  | "duplicate";
+
 export type CreateUserRequestRequest = {
   type: UserRequestType;
   title: string;
@@ -45,6 +53,59 @@ export type CreateUserRequestRequest = {
 
 export type CreateUserRequestResponse = {
   request_id: string;
+};
+
+export type UserRequest = {
+  request_id: string;
+  type: UserRequestType;
+  title: string;
+  message: string;
+  channel_slug: string | null;
+  channel_display_name: string | null;
+  contact: string | null;
+  current_status: UserRequestStatus;
+  is_archived: boolean;
+  created_at: string;
+  latest_event_at: string;
+};
+
+export type UserRequestEvent = {
+  event_id: string;
+  request_id: string;
+  event_type: "status_changed" | "note_added" | "archived";
+  status: UserRequestStatus | "";
+  note: string;
+  admin_id: number;
+  created_at: string;
+};
+
+export type UserRequestsResponse = {
+  items: UserRequest[];
+  count: number;
+};
+
+export type UserRequestDetailResponse = {
+  request: UserRequest;
+  events: UserRequestEvent[];
+};
+
+export type UserRequestListParams = {
+  type?: UserRequestType;
+  status?: UserRequestStatus;
+  archived?: boolean;
+  q?: string;
+  start?: string;
+  end?: string;
+  limit?: number;
+  offset?: number;
+};
+
+export type UpdateUserRequestStatusRequest = {
+  status: UserRequestStatus;
+};
+
+export type AddUserRequestNoteRequest = {
+  note: string;
 };
 
 export type Channel = {

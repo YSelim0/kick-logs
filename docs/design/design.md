@@ -352,8 +352,8 @@ Login required.
 
 ### Sidebar Nav
 
-- `Operations`, `Channels`, `Users`, `Data`, `Settings`. Active item: `bg-panel` background with
-  hairline, accent icon, `text-primary` label.
+- `Operations`, `Channels`, `Requests`, `Users`, `Data`, `Settings`. Active item: `bg-panel`
+  background with hairline, accent icon, `text-primary` label.
 - Regular `admin` (non-super) users do not see `Users`.
 
 ### Operations Section
@@ -400,6 +400,21 @@ ClickHouse geçmişi, depolama özeti`. Right: `Yenile` outline button.
 ### Users Section (super admin only)
 
 - Visually separate from channel management. No hero/landing treatment.
+
+### Requests Section
+
+- Route: `/admin/requests`.
+- Dense single-page workflow for public form submissions.
+- Top filter panel includes request type, current status, archive state, text query, and optional
+  start/end date range.
+- Default archive filter is active requests only.
+- Main list uses the full available width; do not reserve a persistent side detail panel.
+- List rows show type, title, optional channel/contact preview, current status, archive state, and
+  created date. Desktop/mobile row variants may coexist behind breakpoint classes.
+- Selecting a row opens a modal dialog for the request detail.
+- The detail modal shows original content, metadata, current status, event timeline, status control,
+  note form, and archive action. Admin workflow actions are performed from this modal.
+- Archive is represented as a workflow action, not a destructive delete.
 
 ### Default Super Admin Credentials (local MVP)
 

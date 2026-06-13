@@ -2,6 +2,29 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-06-14 (admin request management frontend)
+
+- Implemented `/admin/requests` for managing public request form submissions.
+- Added `Requests` to the admin sidebar navigation.
+- Added admin request API wrappers for list, detail, status update, note creation, and archive.
+- Added request list filters for type, status, archive state, text query, and optional date range.
+- Added list/detail workflow:
+  - list rows show request type, title, channel/contact preview, status, archive state, and created date.
+  - request list uses full width; detail opens in a modal.
+  - detail modal shows original content, metadata, status control, note form, timeline, and archive.
+- Added frontend tests for active default listing, filter query mapping, detail loading, status
+  update, note creation, and archive action.
+- Updated design/context/implementation docs and README for the completed request workflow.
+- Completed final verification for the request-form feature:
+  - `go test ./...`
+  - `pnpm --filter @kick-logs/web test`
+  - `pnpm --filter @kick-logs/web typecheck`
+  - `pnpm --filter @kick-logs/web lint`
+  - `pnpm --filter @kick-logs/web build`
+  - targeted Prettier check for changed files
+  - `gofmt -l cmd internal`
+  - `docker compose ps`
+
 ## 2026-06-13 (public request form frontend)
 
 - Implemented the public `/request` page for the request form feature.

@@ -1,5 +1,16 @@
 # Decisions
 
+## 2026-06-14 (admin request management frontend)
+
+- **Request management lives in one admin route.** `/admin/requests` owns filtering, list, detail,
+  status, note, and archive controls instead of splitting the workflow across multiple pages.
+- **Request detail opens as a modal.** The list keeps the full admin page width for scanning many
+  submissions; status, note, timeline, and archive actions live inside the selected request modal.
+- **Active requests are the default view.** Archived requests are available through the archive
+  filter so the default operator view stays focused on current work.
+- **Archive remains a workflow action.** The admin UI exposes `Arşivle`, not delete, matching the
+  append-only backend event model.
+
 ## 2026-06-13 (public request form frontend)
 
 - **`/request` is a compact app page, not a landing page.** The form uses the existing dark

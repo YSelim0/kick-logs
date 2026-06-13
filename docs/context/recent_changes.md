@@ -2,7 +2,36 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (public request form frontend)
+## Latest (admin request management frontend)
+
+- `/admin/requests` frontend is implemented and wired to the request workflow APIs.
+- Admin sidebar now includes `Requests` for regular admin and super admin users.
+- The Requests page includes:
+  - filters for request type, current status, archive state, text query, start, and end,
+  - active-only requests as the default archive filter,
+  - full-width request list rows with type/status/date and channel/contact preview,
+  - detail modal with original content, metadata, current status, event timeline, status update,
+    note form, and archive action.
+- Frontend API wrapper now covers:
+  - `GET /admin/requests`
+  - `GET /admin/requests/{request_id}`
+  - `POST /admin/requests/{request_id}/status`
+  - `POST /admin/requests/{request_id}/notes`
+  - `POST /admin/requests/{request_id}/archive`
+- Added `request-admin.test.tsx` coverage for default active listing, filters, detail loading,
+  status update, notes, and archive.
+- Final request-form verification completed:
+  - `go test ./...`
+  - `pnpm --filter @kick-logs/web test`
+  - `pnpm --filter @kick-logs/web typecheck`
+  - `pnpm --filter @kick-logs/web lint`
+  - `pnpm --filter @kick-logs/web build`
+  - targeted Prettier check for changed files
+  - `gofmt -l cmd internal`
+  - `docker compose ps`
+- Updated `docs/implementation_plan.md` status: Phases 1-7 complete.
+
+## Previously Latest (public request form frontend)
 
 - Public `/request` frontend is implemented and wired to the backend request API.
 - Global public header is sticky on desktop and mobile.

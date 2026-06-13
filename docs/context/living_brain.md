@@ -69,7 +69,13 @@ implementation details, or working assumptions change.
   - The form has `Kanal Talebi` and `Geri Bildirim` modes and posts through
     `features/requests/api.ts`.
   - Success renders the returned request id inline; rate-limit/validation errors stay inline.
-- Admin request management frontend is still pending.
+- Admin request management frontend is implemented:
+  - `/admin/requests` mounts `features/requests/request-admin.tsx`.
+  - Admin sidebar includes `Requests` for regular admin and super admin users.
+  - Default list filter shows active requests only.
+  - Filters cover type, status, archive state, text query, and date range.
+  - The request list is full width; selecting a row opens a detail modal.
+  - The detail modal supports status change, note creation, event timeline, and archive action.
 
 ## Webhook Subscription Pipeline (issue #22, Phase 6 complete)
 
