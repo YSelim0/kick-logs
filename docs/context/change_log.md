@@ -2,6 +2,25 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-06-13 (public request form backend)
+
+- Implemented the backend foundation for the public request form feature:
+  - `user_requests` ClickHouse table for immutable public submissions.
+  - `user_request_events` ClickHouse table for append-only admin workflow events.
+  - domain models, storage port, ClickHouse repository, and request use case.
+- Added public `POST /requests` with validation, channel slug normalization, honeypot rejection,
+  HMAC-hashed IP/user-agent metadata, and a dedicated IP-based rate-limit policy.
+- Added authenticated admin APIs:
+  - `GET /admin/requests`
+  - `GET /admin/requests/{request_id}`
+  - `POST /admin/requests/{request_id}/status`
+  - `POST /admin/requests/{request_id}/notes`
+  - `POST /admin/requests/{request_id}/archive`
+- Admin request state is computed from events: status defaults to `new`, notes are timeline events,
+  and archive is an event instead of a hard delete.
+- Updated architecture, project plan, implementation plan, and context docs. Frontend `/request` and
+  `/admin/requests` screens remain pending.
+
 ## 2026-06-02 (channel index aggregate hardening)
 
 - Reworked ClickHouse analytics aggregates to avoid

@@ -2,6 +2,30 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
+## Latest (public request form backend)
+
+- Backend request-form foundation is implemented; frontend remains pending.
+- Public submissions use ClickHouse, not SQLite:
+  - `user_requests` stores immutable form submissions.
+  - `user_request_events` stores append-only admin workflow events.
+- Public endpoint:
+  - `POST /requests`
+  - supports `channel_request` and `feedback`
+  - validates and normalizes payloads
+  - normalizes channel slugs from plain names or Kick URLs
+  - rejects filled honeypot field `website`
+  - stores HMAC-hashed IP and user-agent metadata
+  - has a dedicated IP rate-limit policy: 5 requests per 10 minutes, burst 2
+- Admin endpoints:
+  - `GET /admin/requests`
+  - `GET /admin/requests/{request_id}`
+  - `POST /admin/requests/{request_id}/status`
+  - `POST /admin/requests/{request_id}/notes`
+  - `POST /admin/requests/{request_id}/archive`
+- Current status is computed from the latest `status_changed` event and defaults to `new`. Archive
+  is represented by an `archived` event; no hard delete was added.
+- Updated `docs/implementation_plan.md` status: Phases 1-4 complete, frontend phases 5-7 pending.
+
 ## Latest (channel index aggregate hardening)
 
 - Root cause for `/channels` search failing on high-volume channels such as `hype`: the endpoint

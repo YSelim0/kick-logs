@@ -5,7 +5,7 @@ implementation details, or working assumptions change.
 
 ## Current State
 
-- Branch: `feat/issue-23-storage-hot-path-hardening`.
+- Branch: `dev`.
 - Active architecture: JetStream durable ingestion (see `docs/implementation_plan.md`, issue #23).
   Live chat ingestion now runs as `listener -> NATS JetStream -> processor -> ClickHouse`, with
   SQLite used for control-plane state only.
@@ -34,6 +34,36 @@ implementation details, or working assumptions change.
   - `chat_messages`: 123790
   - `raw_kick_events`: 121664
   - `raw_event_attempts`: 121664
+
+## User Request Form Backend
+
+- Active implementation plan now targets a public request form for two request types:
+  - `channel_request`: visitors ask for a Kick channel to be added to tracking.
+  - `feedback`: visitors send product feedback, bug reports, or feature ideas.
+- Backend storage uses ClickHouse append-only tables, not SQLite:
+  - `user_requests`: immutable public submissions.
+  - `user_request_events`: admin workflow events (`status_changed`, `note_added`, `archived`).
+- Current status is computed from latest `status_changed` event and defaults to `new`.
+- Archive is append-only through an `archived` event; there is no delete workflow in the MVP.
+- Public endpoint:
+  - `POST /requests`
+  - IP and user-agent are HMAC-hashed before storage.
+  - Honeypot field `website` is rejected when filled.
+  - Public route rate limit: `POST /requests`, IP key, 5 requests per 10 minutes, burst 2.
+- Admin endpoints:
+  - `GET /admin/requests`
+  - `GET /admin/requests/{request_id}`
+  - `POST /admin/requests/{request_id}/status`
+  - `POST /admin/requests/{request_id}/notes`
+  - `POST /admin/requests/{request_id}/archive`
+- Admin status values:
+  - `new`
+  - `reviewing`
+  - `approved`
+  - `rejected`
+  - `done`
+  - `duplicate`
+- The backend is implemented and wired; frontend request/admin screens are still pending.
 
 ## Webhook Subscription Pipeline (issue #22, Phase 6 complete)
 

@@ -31,6 +31,7 @@ import (
 	kicksyncusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/kicksync"
 	messagesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/messages"
 	profilesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/profiles"
+	requestsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/requests"
 	webhookprocessorusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/webhookprocessor"
 )
 
@@ -147,15 +148,18 @@ func main() {
 	var messageService *messagesusecase.Service
 	var analyticsService *analyticsusecase.Service
 	var profileService *profilesusecase.Service
+	var requestService *requestsusecase.Service
 	var subPeriodRepoForAPI ports.SubscriptionPeriodRepository
 	if clickHouseConn != nil {
 		messageRepository := clickhouseinfra.NewMessageRepository(clickHouseConn)
 		analyticsRepository := clickhouseinfra.NewAnalyticsRepository(clickHouseConn)
 		subPeriodRepo := clickhouseinfra.NewSubscriptionPeriodRepository(clickHouseConn)
+		userRequestRepo := clickhouseinfra.NewUserRequestRepository(clickHouseConn)
 		subPeriodRepoForAPI = subPeriodRepo
 		messageService = messagesusecase.NewService(messageRepository)
 		analyticsService = analyticsusecase.NewService(analyticsRepository)
 		profileService = profilesusecase.NewService(analyticsRepository, channelRepo, senderRepo)
+		requestService = requestsusecase.NewService(userRequestRepo)
 
 		processorSvc := webhookprocessorusecase.NewService(
 			logger,
@@ -186,6 +190,7 @@ func main() {
 		Profiles:            profileService,
 		Data:                dataManagementService,
 		KickSync:            kickSyncService,
+		Requests:            requestService,
 		WebhookEvents:       webhookEventRepo,
 		WebhookVerifier:     webhookVerifier,
 		WebhookEventSubs:    eventSubRepo,

@@ -104,6 +104,14 @@ func DefaultPolicies(trustProxy bool, clientIPHeader string) []RateLimitPolicy {
 			MaxBurst:      10,
 		},
 		{
+			Name:          "public-requests",
+			Match:         exactMatch("POST", "/requests"),
+			Key:           ip,
+			PerPeriod:     5,
+			PeriodSeconds: 600,
+			MaxBurst:      2,
+		},
+		{
 			Name:          "analytics",
 			Match:         prefixMatch("GET", "/analytics/"),
 			Key:           ip,

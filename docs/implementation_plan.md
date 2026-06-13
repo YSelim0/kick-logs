@@ -15,6 +15,18 @@ will be visible to admins in a single admin page with filters and archive/status
 The feature should be built as a production-quality MVP: small surface area, clear validation,
 spam-resistant public endpoint behavior, and no unnecessary CRUD complexity.
 
+## Current Status
+
+- Phase 1 complete: active plan and context are focused on the public request form.
+- Phase 2 complete: backend domain models, ClickHouse migrations, storage port, repository, and
+  repository coverage are implemented.
+- Phase 3 complete: `POST /requests`, validation, normalization, honeypot handling, request metadata
+  hashing, and public rate limit policy are implemented.
+- Phase 4 complete: admin request listing, detail, status, note, and archive APIs are implemented.
+- Phase 5 pending: public `/request` frontend page.
+- Phase 6 pending: admin request management frontend.
+- Phase 7 pending: final frontend-aware docs, smoke, and CI verification.
+
 ## Product Goals
 
 - Give visitors a clear way to request new tracked channels.

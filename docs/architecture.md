@@ -118,6 +118,8 @@ ClickHouse stores data-plane rows:
 - `raw_kick_events`
 - `raw_event_attempts`
 - `channel_subscription_periods`
+- `user_requests`
+- `user_request_events`
 
 `chat_messages` is denormalized. It includes sender/channel snapshots, normalized helper columns,
 reply metadata, emote arrays/image URLs, badges, raw payload JSON, message timestamps, and ingestion
@@ -141,6 +143,8 @@ The Go API preserves the existing frontend contract:
 ```text
 GET  /health
 
+POST /requests
+
 POST /auth/login
 POST /auth/logout
 GET  /auth/me
@@ -154,6 +158,12 @@ DELETE /admin/channels/{channel_id}
 
 GET  /admin/users
 POST /admin/users
+
+GET  /admin/requests
+GET  /admin/requests/{request_id}
+POST /admin/requests/{request_id}/status
+POST /admin/requests/{request_id}/notes
+POST /admin/requests/{request_id}/archive
 
 GET /admin/operations/summary
 
@@ -180,6 +190,7 @@ POST /admin/webhooks/sync
 
 Public routes:
 
+- `POST /requests`
 - `/messages`
 - `/messages/export`
 - `/analytics/*`

@@ -1,5 +1,23 @@
 # Decisions
 
+## 2026-06-13 (public request form backend)
+
+- **Request form data belongs in ClickHouse, not SQLite.** Public channel requests and feedback are
+  product/user history, not control-plane runtime state. SQLite remains for admin users, followed
+  channels, heartbeat/operations state, webhook registry/inbox state, and other small operational
+  records.
+- **The request workflow is append-only.** `user_requests` stores immutable public submissions.
+  Admin actions append to `user_request_events` instead of updating the original row. Current status
+  is computed from the latest `status_changed` event and defaults to `new`.
+- **Archive replaces delete for the MVP.** Admin archive writes an `archived` event. There is no hard
+  delete endpoint in the first implementation.
+- **Public request metadata is hashed before storage.** IP and user-agent values are HMAC-hashed
+  before insertion. The API should not store raw visitor IP/user-agent values for this feature by
+  default.
+- **Public request submissions are rate-limited.** `POST /requests` has its own IP-based policy
+  (5 requests per 10 minutes, burst 2) plus a honeypot field (`website`) that rejects simple bot
+  submissions.
+
 ## 2026-06-02 (channel/user top-list aggregate hardening)
 
 - **Channel index and admin channel counts must avoid window scans.** `/channels` search and the

@@ -140,6 +140,14 @@ type SubscriptionPeriodRepository interface {
 	ActiveSummary(ctx context.Context, followedChannelID int64) (domain.ChannelSubscriptionSummary, error)
 }
 
+type UserRequestRepository interface {
+	Create(ctx context.Context, request domain.UserRequest) error
+	List(ctx context.Context, filter domain.UserRequestListFilter) ([]domain.UserRequestState, error)
+	Get(ctx context.Context, requestID string) (domain.UserRequestState, error)
+	ListEvents(ctx context.Context, requestID string) ([]domain.UserRequestEvent, error)
+	AppendEvent(ctx context.Context, event domain.UserRequestEvent) error
+}
+
 type DataManagementRepository interface {
 	Summary(ctx context.Context) (domain.DataManagementSummary, error)
 	GetRetentionSettings(ctx context.Context) (domain.RetentionSettings, error)

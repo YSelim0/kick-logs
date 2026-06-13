@@ -11,7 +11,8 @@ The default runtime is Go + NATS JetStream + ClickHouse + SQLite:
 - Go listener subscribes to Kick chat streams and publishes reached raw events to JetStream.
 - Go processor consumes JetStream batches and writes raw events plus normalized messages to ClickHouse.
 - NATS JetStream is the durable live chat ingestion backlog for issue #23.
-- ClickHouse stores chat messages, raw Kick events, exports, analytics, and profile aggregates.
+- ClickHouse stores chat messages, raw Kick events, exports, analytics, profile aggregates, and
+  public request-form history.
 - SQLite stores admin users, followed channels, sender profile cache, retention settings,
   heartbeats, webhook inbox/registry state, legacy queue compatibility tables, and migration
   metadata.
@@ -40,7 +41,9 @@ docker compose up --build -d
 - Render reply context and inline emotes in search results.
 - Export filtered messages as JSON or CSV.
 - Provide public analytics, user profile pages, and channel profile pages.
+- Provide a public request form for channel tracking requests and general feedback.
 - Provide admin operations and data-management panels.
+- Let admins review, status-change, note, and archive public requests.
 - Run locally through Docker Compose.
 
 ## Runtime Architecture
@@ -144,6 +147,7 @@ If the image fails, the UI falls back to emote name/token text.
 ## Public Pages
 
 - `/`: compact public landing page with self-hosted positioning and analytics blocks.
+- `/request`: public request form for channel tracking requests and general feedback.
 - `/search`: public historical message search.
 - `/users/[slug]`: public sender profile with analytics and latest messages.
 - `/channels/[slug]`: public channel profile with metadata, analytics, and latest messages.
@@ -162,6 +166,7 @@ convert `_` to `-`.
 - create admin user when current user is `super_admin`
 - operations health, storage growth, raw event status, and listener freshness
 - retention settings and guarded cleanup preview/confirm flows
+- request-form review workflow with status, notes, and archive actions
 
 Operations treats JetStream pending and ack-pending counts as the active live chat backlog. SQLite
 raw-event queue depth is shown only as legacy/migration state. Processed raw-event history is read
