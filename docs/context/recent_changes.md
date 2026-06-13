@@ -2,9 +2,27 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (public request form backend)
+## Latest (public request form frontend)
 
-- Backend request-form foundation is implemented; frontend remains pending.
+- Public `/request` frontend is implemented and wired to the backend request API.
+- Global public header is sticky on desktop and mobile.
+- Header now includes `Talep`:
+  - desktop: right action area near GitHub/Admin,
+  - mobile: inside the hamburger panel above Admin.
+- `/request` is public and compact:
+  - `Kanal Talebi` mode collects channel slug/name, title, message, and optional contact.
+  - `Geri Bildirim` mode hides channel fields and collects title, message, and optional contact.
+  - submit calls `POST /requests`,
+  - success renders the returned request id inline,
+  - validation/rate-limit failures render inline,
+  - hidden honeypot field `website` is included for backend bot rejection.
+- The `/request` right-side panel explains the user-facing review process and avoids internal
+  implementation details.
+- Added frontend request page tests for navigation, channel payload, feedback payload, and required
+  field gating.
+- Backend request-form foundation remains:
+  - public endpoint and admin request APIs are implemented,
+  - admin request management frontend remains pending.
 - Public submissions use ClickHouse, not SQLite:
   - `user_requests` stores immutable form submissions.
   - `user_request_events` stores append-only admin workflow events.
@@ -24,7 +42,8 @@ This file is the short handoff summary of the latest project changes. Keep it co
   - `POST /admin/requests/{request_id}/archive`
 - Current status is computed from the latest `status_changed` event and defaults to `new`. Archive
   is represented by an `archived` event; no hard delete was added.
-- Updated `docs/implementation_plan.md` status: Phases 1-4 complete, frontend phases 5-7 pending.
+- Updated `docs/implementation_plan.md` status: Phases 1-5 complete, admin frontend and final
+  verification pending.
 
 ## Latest (channel index aggregate hardening)
 

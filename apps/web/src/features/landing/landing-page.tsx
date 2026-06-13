@@ -128,11 +128,17 @@ export function LandingPage() {
 function Footer() {
   return (
     <footer className="border-t border-border py-3">
-      <div className="mx-auto max-w-[1280px] px-6">
+      <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-4 px-6">
         <p className="flex items-center gap-1.5 font-mono text-2xs uppercase text-muted-foreground">
           <Copyright className="h-3 w-3 shrink-0" aria-hidden />
           {new Date().getFullYear()} kick-logs · Tüm hakları saklıdır.
         </p>
+        <Link
+          className="font-mono text-2xs uppercase text-muted-foreground transition-colors hover:text-foreground"
+          href="/request"
+        >
+          Talep
+        </Link>
       </div>
     </footer>
   );

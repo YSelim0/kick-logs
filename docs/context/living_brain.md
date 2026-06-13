@@ -63,7 +63,13 @@ implementation details, or working assumptions change.
   - `rejected`
   - `done`
   - `duplicate`
-- The backend is implemented and wired; frontend request/admin screens are still pending.
+- Public frontend is implemented:
+  - `/request` is public and mounts `features/requests/request-page.tsx`.
+  - Header includes `Talep`; desktop shows it near GitHub/Admin, mobile shows it above Admin.
+  - The form has `Kanal Talebi` and `Geri Bildirim` modes and posts through
+    `features/requests/api.ts`.
+  - Success renders the returned request id inline; rate-limit/validation errors stay inline.
+- Admin request management frontend is still pending.
 
 ## Webhook Subscription Pipeline (issue #22, Phase 6 complete)
 
@@ -231,9 +237,15 @@ GET  /analytics/top-emotes
 GET  /users/{slug}/analytics
 GET  /channels/{slug}/analytics
 GET  /channels/{slug}/subscription-summary
+POST /requests
 POST /webhooks/kick
 GET  /admin/webhooks/health
 POST /admin/webhooks/sync
+GET  /admin/requests
+GET  /admin/requests/{request_id}
+POST /admin/requests/{request_id}/status
+POST /admin/requests/{request_id}/notes
+POST /admin/requests/{request_id}/archive
 ```
 
 Public routes remain unauthenticated. Admin routes require the HttpOnly JWT session cookie and an

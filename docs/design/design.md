@@ -29,6 +29,8 @@ Do not commit screenshots or exported images unless explicitly requested.
   load. Submitting navigates to `/prediction/{slug}`; it does not render analytics itself.
 - `/prediction/[slug]`: public latest-prediction analysis for the channel (summary, charts, outcome
   cards, top users), fetched live from Kick in the browser.
+- `/request`: public request form. Visitors can submit channel tracking requests or general feedback
+  without logging in.
 
 Landing must stay product-focused and must not turn into a marketing site.
 
@@ -117,17 +119,38 @@ Type scale (Tailwind):
 ## Global Header
 
 - 56px high, `bg-page` with bottom `border-subtle`.
-- Desktop: left side has logo square + `kick logs` wordmark + nav links; right side has GitHub icon + `Admin` outline button.
-- Mobile: left side has logo square + `kick logs` wordmark; right side has GitHub icon + hamburger (Menu/X toggle). Nav links hidden.
-- Hamburger opens a fixed dropdown panel below the header (z-40) with a dark backdrop. Panel lists all nav links (Search, Channels, Users, Prediction) plus Admin. Clicking any link closes the menu.
+- Sticky on both desktop and mobile (`top: 0`) so it stays visible while scrolling.
+- Desktop: left side has logo square + `kick logs` wordmark + nav links; right side has GitHub icon,
+  `Talep`, and `Admin` outline button.
+- Mobile: left side has logo square + `kick logs` wordmark; right side has GitHub icon + hamburger
+  (Menu/X toggle). Nav links hidden.
+- Hamburger opens a fixed dropdown panel below the header (z-40) with a dark backdrop. Panel lists
+  all nav links (Search, Channels, Users, Prediction), then `Talep`, then Admin. Clicking any link
+  closes the menu.
 - `Channels`, `Users`, and `Prediction` nav links are active and point to `/channels`, `/users`,
   and `/prediction`.
-- `ActiveRoute` type supports `"search" | "channels" | "users" | "prediction"` to highlight the
-  current section. Profile pages (`/channels/[slug]`, `/users/[slug]`) use the parent route
-  (`"channels"`, `"users"`) so the nav item stays highlighted when browsing within a section.
+- `ActiveRoute` type supports `"search" | "channels" | "users" | "prediction" | "request"` to
+  highlight the current section. Profile pages (`/channels/[slug]`, `/users/[slug]`) use the parent
+  route (`"channels"`, `"users"`) so the nav item stays highlighted when browsing within a section.
 - Clicking the brand goes to `/`.
 - Admin page uses a different chrome: brand + `/ admin` breadcrumb on the left, user email +
   `SUPER ADMIN` badge + `Çıkış` outline button on the right.
+
+## Public Request Page (`/request`)
+
+- Public, no auth.
+- Compact page title `Talep` with one short explanatory line.
+- One form panel with two mode buttons:
+  - `Kanal Talebi`: shows `Kanal adı`, `Başlık`, `Mesaj`, optional `İletişim`.
+  - `Geri Bildirim`: shows `Başlık`, `Mesaj`, optional `İletişim`; channel field is hidden.
+- `Talep` header action is primary when this route is active.
+- Submit maps to `POST /requests`; success renders an inline confirmation with request id.
+- Errors stay inline. Rate-limit error copy should clearly ask the visitor to retry later.
+- The right-side support panel explains the user-facing evaluation process only: request review,
+  possible follow-up, and the fact that submission is not guaranteed acceptance. Do not mention admin
+  panels, databases, or internal storage there.
+- Honeypot field exists in the DOM but is hidden and never part of the visible UX.
+- No hero layout, large typography, decorative cards, blur, or glow.
 
 ## Landing Page (`/`)
 

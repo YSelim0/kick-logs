@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-06-13 (public request form frontend)
+
+- **`/request` is a compact app page, not a landing page.** The form uses the existing dark
+  operations-tool layout: page title, one form panel, one supporting side panel, no hero treatment,
+  no decorative effects.
+- **One form handles both public request types.** `Kanal Talebi` and `Geri Bildirim` are mode
+  buttons inside the same page. Switching to feedback hides channel-specific fields instead of
+  sending empty channel UI.
+- **The public header exposes request submission as `Talep`.** Desktop places it in the right action
+  area near GitHub/Admin; mobile places it inside the hamburger panel above Admin.
+- **Success and failure stay inline.** The page does not redirect after submit. A successful submit
+  shows the returned request id; validation and rate-limit errors remain in the form panel.
+
 ## 2026-06-13 (public request form backend)
 
 - **Request form data belongs in ClickHouse, not SQLite.** Public channel requests and feedback are

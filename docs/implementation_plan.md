@@ -23,7 +23,8 @@ spam-resistant public endpoint behavior, and no unnecessary CRUD complexity.
 - Phase 3 complete: `POST /requests`, validation, normalization, honeypot handling, request metadata
   hashing, and public rate limit policy are implemented.
 - Phase 4 complete: admin request listing, detail, status, note, and archive APIs are implemented.
-- Phase 5 pending: public `/request` frontend page.
+- Phase 5 complete: public `/request` page, `Talep` header navigation, two-mode form UI, submit
+  integration, success/error states, and frontend coverage are implemented.
 - Phase 6 pending: admin request management frontend.
 - Phase 7 pending: final frontend-aware docs, smoke, and CI verification.
 

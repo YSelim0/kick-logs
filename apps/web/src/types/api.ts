@@ -31,6 +31,22 @@ export type CreateAdminUserRequest = {
   password: string;
 };
 
+export type UserRequestType = "channel_request" | "feedback";
+
+export type CreateUserRequestRequest = {
+  type: UserRequestType;
+  title: string;
+  message: string;
+  channel_slug?: string;
+  channel_display_name?: string;
+  contact?: string;
+  website?: string;
+};
+
+export type CreateUserRequestResponse = {
+  request_id: string;
+};
+
 export type Channel = {
   id: number;
   kick_channel_id: number | null;

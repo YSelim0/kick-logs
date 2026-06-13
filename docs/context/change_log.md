@@ -2,6 +2,21 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-06-13 (public request form frontend)
+
+- Implemented the public `/request` page for the request form feature.
+- Added `Talep` to the public header:
+  - desktop right action area near GitHub/Admin,
+  - mobile hamburger panel above Admin.
+- Added a compact two-mode form:
+  - `Kanal Talebi` submits channel tracking requests,
+  - `Geri Bildirim` submits product feedback or general messages.
+- Wired submit to `POST /requests` through `features/requests/api.ts`.
+- Added inline success/error states, returned request id display, and hidden honeypot field support.
+- Added frontend tests for navigation visibility, channel request payload, feedback payload, and
+  required-field gating.
+- Updated design/context/implementation docs. Admin request management frontend remains pending.
+
 ## 2026-06-13 (public request form backend)
 
 - Implemented the backend foundation for the public request form feature:
