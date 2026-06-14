@@ -1,401 +1,400 @@
-# User Request Form Implementation Plan
+# Active Channel Subscribers Implementation Plan
 
 ## Summary
 
-This plan defines the next product feature: a public request form that lets visitors send two kinds
-of input to Kick Logs:
+This plan defines the next product feature: visitors should be able to open a channel profile page
+at `/channels/{slug}` and view the active subscriber list for that channel.
 
-1. channel tracking requests, where a visitor asks for a Kick channel to be added to the tracked
-   channel list,
-2. general feedback, where a visitor sends product ideas, bug reports, or other messages.
+The list is based only on subscription periods already captured by Kick Logs. It must not imply that
+the app knows subscribers from before webhook tracking was enabled.
 
-The form will be available from the public site navigation through a `Talep` button. Submitted data
-will be visible to admins in a single admin page with filters and archive/status workflows.
+The feature builds on the existing subscription summary flow:
 
-The feature should be built as a production-quality MVP: small surface area, clear validation,
-spam-resistant public endpoint behavior, and no unnecessary CRUD complexity.
+- `GET /channels/{slug}/subscription-summary`
+- `SubscriptionPeriodRepository.ActiveSummary`
+- ClickHouse table: `channel_subscription_periods`
+
+The existing summary count stays in place. The new work adds a detailed subscriber list modal and a
+user-friendly full-list download.
 
 ## Current Status
 
-- Phase 1 complete: active plan and context are focused on the public request form.
-- Phase 2 complete: backend domain models, ClickHouse migrations, storage port, repository, and
-  repository coverage are implemented.
-- Phase 3 complete: `POST /requests`, validation, normalization, honeypot handling, request metadata
-  hashing, and public rate limit policy are implemented.
-- Phase 4 complete: admin request listing, detail, status, note, and archive APIs are implemented.
-- Phase 5 complete: public `/request` page, `Talep` header navigation, two-mode form UI, submit
-  integration, success/error states, and frontend coverage are implemented.
-- Phase 6 complete: `/admin/requests` page, sidebar navigation, filters, list/detail workflow,
-  timeline, status update, note, archive, and frontend coverage are implemented.
-- Phase 7 complete: final docs, backend tests, frontend tests, typecheck, lint, build, formatting,
-  and Docker Compose service health verification are complete.
+- Active subscriber counts already exist on channel profile pages.
+- Backend active count logic currently counts distinct subscribers where `expires_at > now()`.
+- Gifted active count currently counts distinct subscribers where `expires_at > now()` and
+  `is_gift = 1`.
+- Channel profile frontend already fetches subscription summary as a non-blocking secondary request.
+- Detailed active subscriber listing and export are not implemented yet.
 
 ## Product Goals
 
-- Give visitors a clear way to request new tracked channels.
-- Give visitors a clear way to send feedback or product requests.
-- Keep both request types in one admin workflow.
-- Let admins filter, review, status-change, note, and archive requests.
-- Avoid storing this feature in SQLite because SQLite should stay focused on operational/control
-  data.
-- Preserve the existing visual system: dark theme, compact professional layout, strict palette, and
-  no marketing-style page composition.
+- Let visitors inspect which captured subscribers are currently active for a channel.
+- Keep channel profile pages compact by opening the subscriber list in a modal.
+- Make the active subscriber count itself discoverable and actionable.
+- Let visitors download the full active subscriber list as JSON, CSV, or a readable TXT report.
+- Keep UI copy understandable for normal visitors; do not mention webhook internals in public empty
+  states.
+- Preserve the existing dark, dense, professional visual system.
 
 ## Non-Goals
 
+- No attempt to reconstruct subscribers from before Kick Logs started capturing subscription events.
+- No admin-only subscriber management UI.
 - No public account system.
-- No email notifications in the first implementation.
-- No hard delete workflow in the first implementation.
-- No user-facing request tracking page.
-- No CAPTCHA dependency unless rate limiting and lightweight bot checks prove insufficient.
-- No changes to existing search, profile, prediction, webhook, or ingestion APIs beyond shared
-  navigation/layout usage.
+- No XLSX/PDF export for this feature.
+- No display of subscription streak/month count unless Kick payload data is explicitly available and
+  persisted later.
+- No database migration just to infer streak/month count.
+- No new landing page or large marketing-style section.
 
-## Storage Decision
+## Data Source
 
-Requests will be stored in ClickHouse, not SQLite.
+Use ClickHouse table `channel_subscription_periods`.
+
+Relevant stored fields already available:
+
+- `followed_channel_id`
+- `channel_slug`
+- `channel_display_name`
+- `subscriber_kick_user_id`
+- `subscriber_username`
+- `subscriber_slug`
+- `subscriber_profile_image_url`
+- `gifter_kick_user_id`
+- `gifter_username`
+- `gifter_slug`
+- `gifter_profile_image_url`
+- `is_gift`
+- `started_at`
+- `expires_at`
+- `event_type`
+
+Active subscriber definition:
+
+- `expires_at > now()`
+
+The existing summary query does not check `started_at <= now()`. Keep list behavior aligned with the
+existing count unless a later bug fix intentionally changes both summary and list together.
+
+## Streak And Month Count Decision
+
+Do not show month/streak data in the UI or export for now.
 
 Reasoning:
 
-- The feature is append-heavy and audit-oriented.
-- Admin listing needs filtering over historical product input.
-- Request data is not runtime control-plane state.
-- SQLite should remain focused on admin users, followed channels, webhook subscription registry,
-  heartbeat/operations state, and other small operational state.
+- Current Kick webhook payload handling does not persist an explicit streak/month field.
+- Deriving a "registered month count" from captured periods can be misleading because the app may
+  not have historical periods from before tracking began.
+- Public UI and downloaded files should avoid presenting inferred values as subscription truth.
 
-ClickHouse should be used with an append-only model. The implementation must avoid treating
-ClickHouse like a row-update OLTP database.
+If Kick payloads later expose a reliable streak/month field, add it in a separate feature with a
+clear migration/storage plan.
 
-## Data Model
+## Backend API
 
-### `user_requests`
-
-Stores the immutable public submission.
-
-Suggested fields:
-
-- `request_id`: stable unique id generated by the API.
-- `type`: `channel_request` or `feedback`.
-- `title`: short summary.
-- `message`: visitor-provided explanation.
-- `channel_slug`: nullable, normalized Kick channel slug for channel requests.
-- `channel_display_name`: nullable, raw/display channel name if provided.
-- `contact`: nullable visitor contact field.
-- `ip_hash`: nullable hash of submitter IP for abuse investigation and rate-limit auditing.
-- `user_agent_hash`: nullable hash of user agent.
-- `created_at`: submission timestamp.
-
-Validation:
-
-- `type` must be one of the supported request types.
-- `title` max length should be limited.
-- `message` max length should be limited.
-- `channel_slug` is required for `channel_request`.
-- `channel_slug` should be normalized consistently with Kick profile/channel URL behavior.
-- `contact` is optional and length-limited.
-- Raw HTML must not be rendered back to admins as HTML.
-
-### `user_request_events`
-
-Stores admin workflow actions as append-only events.
-
-Suggested fields:
-
-- `event_id`: stable unique id generated by the API.
-- `request_id`: target request id.
-- `event_type`: `status_changed`, `note_added`, or `archived`.
-- `status`: nullable; used by `status_changed`.
-- `note`: nullable admin note.
-- `admin_id`: nullable/id of acting admin.
-- `created_at`: event timestamp.
-
-Supported statuses:
-
-- `new`
-- `reviewing`
-- `approved`
-- `rejected`
-- `done`
-- `duplicate`
-
-Archive behavior:
-
-- There is no delete in the first implementation.
-- Archiving is represented by an append-only `archived` event.
-- Admin queries compute current archive state from the latest event history.
-
-## Public Request Page
-
-Route:
-
-- `/request`
-
-Navigation:
-
-- Add a `Talep` button to the public header.
-- Desktop placement: between the existing right-side navigation actions, to the left of `Admin` and
-  near the GitHub icon according to the current header layout.
-- Mobile placement: above the `Admin` action or before it in the mobile action stack.
-- Use the same text on desktop and mobile: `Talep`.
-
-Page behavior:
-
-- The page contains one form with a two-option mode selector.
-- Modes:
-  - `Kanal Talebi`
-  - `Geri Bildirim`
-- Fields change based on the selected mode.
-- Submit success should show a calm confirmation state without redirecting unless the UI naturally
-  benefits from it.
-- Submit failure should show clear inline errors.
-
-Channel request fields:
-
-- Kick channel name or slug.
-- Short title or reason.
-- Message/details.
-- Optional contact.
-
-Feedback fields:
-
-- Title.
-- Message/details.
-- Optional contact.
-
-UX rules:
-
-- Keep it compact and functional.
-- Do not create a new landing page.
-- Do not use large hero typography.
-- Do not use decorative blur/glow/orb styling.
-- Use existing form, button, and panel styling patterns.
-
-## Public API
+### Paginated Subscriber List
 
 Endpoint:
 
-- `POST /requests`
+```text
+GET /channels/{slug}/subscribers?limit=50&offset=0&gift_only=false
+```
 
-Responsibilities:
+Access:
 
-- Accept only the public request form payload.
-- Validate and normalize fields.
-- Apply public route rate limiting.
-- Apply lightweight bot/spam checks.
-- Insert the immutable request row into ClickHouse.
-- Return a minimal success response with `request_id`.
+- Public.
+
+Purpose:
+
+- Used by the channel profile modal.
+- Returns only the requested page of active subscribers.
+
+Query params:
+
+- `limit`: default `50`, max `100`.
+- `offset`: default `0`.
+- `gift_only`: optional boolean. When true, return only active gifted subscribers.
 
 Suggested response:
 
 ```json
 {
-  "request_id": "..."
+  "channel_slug": "nuriben",
+  "items": [
+    {
+      "subscriber_kick_user_id": 123456,
+      "username": "example_user",
+      "slug": "example-user",
+      "profile_image_url": "https://...",
+      "is_gift": true,
+      "gifter_kick_user_id": 987654,
+      "gifter_username": "gift_sender",
+      "gifter_slug": "gift-sender",
+      "gifter_profile_image_url": "https://...",
+      "started_at": "2026-05-17T06:05:00Z",
+      "expires_at": "2026-06-16T06:05:00Z"
+    }
+  ],
+  "count": 248,
+  "limit": 50,
+  "offset": 0
 }
 ```
 
-Security and abuse controls:
+### Full Export
 
-- IP-based rate limiting through the existing rate-limit middleware.
-- Honeypot field in the frontend payload.
-- Reject submissions where the honeypot field is filled.
-- Optional minimum client form lifetime field if implemented cleanly.
-- Store hashed IP/user-agent only; do not store raw IP by default.
-- Keep error messages useful but not overly detailed for abuse paths.
+Endpoint:
 
-## Admin Request Management
+```text
+GET /channels/{slug}/subscribers/export?gift_only=false&format=txt
+```
 
-Admin route:
+Access:
 
-- `/admin/requests`
+- Public.
 
-Admin APIs:
+Purpose:
 
-- `GET /admin/requests`
-- `GET /admin/requests/{request_id}`
-- `POST /admin/requests/{request_id}/status`
-- `POST /admin/requests/{request_id}/notes`
-- `POST /admin/requests/{request_id}/archive`
+- Downloads the full active subscriber list.
+- Supported formats:
+  - `json`
+  - `csv`
+  - `txt`
 
-Admin listing filters:
+Response headers:
 
-- request type,
-- current status,
-- archived/active,
-- date range,
-- text search across title/message/channel/contact where practical.
+- TXT:
+  - `Content-Type: text/plain; charset=utf-8`
+  - `Content-Disposition: attachment; filename="{channel_slug}-active-subscribers.txt"`
+- CSV:
+  - `Content-Type: text/csv; charset=utf-8`
+  - `Content-Disposition: attachment; filename="{channel_slug}-active-subscribers.csv"`
+- JSON:
+  - `Content-Type: application/json; charset=utf-8`
+  - `Content-Disposition: attachment; filename="{channel_slug}-active-subscribers.json"`
 
-Admin list row should show:
+Suggested text output:
 
-- type,
-- title,
-- channel slug/name when present,
-- current status,
-- archived state,
-- created date,
-- latest admin action date when available.
+```text
+Kick Logs Aktif Abone Listesi
 
-Admin detail should show:
+Kanal: nuriben
+Liste: Tüm aktif aboneler
+Oluşturulma: 14.06.2026 01:15
+Toplam: 248
 
-- original request content,
-- computed current status,
-- archive state,
-- event timeline,
-- status change control,
-- note form,
-- archive action.
+1. ID: 123456
+   Kullanıcı: example_user
+   Başlangıç: 17.05.2026 06:05
+   Bitiş: 16.06.2026 06:05
+   Tür: Hediye
+   Hediye eden: gift_sender
+```
 
-The admin page should be operational and dense, consistent with the rest of the admin dashboard.
+Gift-only TXT export should change `Liste` to `Hediye aktif aboneler`.
 
-## Query Design
+Empty export should still download a useful file/payload with total `0` and no item rows.
 
-Because ClickHouse is append-only, admin reads should compute current request state from
-`user_request_events`.
+## Backend Query Design
 
-Expected computed values:
+The list must avoid duplicate subscribers.
 
-- latest status per request,
-- latest archive event per request,
-- latest event time per request,
-- note/event timeline for detail view.
+Expected behavior:
 
-Implementation should prefer clear query structure over over-optimized SQL in the first MVP.
+- A subscriber appears once in the current active list.
+- If multiple active periods exist for the same subscriber, choose the latest period by
+  `started_at DESC`, then `expires_at DESC`.
+- `gift_only=true` filters rows where the selected active period is gifted.
+- Sort public list by `started_at DESC`, then `subscriber_username ASC`.
+- Return a total count for the current filter.
 
-The first version may use query-time aggregation. If request volume becomes large later, a materialized
-view or projection can be introduced in a separate issue.
+Implementation approach:
+
+- Add a domain model for active channel subscribers.
+- Extend `SubscriptionPeriodRepository` port with:
+  - paginated list method,
+  - full export/list method or an unbounded method with a safe export cap if needed.
+- Add ClickHouse repository methods using query-time aggregation/windowing.
+- Keep the query readable first; optimize later only if production data requires it.
+
+## Rate Limiting
+
+Add a public rate-limit policy for subscriber export.
+
+Recommended:
+
+- `GET /channels/{slug}/subscribers/export`
+- IP key
+- similar to message export, e.g. 3 requests per 60 seconds with burst 2
+
+Paginated list calls can reuse the existing profile/analytics public limits only if matching remains
+clear. If not, add a dedicated `channel-subscribers` policy with a moderate limit.
+
+## Frontend UX
+
+Location:
+
+- Channel profile page: `/channels/{slug}`.
+
+Modal triggers:
+
+- `AKTİF ABONE` stat cell opens the modal for all active subscribers.
+- `HEDİYE ABONE` stat cell opens the same modal with `gift_only=true`.
+
+Modal behavior:
+
+- Title reflects the selected mode:
+  - `Aktif aboneler`
+  - `Hediye aktif aboneler`
+- First open fetches `limit=50&offset=0`.
+- `Daha fazla yükle` fetches the next page.
+- The download button opens a compact export menu, matching the search page export pattern.
+- Export menu options:
+  - JSON
+  - CSV
+  - TXT
+- Selecting an option downloads the full list for the same modal mode.
+- Modal can be closed by close button, Escape, or backdrop click using the existing dialog pattern.
+
+List row content:
+
+- Subscriber avatar when available; otherwise a compact fallback initial.
+- Subscriber username.
+- Subscriber username links to the app user profile when slug is available.
+- Gift badge when `is_gift=true`.
+- Gifter username when available.
+- Start date.
+- Expiry date.
+
+Do not show:
+
+- webhook terminology,
+- inferred month count,
+- inferred streak count,
+- internal event IDs.
+
+Empty state:
+
+```text
+Bu kanal için henüz aktif abonelik kaydı yok.
+```
+
+## Download UX
+
+The modal download action should follow the search page export pattern:
+
+- A square/icon download button opens an export menu.
+- The menu contains JSON, CSV, and TXT options.
+- Clicking outside closes the menu.
+- Selecting an option starts the download and closes the menu.
+
+Behavior:
+
+- Each option starts a browser download from the export endpoint with the selected `format`.
+- The button should not require loading the full list into the modal first.
+- Download uses the current modal mode:
+  - all active subscribers,
+  - gift-only active subscribers.
+
+TXT should be the most human-readable report format. JSON and CSV are provided for users who want to
+reuse the list elsewhere.
 
 ## Implementation Phases
 
 ### Phase 1 - Plan And Context
 
-- Replace the active implementation plan with this request form plan.
-- Update context docs to mention the new planned feature and storage decision.
+- Replace active implementation plan with this active subscriber list plan.
+- Update context docs with the new feature decision.
 - Do not implement runtime code in this phase unless explicitly requested.
 
 Exit criteria:
 
-- This file contains only the active request form plan.
-- Old implementation plan content is removed from the active plan.
-- Context docs identify ClickHouse append-only storage as the chosen approach.
+- `docs/implementation_plan.md` contains only this active feature plan.
+- Previous request-form implementation plan content is removed from the active plan.
+- Context docs mention the no-streak/no-month-count decision.
 
-### Phase 2 - Backend Domain And Storage
+### Phase 2 - Backend List And Export API
 
-- Add request and request-event domain models.
-- Add ClickHouse migrations for `user_requests` and `user_request_events`.
-- Add storage ports for creating public requests and reading/administering requests.
-- Add ClickHouse repository implementations.
-- Add focused repository tests.
-
-Exit criteria:
-
-- Migrations are deterministic.
-- Insert and read queries are covered by tests.
-- No SQLite table is introduced for this feature.
-
-### Phase 3 - Public Submit API
-
-- Add public request creation use case.
-- Add validation and normalization rules.
-- Add `POST /requests`.
-- Add rate-limit policy for the endpoint.
-- Add honeypot handling.
-- Add API tests for valid channel request, valid feedback, validation errors, honeypot rejection, and
-  rate-limit wiring where practical.
+- Add domain response models for active channel subscribers.
+- Extend `SubscriptionPeriodRepository` port.
+- Implement ClickHouse paginated list query.
+- Implement ClickHouse full export query or safe full-list method.
+- Add public routes:
+  - `GET /channels/{slug}/subscribers`
+  - `GET /channels/{slug}/subscribers/export`
+- Add schemas/mappers for JSON response.
+- Add JSON, CSV, and TXT export formatters.
+- Add focused backend tests for:
+  - active subscribers only,
+  - gift-only filtering,
+  - duplicate subscriber collapse,
+  - pagination,
+  - JSON, CSV, and TXT export formats,
+  - missing channel behavior.
 
 Exit criteria:
 
-- Public requests can be inserted into ClickHouse.
-- Invalid/spam-like payloads are rejected.
-- Response shape is stable and minimal.
+- Public list endpoint returns stable JSON.
+- Public export endpoint downloads JSON, CSV, and readable TXT formats.
+- Existing subscription summary behavior is not broken.
 
-### Phase 4 - Admin APIs
+### Phase 3 - Frontend Modal
 
-- Add admin request listing use case.
-- Add admin request detail use case.
-- Add status-change, note, and archive use cases.
-- Add admin API routes.
-- Add tests for filtering, computed current status, archive behavior, and event timeline behavior.
-
-Exit criteria:
-
-- Admin can list active and archived requests.
-- Admin can update workflow state without mutating the original request row.
-- Admin can add notes and archive through append-only events.
-
-### Phase 5 - Public Frontend
-
-- Add `/request` page.
-- Add the `Talep` navigation button to public header desktop and mobile layouts.
-- Build two-mode form UI.
-- Wire submit flow to `POST /requests`.
-- Add success and error states.
-- Add tests for mode switching and successful submit behavior.
+- Add channel subscriber API helpers.
+- Add TypeScript response types.
+- Make `AKTİF ABONE` and `HEDİYE ABONE` stat cells clickable when a channel profile is ready.
+- Add subscriber list modal using the existing dialog pattern.
+- Add first-page loading, load-more, empty, and error states.
+- Add download menu with JSON, CSV, and TXT options.
+- Add frontend tests for:
+  - clicking active count opens all-active modal,
+  - clicking gifted count opens gift-only modal,
+  - empty state copy,
+  - load-more behavior,
+  - export link/button target.
 
 Exit criteria:
 
-- Visitors can submit both request types.
-- The form matches existing visual rules.
-- Header placement works on desktop and mobile.
+- Visitors can inspect active subscribers without leaving the channel page.
+- Modal is responsive and does not render huge lists at once.
+- Visitors can download the full active subscriber list in JSON, CSV, or TXT.
 
-### Phase 6 - Admin Frontend
+### Phase 4 - Docs And Verification
 
-- Add `/admin/requests` page.
-- Add request list with filters.
-- Add request detail/timeline view.
-- Add status, note, and archive controls.
-- Add tests for filtering UI and admin actions.
-
-Exit criteria:
-
-- Admins can review and manage requests from one page.
-- Archived requests do not clutter the default active view.
-- UI remains consistent with existing admin density and styling.
-
-### Phase 7 - Documentation And Verification
-
-- Update README only if the public feature should be mentioned there.
-- Update architecture/context docs.
-- Run relevant backend tests.
-- Run relevant frontend tests.
-- Run typecheck and formatting checks.
-- Confirm Docker Compose migrations work.
+- Update design docs for clickable stats and subscriber modal.
+- Update context docs with completed implementation details.
+- Run backend tests.
+- Run frontend tests.
+- Run typecheck, lint, build, and formatting checks.
 
 Exit criteria:
 
 - CI-relevant checks pass.
 - Documentation reflects the new feature.
-- No unrelated files or old task-plan content are included.
+- No unrelated files are included.
 
-## Test Plan
+## Manual Test Plan
 
-Backend:
-
-- ClickHouse migration smoke test includes the new tables.
-- Repository tests cover request insert and admin read projections.
-- Use case tests cover validation and append-only status transitions.
-- HTTP tests cover public submit and admin management endpoints.
-
-Frontend:
-
-- Public page tests cover mode switch, field visibility, submit success, and validation display.
-- Header tests cover `Talep` navigation visibility.
-- Admin page tests cover filters, status changes, notes, archive action, and empty states.
-
-Manual:
-
-- Start Docker Compose.
-- Submit a channel request from `/request`.
-- Submit feedback from `/request`.
-- Verify both appear in `/admin/requests`.
-- Change status, add note, archive.
-- Verify archive filter behavior.
+1. Start Docker Compose.
+2. Visit `/channels/{slug}` for a channel with captured subscription periods.
+3. Click `AKTİF ABONE`.
+4. Confirm the modal lists active subscribers.
+5. Click `Daha fazla yükle` when more than one page exists.
+6. Close and reopen from `HEDİYE ABONE`.
+7. Confirm only gifted active subscribers are shown.
+8. Click the download button.
+9. Confirm the export menu shows JSON, CSV, and TXT options.
+10. Download each format and confirm the files include channel name, generated time, total, and
+    subscriber rows where that format supports those fields.
+11. Visit a channel with no active subscriptions and confirm the public empty state copy.
 
 ## Open Decisions
 
-No blocking product decisions remain.
+No blocking decisions remain.
 
-Non-blocking copy/details may be adjusted during implementation:
+Non-blocking implementation details:
 
-- exact field labels,
-- exact status badge copy,
-- exact admin filter layout,
-- whether README should mention the request form.
+- exact modal row density,
+- exact file name pattern,
+- exact export date formatting,
+- whether list export should have a hard maximum row cap later.
