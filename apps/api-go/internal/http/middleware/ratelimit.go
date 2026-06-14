@@ -104,6 +104,30 @@ func DefaultPolicies(trustProxy bool, clientIPHeader string) []RateLimitPolicy {
 			MaxBurst:      10,
 		},
 		{
+			Name: "channel-subscribers-export",
+			Match: func(method, path string) bool {
+				return method == "GET" &&
+					strings.HasPrefix(path, "/channels/") &&
+					strings.HasSuffix(path, "/subscribers/export")
+			},
+			Key:           ip,
+			PerPeriod:     3,
+			PeriodSeconds: 60,
+			MaxBurst:      2,
+		},
+		{
+			Name: "channel-subscribers",
+			Match: func(method, path string) bool {
+				return method == "GET" &&
+					strings.HasPrefix(path, "/channels/") &&
+					strings.HasSuffix(path, "/subscribers")
+			},
+			Key:           ip,
+			PerPeriod:     60,
+			PeriodSeconds: 60,
+			MaxBurst:      15,
+		},
+		{
 			Name:          "public-requests",
 			Match:         exactMatch("POST", "/requests"),
 			Key:           ip,

@@ -138,6 +138,8 @@ type KickEventSubscriptionRepository interface {
 type SubscriptionPeriodRepository interface {
 	InsertBatch(ctx context.Context, periods []domain.ChannelSubscriptionPeriod) error
 	ActiveSummary(ctx context.Context, followedChannelID int64) (domain.ChannelSubscriptionSummary, error)
+	ListActiveSubscribers(ctx context.Context, filter domain.ChannelSubscriberFilter) (domain.ChannelSubscriberPage, error)
+	ExportActiveSubscribers(ctx context.Context, followedChannelID int64, giftOnly bool) ([]domain.ChannelSubscriber, error)
 }
 
 type UserRequestRepository interface {

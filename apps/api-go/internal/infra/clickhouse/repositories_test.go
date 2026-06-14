@@ -608,6 +608,45 @@ func TestClickHouseMigrationsAndRepositories(t *testing.T) {
 		t.Fatalf("ActiveGiftedCount = %d, want 1", summary.ActiveGiftedCount)
 	}
 
+	activeSubscribers, err := subPeriodRepo.ListActiveSubscribers(ctx, domain.ChannelSubscriberFilter{
+		FollowedChannelID: 1,
+		Limit:             10,
+	})
+	if err != nil {
+		t.Fatalf("subPeriodRepo.ListActiveSubscribers() error = %v", err)
+	}
+	if activeSubscribers.Count != 2 || len(activeSubscribers.Items) != 2 {
+		t.Fatalf("active subscribers = %#v", activeSubscribers)
+	}
+	for _, subscriber := range activeSubscribers.Items {
+		if strings.HasPrefix(subscriber.Username, "expired_") {
+			t.Fatalf("expired subscriber returned = %#v", activeSubscribers.Items)
+		}
+	}
+
+	giftSubscribers, err := subPeriodRepo.ListActiveSubscribers(ctx, domain.ChannelSubscriberFilter{
+		FollowedChannelID: 1,
+		GiftOnly:          true,
+		Limit:             10,
+	})
+	if err != nil {
+		t.Fatalf("subPeriodRepo.ListActiveSubscribers(gift) error = %v", err)
+	}
+	if giftSubscribers.Count != 1 || len(giftSubscribers.Items) != 1 || !giftSubscribers.Items[0].IsGift {
+		t.Fatalf("gift subscribers = %#v", giftSubscribers)
+	}
+	if giftSubscribers.Items[0].GifterUsername == "" {
+		t.Fatalf("gift subscriber missing gifter = %#v", giftSubscribers.Items[0])
+	}
+
+	exportedSubscribers, err := subPeriodRepo.ExportActiveSubscribers(ctx, 1, false)
+	if err != nil {
+		t.Fatalf("subPeriodRepo.ExportActiveSubscribers() error = %v", err)
+	}
+	if len(exportedSubscribers) != 2 {
+		t.Fatalf("exported subscribers = %#v", exportedSubscribers)
+	}
+
 	userRequestRepo := clickhouseinfra.NewUserRequestRepository(conn)
 	userRequest := domain.UserRequest{
 		ID:                 "request-" + suffix,

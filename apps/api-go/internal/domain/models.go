@@ -550,6 +550,34 @@ type ChannelSubscriptionSummary struct {
 	LatestEventAt     time.Time
 }
 
+type ChannelSubscriberFilter struct {
+	FollowedChannelID int64
+	GiftOnly          bool
+	Limit             uint64
+	Offset            uint64
+}
+
+type ChannelSubscriber struct {
+	SubscriberKickUserID  int64
+	Username              string
+	Slug                  string
+	ProfileImageURL       string
+	IsGift                bool
+	GifterKickUserID      int64
+	GifterUsername        string
+	GifterSlug            string
+	GifterProfileImageURL string
+	StartedAt             time.Time
+	ExpiresAt             time.Time
+}
+
+type ChannelSubscriberPage struct {
+	Items  []ChannelSubscriber
+	Count  int64
+	Limit  uint64
+	Offset uint64
+}
+
 type UserRequestType string
 
 const (

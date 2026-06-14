@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -98,6 +99,197 @@ func TestChannelSubscriptionSummary(t *testing.T) {
 	})
 }
 
+func TestChannelSubscribers(t *testing.T) {
+	ch := domain.FollowedChannel{ID: 1, Slug: "hype", DisplayName: "Hype", BroadcasterUserID: 9000, IsEnabled: true, RawPayloadJSON: "{}"}
+	channelSvc := channelsusecase.NewService(newAdminFakeChannelRepo(ch), &nopResolver{})
+	periodRepo := &fakeSubPeriodRepo{
+		page: domain.ChannelSubscriberPage{
+			Items: []domain.ChannelSubscriber{
+				{
+					SubscriberKickUserID:  1001,
+					Username:              "SubUser",
+					Slug:                  "subuser",
+					ProfileImageURL:       "https://example.test/avatar.png",
+					IsGift:                true,
+					GifterKickUserID:      2001,
+					GifterUsername:        "Gifter",
+					GifterSlug:            "gifter",
+					GifterProfileImageURL: "https://example.test/gifter.png",
+					StartedAt:             time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC),
+					ExpiresAt:             time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC),
+				},
+			},
+			Count:  1,
+			Limit:  2,
+			Offset: 1,
+		},
+	}
+
+	router := httpapi.NewRouter(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)), routes.Dependencies{
+		Channels:            channelSvc,
+		SubscriptionPeriods: periodRepo,
+	})
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/channels/hype/subscribers?limit=2&offset=1&gift_only=true", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d body = %s", w.Code, w.Body.String())
+	}
+
+	var resp schemas.ChannelSubscribersResponse
+	_ = json.NewDecoder(w.Body).Decode(&resp)
+	if resp.ChannelSlug != "hype" || !resp.GiftOnly || resp.Count != 1 || len(resp.Items) != 1 {
+		t.Fatalf("resp = %+v", resp)
+	}
+	if resp.Items[0].Username != "SubUser" || resp.Items[0].GifterUsername == nil {
+		t.Fatalf("subscriber = %+v", resp.Items[0])
+	}
+	if periodRepo.lastFilter.FollowedChannelID != 1 || !periodRepo.lastFilter.GiftOnly || periodRepo.lastFilter.Limit != 2 || periodRepo.lastFilter.Offset != 1 {
+		t.Fatalf("filter = %+v", periodRepo.lastFilter)
+	}
+}
+
+func TestChannelSubscribersExportTXT(t *testing.T) {
+	ch := domain.FollowedChannel{ID: 1, Slug: "hype", DisplayName: "Hype", BroadcasterUserID: 9000, IsEnabled: true, RawPayloadJSON: "{}"}
+	channelSvc := channelsusecase.NewService(newAdminFakeChannelRepo(ch), &nopResolver{})
+	periodRepo := &fakeSubPeriodRepo{
+		exportItems: []domain.ChannelSubscriber{
+			{
+				SubscriberKickUserID: 1001,
+				Username:             "SubUser",
+				Slug:                 "subuser",
+				StartedAt:            time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC),
+				ExpiresAt:            time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC),
+			},
+		},
+	}
+	router := httpapi.NewRouter(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)), routes.Dependencies{
+		Channels:            channelSvc,
+		SubscriptionPeriods: periodRepo,
+	})
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/channels/hype/subscribers/export?format=txt", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d body = %s", w.Code, w.Body.String())
+	}
+	if got := w.Header().Get("Content-Type"); !strings.HasPrefix(got, "text/plain") {
+		t.Fatalf("content-type = %q", got)
+	}
+	if got := w.Header().Get("Content-Disposition"); !strings.Contains(got, "kick-logs-hype-active-subscribers.txt") {
+		t.Fatalf("content-disposition = %q", got)
+	}
+	body := w.Body.String()
+	for _, want := range []string{"Kick Logs Aktif Abone Listesi", "Kanal: #hype", "SubUser", "Toplam: 1"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("body does not contain %q: %s", want, body)
+		}
+	}
+	if strings.Contains(body, "streak") || strings.Contains(body, "month") {
+		t.Fatalf("txt export should not include unavailable streak/month fields: %s", body)
+	}
+}
+
+func TestChannelSubscribersExportJSON(t *testing.T) {
+	ch := domain.FollowedChannel{ID: 1, Slug: "hype", DisplayName: "Hype", BroadcasterUserID: 9000, IsEnabled: true, RawPayloadJSON: "{}"}
+	channelSvc := channelsusecase.NewService(newAdminFakeChannelRepo(ch), &nopResolver{})
+	periodRepo := &fakeSubPeriodRepo{
+		exportItems: []domain.ChannelSubscriber{
+			{
+				SubscriberKickUserID: 1001,
+				Username:             "SubUser",
+				Slug:                 "subuser",
+				IsGift:               true,
+				StartedAt:            time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC),
+				ExpiresAt:            time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC),
+			},
+		},
+	}
+	router := httpapi.NewRouter(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)), routes.Dependencies{
+		Channels:            channelSvc,
+		SubscriptionPeriods: periodRepo,
+	})
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/channels/hype/subscribers/export?format=json&gift_only=true", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d body = %s", w.Code, w.Body.String())
+	}
+	if got := w.Header().Get("Content-Disposition"); !strings.Contains(got, "kick-logs-hype-active-subscribers.json") {
+		t.Fatalf("content-disposition = %q", got)
+	}
+	var resp schemas.ChannelSubscribersExportResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if resp.ChannelSlug != "hype" || !resp.GiftOnly || resp.Count != 1 || len(resp.Items) != 1 {
+		t.Fatalf("resp = %+v", resp)
+	}
+}
+
+func TestChannelSubscribersExportCSV(t *testing.T) {
+	ch := domain.FollowedChannel{ID: 1, Slug: "hype", DisplayName: "Hype", BroadcasterUserID: 9000, IsEnabled: true, RawPayloadJSON: "{}"}
+	channelSvc := channelsusecase.NewService(newAdminFakeChannelRepo(ch), &nopResolver{})
+	periodRepo := &fakeSubPeriodRepo{
+		exportItems: []domain.ChannelSubscriber{
+			{
+				SubscriberKickUserID: 1001,
+				Username:             "SubUser",
+				Slug:                 "subuser",
+				StartedAt:            time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC),
+				ExpiresAt:            time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC),
+			},
+		},
+	}
+	router := httpapi.NewRouter(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)), routes.Dependencies{
+		Channels:            channelSvc,
+		SubscriptionPeriods: periodRepo,
+	})
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/channels/hype/subscribers/export?format=csv", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d body = %s", w.Code, w.Body.String())
+	}
+	if got := w.Header().Get("Content-Type"); !strings.HasPrefix(got, "text/csv") {
+		t.Fatalf("content-type = %q", got)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "channel_slug,subscriber_kick_user_id,username") || !strings.Contains(body, "hype,1001,SubUser") {
+		t.Fatalf("csv body = %s", body)
+	}
+}
+
+func TestChannelSubscribersExportRejectsInvalidFormat(t *testing.T) {
+	ch := domain.FollowedChannel{ID: 1, Slug: "hype", DisplayName: "Hype", BroadcasterUserID: 9000, IsEnabled: true, RawPayloadJSON: "{}"}
+	channelSvc := channelsusecase.NewService(newAdminFakeChannelRepo(ch), &nopResolver{})
+	router := httpapi.NewRouter(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)), routes.Dependencies{
+		Channels:            channelSvc,
+		SubscriptionPeriods: &fakeSubPeriodRepo{},
+	})
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/channels/hype/subscribers/export?format=xml", nil))
+	if w.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("status = %d", w.Code)
+	}
+}
+
+func TestChannelSubscribersUnknownChannelReturns404(t *testing.T) {
+	ch := domain.FollowedChannel{ID: 1, Slug: "hype", DisplayName: "Hype", BroadcasterUserID: 9000, IsEnabled: true, RawPayloadJSON: "{}"}
+	channelSvc := channelsusecase.NewService(newAdminFakeChannelRepo(ch), &nopResolver{})
+	router := httpapi.NewRouter(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)), routes.Dependencies{
+		Channels:            channelSvc,
+		SubscriptionPeriods: &fakeSubPeriodRepo{},
+	})
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/channels/nope/subscribers", nil))
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("status = %d", w.Code)
+	}
+}
+
 func TestWebhookHealthRequiresAuth(t *testing.T) {
 	router := httpapi.NewRouter(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)), routes.Dependencies{})
 	w := httptest.NewRecorder()
@@ -154,6 +346,9 @@ func TestWebhookSyncNoSyncServiceReturns503(t *testing.T) {
 
 type fakeSubPeriodRepo struct {
 	summary            domain.ChannelSubscriptionSummary
+	page               domain.ChannelSubscriberPage
+	exportItems        []domain.ChannelSubscriber
+	lastFilter         domain.ChannelSubscriberFilter
 	activeSummaryCalls int
 }
 
@@ -164,6 +359,22 @@ func (r *fakeSubPeriodRepo) InsertBatch(_ context.Context, _ []domain.ChannelSub
 func (r *fakeSubPeriodRepo) ActiveSummary(_ context.Context, _ int64) (domain.ChannelSubscriptionSummary, error) {
 	r.activeSummaryCalls++
 	return r.summary, nil
+}
+
+func (r *fakeSubPeriodRepo) ListActiveSubscribers(
+	_ context.Context,
+	filter domain.ChannelSubscriberFilter,
+) (domain.ChannelSubscriberPage, error) {
+	r.lastFilter = filter
+	return r.page, nil
+}
+
+func (r *fakeSubPeriodRepo) ExportActiveSubscribers(
+	_ context.Context,
+	_ int64,
+	_ bool,
+) ([]domain.ChannelSubscriber, error) {
+	return r.exportItems, nil
 }
 
 // --- fakeInboxRepo ---

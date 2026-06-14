@@ -7,6 +7,37 @@ type ChannelSubscriptionSummaryResponse struct {
 	LatestEventAt     *string `json:"latest_event_at,omitempty"`
 }
 
+type ChannelSubscriberResponse struct {
+	SubscriberKickUserID  int64   `json:"subscriber_kick_user_id"`
+	Username              string  `json:"username"`
+	Slug                  string  `json:"slug"`
+	ProfileImageURL       string  `json:"profile_image_url"`
+	IsGift                bool    `json:"is_gift"`
+	GifterKickUserID      *int64  `json:"gifter_kick_user_id,omitempty"`
+	GifterUsername        *string `json:"gifter_username,omitempty"`
+	GifterSlug            *string `json:"gifter_slug,omitempty"`
+	GifterProfileImageURL *string `json:"gifter_profile_image_url,omitempty"`
+	StartedAt             string  `json:"started_at"`
+	ExpiresAt             string  `json:"expires_at"`
+}
+
+type ChannelSubscribersResponse struct {
+	ChannelSlug string                      `json:"channel_slug"`
+	GiftOnly    bool                        `json:"gift_only"`
+	Count       int64                       `json:"count"`
+	Limit       int64                       `json:"limit"`
+	Offset      int64                       `json:"offset"`
+	Items       []ChannelSubscriberResponse `json:"items"`
+}
+
+type ChannelSubscribersExportResponse struct {
+	ChannelSlug string                      `json:"channel_slug"`
+	GiftOnly    bool                        `json:"gift_only"`
+	GeneratedAt string                      `json:"generated_at"`
+	Count       int64                       `json:"count"`
+	Items       []ChannelSubscriberResponse `json:"items"`
+}
+
 type WebhookHealthResponse struct {
 	ConfiguredEventTypes     []string            `json:"configured_event_types"`
 	MissingClientCredentials bool                `json:"missing_client_credentials"`
