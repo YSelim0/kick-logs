@@ -44,6 +44,31 @@ describe("MessageList", () => {
     expect(screen.getByText("hello")).toBeInTheDocument();
   });
 
+  it("renders emotes inside reply context", () => {
+    renderMessageList([
+      {
+        ...messageFixture(),
+        message_type: "reply",
+        reply_metadata: {
+          original_sender: {
+            id: 97891494,
+            username: "Cansu98xx",
+            slug: "cansu_98xx"
+          },
+          original_message: {
+            id: "1be196b8-55c7-4980-8022-a1112723acea",
+            content: "cevap [emote:37226:KEKW]"
+          }
+        }
+      }
+    ]);
+
+    expect(screen.getByRole("img", { name: "KEKW" })).toHaveAttribute(
+      "src",
+      "https://files.kick.com/emotes/37226/fullsize"
+    );
+  });
+
   it("links sender name to the public user profile", () => {
     renderMessageList([messageFixture()]);
 

@@ -5,6 +5,7 @@
 import { useMemo, useState } from "react";
 
 import type { MessageEmote } from "@/types/api";
+import { cn } from "@/lib/utils";
 
 type TextPart = {
   type: "text";
@@ -35,24 +36,39 @@ export type MessageTextSegment =
 type MessageContentProps = {
   content: string;
   emotes: MessageEmote[];
+  className?: string;
+  emoteClassName?: string;
   highlight?: string;
+  textPartClassName?: string;
 };
 
 const emoteTokenPattern = /\[emote:(\d+):([^\]]+)\]/g;
 const urlPattern = /https?:\/\/[^\s<>"']+/gi;
 const trailingUrlPunctuationPattern = /[),.!?;:]+$/;
 
-export function MessageContent({ content, emotes, highlight = "" }: MessageContentProps) {
+export function MessageContent({
+  className,
+  content,
+  emoteClassName,
+  emotes,
+  highlight = "",
+  textPartClassName
+}: MessageContentProps) {
   const [failedTokens, setFailedTokens] = useState<Set<string>>(() => new Set());
   const parts = useMemo(() => splitMessageContent(content, emotes), [content, emotes]);
   const highlightText = highlight.trim();
 
   return (
-    <span className="inline-flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-6">
+    <span
+      className={cn(
+        "inline-flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 leading-6",
+        className
+      )}
+    >
       {parts.map((part, index) => {
         if (part.type === "text") {
           return (
-            <span key={`${part.value}-${index}`}>
+            <span className={textPartClassName} key={`${part.value}-${index}`}>
               {renderTextSegments(part.value, highlightText)}
             </span>
           );
@@ -72,7 +88,10 @@ export function MessageContent({ content, emotes, highlight = "" }: MessageConte
         return (
           <img
             alt={part.name}
-            className="inline-block h-6 w-6 shrink-0 object-contain align-middle"
+            className={cn(
+              "inline-block h-6 w-6 shrink-0 object-contain align-middle",
+              emoteClassName
+            )}
             height={24}
             key={`${part.token}-${index}`}
             loading="lazy"
