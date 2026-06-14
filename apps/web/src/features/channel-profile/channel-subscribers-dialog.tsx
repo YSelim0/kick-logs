@@ -143,9 +143,9 @@ export function ChannelSubscribersDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] max-w-4xl overflow-hidden border-border bg-panel p-0 text-foreground shadow-none">
+      <DialogContent className="flex max-h-[calc(100vh-2rem)] max-w-4xl flex-col overflow-hidden border-border bg-panel !p-0 text-foreground shadow-none sm:max-h-[85vh]">
         <DialogClose onClose={() => onOpenChange(false)} />
-        <div className="flex max-h-[85vh] flex-col">
+        <div className="flex min-h-0 flex-1 flex-col">
           <div className="border-b border-border px-5 py-4">
             <div className="flex flex-col gap-3 pr-8 sm:flex-row sm:items-start sm:justify-between">
               <DialogHeader>
@@ -217,21 +217,23 @@ export function ChannelSubscribersDialog({
           </div>
 
           {items.length > 0 ? (
-            <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-4">
-              <p className="font-mono text-[11px] text-muted-foreground">
-                {formatCompactNumber(items.length)} / {formatCompactNumber(count)}
-              </p>
-              <button
-                className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-elevated px-3 text-[13px] font-medium text-foreground transition-colors hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-50"
-                disabled={!hasMore || status === "loading-more"}
-                onClick={loadMore}
-                type="button"
-              >
-                {status === "loading-more" ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                Daha fazla yükle
-              </button>
+            <div className="shrink-0 border-t border-border px-5 py-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-mono text-[11px] text-muted-foreground">
+                  {formatCompactNumber(items.length)} / {formatCompactNumber(count)}
+                </p>
+                <button
+                  className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-elevated px-3 text-[13px] font-medium text-foreground transition-colors hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={!hasMore || status === "loading-more"}
+                  onClick={loadMore}
+                  type="button"
+                >
+                  {status === "loading-more" ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  Daha fazla yükle
+                </button>
+              </div>
             </div>
           ) : null}
         </div>
