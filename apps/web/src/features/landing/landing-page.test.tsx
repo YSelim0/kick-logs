@@ -127,6 +127,22 @@ describe("LandingPage", () => {
     expect(screen.getByText("Henüz veri yok.")).toBeInTheDocument();
   });
 
+  it("shows skeletons while analytics are loading", () => {
+    const pending = new Promise(() => {});
+    analyticsMocks.getAnalyticsOverview.mockReturnValue(pending);
+    analyticsMocks.getMessageVolume.mockReturnValue(pending);
+    analyticsMocks.getTopChannels.mockReturnValue(pending);
+    analyticsMocks.getTopEmotes.mockReturnValue(pending);
+    analyticsMocks.getTopSenders.mockReturnValue(pending);
+
+    render(<LandingPage />);
+
+    expect(screen.getByLabelText("TOPLAM MESAJ yükleniyor")).toBeInTheDocument();
+    expect(screen.getByLabelText("Mesaj hacmi yükleniyor")).toBeInTheDocument();
+    expect(screen.getAllByLabelText("Liste yükleniyor")).toHaveLength(3);
+    expect(screen.queryByText("0")).not.toBeInTheDocument();
+  });
+
   it("keeps successful analytics visible when one panel fails", async () => {
     analyticsMocks.getAnalyticsOverview.mockResolvedValue({
       total_messages: 482,

@@ -102,6 +102,7 @@ export function LandingPage() {
   }, []);
 
   const overview = analytics?.overview ?? EMPTY_OVERVIEW;
+  const isLoading = status === "loading";
 
   return (
     <main className="min-h-screen bg-page text-foreground">
@@ -110,9 +111,10 @@ export function LandingPage() {
       <div className="mx-auto max-w-[1280px] px-6 py-16 md:pt-16 md:pb-20">
         <div className="flex flex-col gap-12">
           <Hero />
-          <StatsBar overview={overview} />
+          <StatsBar isLoading={isLoading} overview={overview} />
           <StatusBanner status={status} />
           <AnalyticsGrid
+            isLoading={isLoading}
             volume={analytics?.volume ?? []}
             topChannels={analytics?.topChannels ?? []}
             topSenders={analytics?.topSenders ?? []}
@@ -175,7 +177,7 @@ function Hero() {
   );
 }
 
-function StatsBar({ overview }: { overview: AnalyticsOverview }) {
+function StatsBar({ isLoading, overview }: { isLoading: boolean; overview: AnalyticsOverview }) {
   const cells: { label: string; value: string }[] = [
     { label: "TOPLAM MESAJ", value: formatCompactNumber(overview.total_messages) },
     { label: "KANAL", value: formatCompactNumber(overview.total_channels) },
@@ -191,9 +193,13 @@ function StatsBar({ overview }: { overview: AnalyticsOverview }) {
       {cells.map((cell) => (
         <div key={cell.label} className="bg-panel px-6 py-5">
           <div className="font-mono text-2xs uppercase text-muted-foreground">{cell.label}</div>
-          <div className="mt-2 text-[26px] font-semibold leading-none text-foreground">
-            {cell.value}
-          </div>
+          {isLoading ? (
+            <SkeletonBlock ariaLabel={`${cell.label} yükleniyor`} className="mt-2 h-[26px] w-24" />
+          ) : (
+            <div className="mt-2 text-[26px] font-semibold leading-none text-foreground">
+              {cell.value}
+            </div>
+          )}
         </div>
       ))}
     </section>
@@ -201,11 +207,13 @@ function StatsBar({ overview }: { overview: AnalyticsOverview }) {
 }
 
 function AnalyticsGrid({
+  isLoading,
   volume,
   topChannels,
   topSenders,
   topEmotes
 }: {
+  isLoading: boolean;
   volume: MessageVolumePoint[];
   topChannels: TopChannelAnalytics[];
   topSenders: TopSenderAnalytics[];
@@ -214,10 +222,11 @@ function AnalyticsGrid({
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
       <Panel title="Mesaj hacmi" subtitle="son 14 gün">
-        <MessageVolumeChart points={volume} />
+        <MessageVolumeChart isLoading={isLoading} points={volume} />
       </Panel>
       <Panel title="Top kanallar" subtitle="mesaj sayısı">
         <TopList
+          isLoading={isLoading}
           rows={topChannels.map((channel) => ({
             key: String(channel.channel_id),
             label: channel.display_name,
@@ -231,6 +240,7 @@ function AnalyticsGrid({
       </Panel>
       <Panel title="Top kullanıcılar" subtitle="mesaj sayısı">
         <TopList
+          isLoading={isLoading}
           rows={topSenders.map((sender) => ({
             key: String(sender.sender_id),
             label: sender.username,
@@ -244,6 +254,7 @@ function AnalyticsGrid({
       </Panel>
       <Panel title="Top emoteler" subtitle="kullanım">
         <TopList
+          isLoading={isLoading}
           rows={topEmotes.map((emote) => ({
             key: emote.id,
             label: emote.name,
@@ -277,7 +288,17 @@ function Panel({
   );
 }
 
-function MessageVolumeChart({ points }: { points: MessageVolumePoint[] }) {
+function MessageVolumeChart({
+  isLoading,
+  points
+}: {
+  isLoading: boolean;
+  points: MessageVolumePoint[];
+}) {
+  if (isLoading) {
+    return <MessageVolumeSkeleton />;
+  }
+
   if (!points.length) {
     return <EmptyHint text="Henüz veri yok." />;
   }
@@ -335,7 +356,19 @@ type TopRow = {
   initial?: string;
 };
 
-function TopList({ rows, emptyText }: { rows: TopRow[]; emptyText: string }) {
+function TopList({
+  emptyText,
+  isLoading,
+  rows
+}: {
+  emptyText: string;
+  isLoading: boolean;
+  rows: TopRow[];
+}) {
+  if (isLoading) {
+    return <TopListSkeleton />;
+  }
+
   if (!rows.length) {
     return <EmptyHint text={emptyText} />;
   }
@@ -411,6 +444,57 @@ function StatusBanner({ status }: { status: "loading" | "ready" | "partial" | "e
 
 function EmptyHint({ text }: { text: string }) {
   return <p className="text-[13px] text-muted-foreground">{text}</p>;
+}
+
+function SkeletonBlock({
+  ariaLabel,
+  className,
+  styleHeight
+}: {
+  ariaLabel?: string;
+  className: string;
+  styleHeight?: string;
+}) {
+  return (
+    <span
+      aria-label={ariaLabel}
+      className={cn("block animate-pulse rounded-sm bg-elevated", className)}
+      style={styleHeight ? { height: styleHeight } : undefined}
+    />
+  );
+}
+
+function MessageVolumeSkeleton() {
+  const heights = [34, 54, 42, 68, 48, 74, 38, 58, 46, 84, 52, 70, 44, 62];
+
+  return (
+    <div
+      aria-label="Mesaj hacmi yükleniyor"
+      className="relative flex h-44 items-end gap-1.5"
+      role="status"
+    >
+      {heights.map((height, index) => (
+        <div className="flex h-full flex-1 flex-col justify-end" key={`${height}-${index}`}>
+          <SkeletonBlock className="w-full" styleHeight={`${height}%`} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TopListSkeleton() {
+  return (
+    <div aria-label="Liste yükleniyor" className="flex flex-col gap-2.5" role="status">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div className="flex items-center gap-3 px-1 py-1 -mx-1" key={index}>
+          <SkeletonBlock className="h-3 w-5" />
+          <SkeletonBlock className="h-5 w-5" />
+          <SkeletonBlock className="h-3 flex-1" />
+          <SkeletonBlock className="h-3 w-12" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function getRecentVolumeRange() {
