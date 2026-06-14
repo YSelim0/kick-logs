@@ -54,12 +54,12 @@ func TestServiceDoesNotCacheScopedTopSenderSearch(t *testing.T) {
 }
 
 func TestServiceCachesRepeatedGlobalVolumeRange(t *testing.T) {
-	repo := &countingAnalyticsRepository{
-		volume: []domain.MessageVolumePoint{{MessageCount: 12}},
-	}
-	service := NewService(repo)
 	start := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2026, 6, 2, 8, 0, 0, 0, time.UTC)
+	repo := &countingAnalyticsRepository{
+		volume: []domain.MessageVolumePoint{{BucketStart: start, MessageCount: 12}},
+	}
+	service := NewService(repo)
 
 	for range 2 {
 		points, err := service.MessageVolume(
@@ -70,13 +70,49 @@ func TestServiceCachesRepeatedGlobalVolumeRange(t *testing.T) {
 		if err != nil {
 			t.Fatalf("MessageVolume() error = %v", err)
 		}
-		if len(points) != 1 {
+		if len(points) != 2 {
 			t.Fatalf("points = %#v", points)
+		}
+		if points[0].BucketStart != start || points[0].MessageCount != 12 {
+			t.Fatalf("first point = %#v", points[0])
+		}
+		if points[1].BucketStart != start.AddDate(0, 0, 1) || points[1].MessageCount != 0 {
+			t.Fatalf("second point = %#v", points[1])
 		}
 	}
 
 	if repo.volumeCalls != 1 {
 		t.Fatalf("volume calls = %d, want 1", repo.volumeCalls)
+	}
+}
+
+func TestServiceFillsMissingHourlyVolumeBuckets(t *testing.T) {
+	start := time.Date(2026, 6, 1, 10, 15, 0, 0, time.UTC)
+	end := time.Date(2026, 6, 1, 12, 45, 0, 0, time.UTC)
+	repo := &countingAnalyticsRepository{
+		volume: []domain.MessageVolumePoint{{
+			BucketStart:  time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC),
+			MessageCount: 7,
+		}},
+	}
+	service := NewService(repo)
+
+	points, err := service.MessageVolume(
+		context.Background(),
+		domain.AnalyticsFilter{Start: start, End: end, Channel: "hype"},
+		domain.AnalyticsBucketHour,
+	)
+	if err != nil {
+		t.Fatalf("MessageVolume() error = %v", err)
+	}
+	if len(points) != 3 {
+		t.Fatalf("points = %#v", points)
+	}
+	expected := []int64{0, 0, 7}
+	for index, wantCount := range expected {
+		if points[index].MessageCount != wantCount {
+			t.Fatalf("points[%d] = %#v, want count %d", index, points[index], wantCount)
+		}
 	}
 }
 

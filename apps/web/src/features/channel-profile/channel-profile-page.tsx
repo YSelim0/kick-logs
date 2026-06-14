@@ -379,7 +379,7 @@ function VolumeChart({ points }: { points: MessageVolumePoint[] }) {
     <div className="relative flex h-36 items-end gap-1">
       {points.map((point) => {
         const ratio = max > 0 ? point.message_count / max : 0;
-        const heightPct = max > 0 ? Math.max(ratio * 100, 4) : 4;
+        const heightPct = max > 0 && point.message_count > 0 ? Math.max(ratio * 100, 4) : 2;
         return (
           <div
             key={point.bucket_start}
