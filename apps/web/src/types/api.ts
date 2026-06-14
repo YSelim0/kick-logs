@@ -466,6 +466,31 @@ export type ChannelSubscriptionSummary = {
   latest_event_at: string | null;
 };
 
+export type ChannelSubscriber = {
+  subscriber_kick_user_id: number;
+  username: string;
+  slug: string;
+  profile_image_url: string;
+  is_gift: boolean;
+  gifter_kick_user_id?: number;
+  gifter_username?: string;
+  gifter_slug?: string;
+  gifter_profile_image_url?: string;
+  started_at: string;
+  expires_at: string;
+};
+
+export type ChannelSubscribersResponse = {
+  channel_slug: string;
+  gift_only: boolean;
+  count: number;
+  limit: number;
+  offset: number;
+  items: ChannelSubscriber[];
+};
+
+export type ChannelSubscriberExportFormat = "json" | "csv" | "txt";
+
 export type EventSubStatus = {
   event_type: string;
   kick_subscription_id: string;

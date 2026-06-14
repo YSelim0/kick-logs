@@ -1,5 +1,21 @@
 # Decisions
 
+## 2026-06-14 (active channel subscribers)
+
+- **Active subscriber detail is public on channel profiles.** `/channels/{slug}` lets visitors open
+  the active subscriber list from the `AKTİF ABONE` stat cell and the gift-only list from
+  `HEDİYE ABONE`.
+- **The list uses captured subscription periods only.** Active means `expires_at > now()` from
+  `channel_subscription_periods`; the UI must not imply knowledge of subscriptions from before
+  webhook tracking was enabled.
+- **Subscribers are deduplicated per Kick user.** If multiple active periods exist for the same
+  subscriber, public list/export use the latest period instead of rendering duplicates.
+- **No inferred streak/month count.** Current persisted webhook data does not include a reliable
+  streak/month value. The modal and export omit it instead of deriving a misleading value from
+  partial captured history.
+- **Export is visitor-friendly.** The modal exposes one download icon with JSON, CSV, and readable
+  TXT options. TXT is the human-readable default format.
+
 ## 2026-06-14 (admin request management frontend)
 
 - **Request management lives in one admin route.** `/admin/requests` owns filtering, list, detail,

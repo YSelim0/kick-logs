@@ -93,6 +93,29 @@ implementation details, or working assumptions change.
 - ClickHouse migration v5 (channel_subscription_periods, ReplacingMergeTree ORDER BY id)
 - Active count query uses `FINAL` + `countDistinctIf(subscriber_kick_user_id, expires_at > now())`
 
+## Active Channel Subscribers
+
+- Public channel profiles now expose detailed active subscriber lists from captured webhook periods.
+- Backend endpoints:
+  - `GET /channels/{slug}/subscribers?limit=50&offset=0&gift_only=false`
+  - `GET /channels/{slug}/subscribers/export?gift_only=false&format=txt|csv|json`
+- Both endpoints resolve the channel through followed-channel metadata and read
+  `channel_subscription_periods` from ClickHouse.
+- Active subscriber definition matches summary counts: `expires_at > now()`.
+- List/export collapse multiple active periods for the same `subscriber_kick_user_id` and use the
+  latest period by expiry/start/ingest ordering.
+- `gift_only=true` returns active subscribers whose selected active period is gifted.
+- Public export supports JSON, CSV, and human-readable TXT. TXT includes channel, generated time,
+  total, user id, username, optional Kick profile slug, optional gifter, start, and expiry.
+- The UI intentionally omits streak/month count because the current stored Kick webhook data does
+  not include a reliable value and historical capture may be partial.
+- Frontend `/channels/[slug]` behavior:
+  - `AKTİF ABONE` opens all active subscribers.
+  - `HEDİYE ABONE` opens gift-only active subscribers.
+  - modal loads 50 rows, appends with `Daha fazla yükle`, and shows
+    `Bu kanal için henüz aktif abonelik kaydı yok.` when empty.
+  - download menu follows the search export pattern and closes on outside click.
+
 ## Default Data Stores
 
 - SQLite stores control-plane data:
@@ -243,6 +266,8 @@ GET  /analytics/top-emotes
 GET  /users/{slug}/analytics
 GET  /channels/{slug}/analytics
 GET  /channels/{slug}/subscription-summary
+GET  /channels/{slug}/subscribers
+GET  /channels/{slug}/subscribers/export
 POST /requests
 POST /webhooks/kick
 GET  /admin/webhooks/health

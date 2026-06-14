@@ -2,6 +2,27 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-06-14 (active channel subscribers)
+
+- Added public active subscriber list and export APIs for channel profiles:
+  - `GET /channels/{slug}/subscribers`
+  - `GET /channels/{slug}/subscribers/export`
+- Extended the subscription period domain/port and ClickHouse repository with paginated list and
+  full export methods.
+- Added subscriber export formatters for JSON, CSV, and readable TXT.
+- Added public rate-limit policies for subscriber list and subscriber export routes.
+- Added backend tests for list query mapping, gift-only filtering, JSON/CSV/TXT export, invalid
+  format handling, missing channel behavior, and ClickHouse integration coverage for active/gift
+  filtering.
+- Added frontend subscriber API helpers and response types.
+- Added a channel-profile subscriber modal:
+  - `AKTİF ABONE` opens all active subscribers.
+  - `HEDİYE ABONE` opens gift-only active subscribers.
+  - first page loads 50 rows and `Daha fazla yükle` appends more.
+  - download menu supports JSON, CSV, and TXT and closes on outside click.
+  - empty state uses user-facing copy without webhook/internal terms.
+- Updated design and context docs for the subscriber modal and no-streak/no-month-count decision.
+
 ## 2026-06-14 (admin request management frontend)
 
 - Implemented `/admin/requests` for managing public request form submissions.

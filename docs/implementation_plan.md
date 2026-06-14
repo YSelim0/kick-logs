@@ -20,11 +20,13 @@ user-friendly full-list download.
 ## Current Status
 
 - Active subscriber counts already exist on channel profile pages.
-- Backend active count logic currently counts distinct subscribers where `expires_at > now()`.
-- Gifted active count currently counts distinct subscribers where `expires_at > now()` and
-  `is_gift = 1`.
-- Channel profile frontend already fetches subscription summary as a non-blocking secondary request.
-- Detailed active subscriber listing and export are not implemented yet.
+- Backend active count logic counts distinct subscribers where `expires_at > now()`.
+- Gifted active count counts distinct subscribers where `expires_at > now()` and `is_gift = 1`.
+- Backend public subscriber list and export endpoints have been implemented.
+- Channel profile frontend exposes the active and gifted subscriber counts as modal triggers.
+- The modal supports paginated viewing plus JSON, CSV, and TXT download options.
+- Streak/month count remains intentionally omitted because the stored webhook data does not contain a
+  reliable source field.
 
 ## Product Goals
 

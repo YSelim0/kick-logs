@@ -265,7 +265,18 @@ no card-per-row treatment.
 - Breadcrumb (mono): `channels / exampleChannel`.
 - Identity panel: rounded-square channel image, display name (22/600), `LOGGING` accent pill, mono
   meta row (`ilk log`, `son aktivite`), CTA `Kanalda ara` linking to `/search?channel={slug}`.
-- 4-cell stats bar: `MESAJ`, `KULLANICI`, `EMOTE`, `İLK LOG`.
+- Stats bar: `MESAJ`, `KULLANICI`, `EMOTE`, `İLK LOG`, `AKTİF ABONE`, `HEDİYE ABONE`.
+- `AKTİF ABONE` and `HEDİYE ABONE` cells are clickable after subscription summary loads. They open
+  the active subscriber modal without leaving the channel page.
+- Active subscriber modal:
+  - title is `Aktif aboneler` or `Hediye aktif aboneler`.
+  - first page loads 50 rows; `Daha fazla yükle` appends more rows.
+  - rows show circular subscriber avatar/fallback, username link, Kick user id, gift badge/gifter
+    when available, start date, and expiry date.
+  - empty state copy is exactly `Bu kanal için henüz aktif abonelik kaydı yok.`
+  - download action is one square icon button with JSON, CSV, and TXT options; the menu closes on
+    outside click.
+  - do not show inferred streak/month counts.
 - 3-column analytics grid with **equal panel heights**: `Mesaj hacmi`, `Top kullanıcılar`,
   `Top emoteler`.
 - `Son mesajlar` panel: username (rendered in sender color) + message + mono timestamp. Same emote

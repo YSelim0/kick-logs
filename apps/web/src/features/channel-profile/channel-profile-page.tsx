@@ -11,6 +11,10 @@ import { KickProfileLink } from "@/components/kick-profile-link";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { getChannelProfile, getChannelSubscriptionSummary } from "@/features/channel-profile/api";
+import {
+  ChannelSubscribersDialog,
+  type ChannelSubscriberMode
+} from "@/features/channel-profile/channel-subscribers-dialog";
 import { MessageContent } from "@/features/search/message-content";
 import { formatMessageDate } from "@/features/search/search-params";
 import { ApiClientError } from "@/lib/api-client";
@@ -122,6 +126,8 @@ function ProfileContent({
 }) {
   const searchHref = `/search?channel=${encodeURIComponent(profile.channel.slug)}`;
   const kickProfileUrl = buildKickProfileUrl(profile.channel.slug);
+  const [subscriberMode, setSubscriberMode] = useState<ChannelSubscriberMode | null>(null);
+  const canOpenSubscribers = Boolean(subscription);
 
   return (
     <div className="space-y-5">
@@ -171,13 +177,24 @@ function ProfileContent({
           { label: "İLK LOG", value: formatShortDate(profile.overview.first_message_at) },
           {
             label: "AKTİF ABONE",
-            value: subscription ? formatCompactNumber(subscription.active_count) : "—"
+            value: subscription ? formatCompactNumber(subscription.active_count) : "—",
+            actionLabel: "Aktif aboneleri görüntüle",
+            onSelect: canOpenSubscribers ? () => setSubscriberMode("all") : undefined
           },
           {
             label: "HEDİYE ABONE",
-            value: subscription ? formatCompactNumber(subscription.active_gifted_count) : "—"
+            value: subscription ? formatCompactNumber(subscription.active_gifted_count) : "—",
+            actionLabel: "Hediye aktif aboneleri görüntüle",
+            onSelect: canOpenSubscribers ? () => setSubscriberMode("gifted") : undefined
           }
         ]}
+      />
+      <ChannelSubscribersDialog
+        channelSlug={profile.channel.slug}
+        mode={subscriberMode}
+        onOpenChange={(open) => {
+          if (!open) setSubscriberMode(null);
+        }}
       />
 
       {/* 3-column analytics grid */}
@@ -286,7 +303,7 @@ function ProfileState({
   );
 }
 
-type StatCell = { label: string; value: string };
+type StatCell = { actionLabel?: string; label: string; onSelect?: () => void; value: string };
 
 function ProfileStatsBar({ cells }: { cells: StatCell[] }) {
   return (
@@ -295,17 +312,38 @@ function ProfileStatsBar({ cells }: { cells: StatCell[] }) {
       className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-3 xl:grid-cols-6"
     >
       {cells.map((cell) => (
-        <div key={cell.label} className="bg-panel px-5 py-4">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            {cell.label}
-          </div>
-          <div className="mt-2 font-sans text-[24px] font-semibold leading-none tracking-tight text-foreground">
-            {cell.value}
-          </div>
-        </div>
+        <StatCellView cell={cell} key={cell.label} />
       ))}
     </section>
   );
+}
+
+function StatCellView({ cell }: { cell: StatCell }) {
+  const content = (
+    <>
+      <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+        {cell.label}
+      </div>
+      <div className="mt-2 font-sans text-[24px] font-semibold leading-none tracking-tight text-foreground">
+        {cell.value}
+      </div>
+    </>
+  );
+
+  if (cell.onSelect) {
+    return (
+      <button
+        aria-label={cell.actionLabel ?? cell.label}
+        className="bg-panel px-5 py-4 text-left transition-colors hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+        onClick={cell.onSelect}
+        type="button"
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return <div className="bg-panel px-5 py-4">{content}</div>;
 }
 
 function AnalyticsPanel({

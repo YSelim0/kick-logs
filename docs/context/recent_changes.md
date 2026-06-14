@@ -2,7 +2,41 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (admin request management frontend)
+## Latest (active channel subscribers)
+
+- Implemented public active subscriber detail for channel profiles.
+- Backend additions:
+  - `GET /channels/{slug}/subscribers`
+  - `GET /channels/{slug}/subscribers/export`
+  - ClickHouse repository methods for paginated active subscribers and full export lists.
+  - Route rate limits for subscriber list and subscriber export.
+- Subscriber list behavior:
+  - active means `expires_at > now()`,
+  - rows are deduplicated by `subscriber_kick_user_id`,
+  - duplicate active periods choose the latest period,
+  - `gift_only=true` returns gifted active subscribers only.
+- Export supports JSON, CSV, and readable TXT. Streak/month count is intentionally omitted because
+  the current stored data does not contain a reliable value.
+- Frontend `/channels/[slug]` additions:
+  - `AKTİF ABONE` opens the active subscriber modal,
+  - `HEDİYE ABONE` opens the gift-only modal,
+  - modal loads 50 rows at a time and supports `Daha fazla yükle`,
+  - download menu offers JSON, CSV, and TXT and closes on outside click,
+  - empty state says `Bu kanal için henüz aktif abonelik kaydı yok.`
+- Verification run so far:
+  - `go test ./...` from `apps/api-go`: passed
+  - `go vet ./...` from `apps/api-go`: passed
+  - `gofmt -l cmd internal` from `apps/api-go`: passed
+  - `pnpm --filter @kick-logs/web test`: passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `pnpm format:check`: passed
+- Local ClickHouse integration test against the developer data volume hit an existing raw-event
+  memory-limit failure before reaching the new subscriber query. CI runs the same test against a
+  clean service.
+
+## Previously Latest (admin request management frontend)
 
 - `/admin/requests` frontend is implemented and wired to the request workflow APIs.
 - Admin sidebar now includes `Requests` for regular admin and super admin users.

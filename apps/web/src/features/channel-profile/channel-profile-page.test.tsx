@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ChannelProfilePage } from "@/features/channel-profile/channel-profile-page";
@@ -6,7 +6,9 @@ import { ApiClientError } from "@/lib/api-client";
 import type { ChannelProfile } from "@/types/api";
 
 const profileMocks = vi.hoisted(() => ({
+  buildChannelSubscribersExportUrl: vi.fn(),
   getChannelProfile: vi.fn(),
+  getChannelSubscribers: vi.fn(),
   getChannelSubscriptionSummary: vi.fn()
 }));
 
@@ -19,14 +21,38 @@ vi.mock("@/features/channel-profile/api", () => profileMocks);
 describe("ChannelProfilePage", () => {
   beforeEach(() => {
     profileMocks.getChannelProfile.mockReset();
+    profileMocks.getChannelSubscribers.mockReset();
     profileMocks.getChannelSubscriptionSummary.mockReset();
+    profileMocks.buildChannelSubscribersExportUrl.mockReset();
     profileMocks.getChannelProfile.mockResolvedValue(profileFixture());
+    profileMocks.getChannelSubscribers.mockResolvedValue({
+      channel_slug: "hype",
+      gift_only: false,
+      count: 1,
+      limit: 50,
+      offset: 0,
+      items: [
+        {
+          subscriber_kick_user_id: 123,
+          username: "subscriber_one",
+          slug: "subscriber-one",
+          profile_image_url: "",
+          is_gift: false,
+          started_at: "2026-06-01T10:00:00Z",
+          expires_at: "2026-07-01T10:00:00Z"
+        }
+      ]
+    });
     profileMocks.getChannelSubscriptionSummary.mockResolvedValue({
       channel_slug: "hype",
       active_count: 42,
       active_gifted_count: 5,
       latest_event_at: null
     });
+    profileMocks.buildChannelSubscribersExportUrl.mockImplementation(
+      (slug: string, giftOnly: boolean, format: string) =>
+        `http://localhost:8000/channels/${slug}/subscribers/export?format=${format}${giftOnly ? "&gift_only=true" : ""}`
+    );
   });
 
   it("renders channel analytics and latest messages", async () => {
@@ -52,6 +78,77 @@ describe("ChannelProfilePage", () => {
       "https://kick.com/hype"
     );
     expect(screen.getByRole("link", { name: /@alpha/ })).toHaveAttribute("href", "/users/alpha");
+  });
+
+  it("opens the active subscriber modal from the stat cell", async () => {
+    render(<ChannelProfilePage slug="hype" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Aktif aboneleri görüntüle" }));
+
+    await waitFor(() =>
+      expect(profileMocks.getChannelSubscribers).toHaveBeenCalledWith("hype", {
+        limit: 50,
+        offset: 0,
+        gift_only: false
+      })
+    );
+    expect(await screen.findByRole("heading", { name: "Aktif aboneler" })).toBeInTheDocument();
+    expect(screen.getByText("subscriber_one")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "subscriber_one" })).toHaveAttribute(
+      "href",
+      "/users/subscriber-one"
+    );
+  });
+
+  it("opens the gifted subscriber modal and export menu", async () => {
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+
+    render(<ChannelProfilePage slug="hype" />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Hediye aktif aboneleri görüntüle" })
+    );
+
+    await waitFor(() =>
+      expect(profileMocks.getChannelSubscribers).toHaveBeenCalledWith("hype", {
+        limit: 50,
+        offset: 0,
+        gift_only: true
+      })
+    );
+    expect(
+      await screen.findByRole("heading", { name: "Hediye aktif aboneler" })
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Abone listesini indir" }));
+    fireEvent.click(screen.getByRole("button", { name: "TXT indir" }));
+
+    expect(openSpy).toHaveBeenCalledWith(
+      "http://localhost:8000/channels/hype/subscribers/export?format=txt&gift_only=true",
+      "_blank",
+      "noopener,noreferrer"
+    );
+
+    openSpy.mockRestore();
+  });
+
+  it("renders subscriber empty state", async () => {
+    profileMocks.getChannelSubscribers.mockResolvedValue({
+      channel_slug: "hype",
+      gift_only: false,
+      count: 0,
+      limit: 50,
+      offset: 0,
+      items: []
+    });
+
+    render(<ChannelProfilePage slug="hype" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Aktif aboneleri görüntüle" }));
+
+    expect(
+      await screen.findByText("Bu kanal için henüz aktif abonelik kaydı yok.")
+    ).toBeInTheDocument();
   });
 
   it("renders loading state", () => {
