@@ -2,6 +2,14 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-06-14 (brand favicon set)
+
+- Added the generated favicon set to `apps/web/public`.
+- Replaced the shared visible app logo asset with the new 512px favicon logo.
+- Updated Next metadata so browsers use `/favicon.ico`, `/favicon.svg`, `/favicon-96x96.png`,
+  `/apple-touch-icon.png`, and `/site.webmanifest`.
+- Updated the documentation logo at `docs/app-logo.png` so README/design references match the app.
+
 ## 2026-06-14 (active channel subscribers)
 
 - Added public active subscriber list and export APIs for channel profiles:

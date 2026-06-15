@@ -9,10 +9,15 @@ import { NavigationProgress } from "@/components/navigation-progress";
 export const metadata: Metadata = {
   title: "Kick Logs",
   description: "Self-hosted Kick chat log search",
+  manifest: "/site.webmanifest",
   icons: {
-    icon: "/app-logo.png",
-    shortcut: "/app-logo.png",
-    apple: "/app-logo.png"
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon-96x96.png", sizes: "96x96", type: "image/png" }
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png"
   }
 };
 

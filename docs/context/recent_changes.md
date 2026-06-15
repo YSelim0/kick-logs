@@ -2,6 +2,21 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
+## Latest (brand favicon set)
+
+- Replaced the visible Kick Logs app logo asset with the new favicon-generated logo.
+- Added the full favicon set to `apps/web/public`:
+  - `favicon.ico`
+  - `favicon.svg`
+  - `favicon-96x96.png`
+  - `apple-touch-icon.png`
+  - `web-app-manifest-192x192.png`
+  - `web-app-manifest-512x512.png`
+  - `site.webmanifest`
+- Updated Next metadata to expose the favicon, SVG icon, Apple touch icon, and web manifest from
+  root public paths.
+- Updated `docs/app-logo.png` so README and design references use the same current product mark.
+
 ## Latest (active channel subscribers)
 
 - Implemented public active subscriber detail for channel profiles.
