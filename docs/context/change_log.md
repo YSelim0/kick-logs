@@ -2,6 +2,13 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-07-06 (subscription expiry fallback)
+
+- Updated Kick webhook subscription normalization so any subscription event without a Kick-provided
+  `expires_at` falls back to `created_at + 31d` instead of `created_at + 30d`.
+- Kept Kick-provided `expires_at` authoritative when present.
+- Added regression coverage for missing-expiry subscription and gift webhook payloads.
+
 ## 2026-06-14 (brand favicon set)
 
 - Added the generated favicon set to `apps/web/public`.
@@ -427,7 +434,7 @@ Backend pipeline for tracking Kick subscription events via webhooks. Phase 8 (fr
   fail-closed (503 with no key, 401 on bad sig); rate-limit exempt; 8 route tests.
 - **Phase 5 — Processor and normalization**: `webhookprocessor.Service` (5s tick, background
   worker); normalizer handles `channel.subscription.new/renewal` (1 period) and
-  `channel.subscription.gifts` (1 period/giftee); `expires_at` fallback `created_at + 30d`;
+  `channel.subscription.gifts` (1 period/giftee); `expires_at` fallback `created_at + 31d`;
   `ErrIgnored` for unsupported/unfollowed events; 13 tests.
 - **Phase 6 — Backend query APIs**: `GET /channels/{slug}/subscription-summary` (public active
   count); `GET /admin/webhooks/health` (inbox counts, sync status, config flags);

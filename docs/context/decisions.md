@@ -228,7 +228,7 @@ sender profile cache behavior, and webhook inbox maintenance where noted.
 - **`channel_subscription_periods` uses `ReplacingMergeTree(ingested_at)` ORDER BY `id`.** The
   deterministic `id` (`messageID` for new/renewal, `messageID_gifteeUserID` for gifts) makes
   re-processing idempotent. Queries use `FINAL` to deduplicate on read.
-- **Subscription period `expires_at` is always set before storage.** The fallback (`created_at + 30d`)
+- **Subscription period `expires_at` is always set before storage.** The fallback (`created_at + 31d`)
   is applied during normalization (Phase 5), not at query time. The ClickHouse column is NOT NULL.
 - **`kick_subscription_id` preserved on upsert conflict.** The `ON CONFLICT DO UPDATE` SQL uses
   `CASE WHEN excluded.kick_subscription_id != '' THEN ... ELSE existing END` so a sync error

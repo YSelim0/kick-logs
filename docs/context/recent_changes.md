@@ -2,6 +2,13 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
+## Latest (subscription expiry fallback)
+
+- Changed Kick webhook subscription normalization fallback expiry from `created_at + 30d` to
+  `created_at + 31d` when Kick does not provide `expires_at`.
+- Kick-provided `expires_at` remains authoritative and is not clamped.
+- Added regression coverage for missing-expiry normal subscription and gift payloads.
+
 ## Latest (brand favicon set)
 
 - Replaced the visible Kick Logs app logo asset with the new favicon-generated logo.

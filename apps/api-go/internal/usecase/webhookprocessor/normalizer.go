@@ -13,6 +13,8 @@ const (
 	EventTypeNew     = "channel.subscription.new"
 	EventTypeRenewal = "channel.subscription.renewal"
 	EventTypeGifts   = "channel.subscription.gifts"
+
+	defaultSubscriptionExpiryDuration = 31 * 24 * time.Hour
 )
 
 // ExtractBroadcasterUserID pulls broadcaster.user_id from any subscription payload.
@@ -162,5 +164,5 @@ func resolveExpiry(createdAt time.Time, expiresAtStr string) time.Time {
 			}
 		}
 	}
-	return createdAt.Add(30 * 24 * time.Hour)
+	return createdAt.Add(defaultSubscriptionExpiryDuration)
 }

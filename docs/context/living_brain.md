@@ -92,6 +92,8 @@ implementation details, or working assumptions change.
 - SQLite migrations v5 (broadcaster_user_id), v6 (kick_webhook_events), v7 (kick_event_subscriptions)
 - ClickHouse migration v5 (channel_subscription_periods, ReplacingMergeTree ORDER BY id)
 - Active count query uses `FINAL` + `countDistinctIf(subscriber_kick_user_id, expires_at > now())`
+- Webhook normalization keeps Kick-provided `expires_at` authoritative. If Kick omits `expires_at`,
+  the fallback expiry is `created_at + 31d`.
 
 ## Active Channel Subscribers
 
