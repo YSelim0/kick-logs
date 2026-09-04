@@ -30,3 +30,6 @@ Thumbs.db
 
 *.sqlite
 *.sqlite3
+
+# Local drop folder for one-off imports (may contain real chat data).
+/import/

@@ -249,6 +249,30 @@ services:
     volumes:
       - api_go_data:/data
 
+  import-messages:
+    profiles:
+      - tools
+    build:
+      context: ./apps/api-go
+      args:
+        TARGET: importmessages
+    environment:
+      APP_NAME: ${APP_NAME:-Kick Logs}
+      APP_ENV: ${APP_ENV:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      CLICKHOUSE_ADDR: ${CLICKHOUSE_ADDR:-clickhouse:9000}
+      CLICKHOUSE_DATABASE: ${CLICKHOUSE_DATABASE:-kick_logs}
+      CLICKHOUSE_USERNAME: ${CLICKHOUSE_USERNAME:-kick_logs}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-kick_logs}
+      CLICKHOUSE_DEBUG: ${CLICKHOUSE_DEBUG:-false}
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    # Read-only bind mount: place the export file(s) to import under ./import
+    # on the host before running this profile.
+    volumes:
+      - ./import:/import:ro
+
 volumes:
   nats_data:
   clickhouse_data:

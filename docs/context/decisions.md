@@ -1,5 +1,28 @@
 # Decisions
 
+## 2026-09-04 (one-off message import tool)
+
+- **The import tool is append-only and requires an explicit confirm phrase to write.** The user
+  provided a 429-message JSON/CSV export pair to backfill into ClickHouse and asked for a safe
+  dry-run first. `-dry-run` defaults to `true`; a real write additionally requires
+  `-confirm=IMPORT-CHAT-MESSAGES` exactly, mirroring the existing admin cleanup pattern
+  (preview + exact confirmation text) rather than trusting a single `-dry-run=false` flag alone.
+- **Existing rows are matched by `kick_message_id` and are never updated**, only skipped. The tool
+  never issues a ClickHouse `ALTER`/update against `chat_messages`; it only `INSERT`s rows whose
+  `kick_message_id` was confirmed absent via `ExistingKickMessageIDs`, consistent with the
+  project's existing dedup-by-`kick_message_id` contract for live ingestion.
+- **JSON is the canonical input; CSV is verification-only.** The user's two export files are the
+  same 429-message dataset in different shapes. The JSON shape (`{items, count, max_rows,
+  truncated}`) carries structured `reply_metadata`, sender/channel objects, and emote objects the
+  flat CSV does not, so it is the only accepted `-input`. `-verify-csv` cross-checks the
+  `kick_message_id` set for peace of mind but never feeds data into the import itself.
+- **Row id reuses the live listener's deterministic hash** (`fnv64a(kick_message_id)` masked into
+  an `int63`) so a backfilled row's id matches what the live pipeline would have produced for the
+  same `kick_message_id`, instead of minting a new unrelated id scheme for imported data. The
+  function is duplicated into the new `cmd/importmessages` package rather than importing
+  `internal/usecase/listener`, which would pull in unrelated live-ingestion dependencies for a
+  one-off CLI tool.
+
 ## 2026-06-02 (channel/user top-list aggregate hardening)
 
 - **Channel index and admin channel counts must avoid window scans.** `/channels` search and the

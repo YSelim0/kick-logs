@@ -2,6 +2,32 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
+## Latest (one-off message import tool, dry-run only so far)
+
+- New `apps/api-go/cmd/importmessages`: backfills `chat_messages` in ClickHouse from a JSON message
+  export (`{items, count, max_rows, truncated}` shape). Append-only: rows are matched by
+  `kick_message_id` and existing rows are never updated; a real write requires
+  `-dry-run=false` plus the exact `-confirm=IMPORT-CHAT-MESSAGES` phrase (`-dry-run` defaults to
+  `true`). `-limit N` caps how many export rows are processed; `-verify-csv` cross-checks the
+  `kick_message_id` set against a CSV export of the same dataset as an informational sanity check
+  only (never used as an import input).
+  - Row id uses the same `fnv64a(kick_message_id)` deterministic hash as the live listener's
+    `deterministicMessageID` (duplicated locally rather than importing the listener package).
+    `reply_metadata` is preserved byte-for-byte from the export; flat `reply_to_*` columns are
+    derived from it. `raw_payload_json` is stored as `{}` for imported rows since the export has
+    no raw Kick payload. `channel_kick_id` is left unset — the export shape has no numeric Kick
+    channel id, only an internal `channel.id`.
+  - New `import-messages` Compose service under the `tools` profile (same shape as `migrate-go`),
+    bind-mounting a gitignored `./import/` host directory read-only.
+  - New `docs/operations/message_import.md` runbook: backup-first step, dry-run usage, real-run
+    usage, field-mapping notes.
+  - Verified by hand against a real 429-row export/CSV pair (not committed as test fixtures, since
+    they contain real chat data): all 429 rows mapped with 0 invalid/0 duplicate, and the JSON vs
+    CSV `kick_message_id` sets matched exactly (429/429, 0 only-in-either-side).
+  - Not yet run against a live ClickHouse target in this unit of work — dry-run only; the real
+    import is pending explicit user approval of a dry-run report.
+- Verification: `go build ./...`, `go vet ./...` green in `apps/api-go`.
+
 ## Latest (channel index aggregate hardening)
 
 - Root cause for `/channels` search failing on high-volume channels such as `hype`: the endpoint
