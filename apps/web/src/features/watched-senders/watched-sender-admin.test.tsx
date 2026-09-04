@@ -7,13 +7,17 @@ import type { WatchedSender } from "@/types/api";
 const watchedSenderApiMocks = vi.hoisted(() => ({
   addWatchedSender: vi.fn(),
   listWatchedSenders: vi.fn(),
-  removeWatchedSender: vi.fn()
+  removeWatchedSender: vi.fn(),
+  getNotificationSettings: vi.fn(),
+  updateNotificationSettings: vi.fn()
 }));
 
 vi.mock("@/features/watched-senders/api", () => ({
   addWatchedSender: watchedSenderApiMocks.addWatchedSender,
   listWatchedSenders: watchedSenderApiMocks.listWatchedSenders,
-  removeWatchedSender: watchedSenderApiMocks.removeWatchedSender
+  removeWatchedSender: watchedSenderApiMocks.removeWatchedSender,
+  getNotificationSettings: watchedSenderApiMocks.getNotificationSettings,
+  updateNotificationSettings: watchedSenderApiMocks.updateNotificationSettings
 }));
 
 describe("WatchedSenderAdmin", () => {
@@ -21,6 +25,9 @@ describe("WatchedSenderAdmin", () => {
     watchedSenderApiMocks.addWatchedSender.mockReset();
     watchedSenderApiMocks.listWatchedSenders.mockReset();
     watchedSenderApiMocks.removeWatchedSender.mockReset();
+    watchedSenderApiMocks.getNotificationSettings.mockReset();
+    watchedSenderApiMocks.updateNotificationSettings.mockReset();
+    watchedSenderApiMocks.getNotificationSettings.mockResolvedValue({ cooldown_seconds: 600 });
   });
 
   it("lists watched senders", async () => {
@@ -72,6 +79,33 @@ describe("WatchedSenderAdmin", () => {
 
     await waitFor(() => expect(watchedSenderApiMocks.removeWatchedSender).toHaveBeenCalledWith(1));
     await waitFor(() => expect(screen.queryAllByText("@nuriben")).toHaveLength(0));
+  });
+
+  it("shows the current cooldown in minutes", async () => {
+    watchedSenderApiMocks.listWatchedSenders.mockResolvedValue([]);
+    watchedSenderApiMocks.getNotificationSettings.mockResolvedValue({ cooldown_seconds: 600 });
+
+    render(<WatchedSenderAdmin />);
+
+    expect(await screen.findByLabelText("Bekleme süresi (dakika)")).toHaveValue(10);
+  });
+
+  it("saves a new cooldown value in minutes", async () => {
+    watchedSenderApiMocks.listWatchedSenders.mockResolvedValue([]);
+    watchedSenderApiMocks.getNotificationSettings.mockResolvedValue({ cooldown_seconds: 600 });
+    watchedSenderApiMocks.updateNotificationSettings.mockResolvedValue({ cooldown_seconds: 300 });
+
+    render(<WatchedSenderAdmin />);
+
+    const input = await screen.findByLabelText("Bekleme süresi (dakika)");
+    fireEvent.change(input, { target: { value: "5" } });
+    fireEvent.click(screen.getByRole("button", { name: /kaydet/i }));
+
+    await waitFor(() =>
+      expect(watchedSenderApiMocks.updateNotificationSettings).toHaveBeenCalledWith({
+        cooldown_seconds: 300
+      })
+    );
   });
 });
 

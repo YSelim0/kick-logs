@@ -58,6 +58,14 @@ export type AddWatchedSenderRequest = {
   username: string;
 };
 
+export type NotificationSettings = {
+  cooldown_seconds: number;
+};
+
+export type UpdateNotificationSettingsRequest = {
+  cooldown_seconds: number;
+};
+
 export type OperationsCounts = {
   channels: number;
   enabled_channels: number;
