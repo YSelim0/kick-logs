@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useState } from "react";
-import { Activity, Database, LogOut, Menu, Radio, Settings, Users, X } from "lucide-react";
+import { Activity, Bell, Database, LogOut, Menu, Radio, Settings, Users, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { logout } from "@/features/auth/api";
@@ -16,6 +16,12 @@ const NAV_ITEMS = [
   { label: "Channels", href: "/admin/channels", icon: Radio, superAdminOnly: false },
   { label: "Users", href: "/admin/users", icon: Users, superAdminOnly: true },
   { label: "Data", href: "/admin/data", icon: Database, superAdminOnly: false },
+  {
+    label: "Notifications",
+    href: "/admin/notifications",
+    icon: Bell,
+    superAdminOnly: false
+  },
   { label: "Settings", href: null, icon: Settings, superAdminOnly: false }
 ] as const;
 
