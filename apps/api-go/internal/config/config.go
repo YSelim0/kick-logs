@@ -77,6 +77,14 @@ type Config struct {
 	KickWebhookProcessBatchSize          int
 	KickWebhookProcessMaxAttempts        int
 	KickWebhookSkipVerification          bool
+	WatchedSenderUsernames               []string
+	NotifyEmailTo                        string
+	NotifyEmailCooldownSeconds           int
+	SMTPHost                             string
+	SMTPPort                             int
+	SMTPUsername                         string
+	SMTPPassword                         string
+	SMTPFrom                             string
 }
 
 func Load() (Config, error) {
@@ -275,6 +283,16 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	notifyEmailCooldownSeconds, err := envInt("NOTIFY_EMAIL_COOLDOWN_SECONDS", 600)
+	if err != nil {
+		return Config{}, err
+	}
+
+	smtpPort, err := envInt("SMTP_PORT", 587)
+	if err != nil {
+		return Config{}, err
+	}
+
 	return Config{
 		AppName:                              envString("APP_NAME", "Kick Logs"),
 		AppEnv:                               envString("APP_ENV", "local"),
@@ -344,6 +362,14 @@ func Load() (Config, error) {
 		KickWebhookProcessBatchSize:          kickWebhookProcessBatchSize,
 		KickWebhookProcessMaxAttempts:        kickWebhookProcessMaxAttempts,
 		KickWebhookSkipVerification:          kickWebhookSkipVerification,
+		WatchedSenderUsernames:               envCSV("WATCHED_SENDER_USERNAMES", ""),
+		NotifyEmailTo:                        envString("NOTIFY_EMAIL_TO", ""),
+		NotifyEmailCooldownSeconds:           notifyEmailCooldownSeconds,
+		SMTPHost:                             envString("SMTP_HOST", ""),
+		SMTPPort:                             smtpPort,
+		SMTPUsername:                         envString("SMTP_USERNAME", ""),
+		SMTPPassword:                         envString("SMTP_PASSWORD", ""),
+		SMTPFrom:                             envString("SMTP_FROM", ""),
 	}, nil
 }
 
