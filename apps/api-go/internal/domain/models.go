@@ -471,6 +471,38 @@ type DataCleanupResult struct {
 	RetentionDays    *int
 }
 
+// MessageImportInvalidReason groups export rows rejected for the same reason.
+type MessageImportInvalidReason struct {
+	Reason  string
+	Count   int
+	Example string
+}
+
+// MessageImportPreview is the dry-run report for a message export import.
+type MessageImportPreview struct {
+	TotalInFile       int
+	RecordsRead       int
+	Limit             int
+	ToInsert          int
+	AlreadyExists     int
+	DuplicateInFile   int
+	Invalid           int
+	InvalidReasons    []MessageImportInvalidReason
+	SampleToInsertIDs []string
+	ConfirmationText  string
+	CanExecute        bool
+	Reason            string
+}
+
+// MessageImportResult is the outcome of an executed message import.
+type MessageImportResult struct {
+	Written          int
+	AlreadyExists    int
+	DuplicateInFile  int
+	Invalid          int
+	ConfirmationText string
+}
+
 const (
 	WebhookEventStatusPending   = "pending"
 	WebhookEventStatusProcessed = "processed"
