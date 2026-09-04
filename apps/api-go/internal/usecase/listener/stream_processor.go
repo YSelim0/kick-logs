@@ -10,6 +10,7 @@ import (
 
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/domain"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/ports"
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/watchlist"
 )
 
 type StreamProcessorService struct {
@@ -21,6 +22,7 @@ type StreamProcessorService struct {
 	config     StreamProcessorConfig
 	core       *Service
 	breaker    *CircuitBreaker
+	watchlist  *watchlist.WatchlistService
 }
 
 type StreamProcessorConfig struct {
@@ -45,6 +47,9 @@ type StreamProcessorDependencies struct {
 	Heartbeats ports.WorkerHeartbeatRepository
 	Logger     *slog.Logger
 	Config     StreamProcessorConfig
+	// Watchlist is optional. When nil, watched-sender email notification is
+	// disabled and ProcessOnce behaves exactly as before this field existed.
+	Watchlist *watchlist.WatchlistService
 }
 
 type StreamProcessingResult struct {
@@ -103,6 +108,7 @@ func NewStreamProcessorService(deps StreamProcessorDependencies) *StreamProcesso
 		config:     cfg,
 		core:       core,
 		breaker:    breaker,
+		watchlist:  deps.Watchlist,
 	}
 }
 
@@ -239,6 +245,12 @@ func (service *StreamProcessorService) ProcessOnce(ctx context.Context) (StreamP
 			nacked := service.nakAll(ctx, streamMessages)
 			result.Nacked += nacked
 			return result, fmt.Errorf("insert chat messages batch: %w", err)
+		}
+		// Fire-and-forget: notification delivery must never delay JetStream
+		// ack of durably-stored messages. Uses a background context so an
+		// in-flight SMTP send is not aborted by a processor shutdown signal.
+		if service.watchlist != nil {
+			go service.watchlist.Notify(context.Background(), chatMessages)
 		}
 	}
 	if len(attempts) > 0 {

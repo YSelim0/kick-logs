@@ -37,6 +37,12 @@ type FollowedChannel struct {
 	LastListenerError string
 }
 
+type WatchedSender struct {
+	ID        int64
+	Username  string
+	CreatedAt time.Time
+}
+
 type SenderProfile struct {
 	ID                    int64
 	KickUserID            int64

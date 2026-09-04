@@ -48,6 +48,16 @@ export type AddChannelRequest = {
   slug: string;
 };
 
+export type WatchedSender = {
+  id: number;
+  username: string;
+  created_at: string;
+};
+
+export type AddWatchedSenderRequest = {
+  username: string;
+};
+
 export type OperationsCounts = {
   channels: number;
   enabled_channels: number;
