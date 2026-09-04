@@ -80,6 +80,24 @@ func DefaultPolicies(trustProxy bool, clientIPHeader string) []RateLimitPolicy {
 			MaxBurst:      1,
 		},
 		{
+			Name:          "import-confirm",
+			Match:         exactMatch("POST", "/admin/data-management/import/confirm"),
+			Key:           adminKey,
+			PerPeriod:     3,
+			PeriodSeconds: 60,
+			MaxBurst:      1,
+		},
+		{
+			// Preview parses an uploaded export in memory, so it gets a tighter
+			// limit than the generic admin-write policy.
+			Name:          "import-preview",
+			Match:         exactMatch("POST", "/admin/data-management/import/preview"),
+			Key:           adminKey,
+			PerPeriod:     10,
+			PeriodSeconds: 60,
+			MaxBurst:      3,
+		},
+		{
 			Name:          "login-ip",
 			Match:         exactMatch("POST", "/auth/login"),
 			Key:           ip,

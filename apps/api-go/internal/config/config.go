@@ -17,6 +17,8 @@ type Config struct {
 	BackendCORSOrigins                   []string
 	KickPusherURL                        string
 	MessageExportMaxRows                 int
+	MessageImportMaxRows                 int
+	MessageImportMaxUploadBytes          int64
 	JWTSecretKey                         string
 	JWTAlgorithm                         string
 	JWTExpiresMinutes                    int
@@ -86,6 +88,18 @@ func Load() (Config, error) {
 	}
 
 	maxRows, err := envInt("MESSAGE_EXPORT_MAX_ROWS", 1000)
+	if err != nil {
+		return Config{}, err
+	}
+
+	// Bounded because the API container runs with a small memory limit and an
+	// admin upload is parsed in memory.
+	importMaxRows, err := envInt("MESSAGE_IMPORT_MAX_ROWS", 5000)
+	if err != nil {
+		return Config{}, err
+	}
+
+	importMaxUploadBytes, err := envInt("MESSAGE_IMPORT_MAX_UPLOAD_BYTES", 16*1024*1024)
 	if err != nil {
 		return Config{}, err
 	}
@@ -284,6 +298,8 @@ func Load() (Config, error) {
 		BackendCORSOrigins:                   envCSV("BACKEND_CORS_ORIGINS", "http://localhost:3000"),
 		KickPusherURL:                        envString("KICK_PUSHER_URL", "wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0-rc2&flash=false"),
 		MessageExportMaxRows:                 maxRows,
+		MessageImportMaxRows:                 importMaxRows,
+		MessageImportMaxUploadBytes:          int64(importMaxUploadBytes),
 		JWTSecretKey:                         envString("JWT_SECRET_KEY", "change-me-for-local-development-secret-key"),
 		JWTAlgorithm:                         envString("JWT_ALGORITHM", "HS256"),
 		JWTExpiresMinutes:                    jwtExpiresMinutes,

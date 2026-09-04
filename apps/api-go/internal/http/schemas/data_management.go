@@ -71,3 +71,32 @@ type DataCleanupResultResponse struct {
 	Sender           *string                   `json:"sender"`
 	RetentionDays    *int                      `json:"retention_days"`
 }
+
+type MessageImportInvalidReasonResponse struct {
+	Reason  string `json:"reason"`
+	Count   int    `json:"count"`
+	Example string `json:"example"`
+}
+
+type MessageImportPreviewResponse struct {
+	TotalInFile       int                                  `json:"total_in_file"`
+	RecordsRead       int                                  `json:"records_read"`
+	Limit             int                                  `json:"limit"`
+	ToInsert          int                                  `json:"to_insert"`
+	AlreadyExists     int                                  `json:"already_exists"`
+	DuplicateInFile   int                                  `json:"duplicate_in_file"`
+	Invalid           int                                  `json:"invalid"`
+	InvalidReasons    []MessageImportInvalidReasonResponse `json:"invalid_reasons"`
+	SampleToInsertIDs []string                             `json:"sample_to_insert_ids"`
+	ConfirmationText  string                               `json:"confirmation_text"`
+	CanExecute        bool                                 `json:"can_execute"`
+	Reason            *string                              `json:"reason"`
+}
+
+type MessageImportResultResponse struct {
+	Written          int    `json:"written"`
+	AlreadyExists    int    `json:"already_exists"`
+	DuplicateInFile  int    `json:"duplicate_in_file"`
+	Invalid          int    `json:"invalid"`
+	ConfirmationText string `json:"confirmation_text"`
+}

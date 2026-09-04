@@ -29,6 +29,7 @@ import (
 	channelsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/channels"
 	datamanagementusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/data_management"
 	kicksyncusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/kicksync"
+	messageimportusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/messageimport"
 	messagesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/messages"
 	profilesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/profiles"
 	webhookprocessorusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/webhookprocessor"
@@ -145,11 +146,13 @@ func main() {
 		logger.Warn("KICK_WEBHOOK_PUBLIC_KEY not configured; POST /webhooks/kick will reject all requests")
 	}
 	var messageService *messagesusecase.Service
+	var messageImportService *messageimportusecase.Service
 	var analyticsService *analyticsusecase.Service
 	var profileService *profilesusecase.Service
 	var subPeriodRepoForAPI ports.SubscriptionPeriodRepository
 	if clickHouseConn != nil {
 		messageRepository := clickhouseinfra.NewMessageRepository(clickHouseConn)
+		messageImportService = messageimportusecase.NewService(messageRepository, cfg.MessageImportMaxRows)
 		analyticsRepository := clickhouseinfra.NewAnalyticsRepository(clickHouseConn)
 		subPeriodRepo := clickhouseinfra.NewSubscriptionPeriodRepository(clickHouseConn)
 		subPeriodRepoForAPI = subPeriodRepo
@@ -185,6 +188,7 @@ func main() {
 		Messages:            messageService,
 		Profiles:            profileService,
 		Data:                dataManagementService,
+		MessageImport:       messageImportService,
 		KickSync:            kickSyncService,
 		WebhookEvents:       webhookEventRepo,
 		WebhookVerifier:     webhookVerifier,

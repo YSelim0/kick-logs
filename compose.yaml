@@ -55,6 +55,10 @@ services:
       API_PORT: 8000
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:3000}
       MESSAGE_EXPORT_MAX_ROWS: ${MESSAGE_EXPORT_MAX_ROWS:-1000}
+      # Admin message import upload bounds. The API parses an uploaded export
+      # in memory, so both caps stay well under the container's mem_limit.
+      MESSAGE_IMPORT_MAX_ROWS: ${MESSAGE_IMPORT_MAX_ROWS:-5000}
+      MESSAGE_IMPORT_MAX_UPLOAD_BYTES: ${MESSAGE_IMPORT_MAX_UPLOAD_BYTES:-16777216}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-for-local-development-secret-key}
       JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
       JWT_EXPIRES_MINUTES: ${JWT_EXPIRES_MINUTES:-10080}

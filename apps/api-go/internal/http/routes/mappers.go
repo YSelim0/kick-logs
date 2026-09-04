@@ -189,6 +189,45 @@ func dataCleanupCountsResponse(counts domain.DataCleanupCounts) schemas.DataClea
 	}
 }
 
+func messageImportPreviewResponse(preview domain.MessageImportPreview) schemas.MessageImportPreviewResponse {
+	reasons := make([]schemas.MessageImportInvalidReasonResponse, 0, len(preview.InvalidReasons))
+	for _, reason := range preview.InvalidReasons {
+		reasons = append(reasons, schemas.MessageImportInvalidReasonResponse{
+			Reason:  reason.Reason,
+			Count:   reason.Count,
+			Example: reason.Example,
+		})
+	}
+	samples := preview.SampleToInsertIDs
+	if samples == nil {
+		samples = []string{}
+	}
+	return schemas.MessageImportPreviewResponse{
+		TotalInFile:       preview.TotalInFile,
+		RecordsRead:       preview.RecordsRead,
+		Limit:             preview.Limit,
+		ToInsert:          preview.ToInsert,
+		AlreadyExists:     preview.AlreadyExists,
+		DuplicateInFile:   preview.DuplicateInFile,
+		Invalid:           preview.Invalid,
+		InvalidReasons:    reasons,
+		SampleToInsertIDs: samples,
+		ConfirmationText:  preview.ConfirmationText,
+		CanExecute:        preview.CanExecute,
+		Reason:            nullableString(preview.Reason),
+	}
+}
+
+func messageImportResultResponse(result domain.MessageImportResult) schemas.MessageImportResultResponse {
+	return schemas.MessageImportResultResponse{
+		Written:          result.Written,
+		AlreadyExists:    result.AlreadyExists,
+		DuplicateInFile:  result.DuplicateInFile,
+		Invalid:          result.Invalid,
+		ConfirmationText: result.ConfirmationText,
+	}
+}
+
 func messageSearchResponse(page messagesusecase.SearchPage) schemas.MessageSearchResponse {
 	items := make([]schemas.MessageResponse, 0, len(page.Items))
 	for _, message := range page.Items {
