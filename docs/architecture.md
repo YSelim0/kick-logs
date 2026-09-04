@@ -152,6 +152,10 @@ GET    /admin/channels
 POST   /admin/channels
 DELETE /admin/channels/{channel_id}
 
+GET    /admin/watched-senders
+POST   /admin/watched-senders
+DELETE /admin/watched-senders/{sender_id}
+
 GET  /admin/users
 POST /admin/users
 
@@ -264,8 +268,16 @@ After a `chat_messages` batch insert succeeds, the processor checks each message
 against an in-memory watchlist (`internal/usecase/watchlist`) and, on a match, fires an SMTP alert
 email (`internal/infra/notify`) in its own goroutine so a slow/blocked mail server cannot delay
 JetStream ack of durably-stored messages. A per-sender cooldown (default 10 minutes) suppresses
-repeat emails from an active chatter. The feature is fully disabled unless
-`WATCHED_SENDER_USERNAMES`, `SMTP_HOST`, and `NOTIFY_EMAIL_TO` are all configured.
+repeat emails from an active chatter. The feature is disabled unless `SMTP_HOST` and
+`NOTIFY_EMAIL_TO` are both configured.
+
+The watched-username list itself is admin-managed, not an env var: `watched_senders` (SQLite,
+control-plane) holds the list, `GET/POST/DELETE /admin/watched-senders` (admin-authenticated) manage
+it from the `/admin/notifications` panel, and the processor polls
+`WatchedSenderRepository.ListUsernames` every `WATCHLIST_REFRESH_INTERVAL_SECONDS` (default 30) to
+push the current list into the in-memory watchlist via `WatchlistService.SetUsernames`. Adding or
+removing a watched username from the admin panel takes effect on the next poll tick, with no
+processor restart.
 
 ## Data Management
 
