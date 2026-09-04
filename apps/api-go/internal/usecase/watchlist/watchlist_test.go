@@ -117,5 +117,34 @@ func TestWatchlistService_NotifierErrorDoesNotPanic(t *testing.T) {
 func TestWatchlistService_NilReceiverIsNoop(t *testing.T) {
 	var svc *WatchlistService
 	svc.SetUsernames([]string{"nuriben"})
+	svc.SetCooldown(time.Minute)
 	svc.Notify(context.Background(), []domain.ChatMessage{{SenderUsername: "nuriben"}})
+}
+
+func TestWatchlistService_SetCooldownAppliesToLaterSends(t *testing.T) {
+	notifier := &fakeNotifier{}
+	svc := NewWatchlistService(time.Hour, notifier, slog.Default())
+	svc.SetUsernames([]string{"nuriben"})
+
+	svc.Notify(context.Background(), []domain.ChatMessage{{SenderUsername: "nuriben"}})
+	svc.SetCooldown(time.Nanosecond)
+	svc.Notify(context.Background(), []domain.ChatMessage{{SenderUsername: "nuriben"}})
+
+	if notifier.callCount() != 2 {
+		t.Fatalf("expected shortened cooldown to allow a second send, got %d calls", notifier.callCount())
+	}
+}
+
+func TestWatchlistService_SetCooldownIgnoresNonPositiveDuration(t *testing.T) {
+	notifier := &fakeNotifier{}
+	svc := NewWatchlistService(time.Hour, notifier, slog.Default())
+	svc.SetUsernames([]string{"nuriben"})
+
+	svc.SetCooldown(0)
+	svc.Notify(context.Background(), []domain.ChatMessage{{SenderUsername: "nuriben"}})
+	svc.Notify(context.Background(), []domain.ChatMessage{{SenderUsername: "nuriben"}})
+
+	if notifier.callCount() != 1 {
+		t.Fatalf("expected the original hour-long cooldown to still apply, got %d calls", notifier.callCount())
+	}
 }

@@ -588,6 +588,38 @@ func TestWatchedSenderRepository(t *testing.T) {
 	}
 }
 
+func TestNotificationSettingsRepository(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openMigratedSQLite(t, ctx)
+	defer db.Close()
+
+	repo := sqlite.NewNotificationSettingsRepository(db, 600)
+
+	seeded, err := repo.GetNotificationSettings(ctx)
+	if err != nil {
+		t.Fatalf("GetNotificationSettings() error = %v", err)
+	}
+	if seeded.CooldownSeconds != 600 {
+		t.Fatalf("seeded CooldownSeconds = %d, want 600", seeded.CooldownSeconds)
+	}
+
+	updated, err := repo.UpdateNotificationSettings(ctx, domain.NotificationSettings{CooldownSeconds: 120})
+	if err != nil {
+		t.Fatalf("UpdateNotificationSettings() error = %v", err)
+	}
+	if updated.CooldownSeconds != 120 {
+		t.Fatalf("updated CooldownSeconds = %d, want 120", updated.CooldownSeconds)
+	}
+
+	reread, err := repo.GetNotificationSettings(ctx)
+	if err != nil {
+		t.Fatalf("GetNotificationSettings() after update error = %v", err)
+	}
+	if reread.CooldownSeconds != 120 {
+		t.Fatalf("reread CooldownSeconds = %d, want 120", reread.CooldownSeconds)
+	}
+}
+
 func openMigratedSQLite(t *testing.T, ctx context.Context) (*sql.DB, string) {
 	t.Helper()
 

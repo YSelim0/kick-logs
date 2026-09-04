@@ -197,8 +197,9 @@ services:
       LISTENER_CLICKHOUSE_BACKOFF_MULTIPLIER: ${LISTENER_CLICKHOUSE_BACKOFF_MULTIPLIER:-2}
       LISTENER_CLICKHOUSE_BREAKER_FAILURE_THRESHOLD: ${LISTENER_CLICKHOUSE_BREAKER_FAILURE_THRESHOLD:-5}
       # Watched-sender email notification. Disabled unless both SMTP_HOST and
-      # NOTIFY_EMAIL_TO are set. The watched username list is managed from
-      # the admin panel, not an env var.
+      # NOTIFY_EMAIL_TO are set. The watched username list and the cooldown
+      # are both managed from the admin panel, not an env var; the cooldown
+      # var below only seeds the first-run value.
       NOTIFY_EMAIL_TO: ${NOTIFY_EMAIL_TO:-}
       NOTIFY_EMAIL_COOLDOWN_SECONDS: ${NOTIFY_EMAIL_COOLDOWN_SECONDS:-600}
       WATCHLIST_REFRESH_INTERVAL_SECONDS: ${WATCHLIST_REFRESH_INTERVAL_SECONDS:-30}

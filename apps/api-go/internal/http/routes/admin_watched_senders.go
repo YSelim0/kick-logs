@@ -19,6 +19,12 @@ func RegisterAdminWatchedSenderRoutes(mux *http.ServeMux, deps Dependencies) {
 	mux.HandleFunc("DELETE /admin/watched-senders/{sender_id}", func(response http.ResponseWriter, request *http.Request) {
 		removeWatchedSender(response, request, deps)
 	})
+	mux.HandleFunc("GET /admin/notification-settings", func(response http.ResponseWriter, request *http.Request) {
+		getNotificationSettings(response, request, deps)
+	})
+	mux.HandleFunc("PUT /admin/notification-settings", func(response http.ResponseWriter, request *http.Request) {
+		updateNotificationSettings(response, request, deps)
+	})
 }
 
 func listWatchedSenders(response http.ResponseWriter, request *http.Request, deps Dependencies) {
@@ -99,4 +105,48 @@ func removeWatchedSender(response http.ResponseWriter, request *http.Request, de
 	}
 
 	writeJSON(response, http.StatusOK, statusResponse{Status: "ok"})
+}
+
+func getNotificationSettings(response http.ResponseWriter, request *http.Request, deps Dependencies) {
+	if _, ok := requireAdmin(response, request, deps.Auth, deps.Config); !ok {
+		return
+	}
+	if deps.WatchedSenders == nil {
+		writeJSON(response, http.StatusOK, schemas.NotificationSettingsResponse{CooldownSeconds: 600})
+		return
+	}
+
+	cooldownSeconds, err := deps.WatchedSenders.GetCooldownSeconds(request.Context())
+	if err != nil {
+		writeError(response, http.StatusInternalServerError, "Internal server error.")
+		return
+	}
+	writeJSON(response, http.StatusOK, schemas.NotificationSettingsResponse{CooldownSeconds: cooldownSeconds})
+}
+
+func updateNotificationSettings(response http.ResponseWriter, request *http.Request, deps Dependencies) {
+	if _, ok := requireAdmin(response, request, deps.Auth, deps.Config); !ok {
+		return
+	}
+	if deps.WatchedSenders == nil {
+		writeError(response, http.StatusInternalServerError, "Internal server error.")
+		return
+	}
+
+	var payload schemas.UpdateNotificationSettingsRequest
+	if err := decodeJSON(request, &payload); err != nil {
+		writeError(response, http.StatusBadRequest, "Invalid request body.")
+		return
+	}
+
+	cooldownSeconds, err := deps.WatchedSenders.UpdateCooldownSeconds(request.Context(), payload.CooldownSeconds)
+	if err != nil {
+		if errors.Is(err, watchedsendersusecase.ErrValidation) {
+			writeError(response, http.StatusBadRequest, "Cooldown must be between 30 and 86400 seconds.")
+			return
+		}
+		writeError(response, http.StatusInternalServerError, "Internal server error.")
+		return
+	}
+	writeJSON(response, http.StatusOK, schemas.NotificationSettingsResponse{CooldownSeconds: cooldownSeconds})
 }

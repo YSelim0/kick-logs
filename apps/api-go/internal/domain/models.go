@@ -43,6 +43,13 @@ type WatchedSender struct {
 	CreatedAt time.Time
 }
 
+// NotificationSettings holds the admin-editable watched-sender notification
+// tuning. It is a single row (see infra/sqlite.NotificationSettingsRepository).
+type NotificationSettings struct {
+	CooldownSeconds int
+	UpdatedAt       time.Time
+}
+
 type SenderProfile struct {
 	ID                    int64
 	KickUserID            int64

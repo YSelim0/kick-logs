@@ -22,11 +22,11 @@ import (
 // and refreshed at runtime via SetUsernames, so adding/removing a watched
 // username never requires a process restart.
 type WatchlistService struct {
-	cooldown time.Duration
 	notifier ports.SenderMessageNotifier
 	logger   *slog.Logger
 
 	mu        sync.Mutex
+	cooldown  time.Duration
 	usernames map[string]bool
 	lastSent  map[string]time.Time
 }
@@ -71,6 +71,21 @@ func (s *WatchlistService) SetUsernames(usernames []string) {
 	}
 	s.mu.Lock()
 	s.usernames = set
+	s.mu.Unlock()
+}
+
+// SetCooldown replaces the per-sender cooldown window. Safe to call
+// concurrently with Notify and on a nil receiver (no-op); intended to be
+// called periodically by the caller (a poll of the admin-managed cooldown
+// setting) so a cooldown change takes effect without a process restart. A
+// non-positive duration is ignored so a bad read cannot disable the
+// cooldown entirely.
+func (s *WatchlistService) SetCooldown(cooldown time.Duration) {
+	if s == nil || cooldown <= 0 {
+		return
+	}
+	s.mu.Lock()
+	s.cooldown = cooldown
 	s.mu.Unlock()
 }
 

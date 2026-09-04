@@ -105,7 +105,10 @@ func main() {
 		logger.Info("rate limiter enabled", "max_keys", cfg.RateLimitStoreMaxKeys, "trust_proxy", cfg.RateLimitTrustProxy)
 	}
 	channelService := channelsusecase.NewService(channelRepo, kick.NewWebChannelResolver())
-	watchedSenderService := watchedsendersusecase.NewService(sqliteinfra.NewWatchedSenderRepository(sqliteDB))
+	watchedSenderService := watchedsendersusecase.NewService(
+		sqliteinfra.NewWatchedSenderRepository(sqliteDB),
+		sqliteinfra.NewNotificationSettingsRepository(sqliteDB, cfg.NotifyEmailCooldownSeconds),
+	)
 
 	webhookEventRepo := sqliteinfra.NewKickWebhookEventRepository(sqliteDB)
 	eventSubRepo := sqliteinfra.NewKickEventSubscriptionRepository(sqliteDB)

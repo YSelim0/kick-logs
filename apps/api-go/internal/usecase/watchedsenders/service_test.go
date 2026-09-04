@@ -50,8 +50,21 @@ func (f *fakeRepository) ListUsernames(ctx context.Context) ([]string, error) {
 	return usernames, nil
 }
 
+type fakeSettingsRepository struct {
+	settings domain.NotificationSettings
+}
+
+func (f *fakeSettingsRepository) GetNotificationSettings(_ context.Context) (domain.NotificationSettings, error) {
+	return f.settings, nil
+}
+
+func (f *fakeSettingsRepository) UpdateNotificationSettings(_ context.Context, settings domain.NotificationSettings) (domain.NotificationSettings, error) {
+	f.settings = settings
+	return f.settings, nil
+}
+
 func TestService_Add_RejectsEmptyAndOverlongUsername(t *testing.T) {
-	service := NewService(&fakeRepository{})
+	service := NewService(&fakeRepository{}, &fakeSettingsRepository{})
 
 	if _, err := service.Add(context.Background(), "   "); !errors.Is(err, ErrValidation) {
 		t.Fatalf("expected ErrValidation for empty username, got %v", err)
@@ -68,7 +81,7 @@ func TestService_Add_RejectsEmptyAndOverlongUsername(t *testing.T) {
 
 func TestService_Add_RejectsDuplicateCaseInsensitive(t *testing.T) {
 	repo := &fakeRepository{}
-	service := NewService(repo)
+	service := NewService(repo, &fakeSettingsRepository{})
 
 	if _, err := service.Add(context.Background(), "Nuriben"); err != nil {
 		t.Fatalf("unexpected error on first add: %v", err)
@@ -79,7 +92,7 @@ func TestService_Add_RejectsDuplicateCaseInsensitive(t *testing.T) {
 }
 
 func TestService_Remove_NotFound(t *testing.T) {
-	service := NewService(&fakeRepository{})
+	service := NewService(&fakeRepository{}, &fakeSettingsRepository{})
 
 	if err := service.Remove(context.Background(), 999); !errors.Is(err, ErrSenderNotFound) {
 		t.Fatalf("expected ErrSenderNotFound, got %v", err)
@@ -87,7 +100,7 @@ func TestService_Remove_NotFound(t *testing.T) {
 }
 
 func TestService_List_ReturnsAddedSenders(t *testing.T) {
-	service := NewService(&fakeRepository{})
+	service := NewService(&fakeRepository{}, &fakeSettingsRepository{})
 
 	if _, err := service.Add(context.Background(), "nuriben"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -98,5 +111,37 @@ func TestService_List_ReturnsAddedSenders(t *testing.T) {
 	}
 	if len(senders) != 1 || senders[0].Username != "nuriben" {
 		t.Fatalf("unexpected senders: %+v", senders)
+	}
+}
+
+func TestService_UpdateCooldownSeconds_RejectsOutOfRange(t *testing.T) {
+	service := NewService(&fakeRepository{}, &fakeSettingsRepository{settings: domain.NotificationSettings{CooldownSeconds: 600}})
+
+	if _, err := service.UpdateCooldownSeconds(context.Background(), 10); !errors.Is(err, ErrValidation) {
+		t.Fatalf("expected ErrValidation for too-low cooldown, got %v", err)
+	}
+	if _, err := service.UpdateCooldownSeconds(context.Background(), 999999); !errors.Is(err, ErrValidation) {
+		t.Fatalf("expected ErrValidation for too-high cooldown, got %v", err)
+	}
+}
+
+func TestService_UpdateCooldownSeconds_PersistsValue(t *testing.T) {
+	settingsRepo := &fakeSettingsRepository{settings: domain.NotificationSettings{CooldownSeconds: 600}}
+	service := NewService(&fakeRepository{}, settingsRepo)
+
+	updated, err := service.UpdateCooldownSeconds(context.Background(), 120)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated != 120 {
+		t.Fatalf("updated cooldown = %d, want 120", updated)
+	}
+
+	got, err := service.GetCooldownSeconds(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != 120 {
+		t.Fatalf("GetCooldownSeconds() = %d, want 120", got)
 	}
 }

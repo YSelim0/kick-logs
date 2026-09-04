@@ -36,6 +36,16 @@ type WatchedSenderRepository interface {
 	ListUsernames(ctx context.Context) ([]string, error)
 }
 
+// NotificationSettingsRepository is the admin-editable tuning for the
+// watched-sender email notification feature (currently just the per-sender
+// cooldown). It is a single control-plane row, read by the API for the
+// admin panel and polled read-only by the processor to keep the live
+// watchlist cooldown in sync without a restart.
+type NotificationSettingsRepository interface {
+	GetNotificationSettings(ctx context.Context) (domain.NotificationSettings, error)
+	UpdateNotificationSettings(ctx context.Context, settings domain.NotificationSettings) (domain.NotificationSettings, error)
+}
+
 type MessageRepository interface {
 	Insert(ctx context.Context, message domain.ChatMessage) error
 	InsertMessagesBatch(ctx context.Context, messages []domain.ChatMessage) error

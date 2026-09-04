@@ -20,14 +20,22 @@ var (
 	ErrSenderNotFound = errors.New("watched sender not found")
 )
 
-const maxUsernameLength = 60
+const (
+	maxUsernameLength = 60
+	// minCooldownSeconds keeps an active watched chatter from flooding the
+	// recipient's inbox; maxCooldownSeconds keeps a fat-fingered value from
+	// silencing the feature for an unreasonable stretch.
+	minCooldownSeconds = 30
+	maxCooldownSeconds = 86400
+)
 
 type Service struct {
-	senders ports.WatchedSenderRepository
+	senders  ports.WatchedSenderRepository
+	settings ports.NotificationSettingsRepository
 }
 
-func NewService(senders ports.WatchedSenderRepository) *Service {
-	return &Service{senders: senders}
+func NewService(senders ports.WatchedSenderRepository, settings ports.NotificationSettingsRepository) *Service {
+	return &Service{senders: senders, settings: settings}
 }
 
 func (service *Service) List(ctx context.Context) ([]domain.WatchedSender, error) {
@@ -59,4 +67,23 @@ func (service *Service) Remove(ctx context.Context, id int64) error {
 		return ErrSenderNotFound
 	}
 	return err
+}
+
+func (service *Service) GetCooldownSeconds(ctx context.Context) (int, error) {
+	settings, err := service.settings.GetNotificationSettings(ctx)
+	if err != nil {
+		return 0, err
+	}
+	return settings.CooldownSeconds, nil
+}
+
+func (service *Service) UpdateCooldownSeconds(ctx context.Context, cooldownSeconds int) (int, error) {
+	if cooldownSeconds < minCooldownSeconds || cooldownSeconds > maxCooldownSeconds {
+		return 0, fmt.Errorf("%w: cooldown must be between %d and %d seconds", ErrValidation, minCooldownSeconds, maxCooldownSeconds)
+	}
+	settings, err := service.settings.UpdateNotificationSettings(ctx, domain.NotificationSettings{CooldownSeconds: cooldownSeconds})
+	if err != nil {
+		return 0, err
+	}
+	return settings.CooldownSeconds, nil
 }
