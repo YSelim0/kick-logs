@@ -156,6 +156,9 @@ GET    /admin/watched-senders
 POST   /admin/watched-senders
 DELETE /admin/watched-senders/{sender_id}
 
+GET /admin/notification-settings
+PUT /admin/notification-settings
+
 GET  /admin/users
 POST /admin/users
 
@@ -278,6 +281,13 @@ it from the `/admin/notifications` panel, and the processor polls
 push the current list into the in-memory watchlist via `WatchlistService.SetUsernames`. Adding or
 removing a watched username from the admin panel takes effect on the next poll tick, with no
 processor restart.
+
+The per-sender cooldown is admin-managed the same way: `notification_settings` (SQLite,
+single-row control-plane table) holds `cooldown_seconds`, `GET/PUT /admin/notification-settings`
+(admin-authenticated) manage it from the same `/admin/notifications` panel, and the processor polls
+`NotificationSettingsRepository.GetNotificationSettings` on the same interval to push the current
+value into `WatchlistService.SetCooldown`. `NOTIFY_EMAIL_COOLDOWN_SECONDS` only seeds the row the
+first time the app starts; after that it has no effect and the SQLite value is authoritative.
 
 ## Data Management
 

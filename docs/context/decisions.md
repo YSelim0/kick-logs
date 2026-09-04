@@ -1,5 +1,31 @@
 # Decisions
 
+## 2026-09-04 (watched-sender cooldown moves to the admin panel)
+
+- **The per-sender cooldown is admin-managed (SQLite + `/admin/notifications`), not only an env
+  var.** `NOTIFY_EMAIL_COOLDOWN_SECONDS` previously required editing `.env` and restarting the
+  processor to change; an operator who just watched a race between "add username" and "next
+  watchlist poll" during testing wanted to tune the cooldown the same way as the username list.
+  `notification_settings` (SQLite, single row, `id = 1`) is the source of truth, following the same
+  shape as `retention_settings`; `usecase/watchedsenders.Service` gained
+  `GetCooldownSeconds`/`UpdateCooldownSeconds`, and `GET/PUT /admin/notification-settings` give the
+  read/write surface.
+- **Validated to 30s-86400s (30s-24h).** Below 30s risks flooding the recipient's inbox for an
+  active watched chatter; above 24h is almost certainly a typo, not an intended setting. Validation
+  lives in the usecase layer (`ErrValidation`), matching the existing `Service.Add` username-length
+  check.
+- **The processor polls SQLite for the cooldown the same way it already polls for usernames.**
+  `WatchlistService` gained `SetCooldown(time.Duration)` under the same mutex as the username set
+  and the last-sent map; a non-positive duration is ignored so a bad read cannot disable the
+  cooldown. `cmd/processor/main.go` runs a second goroutine, `refreshCooldownForever`, on the same
+  `WATCHLIST_REFRESH_INTERVAL_SECONDS` interval as `refreshWatchlistForever`, polling
+  `NotificationSettingsRepository.GetNotificationSettings`. A read failure is logged and skipped for
+  that tick, mirroring the username refresh's failure handling.
+- **`NOTIFY_EMAIL_COOLDOWN_SECONDS` becomes a seed value, not a live setting.** The SQLite
+  repository takes the configured env var as its default-row value the first time it is read (so an
+  operator who already set the env var keeps the same behavior after upgrading), but every read
+  after that comes from SQLite; the env var has no further effect once the row exists.
+
 ## 2026-09-04 (watched-sender list moves to the admin panel)
 
 - **The watched-username list is admin-managed (SQLite + `/admin/notifications`), not an env var.**

@@ -2,7 +2,36 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (watched-sender list moves to the admin panel)
+## Latest (watched-sender cooldown moves to the admin panel)
+
+- The per-sender email cooldown is now admin-managed from the same `/admin/notifications` panel
+  as the watched-username list, instead of only a static `NOTIFY_EMAIL_COOLDOWN_SECONDS` env var
+  read once at processor startup.
+- New SQLite table `notification_settings` (migration v10, single row `id = 1`,
+  `cooldown_seconds INTEGER NOT NULL`), following the same ensure-row-exists shape as
+  `retention_settings`; new `domain.NotificationSettings`; new
+  `ports.NotificationSettingsRepository` + `infra/sqlite.NotificationSettingsRepository`
+  (seeded from `NOTIFY_EMAIL_COOLDOWN_SECONDS` the first time it is read).
+- `usecase/watchedsenders.Service` gained `GetCooldownSeconds`/`UpdateCooldownSeconds` (validated
+  to 30-86400 seconds, `ErrValidation` on out-of-range) and now takes a second constructor arg,
+  `ports.NotificationSettingsRepository`.
+- New admin routes `GET/PUT /admin/notification-settings`
+  (`internal/http/routes/admin_watched_senders.go`), covered by the existing generic
+  `admin-read`/`admin-write` rate-limit policies (no new policy entries needed).
+- `watchlist.WatchlistService` gained `SetCooldown(time.Duration)` under the same mutex as the
+  username set and last-sent map (non-positive durations are ignored, so a bad read cannot disable
+  the cooldown). `cmd/processor/main.go` runs a second poll goroutine,
+  `refreshCooldownForever`, on the same `WATCHLIST_REFRESH_INTERVAL_SECONDS` interval as the
+  existing username refresh.
+- `/admin/notifications` UI (`features/watched-senders/watched-sender-admin.tsx`) gained a
+  "Bekleme süresi (cooldown)" card above the watched-user list — minutes-based input, 1-1440
+  range, backed by new `getNotificationSettings`/`updateNotificationSettings` API functions.
+- Verification: `go build ./...`, `go vet ./...`, `go test ./...` all green (including new
+  `TestNotificationSettingsRepository` and new `watchedsenders`/`watchlist` cooldown tests);
+  `pnpm --filter @kick-logs/web test` (126/126), `typecheck`, `lint`, and `build` all green; `pnpm
+format:check` clean.
+
+## Previously Latest (watched-sender list moves to the admin panel)
 
 - The watched-username list for the email notification feature is now admin-managed instead of a
   static `WATCHED_SENDER_USERNAMES` env var, so an operator can add/remove watched accounts from the
@@ -29,7 +58,7 @@ This file is the short handoff summary of the latest project changes. Keep it co
   `pnpm --filter @kick-logs/web test` (124/124), `typecheck`, `lint`, and `build` all green; `pnpm
 exec prettier --check` clean on touched files.
 
-## Previously Latest (watched-sender email notification, first cut)
+## Earlier (watched-sender email notification, first cut)
 
 - New optional processor feature: when a chat message's sender username matches a configured
   watchlist, the processor sends an SMTP alert email.
