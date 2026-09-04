@@ -258,6 +258,15 @@ The Go processor owns the live chat normalization and ClickHouse write path:
 The processor uses at-least-once delivery and relies on deterministic message identity plus
 read-side dedupe to keep public search/profile results stable under redelivery.
 
+### Watched-Sender Email Notification (optional)
+
+After a `chat_messages` batch insert succeeds, the processor checks each message's sender username
+against an in-memory watchlist (`internal/usecase/watchlist`) and, on a match, fires an SMTP alert
+email (`internal/infra/notify`) in its own goroutine so a slow/blocked mail server cannot delay
+JetStream ack of durably-stored messages. A per-sender cooldown (default 10 minutes) suppresses
+repeat emails from an active chatter. The feature is fully disabled unless
+`WATCHED_SENDER_USERNAMES`, `SMTP_HOST`, and `NOTIFY_EMAIL_TO` are all configured.
+
 ## Data Management
 
 Admin data-management endpoints operate against SQLite settings and ClickHouse rows.

@@ -1,5 +1,27 @@
 # Decisions
 
+## 2026-09-04 (watched-sender email notification)
+
+- **Notification is sender-scoped, not channel-scoped.** A watched entry is a Kick username; a
+  match fires when that sender posts in _any_ followed channel, not when a channel receives any
+  message. Channel-scoped alerts on an active channel would be too noisy to be useful.
+- **SMTP only, no third-party email API.** Keeps the self-hosted deployment free of an external
+  service dependency/API key; `net/smtp` plus a small STARTTLS/implicit-TLS wrapper
+  (`internal/infra/notify`) covers Gmail/Outlook/most relays on 587 and SMTPS on 465.
+- **Feature is fully opt-in.** It activates only when `WATCHED_SENDER_USERNAMES`, `SMTP_HOST`, and
+  `NOTIFY_EMAIL_TO` are all set (same "missing config -> feature off" pattern as the Kick webhook
+  client). `watchlist.NewWatchlistService` returns `nil` when unconfigured, and `(*WatchlistService)(nil).Notify(...)`
+  is a safe no-op so the processor call site needs no extra nil branching.
+- **Per-sender cooldown, default 10 minutes.** An active watched chatter would otherwise trigger one
+  email per message. The cooldown is a plain in-memory `map[string]time.Time` guarded by a mutex;
+  losing it on a processor restart is acceptable (worst case: one extra email after restart).
+- **Notification is fire-and-forget from the processor's hot path.** The processor spawns
+  `go watchlist.Notify(...)` after the `chat_messages` batch insert succeeds, using
+  `context.Background()` instead of the request context so an in-flight SMTP send is not aborted by
+  a processor shutdown signal. A notifier error is logged and otherwise ignored — it must never
+  affect JetStream ack/nak of the underlying chat messages, mirroring the existing sender-profile
+  cache best-effort rule.
+
 ## 2026-06-02 (channel/user top-list aggregate hardening)
 
 - **Channel index and admin channel counts must avoid window scans.** `/channels` search and the

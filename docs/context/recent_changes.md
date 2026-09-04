@@ -2,6 +2,23 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
+## Latest (watched-sender email notification)
+
+- New optional processor feature: when a chat message's sender username matches a configured
+  watchlist, the processor sends an SMTP alert email. Fully disabled unless
+  `WATCHED_SENDER_USERNAMES`, `SMTP_HOST`, and `NOTIFY_EMAIL_TO` are all set.
+- New port `ports.SenderMessageNotifier`; new `internal/infra/notify` SMTP client (STARTTLS on any
+  port, implicit TLS on 465); new `internal/usecase/watchlist.WatchlistService` (case-insensitive
+  username match, per-sender cooldown, nil-safe no-op when unconfigured).
+- `StreamProcessorService` gained an optional `Watchlist` dependency. After a successful
+  `chat_messages` batch insert, it spawns `go watchlist.Notify(context.Background(), chatMessages)`
+  so a slow/blocked mail server cannot delay JetStream ack.
+- New env vars (`.env.example`, `compose.yaml` `processor` service):
+  `WATCHED_SENDER_USERNAMES` (CSV), `NOTIFY_EMAIL_TO`, `NOTIFY_EMAIL_COOLDOWN_SECONDS` (default 600),
+  `SMTP_HOST`, `SMTP_PORT` (default 587), `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`.
+- Verification: `go build ./...`, `go vet ./...`, `go test ./...` all green (new packages
+  `internal/infra/notify` and `internal/usecase/watchlist` included).
+
 ## Latest (channel index aggregate hardening)
 
 - Root cause for `/channels` search failing on high-volume channels such as `hype`: the endpoint
