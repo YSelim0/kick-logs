@@ -38,6 +38,16 @@ type AddChannelRequest struct {
 	Slug string `json:"slug"`
 }
 
+type WatchedSenderResponse struct {
+	ID        int64  `json:"id"`
+	Username  string `json:"username"`
+	CreatedAt string `json:"created_at"`
+}
+
+type AddWatchedSenderRequest struct {
+	Username string `json:"username"`
+}
+
 type OperationsCountsResponse struct {
 	Channels        int64 `json:"channels"`
 	EnabledChannels int64 `json:"enabled_channels"`

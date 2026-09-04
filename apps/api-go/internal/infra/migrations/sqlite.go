@@ -188,5 +188,16 @@ func SQLiteMigrations() []SQLiteMigration {
 				`DELETE FROM raw_event_queue WHERE status = 'processed';`,
 			},
 		},
+		{
+			Version: 9,
+			Name:    "create_watched_senders",
+			Statements: []string{
+				`CREATE TABLE IF NOT EXISTS watched_senders (
+					id INTEGER PRIMARY KEY AUTOINCREMENT,
+					username TEXT NOT NULL COLLATE NOCASE UNIQUE,
+					created_at TEXT NOT NULL
+				);`,
+			},
+		},
 	}
 }

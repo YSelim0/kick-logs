@@ -533,6 +533,61 @@ func TestFollowedChannelBroadcasterUserID(t *testing.T) {
 	}
 }
 
+func TestWatchedSenderRepository(t *testing.T) {
+	ctx := context.Background()
+	db, _ := openMigratedSQLite(t, ctx)
+	defer db.Close()
+
+	repo := sqlite.NewWatchedSenderRepository(db)
+
+	created, err := repo.Create(ctx, "Nuriben")
+	if err != nil {
+		t.Fatalf("Create() error = %v", err)
+	}
+	if created.ID == 0 || created.Username != "Nuriben" {
+		t.Fatalf("created sender = %+v", created)
+	}
+
+	if _, err := repo.Create(ctx, "nuriben"); err == nil {
+		t.Fatal("expected case-insensitive duplicate insert to fail")
+	}
+
+	if _, err := repo.Create(ctx, "otheruser"); err != nil {
+		t.Fatalf("Create() second sender error = %v", err)
+	}
+
+	senders, err := repo.List(ctx)
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	if len(senders) != 2 {
+		t.Fatalf("List() len = %d, want 2", len(senders))
+	}
+
+	usernames, err := repo.ListUsernames(ctx)
+	if err != nil {
+		t.Fatalf("ListUsernames() error = %v", err)
+	}
+	if len(usernames) != 2 {
+		t.Fatalf("ListUsernames() len = %d, want 2", len(usernames))
+	}
+
+	if err := repo.Delete(ctx, created.ID); err != nil {
+		t.Fatalf("Delete() error = %v", err)
+	}
+	if err := repo.Delete(ctx, created.ID); !errors.Is(err, sql.ErrNoRows) {
+		t.Fatalf("Delete() second call error = %v, want sql.ErrNoRows", err)
+	}
+
+	remaining, err := repo.List(ctx)
+	if err != nil {
+		t.Fatalf("List() after delete error = %v", err)
+	}
+	if len(remaining) != 1 || remaining[0].Username != "otheruser" {
+		t.Fatalf("remaining senders = %+v", remaining)
+	}
+}
+
 func openMigratedSQLite(t *testing.T, ctx context.Context) (*sql.DB, string) {
 	t.Helper()
 
