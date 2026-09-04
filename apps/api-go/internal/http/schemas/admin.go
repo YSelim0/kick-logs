@@ -48,6 +48,14 @@ type AddWatchedSenderRequest struct {
 	Username string `json:"username"`
 }
 
+type NotificationSettingsResponse struct {
+	CooldownSeconds int `json:"cooldown_seconds"`
+}
+
+type UpdateNotificationSettingsRequest struct {
+	CooldownSeconds int `json:"cooldown_seconds"`
+}
+
 type OperationsCountsResponse struct {
 	Channels        int64 `json:"channels"`
 	EnabledChannels int64 `json:"enabled_channels"`

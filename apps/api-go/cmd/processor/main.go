@@ -81,7 +81,10 @@ func main() {
 			logger,
 		)
 		watchedSenders := sqliteinfra.NewWatchedSenderRepository(sqliteDB)
-		go refreshWatchlistForever(ctx, senderWatchlist, watchedSenders, durationFromSeconds(float64(cfg.WatchlistRefreshIntervalSeconds)), logger)
+		notificationSettings := sqliteinfra.NewNotificationSettingsRepository(sqliteDB, cfg.NotifyEmailCooldownSeconds)
+		refreshInterval := durationFromSeconds(float64(cfg.WatchlistRefreshIntervalSeconds))
+		go refreshWatchlistForever(ctx, senderWatchlist, watchedSenders, refreshInterval, logger)
+		go refreshCooldownForever(ctx, senderWatchlist, notificationSettings, refreshInterval, logger)
 		logger.Info("watched-sender email notification enabled")
 	}
 
@@ -136,6 +139,32 @@ func refreshWatchlistForever(ctx context.Context, watchlistService *watchlist.Wa
 			logger.Error("failed to refresh watched-sender list", "error", err)
 		} else {
 			watchlistService.SetUsernames(usernames)
+		}
+		timer := time.NewTimer(interval)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return
+		case <-timer.C:
+		}
+	}
+}
+
+// refreshCooldownForever polls the admin-managed notification cooldown
+// setting and pushes it into the in-memory watchlist so a cooldown change
+// made from the admin panel takes effect without a processor restart. A
+// read failure is logged and retried on the next tick; it never clears the
+// in-memory cooldown, matching refreshWatchlistForever's failure handling.
+func refreshCooldownForever(ctx context.Context, watchlistService *watchlist.WatchlistService, repo *sqliteinfra.NotificationSettingsRepository, interval time.Duration, logger *slog.Logger) {
+	if interval <= 0 {
+		interval = 30 * time.Second
+	}
+	for {
+		settings, err := repo.GetNotificationSettings(ctx)
+		if err != nil {
+			logger.Error("failed to refresh notification cooldown", "error", err)
+		} else {
+			watchlistService.SetCooldown(durationFromSeconds(float64(settings.CooldownSeconds)))
 		}
 		timer := time.NewTimer(interval)
 		select {
