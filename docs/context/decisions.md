@@ -1,11 +1,36 @@
 # Decisions
 
+## 2026-09-04 (message import moves into the admin panel)
+
+- **Import is an admin panel feature, not only a CLI.** The operator asked for an import section in
+  the admin panel rather than an SSH-only tool. `/admin/data` gained a _Mesaj İçe Aktarma_ panel
+  backed by `POST /admin/data-management/import/preview` and
+  `/admin/data-management/import/confirm`, following the same preview-then-exact-confirmation-text
+  shape as the existing cleanup panel instead of inventing a new interaction.
+- **Mapping/validation/dedup logic moved into `internal/usecase/messageimport`** so the CLI and the
+  API share one implementation. A dry-run in the panel and a `-dry-run` on the CLI therefore report
+  identical counts, and there is a single place where the append-only rule lives.
+- **The confirmation phrase is `IMPORT MESSAGES`**, matching the cleanup panel's `DELETE OLD
+MESSAGES` style rather than the CLI's original hyphenated phrase. The CLI now uses the same
+  constant, so one phrase covers both entry points.
+- **The upload path is bounded; the CLI stays unbounded.** The API parses an uploaded export in
+  memory inside a 384 MB container, so `MESSAGE_IMPORT_MAX_UPLOAD_BYTES` (16 MB) and
+  `MESSAGE_IMPORT_MAX_ROWS` (5000) cap the admin path, enforced with `http.MaxBytesReader` plus a
+  usecase-level row check. `cmd/importmessages` passes `maxRows = 0` because an operator running it
+  on the host is already trusted with a full export.
+- **Confirm re-uploads and re-analyzes rather than caching a preview server-side.** No temp file
+  state, no preview token to expire, and the existence check re-runs against ClickHouse right
+  before the insert — which is the check that actually protects existing rows.
+- **`import/confirm` gets its own tight rate-limit policy** (3/min burst 1, keyed by admin user id,
+  same as `cleanup/confirm`), and `import/preview` gets 10/min burst 3 because each preview parses
+  an upload rather than doing a cheap read.
+
 ## 2026-09-04 (one-off message import tool)
 
 - **The import tool is append-only and requires an explicit confirm phrase to write.** The user
   provided a 429-message JSON/CSV export pair to backfill into ClickHouse and asked for a safe
   dry-run first. `-dry-run` defaults to `true`; a real write additionally requires
-  `-confirm=IMPORT-CHAT-MESSAGES` exactly, mirroring the existing admin cleanup pattern
+  `-confirm="IMPORT MESSAGES"` exactly, mirroring the existing admin cleanup pattern
   (preview + exact confirmation text) rather than trusting a single `-dry-run=false` flag alone.
 - **Existing rows are matched by `kick_message_id` and are never updated**, only skipped. The tool
   never issues a ClickHouse `ALTER`/update against `chat_messages`; it only `INSERT`s rows whose
@@ -13,15 +38,15 @@
   project's existing dedup-by-`kick_message_id` contract for live ingestion.
 - **JSON is the canonical input; CSV is verification-only.** The user's two export files are the
   same 429-message dataset in different shapes. The JSON shape (`{items, count, max_rows,
-  truncated}`) carries structured `reply_metadata`, sender/channel objects, and emote objects the
+truncated}`) carries structured `reply_metadata`, sender/channel objects, and emote objects the
   flat CSV does not, so it is the only accepted `-input`. `-verify-csv` cross-checks the
   `kick_message_id` set for peace of mind but never feeds data into the import itself.
 - **Row id reuses the live listener's deterministic hash** (`fnv64a(kick_message_id)` masked into
   an `int63`) so a backfilled row's id matches what the live pipeline would have produced for the
   same `kick_message_id`, instead of minting a new unrelated id scheme for imported data. The
-  function is duplicated into the new `cmd/importmessages` package rather than importing
-  `internal/usecase/listener`, which would pull in unrelated live-ingestion dependencies for a
-  one-off CLI tool.
+  function is duplicated into the import package rather than importing `internal/usecase/listener`,
+  which would pull in unrelated live-ingestion dependencies; a usecase test pins it against a real
+  exported id so the two implementations cannot silently drift.
 
 ## 2026-06-02 (channel/user top-list aggregate hardening)
 

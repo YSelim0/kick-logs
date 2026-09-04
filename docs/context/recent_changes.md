@@ -2,31 +2,45 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (one-off message import tool, dry-run only so far)
+## Latest (message import: shared usecase + admin panel section)
 
-- New `apps/api-go/cmd/importmessages`: backfills `chat_messages` in ClickHouse from a JSON message
-  export (`{items, count, max_rows, truncated}` shape). Append-only: rows are matched by
-  `kick_message_id` and existing rows are never updated; a real write requires
-  `-dry-run=false` plus the exact `-confirm=IMPORT-CHAT-MESSAGES` phrase (`-dry-run` defaults to
-  `true`). `-limit N` caps how many export rows are processed; `-verify-csv` cross-checks the
-  `kick_message_id` set against a CSV export of the same dataset as an informational sanity check
-  only (never used as an import input).
-  - Row id uses the same `fnv64a(kick_message_id)` deterministic hash as the live listener's
-    `deterministicMessageID` (duplicated locally rather than importing the listener package).
-    `reply_metadata` is preserved byte-for-byte from the export; flat `reply_to_*` columns are
-    derived from it. `raw_payload_json` is stored as `{}` for imported rows since the export has
-    no raw Kick payload. `channel_kick_id` is left unset — the export shape has no numeric Kick
-    channel id, only an internal `channel.id`.
-  - New `import-messages` Compose service under the `tools` profile (same shape as `migrate-go`),
-    bind-mounting a gitignored `./import/` host directory read-only.
-  - New `docs/operations/message_import.md` runbook: backup-first step, dry-run usage, real-run
-    usage, field-mapping notes.
-  - Verified by hand against a real 429-row export/CSV pair (not committed as test fixtures, since
-    they contain real chat data): all 429 rows mapped with 0 invalid/0 duplicate, and the JSON vs
-    CSV `kick_message_id` sets matched exactly (429/429, 0 only-in-either-side).
-  - Not yet run against a live ClickHouse target in this unit of work — dry-run only; the real
-    import is pending explicit user approval of a dry-run report.
-- Verification: `go build ./...`, `go vet ./...` green in `apps/api-go`.
+- Messages can now be restored from a JSON export (`{items, count, max_rows, truncated}` shape)
+  from two entry points that share one implementation, `internal/usecase/messageimport`:
+  - **Admin panel** — `/admin/data` → _Mesaj İçe Aktarma_ (`features/data-management/message-import-panel.tsx`):
+    file picker + optional limit → _Dry-run_ → four counts (eklenecek / zaten mevcut / dosya içi
+    tekrar / hatalı) → exact confirmation text → import. Backed by new
+    `POST /admin/data-management/import/preview` and `/admin/data-management/import/confirm`
+    (multipart upload, `file` + optional `limit` + `confirmation_text`).
+  - **CLI** — `apps/api-go/cmd/importmessages`, the unbounded path for larger files, plus
+    `-verify-csv` which cross-checks the `kick_message_id` set against a CSV export of the same
+    dataset (informational only, never an import input).
+- Append-only in both paths: rows are matched by `kick_message_id`, an existing row is never
+  updated (only skipped), and a write additionally requires the exact phrase `IMPORT MESSAGES`
+  (CLI: `-dry-run=false -confirm="IMPORT MESSAGES"`).
+- Row id uses the same `fnv64a(kick_message_id)` deterministic hash as the live listener's
+  `deterministicMessageID`, pinned by a test against a real exported id so the two cannot drift.
+  `reply_metadata` is preserved byte-for-byte; flat `reply_to_*` columns are derived from it.
+  `raw_payload_json` is `{}` for imported rows (the export carries no raw Kick payload), and
+  `channel_kick_id` is left unset (the export has only an internal `channel.id`).
+- Upload path is bounded because the API parses it in memory: `MESSAGE_IMPORT_MAX_UPLOAD_BYTES`
+  (16 MB, `http.MaxBytesReader`) and `MESSAGE_IMPORT_MAX_ROWS` (5000, usecase check), both wired
+  through `compose.yaml` + `.env.example`. The CLI passes `maxRows = 0` and stays unbounded.
+- New rate-limit policies: `import-confirm` (3/min burst 1, admin user id — same as
+  `cleanup-confirm`) and `import-preview` (10/min burst 3).
+- `lib/api-client.ts` now passes a `FormData` body through untouched instead of JSON-stringifying
+  it, so multipart uploads work through the shared client.
+- New `import-messages` Compose service under the `tools` profile (same shape as `migrate-go`),
+  bind-mounting a gitignored `./import/` host directory read-only; new
+  `docs/operations/message_import.md` runbook (backup-first, panel usage, CLI usage, field mapping).
+- Verified by hand against a real 429-row export/CSV pair (not committed as fixtures — real chat
+  data): all 429 rows mapped with 0 invalid / 0 duplicate, and the JSON vs CSV `kick_message_id`
+  sets matched exactly (429/429).
+- Not yet run against a live ClickHouse target: no real import has been executed, and doing so is
+  pending explicit user approval of a dry-run report.
+- Verification: `go build ./...`, `go vet ./...`, `go test ./...` all green (new
+  `internal/usecase/messageimport` tests and new `internal/http` multipart route tests included);
+  `pnpm --filter @kick-logs/web test` (126/126), `typecheck`, `lint`, `build` green;
+  `pnpm format:check` clean.
 
 ## Latest (channel index aggregate hardening)
 

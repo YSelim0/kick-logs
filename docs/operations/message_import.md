@@ -1,12 +1,24 @@
-# One-Off Message Import
+# Message Import
 
-`cmd/importmessages` backfills `chat_messages` in ClickHouse from a JSON message
-export (the `{items, count, max_rows, truncated}` shape the app's own message
-export/search paths produce). It is append-only:
+Messages can be restored from a JSON export (the `{items, count, max_rows,
+truncated}` shape the app's own message export/search paths produce) two ways:
+
+- **Admin panel** — `/admin/data` → _Mesaj İçe Aktarma_. Upload the export,
+  press _Dry-run_, review the counts, type the confirmation text, import.
+  Best for everyday use; bounded by `MESSAGE_IMPORT_MAX_UPLOAD_BYTES` (16 MB)
+  and `MESSAGE_IMPORT_MAX_ROWS` (5000) because the API parses the upload in
+  memory on a small container.
+- **`cmd/importmessages` CLI** — the unbounded path, for files larger than the
+  admin caps or for scripted runs on the host. Documented below.
+
+Both share the same mapping, validation, and dedup rules
+(`internal/usecase/messageimport`), so a dry-run in either place reports the
+same counts. Both are append-only:
 
 - Existing rows are matched by `kick_message_id` and are **never** updated.
 - Nothing is written to ClickHouse unless `-dry-run=false` is combined with the
-  exact `-confirm=IMPORT-CHAT-MESSAGES` phrase.
+  exact `-confirm="IMPORT MESSAGES"` phrase (the admin panel asks for the same
+  phrase in its confirmation box).
 - The JSON export is the source of truth for the fields it carries (message,
   channel, sender, emotes, `reply_metadata`, `message_created_at`). A CSV
   export of the same dataset can be cross-checked with `-verify-csv`, but it
@@ -70,7 +82,7 @@ Only after reviewing a dry-run report:
 docker compose --profile tools run --rm import-messages \
   -input /import/export.json \
   -dry-run=false \
-  -confirm=IMPORT-CHAT-MESSAGES
+  -confirm="IMPORT MESSAGES"
 ```
 
 Omit `-limit` to import everything, or keep it to import in controlled

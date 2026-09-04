@@ -161,6 +161,8 @@ implementation details, or working assumptions change.
   `docs/operations/reverse_proxy_and_origin.md`.
 - Policy table (most specific first):
   - `POST /admin/data-management/cleanup/confirm` → admin user ID, 3/min burst 1
+  - `POST /admin/data-management/import/confirm` → admin user ID, 3/min burst 1
+  - `POST /admin/data-management/import/preview` → admin user ID, 10/min burst 3
   - `POST /auth/login` → IP, 20/10min burst 5; + IP+email in handler, 8/10min burst 3
   - `GET /messages/export` → IP, 3/min burst 2
   - `GET /messages` → IP, 20/min burst 10
@@ -193,6 +195,8 @@ GET  /admin/data-management/summary
 PUT  /admin/data-management/retention-settings
 POST /admin/data-management/cleanup/preview
 POST /admin/data-management/cleanup/confirm
+POST /admin/data-management/import/preview
+POST /admin/data-management/import/confirm
 GET  /analytics/overview
 GET  /analytics/message-volume
 GET  /analytics/top-senders

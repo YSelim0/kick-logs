@@ -161,6 +161,8 @@ GET  /admin/data-management/summary
 PUT  /admin/data-management/retention-settings
 POST /admin/data-management/cleanup/preview
 POST /admin/data-management/cleanup/confirm
+POST /admin/data-management/import/preview
+POST /admin/data-management/import/confirm
 
 GET /analytics/overview
 GET /analytics/message-volume
