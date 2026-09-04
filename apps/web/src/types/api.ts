@@ -214,6 +214,35 @@ export type DataCleanupResult = {
   retention_days: number | null;
 };
 
+export type MessageImportInvalidReason = {
+  reason: string;
+  count: number;
+  example: string;
+};
+
+export type MessageImportPreview = {
+  total_in_file: number;
+  records_read: number;
+  limit: number;
+  to_insert: number;
+  already_exists: number;
+  duplicate_in_file: number;
+  invalid: number;
+  invalid_reasons: MessageImportInvalidReason[];
+  sample_to_insert_ids: string[];
+  confirmation_text: string;
+  can_execute: boolean;
+  reason: string | null;
+};
+
+export type MessageImportResult = {
+  written: number;
+  already_exists: number;
+  duplicate_in_file: number;
+  invalid: number;
+  confirmation_text: string;
+};
+
 export type AnalyticsOverview = {
   total_messages: number;
   total_senders: number;

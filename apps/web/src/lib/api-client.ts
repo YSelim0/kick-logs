@@ -34,8 +34,11 @@ export function createApiClient(options: ApiClientOptions = {}) {
   async function request<TResponse>(path: string, options: RequestOptions = {}) {
     const headers = new Headers(options.headers);
     const hasBody = options.body !== undefined;
+    // FormData carries its own multipart boundary, so it must be passed through
+    // untouched and without a content-type header of our own.
+    const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
 
-    if (hasBody && !headers.has("content-type")) {
+    if (hasBody && !isFormData && !headers.has("content-type")) {
       headers.set("content-type", "application/json");
     }
 
@@ -43,7 +46,7 @@ export function createApiClient(options: ApiClientOptions = {}) {
       ...options,
       headers,
       credentials: options.credentials ?? "include",
-      body: hasBody ? JSON.stringify(options.body) : undefined
+      body: resolveBody(options.body, hasBody, isFormData)
     });
 
     if (!response.ok) {
@@ -70,6 +73,16 @@ export function createApiClient(options: ApiClientOptions = {}) {
 export const apiClient = createApiClient();
 
 export type ApiClient = ReturnType<typeof createApiClient>;
+
+function resolveBody(body: unknown, hasBody: boolean, isFormData: boolean) {
+  if (!hasBody) {
+    return undefined;
+  }
+  if (isFormData) {
+    return body as FormData;
+  }
+  return JSON.stringify(body);
+}
 
 function buildUrl(baseUrl: string, path: string, query?: QueryParams) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
