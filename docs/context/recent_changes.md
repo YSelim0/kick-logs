@@ -42,7 +42,76 @@ This file is the short handoff summary of the latest project changes. Keep it co
   `pnpm --filter @kick-logs/web test` (126/126), `typecheck`, `lint`, `build` green;
   `pnpm format:check` clean.
 
-## Latest (channel index aggregate hardening)
+## Previously Latest (watched-sender cooldown moves to the admin panel)
+
+- The per-sender email cooldown is now admin-managed from the same `/admin/notifications` panel
+  as the watched-username list, instead of only a static `NOTIFY_EMAIL_COOLDOWN_SECONDS` env var
+  read once at processor startup.
+- New SQLite table `notification_settings` (migration v10, single row `id = 1`,
+  `cooldown_seconds INTEGER NOT NULL`), following the same ensure-row-exists shape as
+  `retention_settings`; new `domain.NotificationSettings`; new
+  `ports.NotificationSettingsRepository` + `infra/sqlite.NotificationSettingsRepository`
+  (seeded from `NOTIFY_EMAIL_COOLDOWN_SECONDS` the first time it is read).
+- `usecase/watchedsenders.Service` gained `GetCooldownSeconds`/`UpdateCooldownSeconds` (validated
+  to 30-86400 seconds, `ErrValidation` on out-of-range) and now takes a second constructor arg,
+  `ports.NotificationSettingsRepository`.
+- New admin routes `GET/PUT /admin/notification-settings`
+  (`internal/http/routes/admin_watched_senders.go`), covered by the existing generic
+  `admin-read`/`admin-write` rate-limit policies (no new policy entries needed).
+- `watchlist.WatchlistService` gained `SetCooldown(time.Duration)` under the same mutex as the
+  username set and last-sent map (non-positive durations are ignored, so a bad read cannot disable
+  the cooldown). `cmd/processor/main.go` runs a second poll goroutine,
+  `refreshCooldownForever`, on the same `WATCHLIST_REFRESH_INTERVAL_SECONDS` interval as the
+  existing username refresh.
+- `/admin/notifications` UI (`features/watched-senders/watched-sender-admin.tsx`) gained a
+  "Bekleme süresi (cooldown)" card above the watched-user list — minutes-based input, 1-1440
+  range, backed by new `getNotificationSettings`/`updateNotificationSettings` API functions.
+- Verification: `go build ./...`, `go vet ./...`, `go test ./...` all green (including new
+  `TestNotificationSettingsRepository` and new `watchedsenders`/`watchlist` cooldown tests);
+  `pnpm --filter @kick-logs/web test` (126/126), `typecheck`, `lint`, and `build` all green; `pnpm
+format:check` clean.
+
+## Previously Latest (watched-sender list moves to the admin panel)
+
+- The watched-username list for the email notification feature is now admin-managed instead of a
+  static `WATCHED_SENDER_USERNAMES` env var, so an operator can add/remove watched accounts from the
+  UI with no processor restart.
+- New SQLite table `watched_senders` (migration v9, `username TEXT UNIQUE COLLATE NOCASE`); new
+  `domain.WatchedSender`; new `ports.WatchedSenderRepository` +
+  `infra/sqlite.WatchedSenderRepository`; new `usecase/watchedsenders.Service` (case-insensitive
+  duplicate pre-check, mirrors `usecase/auth.CreateAdminUser`'s `GetByEmail` pre-check pattern).
+- New admin routes `GET/POST/DELETE /admin/watched-senders` (`internal/http/routes/admin_watched_senders.go`),
+  covered automatically by the existing generic `admin-read`/`admin-write` rate-limit policies (no
+  new policy entries needed).
+- New admin panel page `/admin/notifications` (`features/watched-senders/watched-sender-admin.tsx`)
+  — add/list/remove watched Kick usernames; new nav item "Notifications" in `admin/layout.tsx`.
+- `watchlist.WatchlistService` refactored: `NewWatchlistService` no longer takes a username list
+  (only cooldown + notifier + logger); new `SetUsernames([]string)` replaces the watchlist under the
+  same lock as the cooldown map. `cmd/processor/main.go` runs `refreshWatchlistForever`, polling
+  `WatchedSenderRepository.ListUsernames` every `WATCHLIST_REFRESH_INTERVAL_SECONDS` (default 30,
+  new env var) and pushing the result in; a read failure is logged and the previous in-memory list is
+  kept as-is.
+- The feature now activates on `SMTP_HOST` + `NOTIFY_EMAIL_TO` alone (`WATCHED_SENDER_USERNAMES` env
+  var removed from `.env.example`/`compose.yaml`; watched usernames live in SQLite now).
+- Verification: `go build ./...`, `go vet ./...`, `go test ./...` all green (including new
+  `internal/usecase/watchedsenders` package and a new `TestWatchedSenderRepository` SQLite test);
+  `pnpm --filter @kick-logs/web test` (124/124), `typecheck`, `lint`, and `build` all green; `pnpm
+exec prettier --check` clean on touched files.
+
+## Earlier (watched-sender email notification, first cut)
+
+- New optional processor feature: when a chat message's sender username matches a configured
+  watchlist, the processor sends an SMTP alert email.
+- New port `ports.SenderMessageNotifier`; new `internal/infra/notify` SMTP client (STARTTLS on any
+  port, implicit TLS on 465); new `internal/usecase/watchlist.WatchlistService` (case-insensitive
+  username match, per-sender cooldown, nil-safe no-op when unconfigured).
+- `StreamProcessorService` gained an optional `Watchlist` dependency. After a successful
+  `chat_messages` batch insert, it spawns `go watchlist.Notify(context.Background(), chatMessages)`
+  so a slow/blocked mail server cannot delay JetStream ack.
+- Verification: `go build ./...`, `go vet ./...`, `go test ./...` all green (new packages
+  `internal/infra/notify` and `internal/usecase/watchlist` included).
+
+## Earlier (channel index aggregate hardening)
 
 - Root cause for `/channels` search failing on high-volume channels such as `hype`: the endpoint
   calls `GET /analytics/top-channels?q=...`, and `TopChannels` used a

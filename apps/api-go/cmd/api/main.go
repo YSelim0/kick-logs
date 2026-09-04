@@ -32,6 +32,7 @@ import (
 	messageimportusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/messageimport"
 	messagesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/messages"
 	profilesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/profiles"
+	watchedsendersusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/watchedsenders"
 	webhookprocessorusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/webhookprocessor"
 )
 
@@ -105,6 +106,10 @@ func main() {
 		logger.Info("rate limiter enabled", "max_keys", cfg.RateLimitStoreMaxKeys, "trust_proxy", cfg.RateLimitTrustProxy)
 	}
 	channelService := channelsusecase.NewService(channelRepo, kick.NewWebChannelResolver())
+	watchedSenderService := watchedsendersusecase.NewService(
+		sqliteinfra.NewWatchedSenderRepository(sqliteDB),
+		sqliteinfra.NewNotificationSettingsRepository(sqliteDB, cfg.NotifyEmailCooldownSeconds),
+	)
 
 	webhookEventRepo := sqliteinfra.NewKickWebhookEventRepository(sqliteDB)
 	eventSubRepo := sqliteinfra.NewKickEventSubscriptionRepository(sqliteDB)
@@ -190,6 +195,7 @@ func main() {
 		Data:                dataManagementService,
 		MessageImport:       messageImportService,
 		KickSync:            kickSyncService,
+		WatchedSenders:      watchedSenderService,
 		WebhookEvents:       webhookEventRepo,
 		WebhookVerifier:     webhookVerifier,
 		WebhookEventSubs:    eventSubRepo,

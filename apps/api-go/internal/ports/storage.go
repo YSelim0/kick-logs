@@ -25,6 +25,27 @@ type FollowedChannelRepository interface {
 	Disable(ctx context.Context, id int64) (domain.FollowedChannel, error)
 }
 
+// WatchedSenderRepository is the admin-managed list of Kick usernames that
+// trigger a watched-sender email alert when they post a chat message. It is
+// control-plane state (SQLite), read by the API for CRUD and polled
+// read-only by the processor for the live watchlist.
+type WatchedSenderRepository interface {
+	Create(ctx context.Context, username string) (domain.WatchedSender, error)
+	Delete(ctx context.Context, id int64) error
+	List(ctx context.Context) ([]domain.WatchedSender, error)
+	ListUsernames(ctx context.Context) ([]string, error)
+}
+
+// NotificationSettingsRepository is the admin-editable tuning for the
+// watched-sender email notification feature (currently just the per-sender
+// cooldown). It is a single control-plane row, read by the API for the
+// admin panel and polled read-only by the processor to keep the live
+// watchlist cooldown in sync without a restart.
+type NotificationSettingsRepository interface {
+	GetNotificationSettings(ctx context.Context) (domain.NotificationSettings, error)
+	UpdateNotificationSettings(ctx context.Context, settings domain.NotificationSettings) (domain.NotificationSettings, error)
+}
+
 type MessageRepository interface {
 	Insert(ctx context.Context, message domain.ChatMessage) error
 	InsertMessagesBatch(ctx context.Context, messages []domain.ChatMessage) error

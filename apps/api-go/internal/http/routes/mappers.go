@@ -34,6 +34,14 @@ func channelResponse(channel domain.FollowedChannel, messageCount int64) schemas
 	}
 }
 
+func watchedSenderResponse(sender domain.WatchedSender) schemas.WatchedSenderResponse {
+	return schemas.WatchedSenderResponse{
+		ID:        sender.ID,
+		Username:  sender.Username,
+		CreatedAt: sender.CreatedAt.UTC().Format(time.RFC3339),
+	}
+}
+
 func operationsSummaryResponse(summary domain.OperationsSummary) schemas.OperationsSummaryResponse {
 	tables := make([]schemas.OperationsStorageTableResponse, 0, len(summary.StorageTables))
 	for _, table := range summary.StorageTables {
