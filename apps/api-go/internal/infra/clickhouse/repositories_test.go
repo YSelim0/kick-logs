@@ -35,6 +35,7 @@ func TestClickHouseMigrationsAndRepositories(t *testing.T) {
 	if err := migrations.ApplyClickHouse(ctx, conn); err != nil {
 		t.Fatalf("ApplyClickHouse() second run error = %v", err)
 	}
+	t.Run("homepage bounded analytics", func(t *testing.T) { testHomepageAnalytics(t, conn) })
 
 	baseID := time.Now().UnixNano()
 	baseTime := time.Now().UTC().Truncate(time.Millisecond)

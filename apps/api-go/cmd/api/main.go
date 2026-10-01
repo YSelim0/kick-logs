@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/natsstream"
 	operationsinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/operations"
 	ratelimitinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/ratelimit"
+	"github.com/YSelim0/kick-logs/apps/api-go/internal/infra/snapshots"
 	sqliteinfra "github.com/YSelim0/kick-logs/apps/api-go/internal/infra/sqlite"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/ports"
 	analyticsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/analytics"
@@ -29,6 +31,7 @@ import (
 	channelsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/channels"
 	datamanagementusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/data_management"
 	directoryusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/directory"
+	homepageusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/homepage"
 	kicksyncusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/kicksync"
 	messagesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/messages"
 	profilesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/profiles"
@@ -148,6 +151,7 @@ func main() {
 	}
 	var messageService *messagesusecase.Service
 	var analyticsService *analyticsusecase.Service
+	var homepageRepository ports.AnalyticsRepository
 	var profileService *profilesusecase.Service
 	var requestService *requestsusecase.Service
 	var subPeriodRepoForAPI ports.SubscriptionPeriodRepository
@@ -159,6 +163,7 @@ func main() {
 		subPeriodRepoForAPI = subPeriodRepo
 		messageService = messagesusecase.NewService(messageRepository)
 		analyticsService = analyticsusecase.NewService(analyticsRepository)
+		homepageRepository = clickhouseinfra.NewHomepageAnalyticsRepository(clickHouseConn)
 		profileService = profilesusecase.NewService(analyticsRepository, channelRepo, senderRepo)
 		requestService = requestsusecase.NewService(userRequestRepo)
 
@@ -172,6 +177,21 @@ func main() {
 		)
 		processorSvc.Start(context.Background())
 	}
+	homepageService := homepageusecase.NewService(
+		homepageRepository,
+		snapshots.NewHomepageStore(filepath.Join(filepath.Dir(cfg.SQLitePath), "homepage-analytics-v1.json")),
+		logger,
+	)
+	homepageCtx, cancelHomepage := context.WithCancel(context.Background())
+	homepageDone := make(chan struct{})
+	go func() {
+		defer close(homepageDone)
+		homepageService.Run(homepageCtx)
+	}()
+	defer func() {
+		cancelHomepage()
+		<-homepageDone
+	}()
 	operationsRepo := operationsinfra.NewRepository(
 		sqliteDB,
 		cfg.SQLitePath,
@@ -186,6 +206,7 @@ func main() {
 		Config:              cfg,
 		Auth:                authService,
 		Analytics:           analyticsService,
+		Homepage:            homepageService,
 		Channels:            channelService,
 		Messages:            messageService,
 		Profiles:            profileService,

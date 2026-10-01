@@ -37,6 +37,11 @@ implementation details, or working assumptions change.
 
 ## Public Identity Directory (issue #27)
 
+The owner-approved scope is homepage recent statistics, prefix directories, and profile loading
+visuals only. `/search`, exports, subscription calculations, and profile all-time queries are not
+being redesigned in this pass. The wider issue's production benchmarking/profile-query work is
+not implied complete by these changes.
+
 - `/users` and `/channels` use `GET /directory/users` and `GET /directory/channels`.
 - Lookup reads indexed SQLite `sender_profiles` / `followed_channels` metadata, not chat history.
   Disabled followed channels remain discoverable; users require an existing sender-profile cache
@@ -46,6 +51,21 @@ implementation details, or working assumptions change.
 - Directory rows show identity/avatar only, not all-time message counts or activity timestamps.
 - SQLite migration 9 adds four expression indexes. Existing message/subscription data is unchanged.
 - `/search` and the all-time profile analytics contracts remain unchanged.
+
+## Prepared Homepage (issue #27)
+
+- `GET /analytics/homepage` returns a coherent 14-day UTC snapshot with `as_of`, period, and stale
+  metadata. All five panels use the same window; the volume always contains 14 daily bins.
+- One API-lifetime background refresh, five sequential bounded queries, 15-minute refresh interval.
+  Requests never trigger aggregate queries. No new materialized views or historical rewrites.
+- Last good snapshot survives restarts in `/data/homepage-analytics-v1.json` (beside `SQLITE_PATH`),
+  even if ClickHouse is unavailable at startup. File format is versioned and bounded to 1 MiB.
+- Maximum stale age 24 hours, 90-second refresh deadline, per-query 2 threads / 384 MiB / 15s.
+  Failure backoff 1-15 minutes. Future, malformed, incompatible or expired cache is rejected.
+- Before any valid snapshot exists, return 202 initializing with Retry-After 5; the UI retries for
+  at most two minutes, then offers manual retry. Errors are not rendered as real zero values.
+- This optimizes request paths, not every existing analytics endpoint. Production 18M-row latency,
+  memory and ingestion-backlog comparisons still require measurement on the deployment.
 
 ## ClickHouse Logging Policy
 

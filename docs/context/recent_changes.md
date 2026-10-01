@@ -2,7 +2,17 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (indexed identity directories, issue #27)
+## Latest (prepared 14-day homepage, issue #27)
+
+- `/` fetches one `/analytics/homepage` snapshot. Every panel states `Son 14 gün`, with actual
+  UTC dates/update time. Existing all-time endpoints and `/search` are untouched.
+- API prepares data in the background, persists the last good snapshot beside SQLite, and serves
+  memory without request-triggered aggregates. Limits/backoff/stale handling are documented in
+  `docs/operations/public_analytics.md`.
+- Initialization and errors use placeholders/retry, never fake zero counts. Volume keeps all 14 days.
+- Production-scale performance has not been measured locally; no issue-wide completion claim.
+
+## Previous (indexed identity directories, issue #27)
 
 - `/users` and `/channels` now use SQLite-backed `/directory/users` and `/directory/channels`.
 - Search matches name/slug prefixes rather than arbitrary substrings; `_` and `-` are normalized.

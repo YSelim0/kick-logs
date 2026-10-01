@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-10-01 (homepage recent-window snapshots)
+
+- **Only the homepage becomes recent-only.** Use 14 UTC calendar days including today, ending at
+  an explicit second-precision `as_of`. Keep `/search` and all-time profile queries unchanged.
+- **Visitors do not refresh analytics.** One background task prepares all five panels, then swaps
+  the complete snapshot atomically. A fixed endpoint prevents timestamp-fragmented cache keys.
+- **Persist only the small result, not another message copy.** A versioned atomic JSON file beside
+  SQLite survives API restarts and is disposable; existing message history remains authoritative.
+- **Bound background cost and failures.** Sequential queries, resource/time limits, single-flight,
+  exponential retry backoff, and a 24-hour maximum stale age. Keep the last good result on error.
+- **Represent unavailability honestly.** Initializing returns 202; UI uses skeletons and bounded
+  retries. Stale data shows its actual date range. Existing public analytics contracts are additive,
+  not silently redefined. No exact production speed claim without representative measurements.
+
 ## 2026-10-01 (public directory lookup)
 
 - **Directory search is identity lookup, not analytics.** Match name/slug prefixes from existing

@@ -173,6 +173,7 @@ POST /admin/data-management/cleanup/preview
 POST /admin/data-management/cleanup/confirm
 
 GET /analytics/overview
+GET /analytics/homepage
 GET /directory/users
 GET /directory/channels
 GET /analytics/message-volume
@@ -190,12 +191,27 @@ GET  /admin/webhooks/health
 POST /admin/webhooks/sync
 ```
 
+### Prepared Homepage Analytics
+
+`usecase/homepage` prepares one versioned 14-day UTC snapshot per API process. Requests read
+memory only; a background task runs the existing deduplicated analytics queries sequentially
+every 15 minutes. A dedicated ClickHouse connection wrapper limits only this task to two threads,
+384 MiB and 15 seconds per query, with a 90-second overall refresh deadline. Existing analytics
+and all-time profile endpoints retain their original contracts.
+
+The last successful snapshot is atomically persisted as `homepage-analytics-v1.json` beside
+`SQLITE_PATH`, restored on restart, and served during refresh/failure for at most 24 hours. This is
+a disposable read cache, not another source of message history. Partial refreshes never publish.
+Failures retry with exponential delays from one to 15 minutes. An empty cache returns HTTP 202
+with `Retry-After`, not fabricated zero statistics. See `operations/public_analytics.md` for rollout.
+
 Public routes:
 
 - `POST /requests`
 - `/messages`
 - `/messages/export`
 - `/analytics/*`
+- `/directory/users` and `/directory/channels`
 - `/users/{slug}/analytics`
 - `/channels/{slug}/analytics`
 - `/channels/{slug}/subscription-summary`

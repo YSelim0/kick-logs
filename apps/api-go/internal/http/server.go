@@ -21,6 +21,7 @@ func NewRouter(cfg config.Config, logger *slog.Logger, dependencySets ...routes.
 		routes.RegisterAuthRoutes(mux, deps)
 		routes.RegisterMessageRoutes(mux, deps)
 		routes.RegisterAnalyticsRoutes(mux, deps)
+		routes.RegisterHomepageRoutes(mux, deps.Homepage)
 		routes.RegisterDirectoryRoutes(mux, deps)
 		routes.RegisterProfileRoutes(mux, deps)
 		routes.RegisterUserRequestRoutes(mux, deps)

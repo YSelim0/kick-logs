@@ -162,8 +162,15 @@ Type scale (Tailwind):
   rounded border, separated by 1px hairlines.
 - Two analytics rows of 2 columns each: `Mesaj hacmi` bar chart (14 days, accent green bars), `Top
 kanallar`, `Top kullanıcılar`, `Top emoteler`. Each as a panel with title + mono sub.
-- Data sources: `/analytics/overview`, `/analytics/message-volume?bucket=day`,
-  `/analytics/top-channels`, `/analytics/top-emotes`, `/analytics/top-senders`.
+- All five analytics panels describe `Son 14 gün`: today and the preceding 13 UTC calendar days,
+  ending at the snapshot timestamp. Channels/chatters mean identities active within this window;
+  emotes mean occurrences, not distinct emote names or messages containing emotes.
+- One data source: `/analytics/homepage`. Show its actual reporting dates and update time in UTC.
+  A stale snapshot retains its own dates and receives a visible last-successful-update notice.
+- Keep layout-matched, reduced-motion-aware placeholders while initializing. Never substitute zero
+  for loading/failure. Retry initializing responses at a bounded interval; after at most two minutes
+  offer `Tekrar dene`. Request errors also offer manual retry, without automatic retry loops.
+- Stop polling after a ready snapshot; dispose requests/timers on navigation.
 
 ## Search Screen (`/search`)
 

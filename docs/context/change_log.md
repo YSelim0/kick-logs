@@ -2,6 +2,17 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-01 (prepared 14-day homepage)
+
+- Added a dedicated homepage service/endpoint and versioned atomic file cache, restored across
+  restarts. Background work uses shared 14-day UTC boundaries, sequential queries and resource caps.
+- Kept existing ClickHouse deduplication and original analytics/profile contracts; no data backfill
+  or application-table migration was introduced for this snapshot.
+- Replaced the landing page's five-request waterfall with one snapshot request, explicit period and
+  update labels, bounded initializing retries, stale notice, and honest failure/retry state.
+- Added refresh/restart/cancellation/partial-failure tests, file corruption/size tests, HTTP/rate-limit
+  tests, and real ClickHouse boundary/deduplication assertions in the existing CI integration suite.
+
 ## 2026-10-01 (indexed user/channel directories)
 
 - Added public prefix directory APIs backed solely by SQLite identity metadata, with indexed
