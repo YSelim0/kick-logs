@@ -4,7 +4,8 @@
 
 Issue #27's owner-approved first pass covers the homepage, identity directories and profile loading
 visuals. Message search/export and profile all-time analytics remain unchanged. No message or
-subscription history is deleted, re-keyed, or backfilled.
+subscription history is deleted, re-keyed, or backfilled. The later SQL-only profile improvement
+from issue #29 preserves the all-time contract; its implementation and measurements are below.
 
 ## Runtime
 
@@ -59,8 +60,71 @@ Directory query-plan tests verify indexed ranges, not full metadata scans.
 
 Before claiming production acceptance, record p50/p95 response latency, peak memory and ingestion
 backlog under the same workload as the prior version. Small isolated fixtures prove behavior, not
-the performance of an 18-million-message VPS. Profile-query optimization, metadata completeness
-backfill, and production load benchmarking from the wider issue remain separate follow-up work.
+the performance of an 18-million-message VPS. The profile optimization below addresses one query
+pair, not every profile query. Metadata completeness/backfill and production load benchmarking
+remain separate follow-up work under issue #29.
 
 Rollback can redeploy the previous revision without deleting data. The extra SQLite indexes and
 homepage cache do not alter stored message/subscription rows; neither needs removal for rollback.
+
+## All-Time Profile Query Optimization
+
+User/channel profiles now request overview plus the top five counterpart channels/senders in a
+single ClickHouse query through the optional `ProfileSummaryRepository` port. `GROUP BY ... WITH
+TOTALS` returns both ranked rows and exact totals across every matching group before `LIMIT`.
+The native driver reads the totals after consuming the rows. One tuple `argMax` selects all identity
+metadata using the existing `(message_created_at, ingested_at, id)` ordering.
+
+The query retains `FINAL`, deleted-row filtering, exact distinct counts, nullable identity rules,
+slug matching, and ranking order. There is no recent-window restriction on profile summaries.
+Volume, top emotes, latest messages, UI, HTTP responses and profile cache behavior are unchanged.
+The older independent queries remain for other analytics consumers and as a fallback if the
+combined query fails or a repository does not implement the optional port. On failure this can
+cost one attempted combined query plus the two original queries; existing partial-result behavior
+is intentionally retained rather than redesigned in this SQL-only change.
+
+No migration, index, projection, backfill, or historical data rewrite is needed. Recreate only the
+API to deploy this change: `docker compose up -d --build --no-deps api`. Rolling back the API is
+sufficient to restore the previous query path.
+
+### Local Measurement
+
+Measured on 2026-10-02 against local ClickHouse 24.8, using all history before
+`2026-10-01T20:00:00Z`. This fixed cutoff excludes live arrivals from the comparison. The channel
+matched 379,367 messages; the user matched 8,567. Both complete result objects matched the old
+queries before measurement, including metadata and ranking order.
+
+| Summary query pair | Old median | Combined median | Old read rows | Combined read rows | Old read bytes | Combined read bytes |
+| ------------------ | ---------- | --------------- | ------------- | ------------------ | -------------- | ------------------- |
+| Channel            | 1,040 ms   | 807 ms          | 2,800,248     | 1,400,124          | 501,009,881    | 297,725,542         |
+| User               | 760 ms     | 558 ms          | 2,800,248     | 1,400,124          | 660,628,981    | 502,467,440         |
+
+These are medians of three benchmark runs with three iterations each, one query thread, a 256 MiB
+memory cap, 10-second execution limit and ClickHouse query cache disabled. Filesystem/page caches
+were not cleared. Concurrent local ingestion and Docker/network overhead affect timing. This is
+about 22%/26% less elapsed time for the changed pair and 50% fewer rows read, not a whole-page or
+production p95 claim. Remaining profile queries still scan history and require separate evidence
+before any further optimization.
+
+### Reproduce Safely
+
+From `apps/api-go`, point `CLICKHOUSE_ADDR`, `CLICKHOUSE_DATABASE`, `CLICKHOUSE_USERNAME` and
+`CLICKHOUSE_PASSWORD` at the dataset to inspect using the normal application configuration. Prefer
+a read-only database account. Set these additional variables (PowerShell example):
+
+```powershell
+$env:KICK_LOGS_PROFILE_BENCHMARK_CHANNEL = 'hype'
+$env:KICK_LOGS_PROFILE_BENCHMARK_SENDER = 'botrix'
+$env:KICK_LOGS_PROFILE_BENCHMARK_END = '2026-10-01T20:00:00Z'
+go test ./internal/infra/clickhouse -run '^$' -bench '^BenchmarkProfileSummaries$' -benchtime=3x -count=3 -v
+```
+
+Choose existing representative slugs and a fixed historical cutoff. The benchmark runs SELECTs
+only, does not migrate/insert, rejects empty profiles, and stops if old/new results differ. Run
+during a suitable maintenance/test window because both variants intentionally read history.
+Do not enable `KICK_LOGS_RUN_CLICKHOUSE_TESTS` or run the integration-test command against real
+application data; that separate suite inserts fixtures and belongs in an isolated database.
+
+Regression coverage includes empty profiles, data from 2020, identity fallbacks/nulls, renamed
+metadata, duplicate replacements, tombstones, ties, limits of 1/5/default, identical HTTP responses,
+unchanged cache hits and fallback after a combined-query error.

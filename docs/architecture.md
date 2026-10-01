@@ -205,6 +205,20 @@ a disposable read cache, not another source of message history. Partial refreshe
 Failures retry with exponential delays from one to 15 minutes. An empty cache returns HTTP 202
 with `Retry-After`, not fabricated zero statistics. See `operations/public_analytics.md` for rollout.
 
+### All-Time Profile Summaries
+
+`usecase/profiles` uses the optional `ports.ProfileSummaryRepository` capability to fetch overview
+and top-five counterpart identities in one query. ClickHouse groups the filtered `chat_messages
+FINAL` rows with `WITH TOTALS`; exact totals cover all groups before the ranking limit. One tuple
+`argMax` retrieves metadata using the existing deterministic rank fields. Nullable IDs, deletion
+filters, all-time scope and response ordering retain the original query semantics.
+
+Repositories without this capability, or a failed combined query, use the original independent
+overview/ranking calls so existing partial-result behavior is retained. Profile caches, volume,
+emotes, latest messages and public schemas are unchanged. This is a read-query optimization only,
+without new storage, migrations or changes to ingestion. The benchmark and rollout procedure are
+in `operations/public_analytics.md`.
+
 Public routes:
 
 - `POST /requests`

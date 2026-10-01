@@ -2,7 +2,23 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (homepage timestamp copy)
+## Latest (all-time profile query optimization, issue #29)
+
+- Work continues directly on `dev` in the same folder at the owner's request.
+- Profile overview and top-five counterpart ranking share one ClickHouse history scan through an
+  optional port, with original-query fallback. All-time data, exact totals, metadata/order, cache,
+  HTTP responses, UI and `/search` remain unchanged. No schema or stored-data migration.
+- Old/new equality verified on isolated edge-case fixtures and real local historical data. The
+  changed pair reads half as many rows; local median time improved about 22% channel / 26% user.
+- Read-only benchmark and rollout notes: `docs/operations/public_analytics.md`. Production p95,
+  metadata coverage/backfill and other broader #29 tasks are not claimed complete. #28 untouched.
+- Validation passed: full Go tests, vet, gofmt, isolated ClickHouse integration, SQLite/ClickHouse
+  migration smoke checks, full Prettier and API Docker build. Local health and both profile routes
+  return 200. The local API was rebuilt; no frontend source changes were needed.
+- Separate local startup warning: Kick token requests return 401, preventing public-key retrieval
+  and webhook subscription sync. Credentials were not changed; this is outside the SQL task.
+
+## Previous (homepage timestamp copy)
 
 - Removed the homepage's explicit UTC date range and update timestamp at the owner's request.
 - Kept all `Son 14 gün` labels, stale-data warning, API metadata, and refresh behavior unchanged.

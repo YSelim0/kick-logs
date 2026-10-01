@@ -2,6 +2,22 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (all-time profile query pair)
+
+- Added optional combined profile summary queries using WITH TOTALS and tuple argMax. Overview
+  and top counterpart ranking now share one scan while keeping all-time results and exact counts.
+- Profile service uses the capability with legacy fallback. Cache behavior, HTTP schemas, UI,
+  message search, subscriptions and database schemas are unchanged.
+- Added old/new real-ClickHouse equivalence tests, HTTP response/cache/fallback regression tests,
+  and an opt-in read-only benchmark. Isolated integration fixtures cover historical/null/empty,
+  identity normalization, replacement, tombstone, metadata, ordering and ranking-limit cases.
+- Local 1.4M-row comparison returned identical results: half the rows read, approximately 22%/26%
+  faster channel/user summary pairs. Timing is local, not a full-page or production guarantee.
+- Documented measurement conditions, deployment, rollback and remaining issue #29 acceptance work
+  in `docs/operations/public_analytics.md`. No application rows were migrated or rewritten.
+- Passed backend CI-equivalent tests/vet/format, isolated integration/migration smoke checks and
+  repository Prettier. Rebuilt the local API and verified health plus both profile endpoints (200).
+
 ## 2026-10-01 (homepage timestamp copy)
 
 - Removed visible UTC date-range/update metadata from the homepage while keeping period labels

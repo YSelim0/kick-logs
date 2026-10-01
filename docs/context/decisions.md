@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-10-02 (SQL-only profile optimization)
+
+- **Preserve displayed results and all-time scope.** The owner approved query changes, not new
+  profile data windows, cache policies or UI. Keep exact counts, metadata, ordering and schemas.
+- **Combine overview and counterpart ranking.** `WITH TOTALS` shares one history scan; tuple
+  `argMax` shares metadata selection. Totals are not a sum of per-group distinct counts.
+- **Retain read correctness.** Keep FINAL, deleted-row filters, nullable identity behavior and
+  existing rank fields. Do not push non-key filters before FINAL or use approximate distincts.
+- **Keep the original fallback.** Optional repository capability isolates other consumers; failure
+  falls back to independent calls and existing partial results, with the extra-query cost explicit.
+- **Measure without rewriting data.** A read-only, fixed-cutoff benchmark compares full results
+  and read metrics. Local improvement does not establish production p95 or issue #29 completion.
+- **Continue on dev.** Use the existing folder and `dev` as requested; no extra worktree or push.
+
 ## 2026-10-01 (homepage copy simplification)
 
 - **Hide explicit snapshot timestamps in the UI.** Keep `Son 14 gün` and the stale notice, but remove

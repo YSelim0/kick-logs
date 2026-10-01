@@ -60,10 +60,9 @@ func (service *Service) buildUserProfile(
 ) (domain.UserProfile, error) {
 	filter := domain.AnalyticsFilter{Sender: sender.Slug}
 	volumeFilter := service.recentVolumeFilter(filter)
-	overview := valueOrZero(service.analytics.Overview(ctx, filter))
+	overview, topChannels := service.userSummary(ctx, filter)
 	volumePoints, volumeErr := service.analytics.MessageVolume(ctx, volumeFilter, domain.AnalyticsBucketDay)
 	volume := volumeOrEmpty(volumePoints, volumeErr, volumeFilter)
-	topChannels := valueOrZero(service.analytics.TopChannels(ctx, filter, 5))
 	topEmotes := valueOrZero(service.analytics.TopEmotes(ctx, filter, 5))
 	latestMessages := valueOrZero(service.analytics.LatestMessages(ctx, filter, 20))
 	return domain.UserProfile{
@@ -97,10 +96,9 @@ func (service *Service) buildChannelProfile(
 ) (domain.ChannelProfile, error) {
 	filter := domain.AnalyticsFilter{Channel: channel.Slug}
 	volumeFilter := service.recentVolumeFilter(filter)
-	overview := valueOrZero(service.analytics.Overview(ctx, filter))
+	overview, topSenders := service.channelSummary(ctx, filter)
 	volumePoints, volumeErr := service.analytics.MessageVolume(ctx, volumeFilter, domain.AnalyticsBucketDay)
 	volume := volumeOrEmpty(volumePoints, volumeErr, volumeFilter)
-	topSenders := valueOrZero(service.analytics.TopSenders(ctx, filter, 5))
 	topEmotes := valueOrZero(service.analytics.TopEmotes(ctx, filter, 5))
 	latestMessages := valueOrZero(service.analytics.LatestMessages(ctx, filter, 10))
 	return domain.ChannelProfile{
@@ -111,6 +109,25 @@ func (service *Service) buildChannelProfile(
 		TopEmotes:      topEmotes,
 		LatestMessages: latestMessages,
 	}, nil
+}
+
+func (service *Service) userSummary(ctx context.Context, filter domain.AnalyticsFilter) (domain.AnalyticsOverview, []domain.TopChannelAnalytics) {
+	if repo, ok := service.analytics.(ports.ProfileSummaryRepository); ok {
+		if overview, channels, err := repo.OverviewAndTopChannels(ctx, filter, 5); err == nil {
+			return overview, channels
+		}
+	}
+	// Preserve the existing independent/partial results if the combined query fails.
+	return valueOrZero(service.analytics.Overview(ctx, filter)), valueOrZero(service.analytics.TopChannels(ctx, filter, 5))
+}
+
+func (service *Service) channelSummary(ctx context.Context, filter domain.AnalyticsFilter) (domain.AnalyticsOverview, []domain.TopSenderAnalytics) {
+	if repo, ok := service.analytics.(ports.ProfileSummaryRepository); ok {
+		if overview, senders, err := repo.OverviewAndTopSenders(ctx, filter, 5); err == nil {
+			return overview, senders
+		}
+	}
+	return valueOrZero(service.analytics.Overview(ctx, filter)), valueOrZero(service.analytics.TopSenders(ctx, filter, 5))
 }
 
 func (service *Service) recentVolumeFilter(filter domain.AnalyticsFilter) domain.AnalyticsFilter {

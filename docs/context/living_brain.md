@@ -7,6 +7,8 @@ implementation details, or working assumptions change.
 
 - Integration target: `dev`; issue #27's approved first-pass changes were developed on
   `feat/issue-27-analytics-performance` from `dev`.
+- Issue #27 is closed. The owner approved the narrower SQL-only profile follow-up from #29 directly
+  on `dev`, in the existing workspace. Issue #29's broader acceptance/backfill work remains open.
 - Active architecture: JetStream durable ingestion (see `docs/implementation_plan.md`, issue #23).
   Live chat ingestion now runs as `listener -> NATS JetStream -> processor -> ClickHouse`, with
   SQLite used for control-plane state only.
@@ -70,6 +72,19 @@ not implied complete by these changes.
   at most two minutes, then offers manual retry. Errors are not rendered as real zero values.
 - This optimizes request paths, not every existing analytics endpoint. Production 18M-row latency,
   memory and ingestion-backlog comparisons still require measurement on the deployment.
+
+## All-Time Profile Queries (issue #29)
+
+- Combined overview/top-five counterpart query replaces two history scans with one on the normal
+  profile path. Optional `ProfileSummaryRepository` capability keeps other analytics consumers
+  unchanged and falls back to the old calls on error or when unavailable.
+- `WITH TOTALS` preserves exact counts over every matching group before LIMIT. Tuple `argMax`
+  preserves metadata selection. Keep FINAL, tombstones, null identities and all-time scope.
+- No schema/data migration, UI change, cache redesign or `/search` change. Remaining profile
+  volume/emote/latest-message queries are unchanged.
+- Real local data gave equal outputs and 50% fewer rows read for the changed query pair. Local
+  timings improved approximately 22% for a channel and 26% for a user. Not production acceptance;
+  see `docs/operations/public_analytics.md` for conditions and read-only benchmark instructions.
 
 ## ClickHouse Logging Policy
 
