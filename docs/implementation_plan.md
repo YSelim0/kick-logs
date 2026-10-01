@@ -1,5 +1,10 @@
 # Active Channel Subscribers Implementation Plan
 
+> Historical feature plan retained below. Current work is issue #28 localization:
+> `docs/superpowers/plans/2026-10-02-localization.md`, based on the approved design in
+> `docs/superpowers/specs/2026-10-02-localization-design.md`. The new plan awaits owner review;
+> do not treat the subscriber phases below as the current task list.
+
 ## Summary
 
 This plan defines the next product feature: visitors should be able to open a channel profile page

@@ -1,6 +1,7 @@
 # Issue 28: Localization Design
 
-Status: product requirements and selector interaction confirmed; written design awaiting review.
+Status: written design approved by the owner. Implementation plan awaiting review:
+`docs/superpowers/plans/2026-10-02-localization.md`.
 
 Issue: <https://github.com/YSelim0/kick-logs/issues/28>
 

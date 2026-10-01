@@ -11,8 +11,9 @@
   datetime boundaries and prediction polling. Use the existing dark tokens, not the reference hue.
 - **Work on one local issue branch.** `feat/issue-28-localization` starts from `dev` at `d7910fe`;
   feature-sized commits, no push, and no merge before final owner approval.
-- Written design is awaiting review in `docs/superpowers/specs/2026-10-02-localization-design.md`.
-  No localization runtime code or dependencies have been added yet.
+- Written design approved in `docs/superpowers/specs/2026-10-02-localization-design.md`.
+  Task-level implementation plan is `docs/superpowers/plans/2026-10-02-localization.md`, awaiting
+  review/execution-method confirmation. No runtime code or dependencies have been added yet.
 
 ## 2026-10-02 (channel search request prompt)
 

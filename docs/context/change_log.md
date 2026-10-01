@@ -2,6 +2,15 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (issue 28 implementation plan)
+
+- Owner approved the localization design. Added ten task-sized implementation/verification units
+  covering shared locale/catalog contracts, flag popover, all public/admin screens and TXT exports.
+- Defined state-preservation, race, cookie-disabled, catalog-parity, polling and cache-isolation tests,
+  plus frontend CI and backend verification gates. Product code remains unchanged.
+- Linked the active plan from `docs/implementation_plan.md` without deleting the historical subscriber
+  plan. Plan review and execution-method confirmation are the next step; no push or merge.
+
 ## 2026-10-02 (issue 28 localization design)
 
 - Created local `feat/issue-28-localization` from `dev` at `d7910fe`; baseline frontend validation
