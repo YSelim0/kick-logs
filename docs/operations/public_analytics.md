@@ -46,7 +46,8 @@ contracts remain available as before. Assess metadata coverage before any later 
 2. Rebuild/recreate API and web from the same revision: `docker compose up -d --build api web`.
 3. API startup applies migration 9 to existing SQLite metadata; allow the one-time index build.
 4. Check `/analytics/homepage`: expect 200 ready, or 202 while the first snapshot is prepared.
-   Verify 14 ordered daily bins, matching `start`/`end`/`as_of`, and labeled dates on `/`.
+   Verify 14 ordered daily bins, matching `start`/`end`/`as_of`, and `Son 14 gün` labels on `/`.
+   The UI intentionally omits the explicit date range and update timestamp.
 5. Check prefix search and pagination on `/users` and `/channels`; no `top-*` analytics request
    should occur there. Check both profile loading layouts and all-time values after loading.
 6. Recreate only the API and verify a valid persisted snapshot remains available without waiting

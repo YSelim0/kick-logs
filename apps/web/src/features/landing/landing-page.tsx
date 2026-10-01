@@ -96,7 +96,11 @@ export function LandingPage() {
             status={status}
             onRetry={() => setRequestVersion((version) => version + 1)}
           />
-          {analytics ? <SnapshotDetails snapshot={analytics} /> : null}
+          {analytics?.stale ? (
+            <p className="font-mono text-[12px] text-warning" role="status">
+              Veriler güncel olmayabilir. Son başarılı anlık görüntü gösteriliyor.
+            </p>
+          ) : null}
           {status !== "error" ? (
             <>
               <StatsBar overview={analytics?.overview ?? null} />
@@ -445,28 +449,6 @@ function StatusBanner({ status, onRetry }: { status: HomepageStatus; onRetry: ()
   );
 }
 
-function SnapshotDetails({ snapshot }: { snapshot: HomepageSnapshot }) {
-  return (
-    <div className="space-y-2 font-mono text-[12px] text-muted-foreground">
-      <p className="flex flex-wrap gap-x-2 gap-y-1">
-        <span>Veri aralığı (UTC):</span>
-        <time dateTime={snapshot.start}>{formatSnapshotDate(snapshot.start)}</time>
-        <span aria-hidden>-</span>
-        <time dateTime={snapshot.end}>{formatSnapshotDate(snapshot.end)}</time>
-      </p>
-      <p className="flex flex-wrap gap-x-2 gap-y-1">
-        <span>Güncelleme (UTC):</span>
-        <time dateTime={snapshot.as_of}>{formatSnapshotDate(snapshot.as_of)}</time>
-      </p>
-      {snapshot.stale ? (
-        <p className="text-warning" role="status">
-          Veriler güncel olmayabilir. Son başarılı anlık görüntü gösteriliyor.
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
 function EmptyHint({ text }: { text: string }) {
   return <p className="text-[13px] text-muted-foreground">{text}</p>;
 }
@@ -538,19 +520,6 @@ function formatShortDate(value: string) {
   return new Intl.DateTimeFormat("tr-TR", {
     day: "2-digit",
     month: "short",
-    timeZone: "UTC"
-  }).format(new Date(value));
-}
-
-function formatSnapshotDate(value: string) {
-  return new Intl.DateTimeFormat("tr-TR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
     timeZone: "UTC"
   }).format(new Date(value));
 }

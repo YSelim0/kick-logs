@@ -5,7 +5,8 @@ implementation details, or working assumptions change.
 
 ## Current State
 
-- Branch: `feat/issue-27-analytics-performance`, based on `dev`.
+- Integration target: `dev`; issue #27's approved first-pass changes were developed on
+  `feat/issue-27-analytics-performance` from `dev`.
 - Active architecture: JetStream durable ingestion (see `docs/implementation_plan.md`, issue #23).
   Live chat ingestion now runs as `listener -> NATS JetStream -> processor -> ClickHouse`, with
   SQLite used for control-plane state only.

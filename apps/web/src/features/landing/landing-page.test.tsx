@@ -206,26 +206,20 @@ describe("LandingPage", () => {
     expect(homepageMocks.getHomepage).toHaveBeenCalledTimes(1);
   });
 
-  it("shows actual snapshot range and as-of time in UTC with a stale notice", async () => {
-    homepageMocks.getHomepage.mockResolvedValue({ ...snapshotFixture(), stale: true });
-    render(<LandingPage />);
+  it.each([false, true])("hides snapshot timestamps when stale is %s", async (stale) => {
+    homepageMocks.getHomepage.mockResolvedValue({ ...snapshotFixture(), stale });
+    const { container } = render(<LandingPage />);
     await flush();
 
-    expect(screen.getByText("01.05.2026 00:00:00")).toHaveAttribute(
-      "datetime",
-      "2026-05-01T00:00:00Z"
-    );
-    expect(screen.getByText("15.05.2026 00:00:00")).toHaveAttribute(
-      "datetime",
-      "2026-05-15T00:00:00Z"
-    );
-    expect(screen.getByText("15.05.2026 00:05:00")).toHaveAttribute(
-      "datetime",
-      "2026-05-15T00:05:00Z"
-    );
-    expect(screen.getByText(/Veri aralığı \(UTC\)/)).toBeInTheDocument();
-    expect(screen.getByText(/Güncelleme \(UTC\)/)).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent(/güncel olmayabilir/);
+    expect(screen.queryByText(/Veri aralığı \(UTC\)/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Güncelleme \(UTC\)/)).not.toBeInTheDocument();
+    expect(container.querySelector("time")).toBeNull();
+    expect(screen.getAllByText("Son 14 gün")).toHaveLength(5);
+    if (stale) {
+      expect(screen.getByRole("status")).toHaveTextContent(/güncel olmayabilir/);
+    } else {
+      expect(screen.queryByText(/güncel olmayabilir/)).not.toBeInTheDocument();
+    }
     expect(screen.getByText("482")).toBeInTheDocument();
   });
 

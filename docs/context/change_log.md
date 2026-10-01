@@ -2,6 +2,12 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-01 (homepage timestamp copy)
+
+- Removed visible UTC date-range/update metadata from the homepage while keeping period labels
+  and the stale-data notice. API timestamps, caching and calculations are unchanged.
+- Updated regression coverage for both fresh and stale snapshots.
+
 ## 2026-10-01 (animated profile loading)
 
 - Added shared responsive user/channel skeletons for identity, metrics, charts and latest messages.

@@ -165,8 +165,9 @@ kanallar`, `Top kullanıcılar`, `Top emoteler`. Each as a panel with title + mo
 - All five analytics panels describe `Son 14 gün`: today and the preceding 13 UTC calendar days,
   ending at the snapshot timestamp. Channels/chatters mean identities active within this window;
   emotes mean occurrences, not distinct emote names or messages containing emotes.
-- One data source: `/analytics/homepage`. Show its actual reporting dates and update time in UTC.
-  A stale snapshot retains its own dates and receives a visible last-successful-update notice.
+- One data source: `/analytics/homepage`. Keep `Son 14 gün` labels, but do not render the explicit
+  reporting date range or update timestamp on the homepage. Time metadata remains in the API.
+  A stale snapshot still receives a visible last-successful-update notice.
 - Keep layout-matched, reduced-motion-aware placeholders while initializing. Never substitute zero
   for loading/failure. Retry initializing responses at a bounded interval; after at most two minutes
   offer `Tekrar dene`. Request errors also offer manual retry, without automatic retry loops.

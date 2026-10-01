@@ -2,7 +2,15 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (profile loading and verification, issue #27)
+## Latest (homepage timestamp copy)
+
+- Removed the homepage's explicit UTC date range and update timestamp at the owner's request.
+- Kept all `Son 14 gün` labels, stale-data warning, API metadata, and refresh behavior unchanged.
+- Integration verification passed: Go tests/vet/gofmt, isolated ClickHouse integration, 166 frontend
+  tests, typecheck, lint, production build and repository-wide Prettier. Wider issue #27 follow-ups
+  remain open; this is not production-scale performance acceptance.
+
+## Previous (profile loading and verification, issue #27)
 
 - User/channel profiles use animated, responsive skeletons with accessible status and reduced-motion
   support. Profile all-time queries, loaded views and `/search` remain unchanged.

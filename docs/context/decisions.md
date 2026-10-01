@@ -1,5 +1,10 @@
 # Decisions
 
+## 2026-10-01 (homepage copy simplification)
+
+- **Hide explicit snapshot timestamps in the UI.** Keep `Son 14 gün` and the stale notice, but remove
+  the date-range/update text. API `start`, `end`, `as_of` and cache behavior remain unchanged.
+
 ## 2026-10-01 (profile waiting experience)
 
 - **Profile work is visual only in this pass.** Keep all-time metrics and APIs. Replace the plain
