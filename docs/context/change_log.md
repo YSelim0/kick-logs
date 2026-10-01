@@ -2,6 +2,15 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (issue 28 locale foundation)
+
+- Added pinned next-intl, validated cookie/header/English negotiation, public/admin catalog scopes,
+  stable client state and SSR configuration without changing URLs. Added localized metadata support.
+- Added timezone-aware display formatters, semantic UI error mapping, ICU/parity checks and real
+  provider tests covering hydration, request races, failed loads and blocked cookies.
+- Prepared existing component tests with explicit locale wrappers and added frontend validation CI.
+- No source-content translation, database changes, ingestion changes or production deployment.
+
 ## 2026-10-02 (issue 28 implementation plan)
 
 - Owner approved the localization design. Added ten task-sized implementation/verification units

@@ -1,0 +1,35 @@
+{
+  "actions": {
+    "close": "Close",
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "search": "Search",
+    "reset": "Reset",
+    "download": "Download",
+    "refresh": "Refresh",
+    "loading": "Loading…",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "open": "Open",
+    "logout": "Sign out"
+  },
+  "errors": {
+    "invalidCredentials": "The email or password is incorrect.",
+    "sessionExpired": "Your session has expired. Please sign in again.",
+    "forbidden": "You do not have permission to perform this action.",
+    "notFound": "The requested record was not found.",
+    "conflict": "This change conflicts with an existing record.",
+    "invalidInput": "Check the information you entered.",
+    "rateLimited": "Too many requests. Please wait before trying again.",
+    "network": "Unable to connect. Check your connection and try again.",
+    "unavailable": "Something went wrong. Please try again.",
+    "languageSwitch": "The language could not be loaded. Please try again."
+  },
+  "metadata": {
+    "description": "Search Kick chat history, explore channel activity and track recorded subscriptions."
+  },
+  "language": { "label": "Language", "choose": "Change language" }
+}

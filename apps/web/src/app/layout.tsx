@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import { Suspense } from "react";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 
 import "./globals.css";
 import { NavigationProgress } from "@/components/navigation-progress";
+import { LocaleProvider } from "@/i18n/locale-provider";
 
-export const metadata: Metadata = {
+const sharedMetadata: Metadata = {
   title: "Kick Logs",
-  description: "Self-hosted Kick chat log search",
   manifest: "/site.webmanifest",
   icons: {
     icon: [
@@ -21,18 +22,27 @@ export const metadata: Metadata = {
   }
 };
 
-export default function RootLayout({
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common.metadata");
+  return { ...sharedMetadata, description: t("description") };
+}
+
+export default async function RootLayout({
   children
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
   return (
-    <html lang="tr" className={`dark ${GeistSans.variable} ${GeistMono.variable}`}>
+    <html lang={locale} className={`dark ${GeistSans.variable} ${GeistMono.variable}`}>
       <body>
-        <Suspense>
-          <NavigationProgress />
-        </Suspense>
-        {children}
+        <LocaleProvider initialLocale={locale} initialMessages={messages}>
+          <Suspense>
+            <NavigationProgress />
+          </Suspense>
+          {children}
+        </LocaleProvider>
       </body>
     </html>
   );

@@ -366,6 +366,20 @@ Frontend rules:
 - `lib/api-client.ts` owns base URL, credentials, and response handling.
 - UI work must follow `docs/design/design.md`.
 
+## Localization
+
+The web app uses request-scoped `next-intl` without locale URL segments. The validated
+`kick_logs_locale` cookie wins over supported `Accept-Language` preferences; English is the fallback.
+Page responses are private/no-store and vary by Cookie and Accept-Language. Asset and API caches
+are not changed. Initial server/client catalogs match; browser timezone is applied after hydration.
+
+`src/i18n/locale-provider.tsx` switches catalogs in place, with latest-selection-wins loading and
+best-effort cookie persistence. No page reload, route replacement or data request is needed. Common
+and public catalogs are available globally; admin catalogs are loaded only for admin scope.
+Catalogs are under `src/i18n/messages/{en,tr,de}`. Add matching keys and ICU arguments in all three
+languages; tests validate raw catalog parity and syntax. Use semantic error keys for UI failures.
+Do not translate source data or derive query timestamps/timezone from the selected language.
+
 ## Verification
 
 Primary Go checks:

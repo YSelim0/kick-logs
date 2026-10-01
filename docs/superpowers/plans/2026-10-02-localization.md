@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-02-localization-design.md` (owner approved).
 
-**Status:** Ready for plan review; no implementation tasks completed yet.
+**Status:** Owner approved inline execution. Task 1 completed; Tasks 2-10 pending.
 
 ## Global Constraints
 
@@ -112,7 +112,7 @@ test renderer; create `.github/workflows/web-tests.yml`.
 admin scope adds admin. Modules may cache immutable catalogs by locale/scope, never a global
 "current language". Initial provider props come from the same request resolver as metadata.
 
-- [ ] Write `resolve-locale.test.ts` with these exact expectations plus malformed/absent headers,
+- [x] Write `resolve-locale.test.ts` with these exact expectations plus malformed/absent headers,
       duplicate preferences, regional tags, wildcards, equal priorities and invalid cookie values:
 
 ```ts
@@ -122,32 +122,32 @@ expect(resolveLocale(undefined, "tr;q=0, en-US;q=0.8")).toBe("en");
 expect(resolveLocale("../../other", "pt-BR")).toBe("en");
 ```
 
-- [ ] Add provider tests for identical SSR/hydrated copy, blocked cookie writes, fallback catalog,
+- [x] Add provider tests for identical SSR/hydrated copy, blocked cookie writes, fallback catalog,
       preserved child input state and out-of-order catalog completion. Add error-key tests for 401,
       403, 404, 409, 422, 429, network/unknown errors, without displaying raw exceptions.
-- [ ] Run `pnpm --filter @kick-logs/web test -- src/i18n` and observe the expected missing-module failures.
-- [ ] Pin a peer-compatible `next-intl` version through pnpm; implement resolver, explicit catalog
+- [x] Run `pnpm --filter @kick-logs/web test -- src/i18n` and observe the expected missing-module failures.
+- [x] Pin a peer-compatible `next-intl` version through pnpm; implement resolver, explicit catalog
       loaders and stable provider. Initialize the cookie through middleware on page requests only;
       manual selection writes the same validated cookie from the browser. Catch blocked cookie writes
       and retain session state. Do not add a preference API or require authentication.
-- [ ] Implement atomic locale/catalog changes: preload the requested scope, ignore superseded
+- [x] Implement atomic locale/catalog changes: preload the requested scope, ignore superseded
       transitions, then update provider, document language/metadata and cookie together. No hard reload,
       route replacement or API fetch. Failed catalog loads leave the previous locale usable.
-- [ ] Configure root SSR metadata/lang with the selected locale. Middleware must not intercept Go/API
+- [x] Configure root SSR metadata/lang with the selected locale. Middleware must not intercept Go/API
       paths, Next assets or public files. Preserve existing Vary values and prevent shared HTML/RSC caching;
       confirm real headers in Task 10. Leave analytics and asset caches alone.
-- [ ] Implement locale formatters and semantic error keys. Form/API state stores keys/raw failure
+- [x] Implement locale formatters and semantic error keys. Form/API state stores keys/raw failure
       context, not already-translated prose. Freeze now/timezone in tests; don't derive timezone from locale.
-- [ ] Wrap existing component tests with `renderWithLocale(ui, {locale: "tr"})` explicitly so later
+- [x] Wrap existing component tests with `renderWithLocale(ui, {locale: "tr"})` explicitly so later
       shared-header hooks have a real provider without breaking unrelated suites. Support optional `scope`
       and normal RTL render options; preserve the wrapper on rerender. Do not globally mock translation
       hooks or change the product's English fallback to satisfy legacy Turkish test assertions.
-- [ ] Add catalog tests using an established ICU parser for equal leaf keys, valid syntax, matching
+- [x] Add catalog tests using an established ICU parser for equal leaf keys, valid syntax, matching
       argument names/types and required plural `other` branches. Allow legitimate locale-specific plural
       categories. Test the checker with deliberately invalid fixtures as well as real catalogs.
-- [ ] Add a Node 20 / pnpm 8.11.0 frontend workflow using frozen-lockfile install and the frontend gate.
+- [x] Add a Node 20 / pnpm 8.11.0 frontend workflow using frozen-lockfile install and the frontend gate.
       Ensure typecheck has generated Next types or runs in an order that succeeds on a clean checkout.
-- [ ] Run the frontend gate; update architecture/contributor guidance for adding translated copy and
+- [x] Run the frontend gate; update architecture/contributor guidance for adding translated copy and
       commit only this tested shared foundation, including required context.
 
 ## Task 2: Flag Popover And Shared Chrome

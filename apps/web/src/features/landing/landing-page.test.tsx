@@ -1,4 +1,6 @@
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { createLocaleRenderer } from "@/test/render-with-locale";
+const render = createLocaleRenderer("tr", "admin");
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { HomepageResponse, HomepageSnapshot } from "@/features/landing/api";

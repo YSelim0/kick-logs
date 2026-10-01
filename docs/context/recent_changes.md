@@ -2,7 +2,19 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue 28 plan, no runtime implementation yet)
+## Latest (issue 28 locale foundation)
+
+- Owner approved inline execution of the ten-task plan. Task 1 adds next-intl, request-scoped locale
+  resolution, EN/TR/DE catalogs, atomic client switching, cookie persistence and cache safeguards.
+- Shared formatting preserves timezone/query semantics; errors map HTTP status/context to product
+  keys. Component tests now use explicit Turkish providers, and a frontend CI workflow was added.
+- Screen translations and the visible flag selector follow in later commits. This is an intermediate
+  branch state, not the completed issue. No backend/database/container changes or push.
+- Verification: 34 frontend test files / 221 tests, typecheck, lint, production build, repository
+  Prettier and diff checks passed. next-intl is pinned to 4.3.12 to avoid an unused newer SWC compiler
+  dependency that failed the Windows native-cache ACL check; no filesystem permissions were weakened.
+
+## Previous (issue 28 plan)
 
 - Active branch: `feat/issue-28-localization`, created from local `dev` at `d7910fe`. No push;
   owner approval is required before merging back to `dev`.

@@ -1,5 +1,17 @@
 # Decisions
 
+## 2026-10-02 (issue 28 locale foundation)
+
+- Pin next-intl 4.3.12 without upgrading Next/React. Version 4.14.8's unused extraction compiler
+  loads SWC native bindings that reject the host's Windows cache ACL. The selected compatible
+  version avoids that dependency rather than weakening filesystem security. Translate through request-scoped catalogs,
+  with a stable client provider and host-only preference cookie; blocked cookies do not break switching.
+- Latest selection wins concurrent catalog loads. Failed loads retain the previous working locale.
+  SSR begins with UTC formatting and matching locale/messages; browser timezone applies after hydration.
+- Protect personalized HTML/RSC from shared caches, but do not alter API/asset cache behavior.
+- Add frontend CI alongside existing checks. Tests use real language providers and validate raw ICU
+  catalogs, including invalid fixtures; no global translation mocks.
+
 ## 2026-10-02 (issue 28 localization design)
 
 - **No locale URLs.** English, Turkish and German use the existing routes; preference cookie wins

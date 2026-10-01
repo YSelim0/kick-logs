@@ -1,4 +1,6 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
+import { createLocaleRenderer } from "@/test/render-with-locale";
+const render = createLocaleRenderer("tr", "admin");
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PredictionAnalysisPage } from "@/features/prediction/prediction-analysis-page";

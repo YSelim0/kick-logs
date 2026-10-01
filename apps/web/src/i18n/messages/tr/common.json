@@ -1,0 +1,35 @@
+{
+  "actions": {
+    "close": "Kapat",
+    "retry": "Tekrar dene",
+    "cancel": "Vazgeç",
+    "save": "Kaydet",
+    "saving": "Kaydediliyor…",
+    "search": "Ara",
+    "reset": "Sıfırla",
+    "download": "İndir",
+    "refresh": "Yenile",
+    "loading": "Yükleniyor…",
+    "back": "Geri",
+    "next": "Sonraki",
+    "previous": "Önceki",
+    "open": "Aç",
+    "logout": "Çıkış yap"
+  },
+  "errors": {
+    "invalidCredentials": "E-posta veya parola hatalı.",
+    "sessionExpired": "Oturumunuz sona erdi. Lütfen yeniden giriş yapın.",
+    "forbidden": "Bu işlem için yetkiniz yok.",
+    "notFound": "İstenen kayıt bulunamadı.",
+    "conflict": "Bu değişiklik mevcut bir kayıtla çakışıyor.",
+    "invalidInput": "Girdiğiniz bilgileri kontrol edin.",
+    "rateLimited": "Çok fazla istek gönderildi. Tekrar denemeden önce biraz bekleyin.",
+    "network": "Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.",
+    "unavailable": "Bir sorun oluştu. Lütfen tekrar deneyin.",
+    "languageSwitch": "Dil yüklenemedi. Lütfen tekrar deneyin."
+  },
+  "metadata": {
+    "description": "Kick sohbet geçmişinde arama yapın, kanal etkinliğini ve kayıtlı abonelikleri inceleyin."
+  },
+  "language": { "label": "Dil", "choose": "Dili değiştir" }
+}

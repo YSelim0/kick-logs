@@ -7,8 +7,9 @@ implementation details, or working assumptions change.
 
 - Active work: issue #28 on local `feat/issue-28-localization`, based on `dev` at `d7910fe`.
   Written design is approved: `docs/superpowers/specs/2026-10-02-localization-design.md`.
-  The plan in `docs/superpowers/plans/2026-10-02-localization.md` awaits review and execution-method
-  confirmation; localization is not implemented yet. No push or merge without owner approval.
+  The owner approved `docs/superpowers/plans/2026-10-02-localization.md` and inline execution.
+  Shared next-intl foundation is implemented; screen translations are still pending. No push or merge
+  without owner approval. Feature commits are local and intermediate states are not deployment-ready.
 - Localization targets EN/TR/DE on unchanged URLs, product copy only, cookie/browser/English
   resolution, and the owner's fixed bottom-right current-flag popover with native language names.
 - Issue #27 is closed. The owner approved the narrower SQL-only profile follow-up from #29 on
