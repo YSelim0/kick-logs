@@ -1,5 +1,16 @@
 # Decisions
 
+## 2026-10-01 (ClickHouse diagnostic storage)
+
+- **Routine query/system-log history is disabled in Compose.** Keep the small VPS disk budget for
+  application data rather than indefinite diagnostic tables and profiling samples.
+- **Do not suppress actionable errors.** Keep warning/error text logs with bounded rotation, live
+  system metrics, and crash/backup logs. Historical query dashboards lose new data by design.
+- **Existing history cleanup is explicit and optional.** Disabling collectors does not delete old
+  log rows. Never remove application tables or volumes to reclaim diagnostic storage.
+- **Deploy requires container recreation.** New XML mounts and Docker logging options do not take
+  effect through a plain restart; follow `docs/operations/clickhouse_logging.md`.
+
 ## 2026-06-14 (active channel subscribers)
 
 - **Active subscriber detail is public on channel profiles.** `/channels/{slug}` lets visitors open

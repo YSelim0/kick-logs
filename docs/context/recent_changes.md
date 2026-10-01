@@ -2,6 +2,19 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
+## Latest (ClickHouse logging controls)
+
+- Added individually mounted server/profile XML overrides to disable routine query/profiling and
+  high-volume system-log history without changing application tables or query behavior.
+- Kept server warning/error diagnostics with 10 MiB rotation and three archives; bounded the
+  ClickHouse container's Docker console logs to three 10 MiB files.
+- Added `docs/operations/clickhouse_logging.md` for deployment, verification, explicit opt-in
+  historical log cleanup, and rollback. No database cleanup or service restart was performed.
+- Compose configuration validation, XML parsing, and diff whitespace checks passed. Runtime
+  verification remains pending because Docker Desktop's Linux engine is unavailable.
+- Follow-up work is tracked separately in English: performance issue #27, then i18n issue #28.
+  No issue branches or implementation changes for those features were created.
+
 ## Latest (subscription expiry fallback)
 
 - Changed Kick webhook subscription normalization fallback expiry from `created_at + 30d` to

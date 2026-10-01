@@ -35,6 +35,16 @@ implementation details, or working assumptions change.
   - `raw_kick_events`: 121664
   - `raw_event_attempts`: 121664
 
+## ClickHouse Logging Policy
+
+- Compose individually mounts `clickhouse/config.d/logging.xml` and
+  `clickhouse/users.d/logging.xml` to disable routine query/profiling/system-log history.
+- Warning/error text logs remain available with rotation; Docker console logs are capped separately.
+  Live system metrics and application history are unaffected.
+- Existing diagnostic tables are not automatically deleted. Deployment, optional scoped cleanup,
+  and rollback are documented in `docs/operations/clickhouse_logging.md`.
+- Runtime verification is pending until Docker is available; static Compose and XML checks passed.
+
 ## User Request Form Backend
 
 - Active implementation plan now targets a public request form for two request types:

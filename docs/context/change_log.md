@@ -2,6 +2,17 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-01 (ClickHouse logging controls)
+
+- Added `clickhouse/config.d/logging.xml` and `clickhouse/users.d/logging.xml` to disable routine
+  query/system history collectors and query profiling in the default user profile.
+- Mounted the overrides individually through Compose, preserving the image's own configuration.
+- Kept warning/error text diagnostics with file rotation and added bounded Docker console logging.
+- Added a deployment/verification/rollback runbook with optional, explicitly scoped system-log
+  cleanup. Existing application data and historical logs were not modified.
+- Verified Compose configuration, XML syntax, and diff whitespace. ClickHouse runtime testing could
+  not run because Docker Desktop's Linux engine was unavailable.
+
 ## 2026-07-06 (subscription expiry fallback)
 
 - Updated Kick webhook subscription normalization so any subscription event without a Kick-provided
