@@ -2,6 +2,17 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (issue 28 localization design)
+
+- Created local `feat/issue-28-localization` from `dev` at `d7910fe`; baseline frontend validation
+  passed with 28 files and 168 tests before documentation changes.
+- Inspected shared layout, public/admin chrome, fixed-locale formatters, API errors, subscriber TXT
+  export and supplied flags. Recorded the unchanged-URL localization design for written review.
+- Recorded the owner's reference interaction: collapsed current flag, upward language-name/flag
+  menu, selected-row highlight, in-place language switch and cookie persistence.
+- Updated design/context guidance only; no product code, dependencies, data or running containers
+  changed. The reference screenshot and external flag assets were not added to the repository.
+
 ## 2026-10-02 (channel search empty-result prompt)
 
 - Replaced the plain `/channels` no-results message with a compact inline panel, quoted submitted

@@ -2,6 +2,20 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
+## Latest (issue 28 design, no runtime implementation yet)
+
+- Active branch: `feat/issue-28-localization`, created from local `dev` at `d7910fe`. No push;
+  owner approval is required before merging back to `dev`.
+- Written design: `docs/superpowers/specs/2026-10-02-localization-design.md`, awaiting review.
+  Next step is the detailed implementation plan after design approval, then feature-sized work.
+- Owner confirmed a fixed bottom-right square current-flag button that opens upward to native
+  language names and flags. Selecting updates the interface/flag, saves preference and closes it.
+  Keep existing URLs, user content, form/query state and dark theme. Languages: EN/TR/DE.
+- Baseline frontend tests passed: 28 files / 168 tests. No source/dependency/database/runtime
+  changes yet. Supplied SVG assets remain in the external `language-flags` folder for later copying.
+- Issue #29 was closed at the owner's request; production performance observation is manual,
+  not a claim that every former follow-up task was implemented.
+
 ## Latest (channel search request prompt)
 
 - `/channels` now shows an inline panel when a submitted search succeeds with zero results. It

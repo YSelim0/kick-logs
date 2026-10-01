@@ -1,5 +1,19 @@
 # Decisions
 
+## 2026-10-02 (issue 28 localization design)
+
+- **No locale URLs.** English, Turkish and German use the existing routes; preference cookie wins
+  over supported browser language, with English fallback. Translate interface copy, not source data.
+- **Use the owner's flag popover interaction.** One fixed square current-flag button at bottom-right
+  opens upward to native language names and flags. Selecting closes it and updates the trigger.
+  This supersedes the issue's older text-only navigation selector requirement.
+- **Keep language switching independent of data fetching.** Preserve route/query/form/result state,
+  datetime boundaries and prediction polling. Use the existing dark tokens, not the reference hue.
+- **Work on one local issue branch.** `feat/issue-28-localization` starts from `dev` at `d7910fe`;
+  feature-sized commits, no push, and no merge before final owner approval.
+- Written design is awaiting review in `docs/superpowers/specs/2026-10-02-localization-design.md`.
+  No localization runtime code or dependencies have been added yet.
+
 ## 2026-10-02 (channel search request prompt)
 
 - **Use an inline empty-result panel, not a modal.** Only a successful empty `/channels` search

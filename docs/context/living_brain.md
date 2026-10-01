@@ -5,10 +5,14 @@ implementation details, or working assumptions change.
 
 ## Current State
 
-- Integration target: `dev`; issue #27's approved first-pass changes were developed on
-  `feat/issue-27-analytics-performance` from `dev`.
-- Issue #27 is closed. The owner approved the narrower SQL-only profile follow-up from #29 directly
-  on `dev`, in the existing workspace. Issue #29's broader acceptance/backfill work remains open.
+- Active work: issue #28 on local `feat/issue-28-localization`, based on `dev` at `d7910fe`.
+  Written design is in `docs/superpowers/specs/2026-10-02-localization-design.md`, awaiting review;
+  localization is not implemented yet. No push or merge without owner approval.
+- Localization targets EN/TR/DE on unchanged URLs, product copy only, cookie/browser/English
+  resolution, and the owner's fixed bottom-right current-flag popover with native language names.
+- Issue #27 is closed. The owner approved the narrower SQL-only profile follow-up from #29 on
+  `dev`, then closed #29 in favor of manual production observation. Broader follow-ups are deferred,
+  not claimed implemented. Existing query improvements remain in place.
 - Active architecture: JetStream durable ingestion (see `docs/implementation_plan.md`, issue #23).
   Live chat ingestion now runs as `listener -> NATS JetStream -> processor -> ClickHouse`, with
   SQLite used for control-plane state only.

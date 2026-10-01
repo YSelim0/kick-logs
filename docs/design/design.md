@@ -12,6 +12,26 @@ conversation changes search UI, admin UI, visual style, routing, or frontend beh
 
 Do not commit screenshots or exported images unless explicitly requested.
 
+## Localization (Issue 28 Target)
+
+This is the approved interaction direction, not implemented UI yet. Full design:
+`docs/superpowers/specs/2026-10-02-localization-design.md`.
+
+- Support English, Turkish and German without locale-prefixed URLs. Resolve saved preference,
+  then supported device/browser language, then English. Persist the preference in a cookie.
+- Translate product-owned copy only; never translate chat, replies, channel/user names or Kick
+  prediction titles/outcomes. All public and admin screens are in scope.
+- Use one fixed square flag button at the bottom-right. Its collapsed state shows the current
+  language's flag only. Clicking opens a compact menu above it, aligned right.
+- Menu rows show a flag plus `Türkçe`, `English`, or `Deutsch`, with a highlighted current choice.
+  Selecting a row changes language and trigger flag, saves the preference and closes the menu.
+- Close on outside click, Escape or trigger toggle. Support keyboard navigation and accessible
+  labels/selected state. This is a popover, not a blocking dialog or fullscreen overlay.
+- Preserve current URL, entered filters/forms and loaded data. Do not hard-reload on language change.
+- Use existing dark tokens and 6px/8px control/menu corners, without blur or glow. Respect mobile
+  safe areas, reduced motion and higher-priority dialogs; ensure bottom controls remain reachable.
+- Use the supplied SVG flags through `apps/web/public/language-flags/`. Do not commit the screenshot.
+
 ## Routes
 
 - `/search`: public primary application search screen. No login required.
