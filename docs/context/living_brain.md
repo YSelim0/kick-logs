@@ -5,7 +5,7 @@ implementation details, or working assumptions change.
 
 ## Current State
 
-- Branch: `dev`.
+- Branch: `feat/issue-27-analytics-performance`, based on `dev`.
 - Active architecture: JetStream durable ingestion (see `docs/implementation_plan.md`, issue #23).
   Live chat ingestion now runs as `listener -> NATS JetStream -> processor -> ClickHouse`, with
   SQLite used for control-plane state only.
@@ -35,6 +35,18 @@ implementation details, or working assumptions change.
   - `raw_kick_events`: 121664
   - `raw_event_attempts`: 121664
 
+## Public Identity Directory (issue #27)
+
+- `/users` and `/channels` use `GET /directory/users` and `GET /directory/channels`.
+- Lookup reads indexed SQLite `sender_profiles` / `followed_channels` metadata, not chat history.
+  Disabled followed channels remain discoverable; users require an existing sender-profile cache
+  entry. No historical identity backfill or remote Kick lookup runs during search.
+- Prefix-only matching on name/slug, normalized `_`/`-` variants, minimum two characters.
+  Results sort by normalized slug then id, with 50-row pages and opaque continuation cursors.
+- Directory rows show identity/avatar only, not all-time message counts or activity timestamps.
+- SQLite migration 9 adds four expression indexes. Existing message/subscription data is unchanged.
+- `/search` and the all-time profile analytics contracts remain unchanged.
+
 ## ClickHouse Logging Policy
 
 - Compose individually mounts `clickhouse/config.d/logging.xml` and
@@ -43,7 +55,8 @@ implementation details, or working assumptions change.
   Live system metrics and application history are unaffected.
 - Existing diagnostic tables are not automatically deleted. Deployment, optional scoped cleanup,
   and rollback are documented in `docs/operations/clickhouse_logging.md`.
-- Runtime verification is pending until Docker is available; static Compose and XML checks passed.
+- Runtime verified on isolated ClickHouse 24.8: existing diagnostic rows stopped growing, live
+  metrics remained available, and application fixture rows survived restart and opt-in log cleanup.
 
 ## User Request Form Backend
 

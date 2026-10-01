@@ -2,6 +2,16 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-01 (indexed user/channel directories)
+
+- Added public prefix directory APIs backed solely by SQLite identity metadata, with indexed
+  ranges, escaped literal input, bounded pages, validated query-bound cursors, and rate limits.
+- Added SQLite migration 9 for name/slug expression indexes; no chat-history migration required.
+- Updated both index pages to show identity-only results and append pages on demand.
+- Added backend route/repository/use-case and frontend behavior tests, including query-plan checks.
+- Follow-up verification of the earlier logging change passed on an isolated ClickHouse 24.8
+  container with fixture data. No real application tables or volumes were modified.
+
 ## 2026-10-01 (ClickHouse logging controls)
 
 - Added `clickhouse/config.d/logging.xml` and `clickhouse/users.d/logging.xml` to disable routine

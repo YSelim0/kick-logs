@@ -173,6 +173,8 @@ POST /admin/data-management/cleanup/preview
 POST /admin/data-management/cleanup/confirm
 
 GET /analytics/overview
+GET /directory/users
+GET /directory/channels
 GET /analytics/message-volume
 GET /analytics/top-senders
 GET /analytics/top-channels

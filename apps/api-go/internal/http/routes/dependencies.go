@@ -11,6 +11,7 @@ import (
 	authusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/auth"
 	channelsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/channels"
 	datamanagementusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/data_management"
+	directoryusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/directory"
 	kicksyncusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/kicksync"
 	messagesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/messages"
 	profilesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/profiles"
@@ -25,6 +26,7 @@ type Dependencies struct {
 	Messages            *messagesusecase.Service
 	Profiles            *profilesusecase.Service
 	Data                *datamanagementusecase.Service
+	Directory           *directoryusecase.Service
 	KickSync            *kicksyncusecase.Service
 	Requests            *requestsusecase.Service
 	WebhookEvents       ports.KickWebhookEventRepository

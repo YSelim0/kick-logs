@@ -1,5 +1,17 @@
 # Decisions
 
+## 2026-10-01 (public directory lookup)
+
+- **Directory search is identity lookup, not analytics.** Match name/slug prefixes from existing
+  SQLite metadata with expression indexes. Never count or group chat history on this path.
+- **Keep explicit submit.** Two-character minimum, 50-row default / 100-row API maximum, keyset
+  pagination, and a dedicated rate-limit bucket shared by the two directory routes.
+- **Do not imply historical totals.** Remove message count and last-message columns rather than
+  replacing them with approximate values. Alphabetical identity order replaces activity ranking.
+- **Keep historical data and existing APIs.** Disabled channels remain searchable. Metadata-only
+  lookup cannot discover a sender missing from `sender_profiles`; no automatic archive scan is
+  introduced. Existing analytics consumers, profiles, and `/search` keep their contracts.
+
 ## 2026-10-01 (ClickHouse diagnostic storage)
 
 - **Routine query/system-log history is disabled in Compose.** Keep the small VPS disk budget for

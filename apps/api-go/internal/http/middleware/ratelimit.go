@@ -136,6 +136,16 @@ func DefaultPolicies(trustProxy bool, clientIPHeader string) []RateLimitPolicy {
 			MaxBurst:      2,
 		},
 		{
+			Name: "directory",
+			Match: func(method, path string) bool {
+				return method == "GET" && (path == "/directory/users" || path == "/directory/channels")
+			},
+			Key:           ip,
+			PerPeriod:     60,
+			PeriodSeconds: 60,
+			MaxBurst:      15,
+		},
+		{
 			Name:          "analytics",
 			Match:         prefixMatch("GET", "/analytics/"),
 			Key:           ip,

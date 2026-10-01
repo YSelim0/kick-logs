@@ -2,7 +2,15 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (ClickHouse logging controls)
+## Latest (indexed identity directories, issue #27)
+
+- `/users` and `/channels` now use SQLite-backed `/directory/users` and `/directory/channels`.
+- Search matches name/slug prefixes rather than arbitrary substrings; `_` and `-` are normalized.
+- Explicit submit, alphabetic identity order, cursor pagination, no history counts/activity fields.
+- Migration 9 adds four metadata expression indexes; existing data and `/search` are unchanged.
+- Directory coverage is the existing metadata cache, not a new scan/backfill of all chat history.
+
+## Previous (ClickHouse logging controls)
 
 - Added individually mounted server/profile XML overrides to disable routine query/profiling and
   high-volume system-log history without changing application tables or query behavior.
@@ -10,10 +18,9 @@ This file is the short handoff summary of the latest project changes. Keep it co
   ClickHouse container's Docker console logs to three 10 MiB files.
 - Added `docs/operations/clickhouse_logging.md` for deployment, verification, explicit opt-in
   historical log cleanup, and rollback. No database cleanup or service restart was performed.
-- Compose configuration validation, XML parsing, and diff whitespace checks passed. Runtime
-  verification remains pending because Docker Desktop's Linux engine is unavailable.
-- Follow-up work is tracked separately in English: performance issue #27, then i18n issue #28.
-  No issue branches or implementation changes for those features were created.
+- Compose validation, XML parsing, and isolated ClickHouse 24.8 runtime verification passed after
+  Docker became available. Historical log cleanup was tested only on disposable fixture data.
+- Follow-up work: performance issue #27 on `feat/issue-27-analytics-performance`, then i18n #28.
 
 ## Latest (subscription expiry fallback)
 

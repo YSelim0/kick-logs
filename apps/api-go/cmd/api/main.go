@@ -28,6 +28,7 @@ import (
 	authusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/auth"
 	channelsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/channels"
 	datamanagementusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/data_management"
+	directoryusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/directory"
 	kicksyncusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/kicksync"
 	messagesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/messages"
 	profilesusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/profiles"
@@ -189,6 +190,7 @@ func main() {
 		Messages:            messageService,
 		Profiles:            profileService,
 		Data:                dataManagementService,
+		Directory:           directoryusecase.NewService(sqliteinfra.NewDirectoryRepository(sqliteDB)),
 		KickSync:            kickSyncService,
 		Requests:            requestService,
 		WebhookEvents:       webhookEventRepo,

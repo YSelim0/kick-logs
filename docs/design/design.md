@@ -18,11 +18,9 @@ Do not commit screenshots or exported images unless explicitly requested.
 - `/admin`: authenticated admin dashboard for backend operations.
 - `/login`: login screen.
 - `/`: public compact landing page with project positioning and live analytics.
-- `/users`: public user search index. Search-first — empty prompt on load, results populate as
-  the user types.
+- `/users`: public user search index. Search-first, results populate on explicit submit.
 - `/users/[slug]`: public sender profile with identity, analytics, and latest messages.
-- `/channels`: public channel search index. Search-first — empty prompt on load, results populate
-  as the user types.
+- `/channels`: public channel search index. Search-first, results populate on explicit submit.
 - `/channels/[slug]`: public channel profile with stored Kick metadata, analytics, and latest
   messages.
 - `/prediction`: public channel search page for Kick predictions. Search-first — empty prompt on
@@ -38,11 +36,15 @@ Landing must stay product-focused and must not turn into a marketing site.
 
 - Search-first: initial load shows an empty state with a centered icon and a prompt string.
 - Explicit submit only: typing does NOT fire requests. User clicks the `Ara` button or presses
-  Enter to send the query. Debounce-while-typing is intentionally avoided so high-traffic
-  ingestion is not put under additional ClickHouse `LIKE` pressure on every keystroke.
+  Enter to send the query. Typing alone must not create network requests.
 - Submit button is disabled until the trimmed query is at least 2 characters long.
 - Submit button text switches to `Aranıyor…` and is disabled while a request is in flight.
-- Results are ordered by message count (backend default).
+- Prefix-only matching on the name/slug, with case-insensitive ASCII Kick identity matching and
+  `_`/`-` normalization. Search uses indexed identity metadata, not analytics endpoints.
+- Results are alphabetic by normalized slug, then id. Rows show the avatar, name, and profile
+  link; no message totals, activity timestamps, or implied total-match count.
+- Fetch 50 identities per page. `Daha fazla yükle` appends the next cursor page while preserving
+  existing rows; a new submitted query resets pagination.
 - Empty-results state quotes the last submitted query, not the current input value.
 - Loading, empty-results, and error states are all handled.
 - Each result row links to the corresponding profile page.
