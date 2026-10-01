@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-10-02 (channel search request prompt)
+
+- **Use an inline empty-result panel, not a modal.** Only a successful empty `/channels` search
+  offers a link to `/request`. Keep loading, errors, user search and pagination behavior unchanged.
+- **Promise review, not acceptance.** Copy says the request is reviewed within six hours. The link
+  opens the existing form; it does not submit a request or prefill fields.
+
 ## 2026-10-02 (SQL-only profile optimization)
 
 - **Preserve displayed results and all-time scope.** The owner approved query changes, not new

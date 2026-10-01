@@ -46,6 +46,14 @@ Landing must stay product-focused and must not turn into a marketing site.
 - Fetch 50 identities per page. `Daha fazla yükle` appends the next cursor page while preserving
   existing rows; a new submitted query resets pagination.
 - Empty-results state quotes the last submitted query, not the current input value.
+- On `/channels`, successful empty results render an inline dark bordered panel in place of the
+  plain message. Keep the quoted query, explain that channel tracking can be requested, and say
+  `Talebiniz en geç 6 saat içinde incelenir.` This promises review, not channel acceptance.
+- The panel has a primary `Talep gönder` link to `/request`, full-width within its content on mobile.
+  It is not a modal and has no dismiss/open state. Show it only for a completed empty first page,
+  never on initial load, errors, loading or exhausted pagination. New searches replace it normally.
+- `/users` keeps its existing plain empty-result message. No prefilled form or automatic request
+  submission is added by the channel panel.
 - Loading, empty-results, and error states are all handled.
 - Each result row links to the corresponding profile page.
 

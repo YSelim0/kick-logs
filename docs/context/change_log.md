@@ -2,6 +2,14 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (channel search empty-result prompt)
+
+- Replaced the plain `/channels` no-results message with a compact inline panel, quoted submitted
+  query, six-hour review explanation, and primary `Talep gönder` link to the existing `/request`.
+- No modal, additional API call, automatic submission or form prefill. `/users` remains unchanged.
+- Added regression assertions for the link, non-modal behavior and removal on a new search; guarded
+  idle/loading/error/success/pagination cases against incorrectly showing the request prompt.
+
 ## 2026-10-02 (all-time profile query pair)
 
 - Added optional combined profile summary queries using WITH TOTALS and tuple argMax. Overview

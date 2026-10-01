@@ -28,7 +28,7 @@ function deferred() {
 describe.each([
   { kind: "users", Component: UsersIndexPage, api: mocks.getDirectoryUsers },
   { kind: "channels", Component: ChannelsIndexPage, api: mocks.getDirectoryChannels }
-])("$kind directory interaction", ({ Component, api }) => {
+])("$kind directory interaction", ({ kind, Component, api }) => {
   beforeEach(() => {
     vi.resetAllMocks();
     api.mockResolvedValue(page());
@@ -40,6 +40,7 @@ describe.each([
       render(<Component />);
       act(() => vi.advanceTimersByTime(10000));
       expect(api).not.toHaveBeenCalled();
+      expect(screen.queryByRole("link", { name: "Talep gönder" })).not.toBeInTheDocument();
       fireEvent.change(screen.getByRole("searchbox"), { target: { value: "alpha" } });
       act(() => vi.advanceTimersByTime(10000));
       expect(api).not.toHaveBeenCalled();
@@ -71,6 +72,7 @@ describe.each([
     fireEvent.submit(input.closest("form")!);
     expect(screen.getByRole("button", { name: /Aranıyor/ })).toBeDisabled();
     expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Talep gönder" })).not.toBeInTheDocument();
     fireEvent.submit(input.closest("form")!);
     expect(api).toHaveBeenCalledTimes(1);
     await act(async () => pending.resolve(page()));
@@ -84,6 +86,18 @@ describe.each([
     const input = screen.getByRole("searchbox");
     await user.type(input, "missing{Enter}");
     expect(await screen.findByText(/"missing".*bulunamadı/)).toBeInTheDocument();
+    if (kind === "channels") {
+      expect(screen.getByRole("link", { name: "Talep gönder" })).toHaveAttribute(
+        "href",
+        "/request"
+      );
+      expect(screen.getByText(/en geç 6 saat içinde incelenir/)).toBeInTheDocument();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      await user.keyboard("{Escape}");
+      expect(screen.getByRole("link", { name: "Talep gönder" })).toBeInTheDocument();
+    } else {
+      expect(screen.queryByRole("link", { name: "Talep gönder" })).not.toBeInTheDocument();
+    }
     await user.clear(input);
     await user.type(input, "unsent");
     expect(screen.getByText(/"missing".*bulunamadı/)).toBeInTheDocument();
@@ -96,9 +110,32 @@ describe.each([
     render(<Component />);
     await user.type(screen.getByRole("searchbox"), "alpha{Enter}");
     expect(await screen.findByRole("alert")).toHaveTextContent(/Sonuçlar alınamadı/);
+    expect(screen.queryByRole("link", { name: "Talep gönder" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Ara" }));
     expect(await screen.findByRole("link", { name: /alpha/ })).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("clears the empty-result request prompt when a new search starts", async () => {
+    const pending = deferred();
+    api
+      .mockResolvedValueOnce({ items: [], next_cursor: null })
+      .mockReturnValueOnce(pending.promise);
+    const user = userEvent.setup();
+    render(<Component />);
+    const input = screen.getByRole("searchbox");
+    await user.type(input, "missing{Enter}");
+    await screen.findByText(/"missing".*bulunamadı/);
+    if (kind === "channels") {
+      expect(screen.getByRole("link", { name: "Talep gönder" })).toBeInTheDocument();
+    }
+    await user.clear(input);
+    await user.type(input, "alpha{Enter}");
+    expect(screen.queryByText(/"missing".*bulunamadı/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Talep gönder" })).not.toBeInTheDocument();
+    await act(async () => pending.resolve(page()));
+    expect(screen.getByRole("link", { name: /alpha/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Talep gönder" })).not.toBeInTheDocument();
   });
 
   it("appends cursor pages for the submitted prefix while retaining previous rows on retry", async () => {
@@ -140,6 +177,7 @@ describe.each([
     expect(more).toBeDisabled();
     await act(async () => pending.resolve({ items: [], next_cursor: null }));
     expect(screen.getByRole("link", { name: /alpha/ })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Talep gönder" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Daha fazla yükle" })).not.toBeInTheDocument();
   });
 

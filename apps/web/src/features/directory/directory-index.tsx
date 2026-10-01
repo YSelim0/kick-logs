@@ -2,11 +2,12 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { ChevronDown, Hash, Loader2, Search, User } from "lucide-react";
+import { ChevronDown, Hash, Loader2, MessageSquarePlus, Search, SearchX, User } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 import { SiteHeader } from "@/components/site-header";
+import { Button } from "@/components/ui/button";
 import {
   useDirectorySearch,
   validDirectoryPrefix
@@ -93,10 +94,40 @@ export function DirectoryIndex({ kind }: { kind: DirectoryKind }) {
             Aranıyor…
           </p>
         ) : null}
-        {directory.state === "empty" ? (
+        {directory.state === "empty" && users ? (
           <p className="py-8 text-[13px] text-muted-foreground" role="status">
-            &quot;{directory.submittedQuery}&quot; için {users ? "kullanıcı" : "kanal"} bulunamadı.
+            &quot;{directory.submittedQuery}&quot; için kullanıcı bulunamadı.
           </p>
+        ) : null}
+        {directory.state === "empty" && !users ? (
+          <section
+            aria-labelledby="channel-empty-title"
+            className="flex max-w-lg gap-3 rounded-lg border border-border bg-panel p-5 sm:p-6"
+          >
+            <SearchX aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+            <div className="min-w-0 flex-1">
+              <h2
+                className="text-[14px] font-semibold leading-6 text-foreground [overflow-wrap:anywhere]"
+                id="channel-empty-title"
+                role="status"
+              >
+                &quot;{directory.submittedQuery}&quot; için kanal bulunamadı.
+              </h2>
+              <p className="mt-2 text-[13px] leading-6 text-muted-foreground">
+                Aradığınız kanalın takip edilmesini istiyorsanız talep gönderebilirsiniz. Talebiniz
+                en geç 6 saat içinde incelenir.
+              </p>
+              <Button
+                asChild
+                className="mt-4 w-full bg-accent text-[13px] text-accent-foreground hover:bg-accent-hover sm:w-auto"
+              >
+                <Link href="/request">
+                  <MessageSquarePlus aria-hidden className="h-4 w-4" />
+                  Talep gönder
+                </Link>
+              </Button>
+            </div>
+          </section>
         ) : null}
         {directory.items.length > 0 ? (
           <section

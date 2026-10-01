@@ -2,7 +2,20 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (all-time profile query optimization, issue #29)
+## Latest (channel search request prompt)
+
+- `/channels` now shows an inline panel when a submitted search succeeds with zero results. It
+  quotes the submitted query, promises review within six hours (not guaranteed addition), and links
+  to `/request` through `Talep gönder`. There is no modal, dismissal or new backend request.
+- Mobile CTA fills the content width; long queries wrap. User search and other search states keep
+  their behavior. The request form itself is unchanged and receives no automatic prefill/submission.
+- Design rules and regression coverage were updated in the same change.
+- Validation: 168 frontend tests, typecheck, lint, production Docker build and full Prettier passed.
+  Desktop empty-result rendering was inspected in the browser. Mobile screenshot verification was
+  blocked by an unresponsive browser tool; do not treat it as visually signed off. Local web was
+  rebuilt at `http://localhost:3101/channels`. The owner approved committing this change on `dev`.
+
+## Previous (all-time profile query optimization, issue #29)
 
 - Work continues directly on `dev` in the same folder at the owner's request.
 - Profile overview and top-five counterpart ranking share one ClickHouse history scan through an
