@@ -31,5 +31,35 @@
   "metadata": {
     "description": "Search Kick chat history, explore channel activity and track recorded subscriptions."
   },
+  "navigation": {
+    "title": "Main navigation",
+    "search": "Search",
+    "channels": "Channels",
+    "users": "Users",
+    "prediction": "Prediction",
+    "request": "Request",
+    "admin": "Admin",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "profile": {
+    "visitKick": "Visit Kick account",
+    "channel": "Channel profile",
+    "user": "User profile",
+    "channelLoading": "Loading channel profile...",
+    "userLoading": "Loading user profile..."
+  },
+  "notFound": {
+    "title": "Page not found.",
+    "description": "This link may have moved, been removed or never existed. Return to chat search or explore recorded channels and users.",
+    "search": "Search page",
+    "home": "Back to home",
+    "quickLinks": "Quick links",
+    "navigation": "404 quick links",
+    "channels": "Explore recorded channels",
+    "users": "View user profiles",
+    "prediction": "Open prediction panels",
+    "request": "Request a channel or send feedback"
+  },
   "language": { "label": "Language", "choose": "Change language" }
 }

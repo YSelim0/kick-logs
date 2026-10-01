@@ -2,6 +2,14 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (issue 28 language selector)
+
+- Added a 48px fixed flag button, upward native-language menu, selected indication, keyboard
+  controls and outside dismissal. Kept original supplied assets, dark theme and existing route paths.
+- Translated shared navigation, 404, profile-link/loading copy and modal close accessibility label.
+  Reserved bottom scroll space; selector stays below mobile navigation and dialogs.
+- Added switcher/shared-copy tests; checked desktop/mobile rendering and loaded flag assets.
+
 ## 2026-10-02 (issue 28 locale foundation)
 
 - Added pinned next-intl, validated cookie/header/English negotiation, public/admin catalog scopes,

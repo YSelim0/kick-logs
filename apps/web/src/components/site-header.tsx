@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Github, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -15,6 +16,7 @@ type SiteHeaderProps = {
 };
 
 export function SiteHeader({ activeRoute = "search" }: SiteHeaderProps) {
+  const t = useTranslations("common.navigation");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -57,13 +59,13 @@ export function SiteHeader({ activeRoute = "search" }: SiteHeaderProps) {
                 activeRoute !== "request" && "border-transparent text-foreground hover:bg-accent/10"
               )}
             >
-              <Link href="/request">Talep</Link>
+              <Link href="/request">{t("request")}</Link>
             </Button>
             <Button asChild variant="outline" size="sm" className="hidden md:inline-flex">
-              <Link href="/admin">Admin</Link>
+              <Link href="/admin">{t("admin")}</Link>
             </Button>
             <button
-              aria-label={isMenuOpen ? "Menüyü kapat" : "Menüyü aç"}
+              aria-label={t(isMenuOpen ? "closeMenu" : "openMenu")}
               className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-elevated hover:text-foreground md:hidden"
               onClick={() => setIsMenuOpen((v) => !v)}
               type="button"
@@ -82,7 +84,7 @@ export function SiteHeader({ activeRoute = "search" }: SiteHeaderProps) {
           />
           <div className="fixed left-0 right-0 top-14 z-40 border-b border-border bg-page px-6 py-3 md:hidden">
             <nav className="flex flex-col gap-1">
-              {NAV_ITEMS.map(({ route, label, href }) => (
+              {NAV_ITEMS.map(({ route, href }) => (
                 <Link
                   key={route}
                   href={href}
@@ -94,7 +96,7 @@ export function SiteHeader({ activeRoute = "search" }: SiteHeaderProps) {
                       : "text-muted-foreground hover:bg-elevated hover:text-foreground"
                   )}
                 >
-                  {label}
+                  {t(route)}
                 </Link>
               ))}
               <div className="mt-1 border-t border-border pt-1">
@@ -108,14 +110,14 @@ export function SiteHeader({ activeRoute = "search" }: SiteHeaderProps) {
                       : "text-muted-foreground hover:bg-elevated hover:text-foreground"
                   )}
                 >
-                  Talep
+                  {t("request")}
                 </Link>
                 <Link
                   href="/admin"
                   onClick={() => setIsMenuOpen(false)}
                   className="flex h-9 items-center rounded-md px-3 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-elevated hover:text-foreground"
                 >
-                  Admin
+                  {t("admin")}
                 </Link>
               </div>
             </nav>
@@ -126,19 +128,20 @@ export function SiteHeader({ activeRoute = "search" }: SiteHeaderProps) {
   );
 }
 
-type NavItem = { route: NonNullable<ActiveRoute>; label: string; href: string };
+type NavItem = { route: NonNullable<ActiveRoute>; href: string };
 
 const NAV_ITEMS: NavItem[] = [
-  { route: "search", label: "Search", href: "/search" },
-  { route: "channels", label: "Channels", href: "/channels" },
-  { route: "users", label: "Users", href: "/users" },
-  { route: "prediction", label: "Prediction", href: "/prediction" }
+  { route: "search", href: "/search" },
+  { route: "channels", href: "/channels" },
+  { route: "users", href: "/users" },
+  { route: "prediction", href: "/prediction" }
 ];
 
 function NavLinks({ activeRoute }: { activeRoute: ActiveRoute }) {
+  const t = useTranslations("common.navigation");
   return (
-    <nav aria-label="Main navigation" className="flex items-center gap-1">
-      {NAV_ITEMS.map(({ route, label, href }) => (
+    <nav aria-label={t("title")} className="flex items-center gap-1">
+      {NAV_ITEMS.map(({ route, href }) => (
         <Link
           key={route}
           className={cn(
@@ -149,7 +152,7 @@ function NavLinks({ activeRoute }: { activeRoute: ActiveRoute }) {
           )}
           href={href}
         >
-          {label}
+          {t(route)}
         </Link>
       ))}
     </nav>

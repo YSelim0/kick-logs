@@ -3,6 +3,7 @@
 import { X } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 
 export function Dialog({
   open,
@@ -79,8 +80,10 @@ export function DialogDescription({
 }
 
 export function DialogClose({ onClose }: { onClose: () => void }) {
+  const t = useTranslations("common.actions");
   return (
     <button
+      aria-label={t("close")}
       className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
       onClick={onClose}
       type="button"

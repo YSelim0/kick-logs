@@ -7,6 +7,7 @@ import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import "./globals.css";
 import { NavigationProgress } from "@/components/navigation-progress";
 import { LocaleProvider } from "@/i18n/locale-provider";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 const sharedMetadata: Metadata = {
   title: "Kick Logs",
@@ -42,6 +43,7 @@ export default async function RootLayout({
             <NavigationProgress />
           </Suspense>
           {children}
+          <LanguageSwitcher />
         </LocaleProvider>
       </body>
     </html>

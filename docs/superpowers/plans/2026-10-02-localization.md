@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-02-localization-design.md` (owner approved).
 
-**Status:** Owner approved inline execution. Task 1 completed; Tasks 2-10 pending.
+**Status:** Owner approved inline execution. Tasks 1-2 completed; Tasks 3-10 pending.
 
 ## Global Constraints
 
@@ -160,19 +160,19 @@ add/update their adjacent component tests and common catalogs.
 **Interfaces:** Consumes `useLocalePreference`, `Locale` and common translation keys. The selector
 passes admin scope for `/admin` and its children, public otherwise. It never controls page data.
 
-- [ ] Write tests for collapsed current flag, expanded native names, selected-row indication, choice,
+- [x] Write tests for collapsed current flag, expanded native names, selected-row indication, choice,
       outside click, Escape/focus return, trigger toggle, arrow/Home/End keys and disabled duplicate requests.
       Assert trigger size is stable and the popover is not a blocking dialog.
-- [ ] Run `pnpm --filter @kick-logs/web test -- language-switcher` and observe missing-component failure.
-- [ ] Copy the three supplied SVGs unchanged into the public asset folder. Implement the 48px trigger,
+- [x] Run `pnpm --filter @kick-logs/web test -- language-switcher` and observe missing-component failure.
+- [x] Copy the three supplied SVGs unchanged into the public asset folder. Implement the 48px trigger,
       upward right-aligned menu, accessible names/menu-radio semantics and reduced-motion transition.
       Use 16px safe-area-aware edge spacing and a viewport-constrained menu with 44px minimum row targets.
-- [ ] Mount once in root layout. Keep it below dialogs/mobile menus; add bottom clearance so page
+- [x] Mount once in root layout. Keep it below dialogs/mobile menus; add bottom clearance so page
       controls can scroll past it. Translate shared public navigation, 404, Kick link, loading descriptions
       and close-button accessibility names; do not change route hrefs or brand names.
-- [ ] Update existing test assertions for formerly hardcoded English navigation now rendered through
+- [x] Update existing test assertions for formerly hardcoded English navigation now rendered through
       the explicit Turkish provider; retain exact labels and href checks rather than weakening selectors.
-- [ ] Run selector/shared tests and frontend gate. Inspect narrow/desktop open/closed states, then commit.
+- [x] Run selector/shared tests and frontend gate. Inspect narrow/desktop open/closed states, then commit.
 
 ## Task 3: Homepage And Identity Directories
 

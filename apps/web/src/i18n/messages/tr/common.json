@@ -31,5 +31,35 @@
   "metadata": {
     "description": "Kick sohbet geçmişinde arama yapın, kanal etkinliğini ve kayıtlı abonelikleri inceleyin."
   },
+  "navigation": {
+    "title": "Ana menü",
+    "search": "Arama",
+    "channels": "Kanallar",
+    "users": "Kullanıcılar",
+    "prediction": "Tahmin",
+    "request": "Talep",
+    "admin": "Admin",
+    "openMenu": "Menüyü aç",
+    "closeMenu": "Menüyü kapat"
+  },
+  "profile": {
+    "visitKick": "Kick hesabını ziyaret",
+    "channel": "Kanal profili",
+    "user": "Kullanıcı profili",
+    "channelLoading": "Kanal profili yükleniyor...",
+    "userLoading": "Kullanıcı profili yükleniyor..."
+  },
+  "notFound": {
+    "title": "Aradığın sayfa bulunamadı.",
+    "description": "Bu bağlantı taşınmış, silinmiş veya hiç oluşmamış olabilir. Log aramasına dönebilir ya da kayıtlı kanal ve kullanıcı sayfalarını inceleyebilirsin.",
+    "search": "Arama sayfası",
+    "home": "Ana sayfaya dön",
+    "quickLinks": "Hızlı bağlantılar",
+    "navigation": "404 hızlı bağlantılar",
+    "channels": "Loglanan kanalları keşfet",
+    "users": "Kullanıcı profillerine bak",
+    "prediction": "Tahmin panellerini aç",
+    "request": "Kanal veya geri bildirim gönder"
+  },
   "language": { "label": "Dil", "choose": "Dili değiştir" }
 }

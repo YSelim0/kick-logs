@@ -2,7 +2,19 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue 28 locale foundation)
+## Latest (issue 28 language selector and shared chrome)
+
+- Added the owner's fixed 48px flag trigger and upward EN/TR/DE menu, with native names,
+  keyboard navigation, outside/Escape dismissal, pending protection and safe-area spacing.
+- Copied supplied flags unchanged; originals and reference screenshot remain outside the repo.
+  Header links, 404, Kick profile link, profile skeleton announcements and modal close labels now
+  translate in place. Existing routes/source names are unchanged.
+- Desktop and mobile selector visuals were inspected on a separate local preview at port 3102.
+  Full page copy is not yet translated; remaining tasks continue on the same local issue branch.
+- Verification passed: 36 test files / 226 tests, typecheck, lint, production build, Prettier and
+  diff check. Browser checks covered 1440px desktop and 390px mobile, loaded assets and unchanged URL.
+
+## Previous (issue 28 locale foundation)
 
 - Owner approved inline execution of the ten-task plan. Task 1 adds next-intl, request-scoped locale
   resolution, EN/TR/DE catalogs, atomic client switching, cookie persistence and cache safeguards.

@@ -31,5 +31,35 @@
   "metadata": {
     "description": "Durchsuche den Kick-Chatverlauf und entdecke Kanalaktivitäten und erfasste Abonnements."
   },
+  "navigation": {
+    "title": "Hauptnavigation",
+    "search": "Suche",
+    "channels": "Kanäle",
+    "users": "Nutzer",
+    "prediction": "Vorhersage",
+    "request": "Anfrage",
+    "admin": "Admin",
+    "openMenu": "Menü öffnen",
+    "closeMenu": "Menü schließen"
+  },
+  "profile": {
+    "visitKick": "Kick-Konto besuchen",
+    "channel": "Kanalprofil",
+    "user": "Nutzerprofil",
+    "channelLoading": "Kanalprofil wird geladen...",
+    "userLoading": "Nutzerprofil wird geladen..."
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden.",
+    "description": "Dieser Link wurde möglicherweise verschoben oder entfernt oder hat nie existiert. Kehre zur Chatsuche zurück oder entdecke erfasste Kanäle und Nutzer.",
+    "search": "Zur Suche",
+    "home": "Zur Startseite",
+    "quickLinks": "Direktlinks",
+    "navigation": "404-Direktlinks",
+    "channels": "Erfasste Kanäle entdecken",
+    "users": "Nutzerprofile ansehen",
+    "prediction": "Vorhersagen öffnen",
+    "request": "Kanal anfragen oder Feedback senden"
+  },
   "language": { "label": "Sprache", "choose": "Sprache ändern" }
 }
