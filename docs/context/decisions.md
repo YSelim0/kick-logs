@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-10-01 (profile waiting experience)
+
+- **Profile work is visual only in this pass.** Keep all-time metrics and APIs. Replace the plain
+  loading message with a layout-matched skeleton and small spinner; no fabricated counts/progress.
+- **Respect accessibility and stable layout.** Expose a polite loading status and busy region,
+  hide decorative shapes, preserve mobile wrapping, and disable animation under reduced motion.
+
 ## 2026-10-01 (homepage recent-window snapshots)
 
 - **Only the homepage becomes recent-only.** Use 14 UTC calendar days including today, ending at

@@ -2,6 +2,17 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-01 (animated profile loading)
+
+- Added shared responsive user/channel skeletons for identity, metrics, charts and latest messages.
+- Added accessible status/busy semantics and reduced-motion-safe animation. Existing profile APIs,
+  all-time values, loaded content and error/404 states are unchanged.
+- Verified desktop/mobile screenshots and no horizontal overflow with delayed test responses.
+- Final validation: full Go tests, vet, gofmt, isolated ClickHouse integration and both migration
+  smoke commands; 165 frontend tests, typecheck, lint, production build, and full Prettier check.
+- Browser checks used isolated fixture databases, not production data. Directory submit/pagination
+  and homepage period labels were exercised; production-scale load benchmarks remain outstanding.
+
 ## 2026-10-01 (prepared 14-day homepage)
 
 - Added a dedicated homepage service/endpoint and versioned atomic file cache, restored across

@@ -8,6 +8,7 @@ import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 
 import { KickProfileLink } from "@/components/kick-profile-link";
+import { ProfileLoading } from "@/components/profile-loading";
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { getChannelProfile, getChannelSubscriptionSummary } from "@/features/channel-profile/api";
@@ -78,7 +79,7 @@ export function ChannelProfilePage({ slug }: { slug: string }) {
         <Breadcrumb slug={slug} />
 
         <div className="mt-5 space-y-5">
-          {status === "loading" ? <ProfileState message="Kanal profili yükleniyor..." /> : null}
+          {status === "loading" ? <ProfileLoading kind="channel" /> : null}
           {status === "not-found" ? (
             <ProfileState
               actionHref="/search"

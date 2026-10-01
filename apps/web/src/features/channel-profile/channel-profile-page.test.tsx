@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ChannelProfilePage } from "@/features/channel-profile/channel-profile-page";
@@ -151,12 +151,47 @@ describe("ChannelProfilePage", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders loading state", () => {
-    profileMocks.getChannelProfile.mockReturnValue(new Promise(() => undefined));
+  it("keeps the header and breadcrumb available while loading, then replaces the skeleton", async () => {
+    let resolveProfile!: (profile: ChannelProfile) => void;
+    profileMocks.getChannelProfile.mockReturnValue(
+      new Promise<ChannelProfile>((resolve) => {
+        resolveProfile = resolve;
+      })
+    );
 
     render(<ChannelProfilePage slug="hype" />);
 
-    expect(screen.getByText("Kanal profili yükleniyor...")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Kanal profili yükleniyor...");
+    expect(screen.getByRole("region", { name: "Kanal profili" })).toHaveAttribute(
+      "aria-busy",
+      "true"
+    );
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByText("hype")
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /kanalda ara/i })).not.toBeInTheDocument();
+
+    await act(async () => resolveProfile(profileFixture()));
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Kanal profili" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Hype" })).toBeInTheDocument();
+    expect(profileMocks.getChannelProfile).toHaveBeenCalledExactlyOnceWith("hype");
+  });
+
+  it("replaces loading with the existing error and search action", async () => {
+    profileMocks.getChannelProfile.mockRejectedValue(new ApiClientError(500, { detail: "failed" }));
+
+    render(<ChannelProfilePage slug="hype" />);
+
+    expect(await screen.findByText("Kanal profili şu anda alınamadı.")).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Kanal profili" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /search'te ara/i })).toHaveAttribute(
+      "href",
+      "/search?channel=hype"
+    );
   });
 
   it("renders empty profile sections", async () => {
@@ -192,6 +227,7 @@ describe("ChannelProfilePage", () => {
     render(<ChannelProfilePage slug="missing" />);
 
     expect(await screen.findByText("Kanal bulunamadı.")).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /search'e dön/i })).toHaveAttribute("href", "/search");
   });
 });

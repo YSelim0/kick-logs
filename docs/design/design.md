@@ -258,6 +258,13 @@ no card-per-row treatment.
 
 ## User Profile (`/users/[slug]`)
 
+- While loading, use the shared `ProfileLoading` layout: identity/avatar, metric cells, chart/list
+  shapes, and message-row placeholders. Use staggered neutral pulse and a small accent spinner,
+  disabled for reduced-motion preferences. Announce loading once via a polite status outside the
+  `aria-busy` region; hide decorative placeholders from assistive technologies.
+- This changes waiting visuals only. Keep all-time metrics, existing errors/404 states, links, and
+  the data request contract unchanged. Apply the same rules to channel profiles.
+
 - Breadcrumb (mono): `users / yavuz`.
 - Identity panel (`bg-panel`, horizontal): circular avatar (real image when available), username
   (22/600), `@slug` (mono muted), mono meta row (`ilk mesaj`, `son aktivite`), right-aligned primary

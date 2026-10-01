@@ -54,6 +54,9 @@ not implied complete by these changes.
 
 ## Prepared Homepage (issue #27)
 
+- User/channel profiles now share responsive `ProfileLoading` skeletons with accessible status and
+  reduced-motion support. Their all-time data request/response behavior is unchanged.
+
 - `GET /analytics/homepage` returns a coherent 14-day UTC snapshot with `as_of`, period, and stale
   metadata. All five panels use the same window; the volume always contains 14 daily bins.
 - One API-lifetime background refresh, five sequential bounded queries, 15-minute refresh interval.

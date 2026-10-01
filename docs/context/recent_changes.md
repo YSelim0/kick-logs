@@ -2,7 +2,18 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (prepared 14-day homepage, issue #27)
+## Latest (profile loading and verification, issue #27)
+
+- User/channel profiles use animated, responsive skeletons with accessible status and reduced-motion
+  support. Profile all-time queries, loaded views and `/search` remain unchanged.
+- Full backend/frontend CI-equivalent checks passed locally, including isolated ClickHouse tests,
+  migration smoke checks, 165 frontend tests and production build. GitHub CI has not run yet.
+- Browser checks covered real fixture-backed prefix paging and homepage results plus delayed profile
+  loading on desktop/mobile. No application data was rewritten or deleted.
+- The approved first-pass features are implemented; broader issue #27 production benchmarking and
+  profile-query optimization are not claimed complete. i18n (#28) is untouched.
+
+## Previous (prepared 14-day homepage, issue #27)
 
 - `/` fetches one `/analytics/homepage` snapshot. Every panel states `Son 14 gün`, with actual
   UTC dates/update time. Existing all-time endpoints and `/search` are untouched.
