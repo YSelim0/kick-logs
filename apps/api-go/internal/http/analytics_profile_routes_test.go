@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -130,6 +131,36 @@ func TestProfileRoutesCacheChannelAnalyticsBySlug(t *testing.T) {
 	}
 }
 
+func TestProfileRoutesReturnFourteenDayVolumeSeries(t *testing.T) {
+	handler, analyticsRepo := newAnalyticsProfileTestRouterWithRepo()
+
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/channels/hype/analytics", nil))
+	if response.Code != http.StatusOK {
+		t.Fatalf("status = %d body = %s", response.Code, response.Body.String())
+	}
+
+	var payload struct {
+		MessageVolume []struct {
+			BucketStart  string `json:"bucket_start"`
+			MessageCount int64  `json:"message_count"`
+		} `json:"message_volume"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(payload.MessageVolume) != 14 {
+		t.Fatalf("message volume length = %d body = %s", len(payload.MessageVolume), response.Body.String())
+	}
+	if len(analyticsRepo.volumeFilters) == 0 {
+		t.Fatal("expected profile route to request message volume")
+	}
+	filter := analyticsRepo.volumeFilters[len(analyticsRepo.volumeFilters)-1]
+	if filter.Start.IsZero() || filter.End.IsZero() {
+		t.Fatalf("volume filter = %#v", filter)
+	}
+}
+
 func newAnalyticsProfileTestRouter() http.Handler {
 	handler, _ := newAnalyticsProfileTestRouterWithRepo()
 	return handler
@@ -152,6 +183,7 @@ type fakeAnalyticsRepository struct {
 	now            time.Time
 	topEmotesErr   error
 	topEmotesCalls int
+	volumeFilters  []domain.AnalyticsFilter
 }
 
 func newFakeAnalyticsRepository() *fakeAnalyticsRepository {
@@ -174,9 +206,10 @@ func (repo *fakeAnalyticsRepository) Overview(
 
 func (repo *fakeAnalyticsRepository) MessageVolume(
 	_ context.Context,
-	_ domain.AnalyticsFilter,
+	filter domain.AnalyticsFilter,
 	_ domain.AnalyticsBucket,
 ) ([]domain.MessageVolumePoint, error) {
+	repo.volumeFilters = append(repo.volumeFilters, filter)
 	return []domain.MessageVolumePoint{{BucketStart: repo.now, MessageCount: 2}}, nil
 }
 

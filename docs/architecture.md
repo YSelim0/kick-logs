@@ -118,6 +118,8 @@ ClickHouse stores data-plane rows:
 - `raw_kick_events`
 - `raw_event_attempts`
 - `channel_subscription_periods`
+- `user_requests`
+- `user_request_events`
 
 `chat_messages` is denormalized. It includes sender/channel snapshots, normalized helper columns,
 reply metadata, emote arrays/image URLs, badges, raw payload JSON, message timestamps, and ingestion
@@ -141,6 +143,8 @@ The Go API preserves the existing frontend contract:
 ```text
 GET  /health
 
+POST /requests
+
 POST /auth/login
 POST /auth/logout
 GET  /auth/me
@@ -155,6 +159,12 @@ DELETE /admin/channels/{channel_id}
 GET  /admin/users
 POST /admin/users
 
+GET  /admin/requests
+GET  /admin/requests/{request_id}
+POST /admin/requests/{request_id}/status
+POST /admin/requests/{request_id}/notes
+POST /admin/requests/{request_id}/archive
+
 GET /admin/operations/summary
 
 GET  /admin/data-management/summary
@@ -163,6 +173,9 @@ POST /admin/data-management/cleanup/preview
 POST /admin/data-management/cleanup/confirm
 
 GET /analytics/overview
+GET /analytics/homepage
+GET /directory/users
+GET /directory/channels
 GET /analytics/message-volume
 GET /analytics/top-senders
 GET /analytics/top-channels
@@ -178,11 +191,41 @@ GET  /admin/webhooks/health
 POST /admin/webhooks/sync
 ```
 
+### Prepared Homepage Analytics
+
+`usecase/homepage` prepares one versioned 14-day UTC snapshot per API process. Requests read
+memory only; a background task runs the existing deduplicated analytics queries sequentially
+every 15 minutes. A dedicated ClickHouse connection wrapper limits only this task to two threads,
+384 MiB and 15 seconds per query, with a 90-second overall refresh deadline. Existing analytics
+and all-time profile endpoints retain their original contracts.
+
+The last successful snapshot is atomically persisted as `homepage-analytics-v1.json` beside
+`SQLITE_PATH`, restored on restart, and served during refresh/failure for at most 24 hours. This is
+a disposable read cache, not another source of message history. Partial refreshes never publish.
+Failures retry with exponential delays from one to 15 minutes. An empty cache returns HTTP 202
+with `Retry-After`, not fabricated zero statistics. See `operations/public_analytics.md` for rollout.
+
+### All-Time Profile Summaries
+
+`usecase/profiles` uses the optional `ports.ProfileSummaryRepository` capability to fetch overview
+and top-five counterpart identities in one query. ClickHouse groups the filtered `chat_messages
+FINAL` rows with `WITH TOTALS`; exact totals cover all groups before the ranking limit. One tuple
+`argMax` retrieves metadata using the existing deterministic rank fields. Nullable IDs, deletion
+filters, all-time scope and response ordering retain the original query semantics.
+
+Repositories without this capability, or a failed combined query, use the original independent
+overview/ranking calls so existing partial-result behavior is retained. Profile caches, volume,
+emotes, latest messages and public schemas are unchanged. This is a read-query optimization only,
+without new storage, migrations or changes to ingestion. The benchmark and rollout procedure are
+in `operations/public_analytics.md`.
+
 Public routes:
 
+- `POST /requests`
 - `/messages`
 - `/messages/export`
 - `/analytics/*`
+- `/directory/users` and `/directory/channels`
 - `/users/{slug}/analytics`
 - `/channels/{slug}/analytics`
 - `/channels/{slug}/subscription-summary`

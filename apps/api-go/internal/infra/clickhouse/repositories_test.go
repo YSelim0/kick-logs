@@ -35,6 +35,8 @@ func TestClickHouseMigrationsAndRepositories(t *testing.T) {
 	if err := migrations.ApplyClickHouse(ctx, conn); err != nil {
 		t.Fatalf("ApplyClickHouse() second run error = %v", err)
 	}
+	t.Run("homepage bounded analytics", func(t *testing.T) { testHomepageAnalytics(t, conn) })
+	t.Run("profile combined analytics", func(t *testing.T) { testProfileCombinedAnalytics(t, conn) })
 
 	baseID := time.Now().UnixNano()
 	baseTime := time.Now().UTC().Truncate(time.Millisecond)
@@ -606,5 +608,131 @@ func TestClickHouseMigrationsAndRepositories(t *testing.T) {
 	}
 	if summary.ActiveGiftedCount != 1 {
 		t.Fatalf("ActiveGiftedCount = %d, want 1", summary.ActiveGiftedCount)
+	}
+
+	activeSubscribers, err := subPeriodRepo.ListActiveSubscribers(ctx, domain.ChannelSubscriberFilter{
+		FollowedChannelID: 1,
+		Limit:             10,
+	})
+	if err != nil {
+		t.Fatalf("subPeriodRepo.ListActiveSubscribers() error = %v", err)
+	}
+	if activeSubscribers.Count != 2 || len(activeSubscribers.Items) != 2 {
+		t.Fatalf("active subscribers = %#v", activeSubscribers)
+	}
+	for _, subscriber := range activeSubscribers.Items {
+		if strings.HasPrefix(subscriber.Username, "expired_") {
+			t.Fatalf("expired subscriber returned = %#v", activeSubscribers.Items)
+		}
+	}
+
+	giftSubscribers, err := subPeriodRepo.ListActiveSubscribers(ctx, domain.ChannelSubscriberFilter{
+		FollowedChannelID: 1,
+		GiftOnly:          true,
+		Limit:             10,
+	})
+	if err != nil {
+		t.Fatalf("subPeriodRepo.ListActiveSubscribers(gift) error = %v", err)
+	}
+	if giftSubscribers.Count != 1 || len(giftSubscribers.Items) != 1 || !giftSubscribers.Items[0].IsGift {
+		t.Fatalf("gift subscribers = %#v", giftSubscribers)
+	}
+	if giftSubscribers.Items[0].GifterUsername == "" {
+		t.Fatalf("gift subscriber missing gifter = %#v", giftSubscribers.Items[0])
+	}
+
+	exportedSubscribers, err := subPeriodRepo.ExportActiveSubscribers(ctx, 1, false)
+	if err != nil {
+		t.Fatalf("subPeriodRepo.ExportActiveSubscribers() error = %v", err)
+	}
+	if len(exportedSubscribers) != 2 {
+		t.Fatalf("exported subscribers = %#v", exportedSubscribers)
+	}
+
+	userRequestRepo := clickhouseinfra.NewUserRequestRepository(conn)
+	userRequest := domain.UserRequest{
+		ID:                 "request-" + suffix,
+		Type:               domain.UserRequestTypeChannelRequest,
+		Title:              "Channel request " + suffix,
+		Message:            "Please track this channel " + suffix,
+		ChannelSlug:        "hype-" + suffix,
+		ChannelDisplayName: "Hype " + suffix,
+		Contact:            "mod-" + suffix + "@example.com",
+		IPHash:             "iphash-" + suffix,
+		UserAgentHash:      "uahash-" + suffix,
+		CreatedAt:          now,
+	}
+	if err := userRequestRepo.Create(ctx, userRequest); err != nil {
+		t.Fatalf("userRequestRepo.Create() error = %v", err)
+	}
+	if err := userRequestRepo.AppendEvent(ctx, domain.UserRequestEvent{
+		ID:        "event-status-" + suffix,
+		RequestID: userRequest.ID,
+		EventType: domain.UserRequestEventStatusChanged,
+		Status:    domain.UserRequestStatusReviewing,
+		AdminID:   1,
+		CreatedAt: now.Add(time.Minute),
+	}); err != nil {
+		t.Fatalf("userRequestRepo.AppendEvent(status) error = %v", err)
+	}
+	if err := userRequestRepo.AppendEvent(ctx, domain.UserRequestEvent{
+		ID:        "event-note-" + suffix,
+		RequestID: userRequest.ID,
+		EventType: domain.UserRequestEventNoteAdded,
+		Note:      "review note " + suffix,
+		AdminID:   1,
+		CreatedAt: now.Add(2 * time.Minute),
+	}); err != nil {
+		t.Fatalf("userRequestRepo.AppendEvent(note) error = %v", err)
+	}
+	if err := userRequestRepo.AppendEvent(ctx, domain.UserRequestEvent{
+		ID:        "event-archive-" + suffix,
+		RequestID: userRequest.ID,
+		EventType: domain.UserRequestEventArchived,
+		AdminID:   1,
+		CreatedAt: now.Add(3 * time.Minute),
+	}); err != nil {
+		t.Fatalf("userRequestRepo.AppendEvent(archive) error = %v", err)
+	}
+
+	requestState, err := userRequestRepo.Get(ctx, userRequest.ID)
+	if err != nil {
+		t.Fatalf("userRequestRepo.Get() error = %v", err)
+	}
+	if requestState.CurrentStatus != domain.UserRequestStatusReviewing || !requestState.IsArchived {
+		t.Fatalf("request state = %#v", requestState)
+	}
+	if requestState.Request.ChannelSlug != userRequest.ChannelSlug || requestState.Request.Contact != userRequest.Contact {
+		t.Fatalf("request payload = %#v", requestState.Request)
+	}
+
+	archived := true
+	requests, err := userRequestRepo.List(ctx, domain.UserRequestListFilter{
+		Type:     domain.UserRequestTypeChannelRequest,
+		Status:   domain.UserRequestStatusReviewing,
+		Archived: &archived,
+		Query:    suffix,
+		Limit:    10,
+	})
+	if err != nil {
+		t.Fatalf("userRequestRepo.List() error = %v", err)
+	}
+	foundRequest := false
+	for _, item := range requests {
+		if item.Request.ID == userRequest.ID {
+			foundRequest = true
+			break
+		}
+	}
+	if !foundRequest {
+		t.Fatalf("created request not found in list = %#v", requests)
+	}
+
+	events, err := userRequestRepo.ListEvents(ctx, userRequest.ID)
+	if err != nil {
+		t.Fatalf("userRequestRepo.ListEvents() error = %v", err)
+	}
+	if len(events) != 3 || events[0].Status != domain.UserRequestStatusReviewing || events[1].Note == "" {
+		t.Fatalf("request events = %#v", events)
 	}
 }

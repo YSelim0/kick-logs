@@ -437,6 +437,21 @@ func (r *fakePeriodRepo) ActiveSummary(_ context.Context, _ int64) (domain.Chann
 	return domain.ChannelSubscriptionSummary{}, nil
 }
 
+func (r *fakePeriodRepo) ListActiveSubscribers(
+	_ context.Context,
+	_ domain.ChannelSubscriberFilter,
+) (domain.ChannelSubscriberPage, error) {
+	return domain.ChannelSubscriberPage{}, nil
+}
+
+func (r *fakePeriodRepo) ExportActiveSubscribers(
+	_ context.Context,
+	_ int64,
+	_ bool,
+) ([]domain.ChannelSubscriber, error) {
+	return nil, nil
+}
+
 var errFakeInsert = fmt.Errorf("fake insert error")
 
 func discardLogger() *slog.Logger {

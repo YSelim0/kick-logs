@@ -69,7 +69,7 @@ func TestNormalizeRenewal(t *testing.T) {
 	}
 }
 
-func TestNormalizeMissingExpiresAtFallsBackTo30Days(t *testing.T) {
+func TestNormalizeMissingExpiresAtFallsBackTo31Days(t *testing.T) {
 	payload := map[string]any{
 		"broadcaster": map[string]any{"user_id": 9000},
 		"subscriber":  map[string]any{"user_id": 3003},
@@ -82,7 +82,7 @@ func TestNormalizeMissingExpiresAtFallsBackTo30Days(t *testing.T) {
 		t.Fatalf("NormalizeEvent: %v", err)
 	}
 	p := periods[0]
-	wantExpiry := time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC)
+	wantExpiry := time.Date(2026, 7, 2, 0, 0, 0, 0, time.UTC)
 	if !p.ExpiresAt.Equal(wantExpiry) {
 		t.Errorf("ExpiresAt = %v, want %v", p.ExpiresAt, wantExpiry)
 	}
@@ -160,6 +160,10 @@ func TestNormalizeGiftUsesGifteesFieldFallback(t *testing.T) {
 	}
 	if len(periods) != 1 || periods[0].SubscriberKickUserID != 8001 {
 		t.Fatalf("periods = %+v", periods)
+	}
+	wantExpiry := time.Date(2026, 7, 2, 10, 0, 0, 0, time.UTC)
+	if !periods[0].ExpiresAt.Equal(wantExpiry) {
+		t.Errorf("gift ExpiresAt = %v, want %v", periods[0].ExpiresAt, wantExpiry)
 	}
 }
 

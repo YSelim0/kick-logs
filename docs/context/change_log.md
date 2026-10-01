@@ -2,6 +2,164 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (all-time profile query pair)
+
+- Added optional combined profile summary queries using WITH TOTALS and tuple argMax. Overview
+  and top counterpart ranking now share one scan while keeping all-time results and exact counts.
+- Profile service uses the capability with legacy fallback. Cache behavior, HTTP schemas, UI,
+  message search, subscriptions and database schemas are unchanged.
+- Added old/new real-ClickHouse equivalence tests, HTTP response/cache/fallback regression tests,
+  and an opt-in read-only benchmark. Isolated integration fixtures cover historical/null/empty,
+  identity normalization, replacement, tombstone, metadata, ordering and ranking-limit cases.
+- Local 1.4M-row comparison returned identical results: half the rows read, approximately 22%/26%
+  faster channel/user summary pairs. Timing is local, not a full-page or production guarantee.
+- Documented measurement conditions, deployment, rollback and remaining issue #29 acceptance work
+  in `docs/operations/public_analytics.md`. No application rows were migrated or rewritten.
+- Passed backend CI-equivalent tests/vet/format, isolated integration/migration smoke checks and
+  repository Prettier. Rebuilt the local API and verified health plus both profile endpoints (200).
+
+## 2026-10-01 (homepage timestamp copy)
+
+- Removed visible UTC date-range/update metadata from the homepage while keeping period labels
+  and the stale-data notice. API timestamps, caching and calculations are unchanged.
+- Updated regression coverage for both fresh and stale snapshots.
+
+## 2026-10-01 (animated profile loading)
+
+- Added shared responsive user/channel skeletons for identity, metrics, charts and latest messages.
+- Added accessible status/busy semantics and reduced-motion-safe animation. Existing profile APIs,
+  all-time values, loaded content and error/404 states are unchanged.
+- Verified desktop/mobile screenshots and no horizontal overflow with delayed test responses.
+- Final validation: full Go tests, vet, gofmt, isolated ClickHouse integration and both migration
+  smoke commands; 165 frontend tests, typecheck, lint, production build, and full Prettier check.
+- Browser checks used isolated fixture databases, not production data. Directory submit/pagination
+  and homepage period labels were exercised; production-scale load benchmarks remain outstanding.
+
+## 2026-10-01 (prepared 14-day homepage)
+
+- Added a dedicated homepage service/endpoint and versioned atomic file cache, restored across
+  restarts. Background work uses shared 14-day UTC boundaries, sequential queries and resource caps.
+- Kept existing ClickHouse deduplication and original analytics/profile contracts; no data backfill
+  or application-table migration was introduced for this snapshot.
+- Replaced the landing page's five-request waterfall with one snapshot request, explicit period and
+  update labels, bounded initializing retries, stale notice, and honest failure/retry state.
+- Added refresh/restart/cancellation/partial-failure tests, file corruption/size tests, HTTP/rate-limit
+  tests, and real ClickHouse boundary/deduplication assertions in the existing CI integration suite.
+
+## 2026-10-01 (indexed user/channel directories)
+
+- Added public prefix directory APIs backed solely by SQLite identity metadata, with indexed
+  ranges, escaped literal input, bounded pages, validated query-bound cursors, and rate limits.
+- Added SQLite migration 9 for name/slug expression indexes; no chat-history migration required.
+- Updated both index pages to show identity-only results and append pages on demand.
+- Added backend route/repository/use-case and frontend behavior tests, including query-plan checks.
+- Follow-up verification of the earlier logging change passed on an isolated ClickHouse 24.8
+  container with fixture data. No real application tables or volumes were modified.
+
+## 2026-10-01 (ClickHouse logging controls)
+
+- Added `clickhouse/config.d/logging.xml` and `clickhouse/users.d/logging.xml` to disable routine
+  query/system history collectors and query profiling in the default user profile.
+- Mounted the overrides individually through Compose, preserving the image's own configuration.
+- Kept warning/error text diagnostics with file rotation and added bounded Docker console logging.
+- Added a deployment/verification/rollback runbook with optional, explicitly scoped system-log
+  cleanup. Existing application data and historical logs were not modified.
+- Verified Compose configuration, XML syntax, and diff whitespace. ClickHouse runtime testing could
+  not run because Docker Desktop's Linux engine was unavailable.
+
+## 2026-07-06 (subscription expiry fallback)
+
+- Updated Kick webhook subscription normalization so any subscription event without a Kick-provided
+  `expires_at` falls back to `created_at + 31d` instead of `created_at + 30d`.
+- Kept Kick-provided `expires_at` authoritative when present.
+- Added regression coverage for missing-expiry subscription and gift webhook payloads.
+
+## 2026-06-14 (brand favicon set)
+
+- Added the generated favicon set to `apps/web/public`.
+- Replaced the shared visible app logo asset with the new 512px favicon logo.
+- Updated Next metadata so browsers use `/favicon.ico`, `/favicon.svg`, `/favicon-96x96.png`,
+  `/apple-touch-icon.png`, and `/site.webmanifest`.
+- Updated the documentation logo at `docs/app-logo.png` so README/design references match the app.
+
+## 2026-06-14 (active channel subscribers)
+
+- Added public active subscriber list and export APIs for channel profiles:
+  - `GET /channels/{slug}/subscribers`
+  - `GET /channels/{slug}/subscribers/export`
+- Extended the subscription period domain/port and ClickHouse repository with paginated list and
+  full export methods.
+- Added subscriber export formatters for JSON, CSV, and readable TXT.
+- Added public rate-limit policies for subscriber list and subscriber export routes.
+- Added backend tests for list query mapping, gift-only filtering, JSON/CSV/TXT export, invalid
+  format handling, missing channel behavior, and ClickHouse integration coverage for active/gift
+  filtering.
+- Added frontend subscriber API helpers and response types.
+- Added a channel-profile subscriber modal:
+  - `AKTİF ABONE` opens all active subscribers.
+  - `HEDİYE ABONE` opens gift-only active subscribers.
+  - first page loads 50 rows and `Daha fazla yükle` appends more.
+  - download menu supports JSON, CSV, and TXT and closes on outside click.
+  - empty state uses user-facing copy without webhook/internal terms.
+- Updated design and context docs for the subscriber modal and no-streak/no-month-count decision.
+
+## 2026-06-14 (admin request management frontend)
+
+- Implemented `/admin/requests` for managing public request form submissions.
+- Added `Requests` to the admin sidebar navigation.
+- Added admin request API wrappers for list, detail, status update, note creation, and archive.
+- Added request list filters for type, status, archive state, text query, and optional date range.
+- Added list/detail workflow:
+  - list rows show request type, title, channel/contact preview, status, archive state, and created date.
+  - request list uses full width; detail opens in a modal.
+  - detail modal shows original content, metadata, status control, note form, timeline, and archive.
+- Added frontend tests for active default listing, filter query mapping, detail loading, status
+  update, note creation, and archive action.
+- Updated design/context/implementation docs and README for the completed request workflow.
+- Completed final verification for the request-form feature:
+  - `go test ./...`
+  - `pnpm --filter @kick-logs/web test`
+  - `pnpm --filter @kick-logs/web typecheck`
+  - `pnpm --filter @kick-logs/web lint`
+  - `pnpm --filter @kick-logs/web build`
+  - targeted Prettier check for changed files
+  - `gofmt -l cmd internal`
+  - `docker compose ps`
+
+## 2026-06-13 (public request form frontend)
+
+- Implemented the public `/request` page for the request form feature.
+- Added `Talep` to the public header:
+  - desktop right action area near GitHub/Admin,
+  - mobile hamburger panel above Admin.
+- Added a compact two-mode form:
+  - `Kanal Talebi` submits channel tracking requests,
+  - `Geri Bildirim` submits product feedback or general messages.
+- Wired submit to `POST /requests` through `features/requests/api.ts`.
+- Added inline success/error states, returned request id display, and hidden honeypot field support.
+- Added frontend tests for navigation visibility, channel request payload, feedback payload, and
+  required-field gating.
+- Updated design/context/implementation docs. Admin request management frontend remains pending.
+
+## 2026-06-13 (public request form backend)
+
+- Implemented the backend foundation for the public request form feature:
+  - `user_requests` ClickHouse table for immutable public submissions.
+  - `user_request_events` ClickHouse table for append-only admin workflow events.
+  - domain models, storage port, ClickHouse repository, and request use case.
+- Added public `POST /requests` with validation, channel slug normalization, honeypot rejection,
+  HMAC-hashed IP/user-agent metadata, and a dedicated IP-based rate-limit policy.
+- Added authenticated admin APIs:
+  - `GET /admin/requests`
+  - `GET /admin/requests/{request_id}`
+  - `POST /admin/requests/{request_id}/status`
+  - `POST /admin/requests/{request_id}/notes`
+  - `POST /admin/requests/{request_id}/archive`
+- Admin request state is computed from events: status defaults to `new`, notes are timeline events,
+  and archive is an event instead of a hard delete.
+- Updated architecture, project plan, implementation plan, and context docs. Frontend `/request` and
+  `/admin/requests` screens remain pending.
+
 ## 2026-06-02 (channel index aggregate hardening)
 
 - Reworked ClickHouse analytics aggregates to avoid
@@ -341,7 +499,7 @@ Backend pipeline for tracking Kick subscription events via webhooks. Phase 8 (fr
   fail-closed (503 with no key, 401 on bad sig); rate-limit exempt; 8 route tests.
 - **Phase 5 — Processor and normalization**: `webhookprocessor.Service` (5s tick, background
   worker); normalizer handles `channel.subscription.new/renewal` (1 period) and
-  `channel.subscription.gifts` (1 period/giftee); `expires_at` fallback `created_at + 30d`;
+  `channel.subscription.gifts` (1 period/giftee); `expires_at` fallback `created_at + 31d`;
   `ErrIgnored` for unsupported/unfollowed events; 13 tests.
 - **Phase 6 — Backend query APIs**: `GET /channels/{slug}/subscription-summary` (public active
   count); `GET /admin/webhooks/health` (inbox counts, sync status, config flags);

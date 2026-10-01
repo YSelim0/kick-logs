@@ -1,5 +1,126 @@
 # Decisions
 
+## 2026-10-02 (SQL-only profile optimization)
+
+- **Preserve displayed results and all-time scope.** The owner approved query changes, not new
+  profile data windows, cache policies or UI. Keep exact counts, metadata, ordering and schemas.
+- **Combine overview and counterpart ranking.** `WITH TOTALS` shares one history scan; tuple
+  `argMax` shares metadata selection. Totals are not a sum of per-group distinct counts.
+- **Retain read correctness.** Keep FINAL, deleted-row filters, nullable identity behavior and
+  existing rank fields. Do not push non-key filters before FINAL or use approximate distincts.
+- **Keep the original fallback.** Optional repository capability isolates other consumers; failure
+  falls back to independent calls and existing partial results, with the extra-query cost explicit.
+- **Measure without rewriting data.** A read-only, fixed-cutoff benchmark compares full results
+  and read metrics. Local improvement does not establish production p95 or issue #29 completion.
+- **Continue on dev.** Use the existing folder and `dev` as requested; no extra worktree or push.
+
+## 2026-10-01 (homepage copy simplification)
+
+- **Hide explicit snapshot timestamps in the UI.** Keep `Son 14 gün` and the stale notice, but remove
+  the date-range/update text. API `start`, `end`, `as_of` and cache behavior remain unchanged.
+
+## 2026-10-01 (profile waiting experience)
+
+- **Profile work is visual only in this pass.** Keep all-time metrics and APIs. Replace the plain
+  loading message with a layout-matched skeleton and small spinner; no fabricated counts/progress.
+- **Respect accessibility and stable layout.** Expose a polite loading status and busy region,
+  hide decorative shapes, preserve mobile wrapping, and disable animation under reduced motion.
+
+## 2026-10-01 (homepage recent-window snapshots)
+
+- **Only the homepage becomes recent-only.** Use 14 UTC calendar days including today, ending at
+  an explicit second-precision `as_of`. Keep `/search` and all-time profile queries unchanged.
+- **Visitors do not refresh analytics.** One background task prepares all five panels, then swaps
+  the complete snapshot atomically. A fixed endpoint prevents timestamp-fragmented cache keys.
+- **Persist only the small result, not another message copy.** A versioned atomic JSON file beside
+  SQLite survives API restarts and is disposable; existing message history remains authoritative.
+- **Bound background cost and failures.** Sequential queries, resource/time limits, single-flight,
+  exponential retry backoff, and a 24-hour maximum stale age. Keep the last good result on error.
+- **Represent unavailability honestly.** Initializing returns 202; UI uses skeletons and bounded
+  retries. Stale data shows its actual date range. Existing public analytics contracts are additive,
+  not silently redefined. No exact production speed claim without representative measurements.
+
+## 2026-10-01 (public directory lookup)
+
+- **Directory search is identity lookup, not analytics.** Match name/slug prefixes from existing
+  SQLite metadata with expression indexes. Never count or group chat history on this path.
+- **Keep explicit submit.** Two-character minimum, 50-row default / 100-row API maximum, keyset
+  pagination, and a dedicated rate-limit bucket shared by the two directory routes.
+- **Do not imply historical totals.** Remove message count and last-message columns rather than
+  replacing them with approximate values. Alphabetical identity order replaces activity ranking.
+- **Keep historical data and existing APIs.** Disabled channels remain searchable. Metadata-only
+  lookup cannot discover a sender missing from `sender_profiles`; no automatic archive scan is
+  introduced. Existing analytics consumers, profiles, and `/search` keep their contracts.
+
+## 2026-10-01 (ClickHouse diagnostic storage)
+
+- **Routine query/system-log history is disabled in Compose.** Keep the small VPS disk budget for
+  application data rather than indefinite diagnostic tables and profiling samples.
+- **Do not suppress actionable errors.** Keep warning/error text logs with bounded rotation, live
+  system metrics, and crash/backup logs. Historical query dashboards lose new data by design.
+- **Existing history cleanup is explicit and optional.** Disabling collectors does not delete old
+  log rows. Never remove application tables or volumes to reclaim diagnostic storage.
+- **Deploy requires container recreation.** New XML mounts and Docker logging options do not take
+  effect through a plain restart; follow `docs/operations/clickhouse_logging.md`.
+
+## 2026-06-14 (active channel subscribers)
+
+- **Active subscriber detail is public on channel profiles.** `/channels/{slug}` lets visitors open
+  the active subscriber list from the `AKTİF ABONE` stat cell and the gift-only list from
+  `HEDİYE ABONE`.
+- **The list uses captured subscription periods only.** Active means `expires_at > now()` from
+  `channel_subscription_periods`; the UI must not imply knowledge of subscriptions from before
+  webhook tracking was enabled.
+- **Subscribers are deduplicated per Kick user.** If multiple active periods exist for the same
+  subscriber, public list/export use the latest period instead of rendering duplicates.
+- **No inferred streak/month count.** Current persisted webhook data does not include a reliable
+  streak/month value. The modal and export omit it instead of deriving a misleading value from
+  partial captured history.
+- **Export is visitor-friendly.** The modal exposes one download icon with JSON, CSV, and readable
+  TXT options. TXT is the human-readable default format.
+
+## 2026-06-14 (admin request management frontend)
+
+- **Request management lives in one admin route.** `/admin/requests` owns filtering, list, detail,
+  status, note, and archive controls instead of splitting the workflow across multiple pages.
+- **Request detail opens as a modal.** The list keeps the full admin page width for scanning many
+  submissions; status, note, timeline, and archive actions live inside the selected request modal.
+- **Active requests are the default view.** Archived requests are available through the archive
+  filter so the default operator view stays focused on current work.
+- **Archive remains a workflow action.** The admin UI exposes `Arşivle`, not delete, matching the
+  append-only backend event model.
+
+## 2026-06-13 (public request form frontend)
+
+- **`/request` is a compact app page, not a landing page.** The form uses the existing dark
+  operations-tool layout: page title, one form panel, one supporting side panel, no hero treatment,
+  no decorative effects.
+- **One form handles both public request types.** `Kanal Talebi` and `Geri Bildirim` are mode
+  buttons inside the same page. Switching to feedback hides channel-specific fields instead of
+  sending empty channel UI.
+- **The public header exposes request submission as `Talep`.** Desktop places it in the right action
+  area near GitHub/Admin; mobile places it inside the hamburger panel above Admin.
+- **Success and failure stay inline.** The page does not redirect after submit. A successful submit
+  shows the returned request id; validation and rate-limit errors remain in the form panel.
+
+## 2026-06-13 (public request form backend)
+
+- **Request form data belongs in ClickHouse, not SQLite.** Public channel requests and feedback are
+  product/user history, not control-plane runtime state. SQLite remains for admin users, followed
+  channels, heartbeat/operations state, webhook registry/inbox state, and other small operational
+  records.
+- **The request workflow is append-only.** `user_requests` stores immutable public submissions.
+  Admin actions append to `user_request_events` instead of updating the original row. Current status
+  is computed from the latest `status_changed` event and defaults to `new`.
+- **Archive replaces delete for the MVP.** Admin archive writes an `archived` event. There is no hard
+  delete endpoint in the first implementation.
+- **Public request metadata is hashed before storage.** IP and user-agent values are HMAC-hashed
+  before insertion. The API should not store raw visitor IP/user-agent values for this feature by
+  default.
+- **Public request submissions are rate-limited.** `POST /requests` has its own IP-based policy
+  (5 requests per 10 minutes, burst 2) plus a honeypot field (`website`) that rejects simple bot
+  submissions.
+
 ## 2026-06-02 (channel/user top-list aggregate hardening)
 
 - **Channel index and admin channel counts must avoid window scans.** `/channels` search and the
@@ -170,7 +291,7 @@ sender profile cache behavior, and webhook inbox maintenance where noted.
 - **`channel_subscription_periods` uses `ReplacingMergeTree(ingested_at)` ORDER BY `id`.** The
   deterministic `id` (`messageID` for new/renewal, `messageID_gifteeUserID` for gifts) makes
   re-processing idempotent. Queries use `FINAL` to deduplicate on read.
-- **Subscription period `expires_at` is always set before storage.** The fallback (`created_at + 30d`)
+- **Subscription period `expires_at` is always set before storage.** The fallback (`created_at + 31d`)
   is applied during normalization (Phase 5), not at query time. The ClickHouse column is NOT NULL.
 - **`kick_subscription_id` preserved on upsert conflict.** The `ON CONFLICT DO UPDATE` SQL uses
   `CASE WHEN excluded.kick_subscription_id != '' THEN ... ELSE existing END` so a sync error

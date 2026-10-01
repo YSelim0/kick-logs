@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"time"
 
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/domain"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/ports"
 )
 
 var ErrInvalidRange = errors.New("invalid analytics date range")
+
+const maxFilledMessageVolumeBuckets = 1000
 
 type Service struct {
 	repository ports.AnalyticsRepository
@@ -54,12 +57,75 @@ func (service *Service) MessageVolume(
 		return nil, errors.New("invalid analytics bucket")
 	}
 	if !globalAnalyticsCacheable(filter) {
-		return service.repository.MessageVolume(ctx, filter, bucket)
+		points, err := service.repository.MessageVolume(ctx, filter, bucket)
+		if err != nil {
+			return nil, err
+		}
+		return FillMessageVolumeRange(points, filter, bucket), nil
 	}
 	key := "message-volume:" + string(bucket) + ":" + analyticsFilterCacheKey(filter)
 	return cachedAnalyticsValue(ctx, service.cache, key, func(ctx context.Context) ([]domain.MessageVolumePoint, error) {
-		return service.repository.MessageVolume(ctx, filter, bucket)
+		points, err := service.repository.MessageVolume(ctx, filter, bucket)
+		if err != nil {
+			return nil, err
+		}
+		return FillMessageVolumeRange(points, filter, bucket), nil
 	})
+}
+
+func FillMessageVolumeRange(
+	points []domain.MessageVolumePoint,
+	filter domain.AnalyticsFilter,
+	bucket domain.AnalyticsBucket,
+) []domain.MessageVolumePoint {
+	if filter.Start.IsZero() || filter.End.IsZero() {
+		return points
+	}
+
+	step := 24 * time.Hour
+	normalize := startOfUTCDay
+	if bucket == domain.AnalyticsBucketHour {
+		step = time.Hour
+		normalize = startOfUTCHour
+	}
+
+	start := normalize(filter.Start)
+	end := normalize(filter.End)
+	if start.After(end) {
+		return []domain.MessageVolumePoint{}
+	}
+	bucketCount := int(end.Sub(start)/step) + 1
+	if bucketCount > maxFilledMessageVolumeBuckets {
+		return points
+	}
+
+	byBucket := make(map[time.Time]int64, len(points))
+	for _, point := range points {
+		bucketStart := normalize(point.BucketStart)
+		if bucketStart.Before(start) || bucketStart.After(end) {
+			continue
+		}
+		byBucket[bucketStart] += point.MessageCount
+	}
+
+	filled := make([]domain.MessageVolumePoint, 0, bucketCount)
+	for current := start; !current.After(end); current = current.Add(step) {
+		filled = append(filled, domain.MessageVolumePoint{
+			BucketStart:  current,
+			MessageCount: byBucket[current],
+		})
+	}
+	return filled
+}
+
+func startOfUTCDay(value time.Time) time.Time {
+	utc := value.UTC()
+	return time.Date(utc.Year(), utc.Month(), utc.Day(), 0, 0, 0, 0, time.UTC)
+}
+
+func startOfUTCHour(value time.Time) time.Time {
+	utc := value.UTC()
+	return time.Date(utc.Year(), utc.Month(), utc.Day(), utc.Hour(), 0, 0, 0, time.UTC)
 }
 
 func (service *Service) TopSenders(

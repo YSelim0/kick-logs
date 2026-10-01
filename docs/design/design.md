@@ -18,17 +18,17 @@ Do not commit screenshots or exported images unless explicitly requested.
 - `/admin`: authenticated admin dashboard for backend operations.
 - `/login`: login screen.
 - `/`: public compact landing page with project positioning and live analytics.
-- `/users`: public user search index. Search-first — empty prompt on load, results populate as
-  the user types.
+- `/users`: public user search index. Search-first, results populate on explicit submit.
 - `/users/[slug]`: public sender profile with identity, analytics, and latest messages.
-- `/channels`: public channel search index. Search-first — empty prompt on load, results populate
-  as the user types.
+- `/channels`: public channel search index. Search-first, results populate on explicit submit.
 - `/channels/[slug]`: public channel profile with stored Kick metadata, analytics, and latest
   messages.
 - `/prediction`: public channel search page for Kick predictions. Search-first — empty prompt on
   load. Submitting navigates to `/prediction/{slug}`; it does not render analytics itself.
 - `/prediction/[slug]`: public latest-prediction analysis for the channel (summary, charts, outcome
   cards, top users), fetched live from Kick in the browser.
+- `/request`: public request form. Visitors can submit channel tracking requests or general feedback
+  without logging in.
 
 Landing must stay product-focused and must not turn into a marketing site.
 
@@ -36,11 +36,15 @@ Landing must stay product-focused and must not turn into a marketing site.
 
 - Search-first: initial load shows an empty state with a centered icon and a prompt string.
 - Explicit submit only: typing does NOT fire requests. User clicks the `Ara` button or presses
-  Enter to send the query. Debounce-while-typing is intentionally avoided so high-traffic
-  ingestion is not put under additional ClickHouse `LIKE` pressure on every keystroke.
+  Enter to send the query. Typing alone must not create network requests.
 - Submit button is disabled until the trimmed query is at least 2 characters long.
 - Submit button text switches to `Aranıyor…` and is disabled while a request is in flight.
-- Results are ordered by message count (backend default).
+- Prefix-only matching on the name/slug, with case-insensitive ASCII Kick identity matching and
+  `_`/`-` normalization. Search uses indexed identity metadata, not analytics endpoints.
+- Results are alphabetic by normalized slug, then id. Rows show the avatar, name, and profile
+  link; no message totals, activity timestamps, or implied total-match count.
+- Fetch 50 identities per page. `Daha fazla yükle` appends the next cursor page while preserving
+  existing rows; a new submitted query resets pagination.
 - Empty-results state quotes the last submitted query, not the current input value.
 - Loading, empty-results, and error states are all handled.
 - Each result row links to the corresponding profile page.
@@ -117,17 +121,38 @@ Type scale (Tailwind):
 ## Global Header
 
 - 56px high, `bg-page` with bottom `border-subtle`.
-- Desktop: left side has logo square + `kick logs` wordmark + nav links; right side has GitHub icon + `Admin` outline button.
-- Mobile: left side has logo square + `kick logs` wordmark; right side has GitHub icon + hamburger (Menu/X toggle). Nav links hidden.
-- Hamburger opens a fixed dropdown panel below the header (z-40) with a dark backdrop. Panel lists all nav links (Search, Channels, Users, Prediction) plus Admin. Clicking any link closes the menu.
+- Sticky on both desktop and mobile (`top: 0`) so it stays visible while scrolling.
+- Desktop: left side has logo square + `kick logs` wordmark + nav links; right side has GitHub icon,
+  `Talep`, and `Admin` outline button.
+- Mobile: left side has logo square + `kick logs` wordmark; right side has GitHub icon + hamburger
+  (Menu/X toggle). Nav links hidden.
+- Hamburger opens a fixed dropdown panel below the header (z-40) with a dark backdrop. Panel lists
+  all nav links (Search, Channels, Users, Prediction), then `Talep`, then Admin. Clicking any link
+  closes the menu.
 - `Channels`, `Users`, and `Prediction` nav links are active and point to `/channels`, `/users`,
   and `/prediction`.
-- `ActiveRoute` type supports `"search" | "channels" | "users" | "prediction"` to highlight the
-  current section. Profile pages (`/channels/[slug]`, `/users/[slug]`) use the parent route
-  (`"channels"`, `"users"`) so the nav item stays highlighted when browsing within a section.
+- `ActiveRoute` type supports `"search" | "channels" | "users" | "prediction" | "request"` to
+  highlight the current section. Profile pages (`/channels/[slug]`, `/users/[slug]`) use the parent
+  route (`"channels"`, `"users"`) so the nav item stays highlighted when browsing within a section.
 - Clicking the brand goes to `/`.
 - Admin page uses a different chrome: brand + `/ admin` breadcrumb on the left, user email +
   `SUPER ADMIN` badge + `Çıkış` outline button on the right.
+
+## Public Request Page (`/request`)
+
+- Public, no auth.
+- Compact page title `Talep` with one short explanatory line.
+- One form panel with two mode buttons:
+  - `Kanal Talebi`: shows `Kanal adı`, `Başlık`, `Mesaj`, optional `İletişim`.
+  - `Geri Bildirim`: shows `Başlık`, `Mesaj`, optional `İletişim`; channel field is hidden.
+- `Talep` header action is primary when this route is active.
+- Submit maps to `POST /requests`; success renders an inline confirmation with request id.
+- Errors stay inline. Rate-limit error copy should clearly ask the visitor to retry later.
+- The right-side support panel explains the user-facing evaluation process only: request review,
+  possible follow-up, and the fact that submission is not guaranteed acceptance. Do not mention admin
+  panels, databases, or internal storage there.
+- Honeypot field exists in the DOM but is hidden and never part of the visible UX.
+- No hero layout, large typography, decorative cards, blur, or glow.
 
 ## Landing Page (`/`)
 
@@ -137,8 +162,16 @@ Type scale (Tailwind):
   rounded border, separated by 1px hairlines.
 - Two analytics rows of 2 columns each: `Mesaj hacmi` bar chart (14 days, accent green bars), `Top
 kanallar`, `Top kullanıcılar`, `Top emoteler`. Each as a panel with title + mono sub.
-- Data sources: `/analytics/overview`, `/analytics/message-volume?bucket=day`,
-  `/analytics/top-channels`, `/analytics/top-emotes`, `/analytics/top-senders`.
+- All five analytics panels describe `Son 14 gün`: today and the preceding 13 UTC calendar days,
+  ending at the snapshot timestamp. Channels/chatters mean identities active within this window;
+  emotes mean occurrences, not distinct emote names or messages containing emotes.
+- One data source: `/analytics/homepage`. Keep `Son 14 gün` labels, but do not render the explicit
+  reporting date range or update timestamp on the homepage. Time metadata remains in the API.
+  A stale snapshot still receives a visible last-successful-update notice.
+- Keep layout-matched, reduced-motion-aware placeholders while initializing. Never substitute zero
+  for loading/failure. Retry initializing responses at a bounded interval; after at most two minutes
+  offer `Tekrar dene`. Request errors also offer manual retry, without automatic retry loops.
+- Stop polling after a ready snapshot; dispose requests/timers on navigation.
 
 ## Search Screen (`/search`)
 
@@ -226,6 +259,13 @@ no card-per-row treatment.
 
 ## User Profile (`/users/[slug]`)
 
+- While loading, use the shared `ProfileLoading` layout: identity/avatar, metric cells, chart/list
+  shapes, and message-row placeholders. Use staggered neutral pulse and a small accent spinner,
+  disabled for reduced-motion preferences. Announce loading once via a polite status outside the
+  `aria-busy` region; hide decorative placeholders from assistive technologies.
+- This changes waiting visuals only. Keep all-time metrics, existing errors/404 states, links, and
+  the data request contract unchanged. Apply the same rules to channel profiles.
+
 - Breadcrumb (mono): `users / yavuz`.
 - Identity panel (`bg-panel`, horizontal): circular avatar (real image when available), username
   (22/600), `@slug` (mono muted), mono meta row (`ilk mesaj`, `son aktivite`), right-aligned primary
@@ -242,7 +282,18 @@ no card-per-row treatment.
 - Breadcrumb (mono): `channels / exampleChannel`.
 - Identity panel: rounded-square channel image, display name (22/600), `LOGGING` accent pill, mono
   meta row (`ilk log`, `son aktivite`), CTA `Kanalda ara` linking to `/search?channel={slug}`.
-- 4-cell stats bar: `MESAJ`, `KULLANICI`, `EMOTE`, `İLK LOG`.
+- Stats bar: `MESAJ`, `KULLANICI`, `EMOTE`, `İLK LOG`, `AKTİF ABONE`, `HEDİYE ABONE`.
+- `AKTİF ABONE` and `HEDİYE ABONE` cells are clickable after subscription summary loads. They open
+  the active subscriber modal without leaving the channel page.
+- Active subscriber modal:
+  - title is `Aktif aboneler` or `Hediye aktif aboneler`.
+  - first page loads 50 rows; `Daha fazla yükle` appends more rows.
+  - rows show circular subscriber avatar/fallback, username link, Kick user id, gift badge/gifter
+    when available, start date, and expiry date.
+  - empty state copy is exactly `Bu kanal için henüz aktif abonelik kaydı yok.`
+  - download action is one square icon button with JSON, CSV, and TXT options; the menu closes on
+    outside click.
+  - do not show inferred streak/month counts.
 - 3-column analytics grid with **equal panel heights**: `Mesaj hacmi`, `Top kullanıcılar`,
   `Top emoteler`.
 - `Son mesajlar` panel: username (rendered in sender color) + message + mono timestamp. Same emote
@@ -329,8 +380,8 @@ Login required.
 
 ### Sidebar Nav
 
-- `Operations`, `Channels`, `Users`, `Data`, `Settings`. Active item: `bg-panel` background with
-  hairline, accent icon, `text-primary` label.
+- `Operations`, `Channels`, `Requests`, `Users`, `Data`, `Settings`. Active item: `bg-panel`
+  background with hairline, accent icon, `text-primary` label.
 - Regular `admin` (non-super) users do not see `Users`.
 
 ### Operations Section
@@ -377,6 +428,21 @@ ClickHouse geçmişi, depolama özeti`. Right: `Yenile` outline button.
 ### Users Section (super admin only)
 
 - Visually separate from channel management. No hero/landing treatment.
+
+### Requests Section
+
+- Route: `/admin/requests`.
+- Dense single-page workflow for public form submissions.
+- Top filter panel includes request type, current status, archive state, text query, and optional
+  start/end date range.
+- Default archive filter is active requests only.
+- Main list uses the full available width; do not reserve a persistent side detail panel.
+- List rows show type, title, optional channel/contact preview, current status, archive state, and
+  created date. Desktop/mobile row variants may coexist behind breakpoint classes.
+- Selecting a row opens a modal dialog for the request detail.
+- The detail modal shows original content, metadata, current status, event timeline, status control,
+  note form, and archive action. Admin workflow actions are performed from this modal.
+- Archive is represented as a workflow action, not a destructive delete.
 
 ### Default Super Admin Credentials (local MVP)
 

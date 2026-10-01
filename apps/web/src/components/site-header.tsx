@@ -8,7 +8,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type ActiveRoute = "search" | "channels" | "users" | "prediction" | "admin" | null;
+type ActiveRoute = "search" | "channels" | "users" | "prediction" | "request" | "admin" | null;
 
 type SiteHeaderProps = {
   activeRoute?: ActiveRoute;
@@ -19,7 +19,7 @@ export function SiteHeader({ activeRoute = "search" }: SiteHeaderProps) {
 
   return (
     <>
-      <header className="h-14 border-b border-border bg-page">
+      <header className="sticky top-0 z-50 h-14 border-b border-border bg-page">
         <div className="mx-auto flex h-full max-w-[1280px] items-center justify-between gap-4 px-6">
           <div className="flex items-center gap-4">
             <Link className="flex items-center gap-2" href="/">
@@ -48,6 +48,17 @@ export function SiteHeader({ activeRoute = "search" }: SiteHeaderProps) {
             >
               <Github className="h-4 w-4" />
             </a>
+            <Button
+              asChild
+              variant={activeRoute === "request" ? "default" : "outline"}
+              size="sm"
+              className={cn(
+                "hidden md:inline-flex",
+                activeRoute !== "request" && "border-transparent text-foreground hover:bg-accent/10"
+              )}
+            >
+              <Link href="/request">Talep</Link>
+            </Button>
             <Button asChild variant="outline" size="sm" className="hidden md:inline-flex">
               <Link href="/admin">Admin</Link>
             </Button>
@@ -87,6 +98,18 @@ export function SiteHeader({ activeRoute = "search" }: SiteHeaderProps) {
                 </Link>
               ))}
               <div className="mt-1 border-t border-border pt-1">
+                <Link
+                  href="/request"
+                  onClick={() => setIsMenuOpen(false)}
+                  className={cn(
+                    "flex h-9 items-center rounded-md px-3 text-[13px] font-medium transition-colors",
+                    activeRoute === "request"
+                      ? "border border-border bg-panel text-foreground"
+                      : "text-muted-foreground hover:bg-elevated hover:text-foreground"
+                  )}
+                >
+                  Talep
+                </Link>
                 <Link
                   href="/admin"
                   onClick={() => setIsMenuOpen(false)}

@@ -2,17 +2,11 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { Copyright, Github, Search } from "lucide-react";
+import { Copyright, Github, RotateCw, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import {
-  getAnalyticsOverview,
-  getMessageVolume,
-  getTopChannels,
-  getTopEmotes,
-  getTopSenders
-} from "@/features/analytics/api";
+import { getHomepage, type HomepageSnapshot } from "@/features/landing/api";
 import { Button } from "@/components/ui/button";
 import { SiteHeader } from "@/components/site-header";
 import { cn } from "@/lib/utils";
@@ -24,84 +18,72 @@ import type {
   TopSenderAnalytics
 } from "@/types/api";
 
-type LandingAnalyticsState = {
-  overview: AnalyticsOverview;
-  volume: MessageVolumePoint[];
-  topChannels: TopChannelAnalytics[];
-  topEmotes: TopEmoteAnalytics[];
-  topSenders: TopSenderAnalytics[];
-};
+type HomepageStatus = "loading" | "initializing" | "ready" | "error";
 
-const EMPTY_OVERVIEW: AnalyticsOverview = {
-  total_messages: 0,
-  total_senders: 0,
-  total_channels: 0,
-  total_emote_usages: 0,
-  first_message_at: null,
-  latest_message_at: null
-};
+const MAX_ATTEMPTS = 24;
+const LOAD_TIMEOUT_MS = 120000;
 
 export function LandingPage() {
-  const [analytics, setAnalytics] = useState<LandingAnalyticsState | null>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "partial" | "error">("loading");
+  const [analytics, setAnalytics] = useState<HomepageSnapshot | null>(null);
+  const [status, setStatus] = useState<HomepageStatus>("loading");
+  const [requestVersion, setRequestVersion] = useState(0);
 
   useEffect(() => {
-    let isMounted = true;
+    const controller = new AbortController();
+    let stopped = false;
+    let attempts = 0;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    const deadlineTimer = setTimeout(fail, LOAD_TIMEOUT_MS);
+
+    setAnalytics(null);
+    setStatus("loading");
+
+    function fail() {
+      if (stopped) return;
+      stopped = true;
+      clearTimeout(retryTimer);
+      clearTimeout(deadlineTimer);
+      controller.abort();
+      setAnalytics(null);
+      setStatus("error");
+    }
 
     async function loadAnalytics() {
-      setStatus("loading");
-
+      attempts += 1;
       try {
-        const recentRange = getRecentVolumeRange();
-        const overview = await settle(getAnalyticsOverview());
-        const volume = await settle(
-          getMessageVolume({ bucket: "day", end: recentRange.end, start: recentRange.start })
-        );
-        const topChannels = await settle(getTopChannels({ limit: 5 }));
-        const topEmotes = await settle(getTopEmotes({ limit: 5 }));
-        const topSenders = await settle(getTopSenders({ limit: 5 }));
+        const snapshot = await getHomepage(controller.signal);
+        if (stopped) return;
 
-        if (!isMounted) {
-          return;
+        if (snapshot.status === "ready") {
+          stopped = true;
+          clearTimeout(deadlineTimer);
+          setAnalytics(snapshot);
+          setStatus("ready");
+        } else if (snapshot.status === "initializing" && attempts < MAX_ATTEMPTS) {
+          setStatus("initializing");
+          const retrySeconds = Number.isFinite(snapshot.retry_after_seconds)
+            ? Math.min(30, Math.max(5, snapshot.retry_after_seconds))
+            : 5;
+          retryTimer = setTimeout(() => void loadAnalytics(), retrySeconds * 1000);
+        } else {
+          fail();
         }
-
-        const fulfilledCount = [
-          overview.status,
-          volume.status,
-          topChannels.status,
-          topEmotes.status,
-          topSenders.status
-        ].filter((resultStatus) => resultStatus === "fulfilled").length;
-        if (fulfilledCount === 0) {
-          setAnalytics(null);
-          setStatus("error");
-          return;
-        }
-
-        setAnalytics({
-          overview: valueOr(overview, EMPTY_OVERVIEW),
-          volume: itemsOrEmpty(volume),
-          topChannels: itemsOrEmpty(topChannels),
-          topEmotes: itemsOrEmpty(topEmotes),
-          topSenders: itemsOrEmpty(topSenders)
-        });
-        setStatus(fulfilledCount === 5 ? "ready" : "partial");
       } catch {
-        if (isMounted) {
-          setAnalytics(null);
-          setStatus("error");
-        }
+        fail();
       }
     }
 
     void loadAnalytics();
 
     return () => {
-      isMounted = false;
+      stopped = true;
+      clearTimeout(retryTimer);
+      clearTimeout(deadlineTimer);
+      controller.abort();
     };
-  }, []);
+  }, [requestVersion]);
 
-  const overview = analytics?.overview ?? EMPTY_OVERVIEW;
+  const isLoading = status === "loading" || status === "initializing";
 
   return (
     <main className="min-h-screen bg-page text-foreground">
@@ -110,14 +92,27 @@ export function LandingPage() {
       <div className="mx-auto max-w-[1280px] px-6 py-16 md:pt-16 md:pb-20">
         <div className="flex flex-col gap-12">
           <Hero />
-          <StatsBar overview={overview} />
-          <StatusBanner status={status} />
-          <AnalyticsGrid
-            volume={analytics?.volume ?? []}
-            topChannels={analytics?.topChannels ?? []}
-            topSenders={analytics?.topSenders ?? []}
-            topEmotes={analytics?.topEmotes ?? []}
+          <StatusBanner
+            status={status}
+            onRetry={() => setRequestVersion((version) => version + 1)}
           />
+          {analytics?.stale ? (
+            <p className="font-mono text-[12px] text-warning" role="status">
+              Veriler güncel olmayabilir. Son başarılı anlık görüntü gösteriliyor.
+            </p>
+          ) : null}
+          {status !== "error" ? (
+            <>
+              <StatsBar overview={analytics?.overview ?? null} />
+              <AnalyticsGrid
+                isLoading={isLoading}
+                volume={analytics?.message_volume ?? []}
+                topChannels={analytics?.top_channels ?? []}
+                topSenders={analytics?.top_senders ?? []}
+                topEmotes={analytics?.top_emotes ?? []}
+              />
+            </>
+          ) : null}
         </div>
       </div>
       <Footer />
@@ -128,11 +123,17 @@ export function LandingPage() {
 function Footer() {
   return (
     <footer className="border-t border-border py-3">
-      <div className="mx-auto max-w-[1280px] px-6">
+      <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-4 px-6">
         <p className="flex items-center gap-1.5 font-mono text-2xs uppercase text-muted-foreground">
           <Copyright className="h-3 w-3 shrink-0" aria-hidden />
           {new Date().getFullYear()} kick-logs · Tüm hakları saklıdır.
         </p>
+        <Link
+          className="font-mono text-2xs uppercase text-muted-foreground transition-colors hover:text-foreground"
+          href="/request"
+        >
+          Talep
+        </Link>
       </div>
     </footer>
   );
@@ -169,49 +170,59 @@ function Hero() {
   );
 }
 
-function StatsBar({ overview }: { overview: AnalyticsOverview }) {
-  const cells: { label: string; value: string }[] = [
-    { label: "TOPLAM MESAJ", value: formatCompactNumber(overview.total_messages) },
-    { label: "KANAL", value: formatCompactNumber(overview.total_channels) },
-    { label: "KULLANICI", value: formatCompactNumber(overview.total_senders) },
-    { label: "EMOTE", value: formatCompactNumber(overview.total_emote_usages) }
+function StatsBar({ overview }: { overview: AnalyticsOverview | null }) {
+  const cells = [
+    { label: "TOPLAM MESAJ", value: overview?.total_messages },
+    { label: "KANAL", value: overview?.total_channels },
+    { label: "KULLANICI", value: overview?.total_senders },
+    { label: "EMOTE", value: overview?.total_emote_usages }
   ];
 
   return (
-    <section
-      aria-label="Genel metrikler"
-      className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-4"
-    >
-      {cells.map((cell) => (
-        <div key={cell.label} className="bg-panel px-6 py-5">
-          <div className="font-mono text-2xs uppercase text-muted-foreground">{cell.label}</div>
-          <div className="mt-2 text-[26px] font-semibold leading-none text-foreground">
-            {cell.value}
+    <section aria-label="Genel metrikler" aria-busy={!overview} className="space-y-3">
+      <p className="font-mono text-2xs uppercase text-muted-foreground">Son 14 gün</p>
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-4">
+        {cells.map((cell) => (
+          <div key={cell.label} className="bg-panel px-6 py-5">
+            <div className="font-mono text-2xs uppercase text-muted-foreground">{cell.label}</div>
+            {cell.value === undefined ? (
+              <SkeletonBlock
+                ariaLabel={`${cell.label} yükleniyor`}
+                className="mt-2 h-[26px] w-24"
+              />
+            ) : (
+              <div className="mt-2 text-[26px] font-semibold leading-none text-foreground">
+                {formatCompactNumber(cell.value)}
+              </div>
+            )}
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </section>
   );
 }
 
 function AnalyticsGrid({
+  isLoading,
   volume,
   topChannels,
   topSenders,
   topEmotes
 }: {
+  isLoading: boolean;
   volume: MessageVolumePoint[];
   topChannels: TopChannelAnalytics[];
   topSenders: TopSenderAnalytics[];
   topEmotes: TopEmoteAnalytics[];
 }) {
   return (
-    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-      <Panel title="Mesaj hacmi" subtitle="son 14 gün">
-        <MessageVolumeChart points={volume} />
+    <div aria-busy={isLoading} className="grid grid-cols-1 gap-5 md:grid-cols-2">
+      <Panel title="Mesaj hacmi" subtitle="Son 14 gün">
+        <MessageVolumeChart isLoading={isLoading} points={volume} />
       </Panel>
-      <Panel title="Top kanallar" subtitle="mesaj sayısı">
+      <Panel title="Top kanallar" subtitle="Son 14 gün">
         <TopList
+          isLoading={isLoading}
           rows={topChannels.map((channel) => ({
             key: String(channel.channel_id),
             label: channel.display_name,
@@ -223,8 +234,9 @@ function AnalyticsGrid({
           emptyText="Kanal verisi henüz yok."
         />
       </Panel>
-      <Panel title="Top kullanıcılar" subtitle="mesaj sayısı">
+      <Panel title="Top kullanıcılar" subtitle="Son 14 gün">
         <TopList
+          isLoading={isLoading}
           rows={topSenders.map((sender) => ({
             key: String(sender.sender_id),
             label: sender.username,
@@ -236,8 +248,9 @@ function AnalyticsGrid({
           emptyText="Kullanıcı verisi henüz yok."
         />
       </Panel>
-      <Panel title="Top emoteler" subtitle="kullanım">
+      <Panel title="Top emoteler" subtitle="Son 14 gün">
         <TopList
+          isLoading={isLoading}
           rows={topEmotes.map((emote) => ({
             key: emote.id,
             label: emote.name,
@@ -271,7 +284,17 @@ function Panel({
   );
 }
 
-function MessageVolumeChart({ points }: { points: MessageVolumePoint[] }) {
+function MessageVolumeChart({
+  isLoading,
+  points
+}: {
+  isLoading: boolean;
+  points: MessageVolumePoint[];
+}) {
+  if (isLoading) {
+    return <MessageVolumeSkeleton />;
+  }
+
   if (!points.length) {
     return <EmptyHint text="Henüz veri yok." />;
   }
@@ -282,7 +305,7 @@ function MessageVolumeChart({ points }: { points: MessageVolumePoint[] }) {
     <div className="relative flex h-44 items-end gap-1.5">
       {points.map((point) => {
         const ratio = max > 0 ? point.message_count / max : 0;
-        const heightPct = max > 0 ? Math.max(ratio * 100, 4) : 4;
+        const heightPct = max > 0 && point.message_count > 0 ? Math.max(ratio * 100, 4) : 2;
         return (
           <div
             key={point.bucket_start}
@@ -329,7 +352,19 @@ type TopRow = {
   initial?: string;
 };
 
-function TopList({ rows, emptyText }: { rows: TopRow[]; emptyText: string }) {
+function TopList({
+  emptyText,
+  isLoading,
+  rows
+}: {
+  emptyText: string;
+  isLoading: boolean;
+  rows: TopRow[];
+}) {
+  if (isLoading) {
+    return <TopListSkeleton />;
+  }
+
   if (!rows.length) {
     return <EmptyHint text={emptyText} />;
   }
@@ -387,18 +422,29 @@ function TopList({ rows, emptyText }: { rows: TopRow[]; emptyText: string }) {
   );
 }
 
-function StatusBanner({ status }: { status: "loading" | "ready" | "partial" | "error" }) {
+function StatusBanner({ status, onRetry }: { status: HomepageStatus; onRetry: () => void }) {
   if (status === "ready") {
     return null;
   }
 
   return (
-    <div className="rounded-md border border-border bg-panel px-4 py-3 text-sm text-muted-foreground">
-      {status === "loading"
-        ? "Analytics verileri yükleniyor…"
-        : status === "partial"
-          ? "Bazı analytics panelleri şu anda alınamadı. Mevcut veriler gösteriliyor."
-          : "Analytics verileri şu anda alınamadı. Arama ve admin bağlantıları kullanılabilir."}
+    <div
+      className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-panel px-4 py-3 text-sm text-muted-foreground"
+      role={status === "error" ? "alert" : "status"}
+    >
+      <p>
+        {status === "loading"
+          ? "Analytics verileri yükleniyor…"
+          : status === "initializing"
+            ? "Analytics verileri hazırlanıyor…"
+            : "Analytics verileri şu anda alınamadı. Arama ve admin bağlantıları kullanılabilir."}
+      </p>
+      {status === "error" ? (
+        <Button onClick={onRetry} size="sm" variant="outline">
+          <RotateCw aria-hidden className="h-4 w-4" />
+          Tekrar dene
+        </Button>
+      ) : null}
     </div>
   );
 }
@@ -407,33 +453,58 @@ function EmptyHint({ text }: { text: string }) {
   return <p className="text-[13px] text-muted-foreground">{text}</p>;
 }
 
-function getRecentVolumeRange() {
-  const end = new Date();
-  const start = new Date(end);
-  start.setDate(start.getDate() - 13);
-  start.setHours(0, 0, 0, 0);
-  end.setHours(23, 59, 59, 999);
-
-  return {
-    end: end.toISOString(),
-    start: start.toISOString()
-  };
+function SkeletonBlock({
+  ariaLabel,
+  className,
+  styleHeight
+}: {
+  ariaLabel?: string;
+  className: string;
+  styleHeight?: string;
+}) {
+  return (
+    <span
+      aria-label={ariaLabel}
+      className={cn(
+        "block rounded-sm bg-elevated motion-safe:animate-pulse motion-reduce:animate-none",
+        className
+      )}
+      style={styleHeight ? { height: styleHeight } : undefined}
+    />
+  );
 }
 
-function settle<T>(promise: Promise<T>) {
-  return Promise.allSettled([promise]).then((results) => results[0]);
+function MessageVolumeSkeleton() {
+  const heights = [34, 54, 42, 68, 48, 74, 38, 58, 46, 84, 52, 70, 44, 62];
+
+  return (
+    <div
+      aria-label="Mesaj hacmi yükleniyor"
+      className="relative flex h-44 items-end gap-1.5"
+      role="status"
+    >
+      {heights.map((height, index) => (
+        <div className="flex h-full flex-1 flex-col justify-end" key={`${height}-${index}`}>
+          <SkeletonBlock className="w-full" styleHeight={`${height}%`} />
+        </div>
+      ))}
+    </div>
+  );
 }
 
-function isFulfilled<T>(result: PromiseSettledResult<T>): result is PromiseFulfilledResult<T> {
-  return result.status === "fulfilled";
-}
-
-function valueOr<T>(result: PromiseSettledResult<T>, fallback: T): T {
-  return isFulfilled(result) ? result.value : fallback;
-}
-
-function itemsOrEmpty<T>(result: PromiseSettledResult<{ items: T[] }>): T[] {
-  return isFulfilled(result) ? result.value.items : [];
+function TopListSkeleton() {
+  return (
+    <div aria-label="Liste yükleniyor" className="flex flex-col gap-2.5" role="status">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div className="flex items-center gap-3 px-1 py-1 -mx-1" key={index}>
+          <SkeletonBlock className="h-3 w-5" />
+          <SkeletonBlock className="h-5 w-5" />
+          <SkeletonBlock className="h-3 flex-1" />
+          <SkeletonBlock className="h-3 w-12" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 const COMPACT_FORMATTER = new Intl.NumberFormat("tr-TR", {
@@ -448,6 +519,7 @@ function formatCompactNumber(value: number) {
 function formatShortDate(value: string) {
   return new Intl.DateTimeFormat("tr-TR", {
     day: "2-digit",
-    month: "short"
+    month: "short",
+    timeZone: "UTC"
   }).format(new Date(value));
 }

@@ -5,9 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/domain"
 	"github.com/YSelim0/kick-logs/apps/api-go/internal/ports"
+	analyticsusecase "github.com/YSelim0/kick-logs/apps/api-go/internal/usecase/analytics"
 )
 
 var (
@@ -20,6 +22,7 @@ type Service struct {
 	channels     ports.FollowedChannelRepository
 	senders      ports.SenderProfileRepository
 	profileCache *profileCache
+	now          func() time.Time
 }
 
 func NewService(
@@ -32,6 +35,7 @@ func NewService(
 		channels:     channels,
 		senders:      senders,
 		profileCache: newProfileCache(),
+		now:          time.Now,
 	}
 }
 
@@ -55,9 +59,10 @@ func (service *Service) buildUserProfile(
 	sender domain.SenderProfile,
 ) (domain.UserProfile, error) {
 	filter := domain.AnalyticsFilter{Sender: sender.Slug}
-	overview := valueOrZero(service.analytics.Overview(ctx, filter))
-	volume := valueOrZero(service.analytics.MessageVolume(ctx, filter, domain.AnalyticsBucketDay))
-	topChannels := valueOrZero(service.analytics.TopChannels(ctx, filter, 5))
+	volumeFilter := service.recentVolumeFilter(filter)
+	overview, topChannels := service.userSummary(ctx, filter)
+	volumePoints, volumeErr := service.analytics.MessageVolume(ctx, volumeFilter, domain.AnalyticsBucketDay)
+	volume := volumeOrEmpty(volumePoints, volumeErr, volumeFilter)
 	topEmotes := valueOrZero(service.analytics.TopEmotes(ctx, filter, 5))
 	latestMessages := valueOrZero(service.analytics.LatestMessages(ctx, filter, 20))
 	return domain.UserProfile{
@@ -90,9 +95,10 @@ func (service *Service) buildChannelProfile(
 	channel domain.FollowedChannel,
 ) (domain.ChannelProfile, error) {
 	filter := domain.AnalyticsFilter{Channel: channel.Slug}
-	overview := valueOrZero(service.analytics.Overview(ctx, filter))
-	volume := valueOrZero(service.analytics.MessageVolume(ctx, filter, domain.AnalyticsBucketDay))
-	topSenders := valueOrZero(service.analytics.TopSenders(ctx, filter, 5))
+	volumeFilter := service.recentVolumeFilter(filter)
+	overview, topSenders := service.channelSummary(ctx, filter)
+	volumePoints, volumeErr := service.analytics.MessageVolume(ctx, volumeFilter, domain.AnalyticsBucketDay)
+	volume := volumeOrEmpty(volumePoints, volumeErr, volumeFilter)
 	topEmotes := valueOrZero(service.analytics.TopEmotes(ctx, filter, 5))
 	latestMessages := valueOrZero(service.analytics.LatestMessages(ctx, filter, 10))
 	return domain.ChannelProfile{
@@ -105,12 +111,50 @@ func (service *Service) buildChannelProfile(
 	}, nil
 }
 
+func (service *Service) userSummary(ctx context.Context, filter domain.AnalyticsFilter) (domain.AnalyticsOverview, []domain.TopChannelAnalytics) {
+	if repo, ok := service.analytics.(ports.ProfileSummaryRepository); ok {
+		if overview, channels, err := repo.OverviewAndTopChannels(ctx, filter, 5); err == nil {
+			return overview, channels
+		}
+	}
+	// Preserve the existing independent/partial results if the combined query fails.
+	return valueOrZero(service.analytics.Overview(ctx, filter)), valueOrZero(service.analytics.TopChannels(ctx, filter, 5))
+}
+
+func (service *Service) channelSummary(ctx context.Context, filter domain.AnalyticsFilter) (domain.AnalyticsOverview, []domain.TopSenderAnalytics) {
+	if repo, ok := service.analytics.(ports.ProfileSummaryRepository); ok {
+		if overview, senders, err := repo.OverviewAndTopSenders(ctx, filter, 5); err == nil {
+			return overview, senders
+		}
+	}
+	return valueOrZero(service.analytics.Overview(ctx, filter)), valueOrZero(service.analytics.TopSenders(ctx, filter, 5))
+}
+
+func (service *Service) recentVolumeFilter(filter domain.AnalyticsFilter) domain.AnalyticsFilter {
+	now := service.now().UTC()
+	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, 0, -13)
+	filter.Start = start
+	filter.End = now
+	return filter
+}
+
 func valueOrZero[T any](value T, err error) T {
 	if err != nil {
 		var zero T
 		return zero
 	}
 	return value
+}
+
+func volumeOrEmpty(
+	value []domain.MessageVolumePoint,
+	err error,
+	filter domain.AnalyticsFilter,
+) []domain.MessageVolumePoint {
+	if err != nil {
+		return nil
+	}
+	return analyticsusecase.FillMessageVolumeRange(value, filter, domain.AnalyticsBucketDay)
 }
 
 func (service *Service) findSender(ctx context.Context, slug string) (domain.SenderProfile, error) {

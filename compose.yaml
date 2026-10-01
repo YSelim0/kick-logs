@@ -23,11 +23,18 @@ services:
       - "${CH_BIND_HOST:-127.0.0.1}:${CLICKHOUSE_NATIVE_PORT:-9000}:9000"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
-      # Mount only this file, not the whole config.d directory: a directory bind
+      # Mount individual files, not the whole config.d directory: a directory bind
       # mount would shadow the image's own config.d files (e.g. the one setting
       # listen_host 0.0.0.0), leaving ClickHouse bound to localhost so the api
       # and listener containers get "connection refused" on clickhouse:9000.
       - ./clickhouse/config.d/memory.xml:/etc/clickhouse-server/config.d/memory.xml:ro
+      - ./clickhouse/config.d/logging.xml:/etc/clickhouse-server/config.d/logging.xml:ro
+      - ./clickhouse/users.d/logging.xml:/etc/clickhouse-server/users.d/logging.xml:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test:
         [

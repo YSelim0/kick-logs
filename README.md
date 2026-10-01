@@ -63,7 +63,8 @@ own their Kick chat archive instead of depending on short-lived browser chat his
 - Infinite-scroll message results with reply context, clickable links, and inline emotes.
 - Public user and channel profile pages with activity summaries.
 - Prediction pages that run client-side and do not store prediction data.
-- Admin dashboard for followed channels, users, listener health, storage, and cleanup previews.
+- Public request form for channel suggestions and feedback, reviewed from the admin dashboard.
+- Admin dashboard for followed channels, requests, users, listener health, storage, and cleanup previews.
 - Durable ingestion: raw events pass through NATS JetStream before ClickHouse normalization.
 - Docker Compose runtime with Go, Next.js, NATS JetStream, ClickHouse, and SQLite.
 
@@ -76,7 +77,8 @@ The app is organized around:
   message volume.
 - **Prediction:** a public channel prediction view that fetches live Kick prediction data in the
   browser without storing it.
-- **Admin:** a protected dashboard for managing followed channels and watching ingestion health.
+- **Requests:** a public form for channel suggestions and feedback.
+- **Admin:** a protected dashboard for managing followed channels, requests, and ingestion health.
 
 The default stack stores high-volume chat data in ClickHouse and keeps control-plane data such as
 admins, followed channels, sender profiles, retention settings, and heartbeats in SQLite.

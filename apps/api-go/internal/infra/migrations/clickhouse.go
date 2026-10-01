@@ -146,5 +146,43 @@ func ClickHouseMigrations() []ClickHouseMigration {
 				ORDER BY id;`,
 			},
 		},
+		{
+			Version: 6,
+			Name:    "create_user_request_tables",
+			Statements: []string{
+				`CREATE TABLE IF NOT EXISTS user_requests (
+					request_id String,
+					type LowCardinality(String),
+					title String,
+					title_lower String,
+					message String,
+					message_lower String,
+					channel_slug Nullable(String),
+					channel_slug_lower String DEFAULT '',
+					channel_display_name Nullable(String),
+					channel_display_name_lower String DEFAULT '',
+					contact Nullable(String),
+					contact_lower String DEFAULT '',
+					ip_hash Nullable(String),
+					user_agent_hash Nullable(String),
+					created_at DateTime64(3, 'UTC')
+				)
+				ENGINE = MergeTree
+				PARTITION BY toYYYYMM(created_at)
+				ORDER BY (created_at, request_id);`,
+				`CREATE TABLE IF NOT EXISTS user_request_events (
+					event_id String,
+					request_id String,
+					event_type LowCardinality(String),
+					status String DEFAULT '',
+					note String DEFAULT '',
+					admin_id Nullable(Int64),
+					created_at DateTime64(3, 'UTC')
+				)
+				ENGINE = MergeTree
+				PARTITION BY toYYYYMM(created_at)
+				ORDER BY (request_id, created_at, event_id);`,
+			},
+		},
 	}
 }

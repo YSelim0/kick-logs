@@ -5,7 +5,10 @@ implementation details, or working assumptions change.
 
 ## Current State
 
-- Branch: `feat/issue-23-storage-hot-path-hardening`.
+- Integration target: `dev`; issue #27's approved first-pass changes were developed on
+  `feat/issue-27-analytics-performance` from `dev`.
+- Issue #27 is closed. The owner approved the narrower SQL-only profile follow-up from #29 directly
+  on `dev`, in the existing workspace. Issue #29's broader acceptance/backfill work remains open.
 - Active architecture: JetStream durable ingestion (see `docs/implementation_plan.md`, issue #23).
   Live chat ingestion now runs as `listener -> NATS JetStream -> processor -> ClickHouse`, with
   SQLite used for control-plane state only.
@@ -35,6 +38,107 @@ implementation details, or working assumptions change.
   - `raw_kick_events`: 121664
   - `raw_event_attempts`: 121664
 
+## Public Identity Directory (issue #27)
+
+The owner-approved scope is homepage recent statistics, prefix directories, and profile loading
+visuals only. `/search`, exports, subscription calculations, and profile all-time queries are not
+being redesigned in this pass. The wider issue's production benchmarking/profile-query work is
+not implied complete by these changes.
+
+- `/users` and `/channels` use `GET /directory/users` and `GET /directory/channels`.
+- Lookup reads indexed SQLite `sender_profiles` / `followed_channels` metadata, not chat history.
+  Disabled followed channels remain discoverable; users require an existing sender-profile cache
+  entry. No historical identity backfill or remote Kick lookup runs during search.
+- Prefix-only matching on name/slug, normalized `_`/`-` variants, minimum two characters.
+  Results sort by normalized slug then id, with 50-row pages and opaque continuation cursors.
+- Directory rows show identity/avatar only, not all-time message counts or activity timestamps.
+- SQLite migration 9 adds four expression indexes. Existing message/subscription data is unchanged.
+- `/search` and the all-time profile analytics contracts remain unchanged.
+
+## Prepared Homepage (issue #27)
+
+- User/channel profiles now share responsive `ProfileLoading` skeletons with accessible status and
+  reduced-motion support. Their all-time data request/response behavior is unchanged.
+
+- `GET /analytics/homepage` returns a coherent 14-day UTC snapshot with `as_of`, period, and stale
+  metadata. All five panels use the same window; the volume always contains 14 daily bins.
+- One API-lifetime background refresh, five sequential bounded queries, 15-minute refresh interval.
+  Requests never trigger aggregate queries. No new materialized views or historical rewrites.
+- Last good snapshot survives restarts in `/data/homepage-analytics-v1.json` (beside `SQLITE_PATH`),
+  even if ClickHouse is unavailable at startup. File format is versioned and bounded to 1 MiB.
+- Maximum stale age 24 hours, 90-second refresh deadline, per-query 2 threads / 384 MiB / 15s.
+  Failure backoff 1-15 minutes. Future, malformed, incompatible or expired cache is rejected.
+- Before any valid snapshot exists, return 202 initializing with Retry-After 5; the UI retries for
+  at most two minutes, then offers manual retry. Errors are not rendered as real zero values.
+- This optimizes request paths, not every existing analytics endpoint. Production 18M-row latency,
+  memory and ingestion-backlog comparisons still require measurement on the deployment.
+
+## All-Time Profile Queries (issue #29)
+
+- Combined overview/top-five counterpart query replaces two history scans with one on the normal
+  profile path. Optional `ProfileSummaryRepository` capability keeps other analytics consumers
+  unchanged and falls back to the old calls on error or when unavailable.
+- `WITH TOTALS` preserves exact counts over every matching group before LIMIT. Tuple `argMax`
+  preserves metadata selection. Keep FINAL, tombstones, null identities and all-time scope.
+- No schema/data migration, UI change, cache redesign or `/search` change. Remaining profile
+  volume/emote/latest-message queries are unchanged.
+- Real local data gave equal outputs and 50% fewer rows read for the changed query pair. Local
+  timings improved approximately 22% for a channel and 26% for a user. Not production acceptance;
+  see `docs/operations/public_analytics.md` for conditions and read-only benchmark instructions.
+
+## ClickHouse Logging Policy
+
+- Compose individually mounts `clickhouse/config.d/logging.xml` and
+  `clickhouse/users.d/logging.xml` to disable routine query/profiling/system-log history.
+- Warning/error text logs remain available with rotation; Docker console logs are capped separately.
+  Live system metrics and application history are unaffected.
+- Existing diagnostic tables are not automatically deleted. Deployment, optional scoped cleanup,
+  and rollback are documented in `docs/operations/clickhouse_logging.md`.
+- Runtime verified on isolated ClickHouse 24.8: existing diagnostic rows stopped growing, live
+  metrics remained available, and application fixture rows survived restart and opt-in log cleanup.
+
+## User Request Form Backend
+
+- Active implementation plan now targets a public request form for two request types:
+  - `channel_request`: visitors ask for a Kick channel to be added to tracking.
+  - `feedback`: visitors send product feedback, bug reports, or feature ideas.
+- Backend storage uses ClickHouse append-only tables, not SQLite:
+  - `user_requests`: immutable public submissions.
+  - `user_request_events`: admin workflow events (`status_changed`, `note_added`, `archived`).
+- Current status is computed from latest `status_changed` event and defaults to `new`.
+- Archive is append-only through an `archived` event; there is no delete workflow in the MVP.
+- Public endpoint:
+  - `POST /requests`
+  - IP and user-agent are HMAC-hashed before storage.
+  - Honeypot field `website` is rejected when filled.
+  - Public route rate limit: `POST /requests`, IP key, 5 requests per 10 minutes, burst 2.
+- Admin endpoints:
+  - `GET /admin/requests`
+  - `GET /admin/requests/{request_id}`
+  - `POST /admin/requests/{request_id}/status`
+  - `POST /admin/requests/{request_id}/notes`
+  - `POST /admin/requests/{request_id}/archive`
+- Admin status values:
+  - `new`
+  - `reviewing`
+  - `approved`
+  - `rejected`
+  - `done`
+  - `duplicate`
+- Public frontend is implemented:
+  - `/request` is public and mounts `features/requests/request-page.tsx`.
+  - Header includes `Talep`; desktop shows it near GitHub/Admin, mobile shows it above Admin.
+  - The form has `Kanal Talebi` and `Geri Bildirim` modes and posts through
+    `features/requests/api.ts`.
+  - Success renders the returned request id inline; rate-limit/validation errors stay inline.
+- Admin request management frontend is implemented:
+  - `/admin/requests` mounts `features/requests/request-admin.tsx`.
+  - Admin sidebar includes `Requests` for regular admin and super admin users.
+  - Default list filter shows active requests only.
+  - Filters cover type, status, archive state, text query, and date range.
+  - The request list is full width; selecting a row opens a detail modal.
+  - The detail modal supports status change, note creation, event timeline, and archive action.
+
 ## Webhook Subscription Pipeline (issue #22, Phase 6 complete)
 
 - `domain.KickWebhookEvent` — webhook inbox model; status: `pending/processed/failed/ignored`
@@ -50,6 +154,31 @@ implementation details, or working assumptions change.
 - SQLite migrations v5 (broadcaster_user_id), v6 (kick_webhook_events), v7 (kick_event_subscriptions)
 - ClickHouse migration v5 (channel_subscription_periods, ReplacingMergeTree ORDER BY id)
 - Active count query uses `FINAL` + `countDistinctIf(subscriber_kick_user_id, expires_at > now())`
+- Webhook normalization keeps Kick-provided `expires_at` authoritative. If Kick omits `expires_at`,
+  the fallback expiry is `created_at + 31d`.
+
+## Active Channel Subscribers
+
+- Public channel profiles now expose detailed active subscriber lists from captured webhook periods.
+- Backend endpoints:
+  - `GET /channels/{slug}/subscribers?limit=50&offset=0&gift_only=false`
+  - `GET /channels/{slug}/subscribers/export?gift_only=false&format=txt|csv|json`
+- Both endpoints resolve the channel through followed-channel metadata and read
+  `channel_subscription_periods` from ClickHouse.
+- Active subscriber definition matches summary counts: `expires_at > now()`.
+- List/export collapse multiple active periods for the same `subscriber_kick_user_id` and use the
+  latest period by expiry/start/ingest ordering.
+- `gift_only=true` returns active subscribers whose selected active period is gifted.
+- Public export supports JSON, CSV, and human-readable TXT. TXT includes channel, generated time,
+  total, user id, username, optional Kick profile slug, optional gifter, start, and expiry.
+- The UI intentionally omits streak/month count because the current stored Kick webhook data does
+  not include a reliable value and historical capture may be partial.
+- Frontend `/channels/[slug]` behavior:
+  - `AKTİF ABONE` opens all active subscribers.
+  - `HEDİYE ABONE` opens gift-only active subscribers.
+  - modal loads 50 rows, appends with `Daha fazla yükle`, and shows
+    `Bu kanal için henüz aktif abonelik kaydı yok.` when empty.
+  - download menu follows the search export pattern and closes on outside click.
 
 ## Default Data Stores
 
@@ -201,9 +330,17 @@ GET  /analytics/top-emotes
 GET  /users/{slug}/analytics
 GET  /channels/{slug}/analytics
 GET  /channels/{slug}/subscription-summary
+GET  /channels/{slug}/subscribers
+GET  /channels/{slug}/subscribers/export
+POST /requests
 POST /webhooks/kick
 GET  /admin/webhooks/health
 POST /admin/webhooks/sync
+GET  /admin/requests
+GET  /admin/requests/{request_id}
+POST /admin/requests/{request_id}/status
+POST /admin/requests/{request_id}/notes
+POST /admin/requests/{request_id}/archive
 ```
 
 Public routes remain unauthenticated. Admin routes require the HttpOnly JWT session cookie and an

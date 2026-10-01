@@ -549,3 +549,103 @@ type ChannelSubscriptionSummary struct {
 	ActiveGiftedCount int64
 	LatestEventAt     time.Time
 }
+
+type ChannelSubscriberFilter struct {
+	FollowedChannelID int64
+	GiftOnly          bool
+	Limit             uint64
+	Offset            uint64
+}
+
+type ChannelSubscriber struct {
+	SubscriberKickUserID  int64
+	Username              string
+	Slug                  string
+	ProfileImageURL       string
+	IsGift                bool
+	GifterKickUserID      int64
+	GifterUsername        string
+	GifterSlug            string
+	GifterProfileImageURL string
+	StartedAt             time.Time
+	ExpiresAt             time.Time
+}
+
+type ChannelSubscriberPage struct {
+	Items  []ChannelSubscriber
+	Count  int64
+	Limit  uint64
+	Offset uint64
+}
+
+type UserRequestType string
+
+const (
+	UserRequestTypeChannelRequest UserRequestType = "channel_request"
+	UserRequestTypeFeedback       UserRequestType = "feedback"
+)
+
+type UserRequestStatus string
+
+const (
+	UserRequestStatusNew       UserRequestStatus = "new"
+	UserRequestStatusReviewing UserRequestStatus = "reviewing"
+	UserRequestStatusApproved  UserRequestStatus = "approved"
+	UserRequestStatusRejected  UserRequestStatus = "rejected"
+	UserRequestStatusDone      UserRequestStatus = "done"
+	UserRequestStatusDuplicate UserRequestStatus = "duplicate"
+)
+
+type UserRequestEventType string
+
+const (
+	UserRequestEventStatusChanged UserRequestEventType = "status_changed"
+	UserRequestEventNoteAdded     UserRequestEventType = "note_added"
+	UserRequestEventArchived      UserRequestEventType = "archived"
+)
+
+type UserRequest struct {
+	ID                 string
+	Type               UserRequestType
+	Title              string
+	Message            string
+	ChannelSlug        string
+	ChannelDisplayName string
+	Contact            string
+	IPHash             string
+	UserAgentHash      string
+	CreatedAt          time.Time
+}
+
+type UserRequestEvent struct {
+	ID        string
+	RequestID string
+	EventType UserRequestEventType
+	Status    UserRequestStatus
+	Note      string
+	AdminID   int64
+	CreatedAt time.Time
+}
+
+type UserRequestState struct {
+	Request       UserRequest
+	CurrentStatus UserRequestStatus
+	IsArchived    bool
+	LatestEventAt time.Time
+}
+
+type UserRequestDetail struct {
+	State  UserRequestState
+	Events []UserRequestEvent
+}
+
+type UserRequestListFilter struct {
+	Type     UserRequestType
+	Status   UserRequestStatus
+	Archived *bool
+	Query    string
+	Start    time.Time
+	End      time.Time
+	Limit    uint64
+	Offset   uint64
+}

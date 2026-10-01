@@ -159,7 +159,13 @@ function MessageRow({ message, highlightQuery }: { message: Message; highlightQu
                 @{replyContext.senderUsername}:
               </span>
             )}
-            <span className="truncate">{replyContext.content}</span>
+            <MessageContent
+              className="min-w-0 flex-1 flex-nowrap overflow-hidden gap-x-1 leading-5"
+              content={replyContext.content}
+              emoteClassName="h-4 w-4"
+              emotes={[]}
+              textPartClassName="min-w-0 truncate"
+            />
           </div>
         ) : null}
         <MessageContent

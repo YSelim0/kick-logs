@@ -2,6 +2,199 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
+## Latest (all-time profile query optimization, issue #29)
+
+- Work continues directly on `dev` in the same folder at the owner's request.
+- Profile overview and top-five counterpart ranking share one ClickHouse history scan through an
+  optional port, with original-query fallback. All-time data, exact totals, metadata/order, cache,
+  HTTP responses, UI and `/search` remain unchanged. No schema or stored-data migration.
+- Old/new equality verified on isolated edge-case fixtures and real local historical data. The
+  changed pair reads half as many rows; local median time improved about 22% channel / 26% user.
+- Read-only benchmark and rollout notes: `docs/operations/public_analytics.md`. Production p95,
+  metadata coverage/backfill and other broader #29 tasks are not claimed complete. #28 untouched.
+- Validation passed: full Go tests, vet, gofmt, isolated ClickHouse integration, SQLite/ClickHouse
+  migration smoke checks, full Prettier and API Docker build. Local health and both profile routes
+  return 200. The local API was rebuilt; no frontend source changes were needed.
+- Separate local startup warning: Kick token requests return 401, preventing public-key retrieval
+  and webhook subscription sync. Credentials were not changed; this is outside the SQL task.
+
+## Previous (homepage timestamp copy)
+
+- Removed the homepage's explicit UTC date range and update timestamp at the owner's request.
+- Kept all `Son 14 gün` labels, stale-data warning, API metadata, and refresh behavior unchanged.
+- Integration verification passed: Go tests/vet/gofmt, isolated ClickHouse integration, 166 frontend
+  tests, typecheck, lint, production build and repository-wide Prettier. Wider issue #27 follow-ups
+  remain open; this is not production-scale performance acceptance.
+
+## Previous (profile loading and verification, issue #27)
+
+- User/channel profiles use animated, responsive skeletons with accessible status and reduced-motion
+  support. Profile all-time queries, loaded views and `/search` remain unchanged.
+- Full backend/frontend CI-equivalent checks passed locally, including isolated ClickHouse tests,
+  migration smoke checks, 165 frontend tests and production build. GitHub CI has not run yet.
+- Browser checks covered real fixture-backed prefix paging and homepage results plus delayed profile
+  loading on desktop/mobile. No application data was rewritten or deleted.
+- The approved first-pass features are implemented; broader issue #27 production benchmarking and
+  profile-query optimization are not claimed complete. i18n (#28) is untouched.
+
+## Previous (prepared 14-day homepage, issue #27)
+
+- `/` fetches one `/analytics/homepage` snapshot. Every panel states `Son 14 gün`, with actual
+  UTC dates/update time. Existing all-time endpoints and `/search` are untouched.
+- API prepares data in the background, persists the last good snapshot beside SQLite, and serves
+  memory without request-triggered aggregates. Limits/backoff/stale handling are documented in
+  `docs/operations/public_analytics.md`.
+- Initialization and errors use placeholders/retry, never fake zero counts. Volume keeps all 14 days.
+- Production-scale performance has not been measured locally; no issue-wide completion claim.
+
+## Previous (indexed identity directories, issue #27)
+
+- `/users` and `/channels` now use SQLite-backed `/directory/users` and `/directory/channels`.
+- Search matches name/slug prefixes rather than arbitrary substrings; `_` and `-` are normalized.
+- Explicit submit, alphabetic identity order, cursor pagination, no history counts/activity fields.
+- Migration 9 adds four metadata expression indexes; existing data and `/search` are unchanged.
+- Directory coverage is the existing metadata cache, not a new scan/backfill of all chat history.
+
+## Previous (ClickHouse logging controls)
+
+- Added individually mounted server/profile XML overrides to disable routine query/profiling and
+  high-volume system-log history without changing application tables or query behavior.
+- Kept server warning/error diagnostics with 10 MiB rotation and three archives; bounded the
+  ClickHouse container's Docker console logs to three 10 MiB files.
+- Added `docs/operations/clickhouse_logging.md` for deployment, verification, explicit opt-in
+  historical log cleanup, and rollback. No database cleanup or service restart was performed.
+- Compose validation, XML parsing, and isolated ClickHouse 24.8 runtime verification passed after
+  Docker became available. Historical log cleanup was tested only on disposable fixture data.
+- Follow-up work: performance issue #27 on `feat/issue-27-analytics-performance`, then i18n #28.
+
+## Latest (subscription expiry fallback)
+
+- Changed Kick webhook subscription normalization fallback expiry from `created_at + 30d` to
+  `created_at + 31d` when Kick does not provide `expires_at`.
+- Kick-provided `expires_at` remains authoritative and is not clamped.
+- Added regression coverage for missing-expiry normal subscription and gift payloads.
+
+## Latest (brand favicon set)
+
+- Replaced the visible Kick Logs app logo asset with the new favicon-generated logo.
+- Added the full favicon set to `apps/web/public`:
+  - `favicon.ico`
+  - `favicon.svg`
+  - `favicon-96x96.png`
+  - `apple-touch-icon.png`
+  - `web-app-manifest-192x192.png`
+  - `web-app-manifest-512x512.png`
+  - `site.webmanifest`
+- Updated Next metadata to expose the favicon, SVG icon, Apple touch icon, and web manifest from
+  root public paths.
+- Updated `docs/app-logo.png` so README and design references use the same current product mark.
+
+## Latest (active channel subscribers)
+
+- Implemented public active subscriber detail for channel profiles.
+- Backend additions:
+  - `GET /channels/{slug}/subscribers`
+  - `GET /channels/{slug}/subscribers/export`
+  - ClickHouse repository methods for paginated active subscribers and full export lists.
+  - Route rate limits for subscriber list and subscriber export.
+- Subscriber list behavior:
+  - active means `expires_at > now()`,
+  - rows are deduplicated by `subscriber_kick_user_id`,
+  - duplicate active periods choose the latest period,
+  - `gift_only=true` returns gifted active subscribers only.
+- Export supports JSON, CSV, and readable TXT. Streak/month count is intentionally omitted because
+  the current stored data does not contain a reliable value.
+- Frontend `/channels/[slug]` additions:
+  - `AKTİF ABONE` opens the active subscriber modal,
+  - `HEDİYE ABONE` opens the gift-only modal,
+  - modal loads 50 rows at a time and supports `Daha fazla yükle`,
+  - download menu offers JSON, CSV, and TXT and closes on outside click,
+  - empty state says `Bu kanal için henüz aktif abonelik kaydı yok.`
+- Verification run so far:
+  - `go test ./...` from `apps/api-go`: passed
+  - `go vet ./...` from `apps/api-go`: passed
+  - `gofmt -l cmd internal` from `apps/api-go`: passed
+  - `pnpm --filter @kick-logs/web test`: passed
+  - `pnpm --filter @kick-logs/web typecheck`: passed
+  - `pnpm --filter @kick-logs/web lint`: passed
+  - `pnpm --filter @kick-logs/web build`: passed
+  - `pnpm format:check`: passed
+- Local ClickHouse integration test against the developer data volume hit an existing raw-event
+  memory-limit failure before reaching the new subscriber query. CI runs the same test against a
+  clean service.
+
+## Previously Latest (admin request management frontend)
+
+- `/admin/requests` frontend is implemented and wired to the request workflow APIs.
+- Admin sidebar now includes `Requests` for regular admin and super admin users.
+- The Requests page includes:
+  - filters for request type, current status, archive state, text query, start, and end,
+  - active-only requests as the default archive filter,
+  - full-width request list rows with type/status/date and channel/contact preview,
+  - detail modal with original content, metadata, current status, event timeline, status update,
+    note form, and archive action.
+- Frontend API wrapper now covers:
+  - `GET /admin/requests`
+  - `GET /admin/requests/{request_id}`
+  - `POST /admin/requests/{request_id}/status`
+  - `POST /admin/requests/{request_id}/notes`
+  - `POST /admin/requests/{request_id}/archive`
+- Added `request-admin.test.tsx` coverage for default active listing, filters, detail loading,
+  status update, notes, and archive.
+- Final request-form verification completed:
+  - `go test ./...`
+  - `pnpm --filter @kick-logs/web test`
+  - `pnpm --filter @kick-logs/web typecheck`
+  - `pnpm --filter @kick-logs/web lint`
+  - `pnpm --filter @kick-logs/web build`
+  - targeted Prettier check for changed files
+  - `gofmt -l cmd internal`
+  - `docker compose ps`
+- Updated `docs/implementation_plan.md` status: Phases 1-7 complete.
+
+## Previously Latest (public request form frontend)
+
+- Public `/request` frontend is implemented and wired to the backend request API.
+- Global public header is sticky on desktop and mobile.
+- Header now includes `Talep`:
+  - desktop: right action area near GitHub/Admin,
+  - mobile: inside the hamburger panel above Admin.
+- `/request` is public and compact:
+  - `Kanal Talebi` mode collects channel slug/name, title, message, and optional contact.
+  - `Geri Bildirim` mode hides channel fields and collects title, message, and optional contact.
+  - submit calls `POST /requests`,
+  - success renders the returned request id inline,
+  - validation/rate-limit failures render inline,
+  - hidden honeypot field `website` is included for backend bot rejection.
+- The `/request` right-side panel explains the user-facing review process and avoids internal
+  implementation details.
+- Added frontend request page tests for navigation, channel payload, feedback payload, and required
+  field gating.
+- Backend request-form foundation remains:
+  - public endpoint and admin request APIs are implemented,
+  - admin request management frontend remains pending.
+- Public submissions use ClickHouse, not SQLite:
+  - `user_requests` stores immutable form submissions.
+  - `user_request_events` stores append-only admin workflow events.
+- Public endpoint:
+  - `POST /requests`
+  - supports `channel_request` and `feedback`
+  - validates and normalizes payloads
+  - normalizes channel slugs from plain names or Kick URLs
+  - rejects filled honeypot field `website`
+  - stores HMAC-hashed IP and user-agent metadata
+  - has a dedicated IP rate-limit policy: 5 requests per 10 minutes, burst 2
+- Admin endpoints:
+  - `GET /admin/requests`
+  - `GET /admin/requests/{request_id}`
+  - `POST /admin/requests/{request_id}/status`
+  - `POST /admin/requests/{request_id}/notes`
+  - `POST /admin/requests/{request_id}/archive`
+- Current status is computed from the latest `status_changed` event and defaults to `new`. Archive
+  is represented by an `archived` event; no hard delete was added.
+- Updated `docs/implementation_plan.md` status: Phases 1-5 complete, admin frontend and final
+  verification pending.
+
 ## Latest (channel index aggregate hardening)
 
 - Root cause for `/channels` search failing on high-volume channels such as `hype`: the endpoint

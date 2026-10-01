@@ -31,6 +31,83 @@ export type CreateAdminUserRequest = {
   password: string;
 };
 
+export type UserRequestType = "channel_request" | "feedback";
+
+export type UserRequestStatus =
+  | "new"
+  | "reviewing"
+  | "approved"
+  | "rejected"
+  | "done"
+  | "duplicate";
+
+export type CreateUserRequestRequest = {
+  type: UserRequestType;
+  title: string;
+  message: string;
+  channel_slug?: string;
+  channel_display_name?: string;
+  contact?: string;
+  website?: string;
+};
+
+export type CreateUserRequestResponse = {
+  request_id: string;
+};
+
+export type UserRequest = {
+  request_id: string;
+  type: UserRequestType;
+  title: string;
+  message: string;
+  channel_slug: string | null;
+  channel_display_name: string | null;
+  contact: string | null;
+  current_status: UserRequestStatus;
+  is_archived: boolean;
+  created_at: string;
+  latest_event_at: string;
+};
+
+export type UserRequestEvent = {
+  event_id: string;
+  request_id: string;
+  event_type: "status_changed" | "note_added" | "archived";
+  status: UserRequestStatus | "";
+  note: string;
+  admin_id: number;
+  created_at: string;
+};
+
+export type UserRequestsResponse = {
+  items: UserRequest[];
+  count: number;
+};
+
+export type UserRequestDetailResponse = {
+  request: UserRequest;
+  events: UserRequestEvent[];
+};
+
+export type UserRequestListParams = {
+  type?: UserRequestType;
+  status?: UserRequestStatus;
+  archived?: boolean;
+  q?: string;
+  start?: string;
+  end?: string;
+  limit?: number;
+  offset?: number;
+};
+
+export type UpdateUserRequestStatusRequest = {
+  status: UserRequestStatus;
+};
+
+export type AddUserRequestNoteRequest = {
+  note: string;
+};
+
 export type Channel = {
   id: number;
   kick_channel_id: number | null;
@@ -388,6 +465,31 @@ export type ChannelSubscriptionSummary = {
   active_gifted_count: number;
   latest_event_at: string | null;
 };
+
+export type ChannelSubscriber = {
+  subscriber_kick_user_id: number;
+  username: string;
+  slug: string;
+  profile_image_url: string;
+  is_gift: boolean;
+  gifter_kick_user_id?: number;
+  gifter_username?: string;
+  gifter_slug?: string;
+  gifter_profile_image_url?: string;
+  started_at: string;
+  expires_at: string;
+};
+
+export type ChannelSubscribersResponse = {
+  channel_slug: string;
+  gift_only: boolean;
+  count: number;
+  limit: number;
+  offset: number;
+  items: ChannelSubscriber[];
+};
+
+export type ChannelSubscriberExportFormat = "json" | "csv" | "txt";
 
 export type EventSubStatus = {
   event_type: string;

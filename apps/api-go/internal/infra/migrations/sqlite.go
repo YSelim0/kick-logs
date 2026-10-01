@@ -188,5 +188,6 @@ func SQLiteMigrations() []SQLiteMigration {
 				`DELETE FROM raw_event_queue WHERE status = 'processed';`,
 			},
 		},
+		directorySQLiteMigration(),
 	}
 }

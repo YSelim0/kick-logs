@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { UserProfilePage } from "@/features/user-profile/user-profile-page";
@@ -48,12 +48,56 @@ describe("UserProfilePage", () => {
     );
   });
 
+  it("keeps the header and breadcrumb available while loading, then replaces the skeleton", async () => {
+    let resolveProfile!: (profile: UserProfile) => void;
+    profileMocks.getUserProfile.mockReturnValue(
+      new Promise<UserProfile>((resolve) => {
+        resolveProfile = resolve;
+      })
+    );
+
+    render(<UserProfilePage slug="yavuz" />);
+
+    expect(screen.getByRole("status")).toHaveTextContent("Kullanıcı profili yükleniyor...");
+    expect(screen.getByRole("region", { name: "Kullanıcı profili" })).toHaveAttribute(
+      "aria-busy",
+      "true"
+    );
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByText("yavuz")
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /mesajlarda ara/i })).not.toBeInTheDocument();
+
+    await act(async () => resolveProfile(profileFixture()));
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Kullanıcı profili" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Yavuz" })).toBeInTheDocument();
+    expect(profileMocks.getUserProfile).toHaveBeenCalledExactlyOnceWith("yavuz");
+  });
+
+  it("replaces loading with the existing error and search action", async () => {
+    profileMocks.getUserProfile.mockRejectedValue(new ApiClientError(500, { detail: "failed" }));
+
+    render(<UserProfilePage slug="yavuz" />);
+
+    expect(await screen.findByText("Kullanıcı profili şu anda alınamadı.")).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Kullanıcı profili" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /search'te ara/i })).toHaveAttribute(
+      "href",
+      "/search?sender=yavuz"
+    );
+  });
+
   it("renders not-found state for unknown senders", async () => {
     profileMocks.getUserProfile.mockRejectedValue(new ApiClientError(404, { detail: "missing" }));
 
     render(<UserProfilePage slug="missing" />);
 
     expect(await screen.findByText("Kullanıcı bulunamadı.")).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: /search'e dön/i })).toHaveAttribute("href", "/search");
   });
 });
