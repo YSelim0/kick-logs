@@ -2,7 +2,16 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue 28 subscriber TXT export)
+## Latest (issue 28 prediction, requests and login)
+
+- Prediction copy, chart legends/tooltips and number/date formatting use EN/TR/DE catalogs.
+  Locale switches preserve chart identity and the existing five-second polling schedule.
+- Request/login drafts and visible success/error states translate in place without resubmission.
+  Async failures store semantic keys; raw prediction titles, outcomes and submitted text stay intact.
+- 262 frontend tests, lint, typecheck and production build passed. German 390px previews cover
+  request/login and populated prediction charts. Nothing pushed; admin localization follows.
+
+## Previous (issue 28 subscriber TXT export)
 
 - Subscriber TXT downloads accept optional `locale=en|tr|de`. Missing/empty locale preserves the
   legacy Turkish report; invalid TXT locale returns 422 before queries. JSON/CSV ignore locale.

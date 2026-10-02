@@ -1,5 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { createLocaleRenderer } from "@/test/render-with-locale";
+import { LocaleTestControls } from "@/test/locale-controls";
+import { ApiClientError } from "@/lib/api-client";
 const render = createLocaleRenderer("tr", "admin");
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -32,6 +34,53 @@ describe("RequestPage", () => {
     expect(screen.getByLabelText("Kanal adı")).toBeInTheDocument();
     expect(screen.getByLabelText("Başlık")).toBeInTheDocument();
     expect(screen.getByLabelText("Mesaj")).toBeInTheDocument();
+  });
+
+  it("preserves drafts and translates validation, rate limits and success without extra submissions", async () => {
+    apiMocks.createUserRequest
+      .mockRejectedValueOnce(new ApiClientError(400, { detail: "private" }))
+      .mockRejectedValueOnce(new ApiClientError(429, { detail: "private" }))
+      .mockResolvedValue({ request_id: "request_unchanged" });
+    render(
+      <>
+        <LocaleTestControls />
+        <RequestPage />
+      </>
+    );
+    fireEvent.change(screen.getByLabelText("Kanal adı"), { target: { value: "Heaven" } });
+    fireEvent.change(screen.getByLabelText("Başlık"), { target: { value: "Kaynak başlık" } });
+    fireEvent.change(screen.getByLabelText("Mesaj"), { target: { value: "Kaynak mesaj metni" } });
+    fireEvent.click(screen.getByRole("button", { name: "Switch to en" }));
+    expect(await screen.findByLabelText("Channel name")).toHaveValue("Heaven");
+    expect(screen.getByLabelText("Title")).toHaveValue("Kaynak başlık");
+    expect(apiMocks.createUserRequest).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByText("Check the form fields and send again.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Switch to tr" }));
+    expect(
+      await screen.findByText("Form alanlarını kontrol edip tekrar gönder.")
+    ).toBeInTheDocument();
+    expect(apiMocks.createUserRequest).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "Gönder" }));
+    expect(
+      await screen.findByText("Çok fazla talep gönderdin. Kısa süre sonra tekrar dene.")
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Switch to en" }));
+    expect(
+      await screen.findByText("Too many requests. Please try again shortly.")
+    ).toBeInTheDocument();
+    expect(apiMocks.createUserRequest).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect(await screen.findByText("Your request has been received.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Switch to de" }));
+    expect(await screen.findByText("Deine Anfrage ist eingegangen.")).toBeInTheDocument();
+    expect(screen.getByText("ID request_unchanged")).toBeInTheDocument();
+    expect(apiMocks.createUserRequest).toHaveBeenCalledTimes(3);
+    expect(apiMocks.createUserRequest.mock.calls[2][0]).toMatchObject({
+      channel_slug: "Heaven",
+      title: "Kaynak başlık",
+      message: "Kaynak mesaj metni"
+    });
   });
 
   it("submits a channel request with the normalized payload keys expected by the API", async () => {

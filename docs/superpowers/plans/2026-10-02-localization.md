@@ -273,17 +273,17 @@ with an optional fifth `Locale` argument; existing fourth-argument test/custom-b
 `predictionStateBadge` produces a semantic display key/tone while unknown source state remains raw.
 Auth/request error presentation consumes typed keys; mutation bodies and session behavior are unchanged.
 
-- [ ] Add a fake-timer test that switches language mid-poll and asserts no immediate new request and
+- [x] Add a fake-timer test that switches language mid-poll and asserts no immediate new request and
       the next request remains on the existing 5000ms schedule. Preserve prediction title/outcomes,
       top-user names and chart mount identity. Add all status/empty/error label cases.
-- [ ] Add tests that retain a partially completed request and login form on switch, translate already
+- [x] Add tests that retain a partially completed request and login form on switch, translate already
       visible validation/rate-limit/success states and do not resubmit. Never put passwords in snapshots.
-- [ ] Run `pnpm --filter @kick-logs/web test -- prediction request-page login-screen`; observe new failures.
-- [ ] Migrate copy/formatters across these screens and chart tooltips/legends. Use locale number and
+- [x] Run `pnpm --filter @kick-logs/web test -- prediction request-page login-screen`; observe new failures.
+- [x] Migrate copy/formatters across these screens and chart tooltips/legends. Use locale number and
       percent formatting instead of prefixing `%`; preserve multiplier values and source outcome strings.
       Keep hooks/timers independent of translation function identity. Translate custom form validation,
       not browser-owned date-picker/credential-manager chrome.
-- [ ] Run targeted tests and frontend gate; inspect German chart legends and request/login controls,
+- [x] Run targeted tests and frontend gate; inspect German chart legends and request/login controls,
       update context, commit.
 
 ## Task 8: Admin Shell And Management

@@ -2,6 +2,13 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (issue 28 prediction, requests and login)
+
+- Localized prediction states, chart legends/tooltips, request modes/forms and login presentation.
+- Unknown prediction states and all source/user text remain raw; API bodies and polling are unchanged.
+- Added language-switch regressions for polling cadence, chart identity, request validation/rate-limit/
+  success states and login credentials. Mobile German previews have no horizontal overflow.
+
 ## 2026-10-02 (issue 28 subscriber TXT export)
 
 - Extracted the TXT presentation formatter into a dedicated route helper with EN/TR/DE report copy.

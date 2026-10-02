@@ -1,35 +1,5 @@
 import type { PredictionOutcome } from "@/types/api";
 
-const COMPACT_FORMATTER = new Intl.NumberFormat("tr-TR", {
-  notation: "compact",
-  maximumFractionDigits: 1
-});
-
-const DATE_TIME_FORMATTER = new Intl.DateTimeFormat("tr-TR", {
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit"
-});
-
-export function formatCompactNumber(value: number): string {
-  return COMPACT_FORMATTER.format(value);
-}
-
-export function formatPercent(share: number): string {
-  return `%${(share * 100).toFixed(1)}`;
-}
-
-export function formatMultiplier(returnRate: number): string {
-  return `${returnRate.toFixed(2)}x`;
-}
-
-export function formatDateTime(value: string | null): string {
-  if (!value) return "—";
-  return DATE_TIME_FORMATTER.format(new Date(value));
-}
-
 // Categorical chart palette rooted in the app palette. The first two colors are intentionally
 // high-contrast for two-outcome predictions.
 export const CHART_COLORS = [
@@ -51,21 +21,22 @@ export function outcomeColor(index: number): string {
 type PredictionStateTone = "accent" | "warning" | "neutral";
 
 export type PredictionStateBadge = {
-  label: string;
+  key?: "active" | "locked" | "resolved" | "cancelled";
+  label?: string;
   tone: PredictionStateTone;
 };
 
 export function predictionStateBadge(state: string): PredictionStateBadge {
   switch (state.toUpperCase()) {
     case "RESOLVED":
-      return { label: "Sonuçlandı", tone: "accent" };
+      return { key: "resolved", tone: "accent" };
     case "LOCKED":
-      return { label: "Kilitli", tone: "warning" };
+      return { key: "locked", tone: "warning" };
     case "CANCELED":
     case "CANCELLED":
-      return { label: "İptal", tone: "warning" };
+      return { key: "cancelled", tone: "warning" };
     case "ACTIVE":
-      return { label: "Aktif", tone: "neutral" };
+      return { key: "active", tone: "neutral" };
     default:
       return { label: state || "—", tone: "neutral" };
   }
