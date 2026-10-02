@@ -394,6 +394,9 @@ Do not translate source data or derive query timestamps/timezone from the select
 The server admin layout loads only its selected admin catalog. `admin-catalog-provider.tsx`
 honors current client preference over stale server props after navigation, including blocked cookies.
 Route metadata is localized on the server and refreshed in place with `page-metadata.tsx`.
+All public/admin pages export metadata through `server-metadata.ts`; its shared `route-metadata.ts`
+resolver also powers client updates. EN/TR/DE titles use `Page Name - KickLogs`, with untranslated
+slugs for profile/prediction details. No additional API call is needed to construct a title.
 Only subscriber TXT export accepts an optional locale; other API payloads remain language-neutral.
 
 ## Verification

@@ -1,5 +1,12 @@
 # Decisions
 
+## 2026-10-02 (localized document titles)
+
+- Every public/admin route uses a localized `Page Name - KickLogs` document title. Profile and
+  prediction detail titles include the unchanged route slug, with no extra identity/data request.
+- Use the same route resolver for server metadata and in-place client updates. Keep existing URLs,
+  descriptions and page content; this is title coverage, not a broader SEO or indexing redesign.
+
 ## 2026-10-02 (issue 28 acceptance)
 
 - Localize route metadata on the server and on in-place language/path changes. The root provider

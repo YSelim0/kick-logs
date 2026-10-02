@@ -29,17 +29,32 @@
     "languageSwitch": "Dil yüklenemedi. Lütfen tekrar deneyin."
   },
   "metadata": {
+    "titles": {
+      "home": "Anasayfa",
+      "search": "Sohbet Arama",
+      "channels": "Kanallar",
+      "users": "Kullanıcılar",
+      "prediction": "Tahmin",
+      "request": "Talep Gönder",
+      "login": "Yönetici Girişi",
+      "channelProfile": "{slug} Kanal Profili",
+      "userProfile": "{slug} Kullanıcı Profili",
+      "predictionAnalysis": "{slug} Tahmin Analizi",
+      "adminOperations": "Operasyonlar - Yönetim",
+      "adminChannels": "Takip Edilen Kanallar - Yönetim",
+      "adminUsers": "Yöneticiler - Yönetim",
+      "adminRequests": "Talepler - Yönetim",
+      "adminData": "Veri Yönetimi - Yönetim",
+      "notFound": "Sayfa Bulunamadı"
+    },
     "description": "Kick sohbet geçmişinde arama yapın, kanal etkinliğini ve kayıtlı abonelikleri inceleyin.",
     "channels": {
-      "title": "Kanallar - Kick Logs",
       "description": "Kaydedilen Kick kanallarını arayın ve keşfedin."
     },
     "users": {
-      "title": "Kullanıcılar - Kick Logs",
       "description": "Kaydedilen Kick kullanıcılarını arayın ve keşfedin."
     },
     "prediction": {
-      "title": "Tahmin - Kick Logs",
       "description": "Bir Kick kanalının son tahmin oyununu görüntüleyin."
     }
   },

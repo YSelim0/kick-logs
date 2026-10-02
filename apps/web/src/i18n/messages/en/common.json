@@ -29,17 +29,32 @@
     "languageSwitch": "The language could not be loaded. Please try again."
   },
   "metadata": {
+    "titles": {
+      "home": "Home",
+      "search": "Chat Search",
+      "channels": "Channels",
+      "users": "Users",
+      "prediction": "Prediction",
+      "request": "Submit a Request",
+      "login": "Admin Sign In",
+      "channelProfile": "{slug} Channel Profile",
+      "userProfile": "{slug} User Profile",
+      "predictionAnalysis": "{slug} Prediction Analysis",
+      "adminOperations": "Operations - Admin",
+      "adminChannels": "Followed Channels - Admin",
+      "adminUsers": "Administrators - Admin",
+      "adminRequests": "Requests - Admin",
+      "adminData": "Data Management - Admin",
+      "notFound": "Page Not Found"
+    },
     "description": "Search Kick chat history, explore channel activity and track recorded subscriptions.",
     "channels": {
-      "title": "Channels - Kick Logs",
       "description": "Search and explore recorded Kick channels."
     },
     "users": {
-      "title": "Users - Kick Logs",
       "description": "Search and explore recorded Kick users."
     },
     "prediction": {
-      "title": "Prediction - Kick Logs",
       "description": "View a Kick channel's latest prediction."
     }
   },

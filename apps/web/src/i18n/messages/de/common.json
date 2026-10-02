@@ -29,17 +29,32 @@
     "languageSwitch": "Die Sprache konnte nicht geladen werden. Bitte versuche es erneut."
   },
   "metadata": {
+    "titles": {
+      "home": "Startseite",
+      "search": "Chat-Suche",
+      "channels": "Kanäle",
+      "users": "Nutzer",
+      "prediction": "Vorhersage",
+      "request": "Anfrage senden",
+      "login": "Admin-Anmeldung",
+      "channelProfile": "{slug} Kanalprofil",
+      "userProfile": "{slug} Nutzerprofil",
+      "predictionAnalysis": "{slug} Vorhersageanalyse",
+      "adminOperations": "Betrieb - Admin",
+      "adminChannels": "Verfolgte Kanäle - Admin",
+      "adminUsers": "Administratoren - Admin",
+      "adminRequests": "Anfragen - Admin",
+      "adminData": "Datenverwaltung - Admin",
+      "notFound": "Seite nicht gefunden"
+    },
     "description": "Durchsuche den Kick-Chatverlauf und entdecke Kanalaktivitäten und erfasste Abonnements.",
     "channels": {
-      "title": "Kanäle - Kick Logs",
       "description": "Suche und entdecke erfasste Kick-Kanäle."
     },
     "users": {
-      "title": "Nutzer - Kick Logs",
       "description": "Suche und entdecke erfasste Kick-Nutzer."
     },
     "prediction": {
-      "title": "Vorhersage - Kick Logs",
       "description": "Sieh dir die neueste Vorhersage eines Kick-Kanals an."
     }
   },

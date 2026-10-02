@@ -2,6 +2,15 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (localized document titles)
+
+- Expanded metadata coverage from three index pages to homepage, search, directories, profiles,
+  prediction, request/login, all admin sections and 404. Titles use the `KickLogs` suffix.
+- Shared one EN/TR/DE route resolver between Next.js server metadata and browser navigation/locale
+  effects. Dynamic slugs are URL-decoded once and remain untranslated; no backend requests added.
+- Added route-matrix and same-section navigation regressions. The 404 presentation now lives in a
+  client component under a server route wrapper so its first HTML response also has metadata.
+
 ## 2026-10-02 (issue 28 acceptance)
 
 - Independent whole-branch review found a public-switch/admin-navigation race that remounted forms.

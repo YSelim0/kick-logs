@@ -1,9 +1,8 @@
-import { getTranslations } from "next-intl/server";
+import { getPageMetadata } from "@/i18n/server-metadata";
 import { UsersIndexPage } from "@/features/user-profile/users-index-page";
 
-export async function generateMetadata() {
-  const t = await getTranslations("common.metadata.users");
-  return { title: t("title"), description: t("description") };
+export function generateMetadata() {
+  return getPageMetadata("/users");
 }
 
 export default function Page() {

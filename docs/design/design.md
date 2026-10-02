@@ -519,6 +519,13 @@ work is purely a re-skin against existing endpoints. Order:
 5. Re-style `/admin` (sidebar layout + sections).
 6. Re-style `/login`.
 
+## Document Titles
+
+- Every page has a localized `Page Name - KickLogs` browser title, such as `Anasayfa - KickLogs`.
+- Channel/user profiles and prediction analysis include the unchanged route slug. Public pages,
+  admin sections and 404 have distinct titles, updated on navigation and in-place language changes.
+- Titles are also present in server-rendered HTML; do not wait for profile/data requests to set them.
+
 ## Update Policy
 
 When the user makes a UI decision in chat:

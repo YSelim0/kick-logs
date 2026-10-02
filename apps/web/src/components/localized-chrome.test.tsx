@@ -1,6 +1,6 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import NotFound from "@/app/not-found";
+import { NotFoundScreen as NotFound } from "@/components/not-found-screen";
 import { renderWithLocale } from "@/test/render-with-locale";
 import { KickProfileLink } from "./kick-profile-link";
 import { ProfileLoading } from "./profile-loading";

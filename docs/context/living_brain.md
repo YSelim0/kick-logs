@@ -14,6 +14,8 @@ implementation details, or working assumptions change.
   without owner approval. Rollout notes: `docs/operations/localization.md`.
 - Localization targets EN/TR/DE on unchanged URLs, product copy only, cookie/browser/English
   resolution, and the owner's fixed bottom-right current-flag popover with native language names.
+- Every route has a localized `Page Name - KickLogs` document title on initial HTML, client navigation
+  and in-place locale changes. Detail titles preserve the route slug without extra data fetching.
 - Issue #27 is closed. The owner approved the narrower SQL-only profile follow-up from #29 on
   `dev`, then closed #29 in favor of manual production observation. Broader follow-ups are deferred,
   not claimed implemented. Existing query improvements remain in place.

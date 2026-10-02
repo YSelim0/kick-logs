@@ -2,16 +2,16 @@ import type { Metadata } from "next";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import { Suspense } from "react";
-import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { getLocale, getMessages } from "next-intl/server";
 
 import "./globals.css";
 import { NavigationProgress } from "@/components/navigation-progress";
 import { LocaleProvider } from "@/i18n/locale-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { PageMetadata } from "@/i18n/page-metadata";
+import { getPageMetadata } from "@/i18n/server-metadata";
 
 const sharedMetadata: Metadata = {
-  title: "Kick Logs",
   manifest: "/site.webmanifest",
   icons: {
     icon: [
@@ -25,8 +25,7 @@ const sharedMetadata: Metadata = {
 };
 
 export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("common.metadata");
-  return { ...sharedMetadata, description: t("description") };
+  return { ...sharedMetadata, ...(await getPageMetadata("/")) };
 }
 
 export default async function RootLayout({

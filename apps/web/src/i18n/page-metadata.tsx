@@ -3,20 +3,12 @@
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect } from "react";
+import { localizeRouteMetadata } from "./route-metadata";
 
 export function PageMetadata() {
   const pathname = usePathname();
   const t = useTranslations("common.metadata");
-  const page =
-    pathname === "/channels"
-      ? "channels"
-      : pathname === "/users"
-        ? "users"
-        : pathname === "/prediction"
-          ? "prediction"
-          : null;
-  const title = page ? t(`${page}.title`) : "Kick Logs";
-  const description = page ? t(`${page}.description`) : t("description");
+  const { title, description } = localizeRouteMetadata(pathname, t);
 
   useEffect(() => {
     document.title = title;

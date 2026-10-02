@@ -1,5 +1,10 @@
 import { OperationsDashboard } from "@/features/operations/operations-dashboard";
 import { WebhookHealthPanel } from "@/features/operations/webhook-health-panel";
+import { getPageMetadata } from "@/i18n/server-metadata";
+
+export function generateMetadata() {
+  return getPageMetadata("/admin/operations");
+}
 
 export default function OperationsPage() {
   return (

@@ -2,7 +2,15 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue 28 acceptance)
+## Latest (localized document titles)
+
+- All public/admin routes now use localized `Page Name - KickLogs` titles, including profile slugs
+  and 404. One shared resolver keeps initial HTML and client navigation/language changes aligned.
+- No API/data/query, URL or visual layout changes. Existing descriptions remain unchanged.
+- Verified 292 frontend tests, TypeScript, lint, formatting and production build; 48 raw HTML title
+  checks (16 routes x three languages), plus browser locale switching and client navigation passed.
+
+## Previous (issue 28 acceptance)
 
 - All public/admin feature groups now use EN/TR/DE catalogs. Route titles/descriptions update on
   SSR and in-place switching; URLs, source content, filters, polling and auth behavior stay unchanged.
