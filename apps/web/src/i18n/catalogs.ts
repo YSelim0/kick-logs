@@ -49,3 +49,10 @@ export async function loadMessages(locale: Locale, scope: CatalogScope): Promise
   if (!isLocale(locale) || locale === "en") return fallback;
   return mergeMessages(fallback, await readMessages(locale, scope));
 }
+
+export async function loadAdminMessages(locale: Locale): Promise<CatalogMessages> {
+  const fallback = (await loaders.en.admin()).default;
+  return locale === "en"
+    ? fallback
+    : mergeMessages(fallback, (await loaders[locale].admin()).default);
+}

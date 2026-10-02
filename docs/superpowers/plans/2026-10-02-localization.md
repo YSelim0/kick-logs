@@ -298,17 +298,17 @@ existing client auth shell. The nested provider consumes root locale/catalog sta
 preloaded admin catalog on manual switch. Never overwrite a newer client preference with stale props.
 For cookie-blocked navigation, load the session-selected admin catalog before showing admin content.
 
-- [ ] Test auth-required redirect, super-admin-only navigation, unchanged role/status enums, and all
+- [x] Test auth-required redirect, super-admin-only navigation, unchanged role/status enums, and all
       admin labels. Test direct admin SSR and public-to-admin navigation for saved and blocked cookies.
-- [ ] Test switching with an unsaved channel/user form or open request detail: inputs, selected request,
+- [x] Test switching with an unsaved channel/user form or open request detail: inputs, selected request,
       notes, filters, scroll and pending mutation state persist; no extra API request. Visible operation
       notices retranslate while submitted feedback/notes remain untouched.
-- [ ] Run `pnpm --filter @kick-logs/web test -- admin channel-admin user-admin request-admin` and observe
+- [x] Run `pnpm --filter @kick-logs/web test -- admin channel-admin user-admin request-admin` and observe
       the new localization assertions fail.
-- [ ] Implement the scoped provider/shell split without weakening auth. Migrate navigation, buttons,
+- [x] Implement the scoped provider/shell split without weakening auth. Migrate navigation, buttons,
       tables, mobile rows, roles, requests/status/timeline labels and confirmations. Preserve request IDs,
       source content and server-required payload values. Keep admin catalog chunks out of public HTML.
-- [ ] Run targeted tests and frontend gate; smoke authenticated and anonymous admin access, update
+- [x] Run targeted tests and frontend gate; smoke authenticated and anonymous admin access, update
       context, commit. Do not change the backend auth model for localization.
 
 ## Task 9: Operations And Data Management

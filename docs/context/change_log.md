@@ -2,6 +2,13 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (issue 28 admin shell and management)
+
+- Split the server admin catalog loader from the existing client authentication shell.
+- Added stale-server/cookie-blocked locale regressions and localized management screens without
+  resetting drafts, open request details or pending mutations. Semantic errors retranslate in place.
+- Preserved authorization and source content. German mobile smoke checks and 269 frontend tests pass.
+
 ## 2026-10-02 (issue 28 prediction, requests and login)
 
 - Localized prediction states, chart legends/tooltips, request modes/forms and login presentation.

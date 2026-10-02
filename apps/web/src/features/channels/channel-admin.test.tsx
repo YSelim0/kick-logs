@@ -1,9 +1,11 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { LocaleTestControls } from "@/test/locale-controls";
 import { createLocaleRenderer } from "@/test/render-with-locale";
 const render = createLocaleRenderer("tr", "admin");
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ChannelAdmin } from "@/features/channels/channel-admin";
+import { ApiClientError } from "@/lib/api-client";
 import type { Channel } from "@/types/api";
 
 const channelApiMocks = vi.hoisted(() => ({
@@ -19,6 +21,57 @@ vi.mock("@/features/channels/api", () => ({
 }));
 
 describe("ChannelAdmin", () => {
+  it("preserves a pending mutation and retranslates its eventual error", async () => {
+    let rejectAdd!: (error: unknown) => void;
+    channelApiMocks.listChannels.mockResolvedValue([]);
+    channelApiMocks.addChannel.mockImplementation(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectAdd = reject;
+        })
+    );
+    render(
+      <>
+        <LocaleTestControls />
+        <ChannelAdmin />
+      </>
+    );
+    await screen.findByText("Henüz takip edilen kanal yok.");
+    fireEvent.change(screen.getByLabelText("Kanal slug/nickname"), { target: { value: "Heaven" } });
+    fireEvent.click(screen.getByRole("button", { name: "Ekle" }));
+    fireEvent.click(screen.getByRole("button", { name: "Switch to en" }));
+    expect(await screen.findByRole("button", { name: "Add" })).toBeDisabled();
+    expect(screen.getByLabelText("Channel slug/nickname")).toHaveValue("Heaven");
+    rejectAdd(new ApiClientError(409, { detail: "RAW INTERNAL DETAIL" }));
+    expect(
+      await screen.findByText("This change conflicts with an existing record.")
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Switch to tr" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByText("This change conflicts with an existing record.")
+      ).not.toBeInTheDocument()
+    );
+    expect(screen.queryByText("RAW INTERNAL DETAIL")).not.toBeInTheDocument();
+    expect(channelApiMocks.addChannel).toHaveBeenCalledTimes(1);
+    expect(channelApiMocks.listChannels).toHaveBeenCalledTimes(1);
+  });
+  it("keeps a channel draft and loaded list when switching languages", async () => {
+    channelApiMocks.listChannels.mockResolvedValue([channelFixture()]);
+    render(
+      <>
+        <LocaleTestControls />
+        <ChannelAdmin />
+      </>
+    );
+    await screen.findAllByText("#hype");
+    fireEvent.change(screen.getByLabelText("Kanal slug/nickname"), { target: { value: "Heaven" } });
+    fireEvent.click(screen.getByRole("button", { name: "Switch to de" }));
+    expect(await screen.findByLabelText("Kanal-Slug/Nickname")).toHaveValue("Heaven");
+    expect(screen.getAllByText("#hype").length).toBeGreaterThan(0);
+    expect(channelApiMocks.listChannels).toHaveBeenCalledTimes(1);
+    expect(channelApiMocks.addChannel).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     channelApiMocks.addChannel.mockReset();
     channelApiMocks.listChannels.mockReset();

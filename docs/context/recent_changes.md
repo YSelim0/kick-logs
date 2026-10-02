@@ -2,7 +2,16 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue 28 prediction, requests and login)
+## Latest (issue 28 admin shell and management)
+
+- Added request-scoped admin catalogs and a client provider that honors session language even when
+  cookies are blocked or server props are stale. Public pages do not receive admin catalogs.
+- Localized admin navigation, channel/user management and request filters/details/timeline.
+  Raw feedback, notes, identity data and role/status payload values remain unchanged.
+- 269 frontend tests, lint and production build passed. German mobile channel/request/user screens
+  have no horizontal overflow; an anonymous admin visit still redirects to login.
+
+## Previous (issue 28 prediction, requests and login)
 
 - Prediction copy, chart legends/tooltips and number/date formatting use EN/TR/DE catalogs.
   Locale switches preserve chart identity and the existing five-second polling schedule.

@@ -1,1 +1,116 @@
-{}
+{
+  "adminShell": {
+    "operations": "Operasyonlar",
+    "channels": "Kanallar",
+    "requests": "Talepler",
+    "users": "Kullanıcılar",
+    "data": "Veri",
+    "settings": "Ayarlar",
+    "admin": "admin",
+    "checking": "Oturum kontrol ediliyor...",
+    "sessionError": "Oturum bilgisi alınamadı.",
+    "superAdmin": "SÜPER ADMİN",
+    "logout": "Çıkış",
+    "openMenu": "Menüyü aç",
+    "closeMenu": "Menüyü kapat"
+  },
+  "channelAdmin": {
+    "title": "Takip edilen kanallar",
+    "activeCount": "{count, plural, one {# aktif} other {# aktif}}",
+    "slug": "Kanal slug/nickname",
+    "placeholder": "channel slug ekle",
+    "add": "Ekle",
+    "channel": "KANAL",
+    "status": "DURUM",
+    "messages": "MESAJ",
+    "lastActivity": "SON AKTİVİTE",
+    "loading": "Kanallar yükleniyor...",
+    "empty": "Henüz takip edilen kanal yok.",
+    "disable": "Devre dışı bırak",
+    "active": "Aktif",
+    "inactive": "Pasif",
+    "messageCount": "{count} mesaj"
+  },
+  "userAdmin": {
+    "title": "Admin Kullanıcıları",
+    "count": "{count, plural, one {# kullanıcı} other {# kullanıcı}} · sadece super admin yönetebilir",
+    "email": "E-POSTA",
+    "password": "GEÇİCİ PAROLA",
+    "passwordPlaceholder": "en az 8 karakter",
+    "create": "Oluştur",
+    "role": "ROL",
+    "status": "DURUM",
+    "loading": "Admin kullanıcıları yükleniyor...",
+    "empty": "Admin kullanıcısı bulunamadı.",
+    "active": "Aktif",
+    "inactive": "Pasif",
+    "roles": {
+      "admin": "Admin",
+      "super_admin": "Süper admin"
+    }
+  },
+  "requestAdmin": {
+    "title": "Talepler",
+    "description": "Kanal talepleri ve geri bildirim akışı",
+    "refresh": "Yenile",
+    "type": "Tip",
+    "status": "Durum",
+    "archive": "Arşiv",
+    "search": "Arama",
+    "searchPlaceholder": "başlık, mesaj, kanal, iletişim",
+    "start": "Başlangıç",
+    "end": "Bitiş",
+    "filter": "Filtrele",
+    "reset": "Sıfırla",
+    "list": "Talep Listesi",
+    "loading": "yükleniyor",
+    "count": "{count, plural, one {# kayıt} other {# kayıt}}",
+    "tableType": "TİP",
+    "tableRequest": "TALEP",
+    "tableStatus": "DURUM",
+    "tableDate": "TARİH",
+    "loadingList": "Talepler yükleniyor...",
+    "empty": "Bu filtrelerle talep bulunamadı.",
+    "detail": "Talep Detayı",
+    "loadingDetailShort": "detay yükleniyor",
+    "loadingDetail": "Detay yükleniyor...",
+    "channelDetail": "Kanal: #{value}",
+    "contactDetail": "İletişim: {value}",
+    "createdDetail": "Oluşturulma: {value}",
+    "latestDetail": "Son hareket: {value}",
+    "save": "Kaydet",
+    "note": "Not",
+    "notePlaceholder": "İnceleme notu ekle",
+    "addNote": "Not ekle",
+    "timeline": "Zaman çizelgesi",
+    "archiveAction": "Arşivle",
+    "selectDetail": "Detay görüntülemek için listeden bir talep seç.",
+    "emptyTimeline": "Henüz admin hareketi yok.",
+    "statusEvent": "Durum: {status}",
+    "noteEvent": "Not eklendi",
+    "archiveEvent": "Arşivlendi",
+    "types": {
+      "all": "Tüm tipler",
+      "channel_request": "Kanal Talebi",
+      "feedback": "Geri Bildirim"
+    },
+    "statuses": {
+      "all": "Tüm durumlar",
+      "new": "Yeni",
+      "reviewing": "İncelemede",
+      "approved": "Onaylandı",
+      "rejected": "Reddedildi",
+      "done": "Tamamlandı",
+      "duplicate": "Tekrar"
+    },
+    "archives": {
+      "false": "Aktif",
+      "true": "Arşiv",
+      "all": "Tümü"
+    },
+    "badges": {
+      "channel_request": "Kanal",
+      "feedback": "Geri bildirim"
+    }
+  }
+}

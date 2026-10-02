@@ -1,4 +1,5 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { LocaleTestControls } from "@/test/locale-controls";
 import { createLocaleRenderer } from "@/test/render-with-locale";
 const render = createLocaleRenderer("tr", "admin");
 import userEvent from "@testing-library/user-event";
@@ -24,6 +25,29 @@ vi.mock("@/features/requests/api", () => ({
 }));
 
 describe("RequestAdmin", () => {
+  it("keeps open request details, raw notes and draft filters on switch", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <LocaleTestControls />
+        <RequestAdmin />
+      </>
+    );
+    await clickRequestRow(user);
+    await screen.findByText("Bu kanal eklenebilir mi?");
+    fireEvent.change(screen.getByPlaceholderText("İnceleme notu ekle"), {
+      target: { value: "Ham not Heaven" }
+    });
+    fireEvent.change(screen.getByLabelText("Arama"), { target: { value: "Ham filtre" } });
+    fireEvent.click(screen.getByRole("button", { name: "Switch to de" }));
+    expect(await screen.findByRole("heading", { name: "Anfragedetails" })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Prüfnotiz hinzufügen")).toHaveValue("Ham not Heaven");
+    expect(screen.getByLabelText("Suche")).toHaveValue("Ham filtre");
+    expect(screen.getByText("Bu kanal eklenebilir mi?")).toBeInTheDocument();
+    expect(apiMocks.getUserRequest).toHaveBeenCalledTimes(1);
+    expect(apiMocks.listUserRequests).toHaveBeenCalledTimes(1);
+    expect(apiMocks.addUserRequestNote).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     apiMocks.addUserRequestNote.mockReset();
     apiMocks.archiveUserRequest.mockReset();

@@ -1,1 +1,116 @@
-{}
+{
+  "adminShell": {
+    "operations": "Operations",
+    "channels": "Channels",
+    "requests": "Requests",
+    "users": "Users",
+    "data": "Data",
+    "settings": "Settings",
+    "admin": "admin",
+    "checking": "Checking session...",
+    "sessionError": "Could not load session.",
+    "superAdmin": "SUPER ADMIN",
+    "logout": "Sign out",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "channelAdmin": {
+    "title": "Followed channels",
+    "activeCount": "{count, plural, one {# active} other {# active}}",
+    "slug": "Channel slug/nickname",
+    "placeholder": "add channel slug",
+    "add": "Add",
+    "channel": "CHANNEL",
+    "status": "STATUS",
+    "messages": "MESSAGES",
+    "lastActivity": "LAST ACTIVITY",
+    "loading": "Loading channels...",
+    "empty": "No followed channels yet.",
+    "disable": "Disable",
+    "active": "Active",
+    "inactive": "Inactive",
+    "messageCount": "{count} messages"
+  },
+  "userAdmin": {
+    "title": "Admin users",
+    "count": "{count, plural, one {# user} other {# users}} · managed by super admins only",
+    "email": "EMAIL",
+    "password": "TEMPORARY PASSWORD",
+    "passwordPlaceholder": "at least 8 characters",
+    "create": "Create",
+    "role": "ROLE",
+    "status": "STATUS",
+    "loading": "Loading admin users...",
+    "empty": "No admin users found.",
+    "active": "Active",
+    "inactive": "Inactive",
+    "roles": {
+      "admin": "Admin",
+      "super_admin": "Super admin"
+    }
+  },
+  "requestAdmin": {
+    "title": "Requests",
+    "description": "Channel requests and feedback",
+    "refresh": "Refresh",
+    "type": "Type",
+    "status": "Status",
+    "archive": "Archive",
+    "search": "Search",
+    "searchPlaceholder": "title, message, channel, contact",
+    "start": "Start",
+    "end": "End",
+    "filter": "Filter",
+    "reset": "Reset",
+    "list": "Request list",
+    "loading": "loading",
+    "count": "{count, plural, one {# record} other {# records}}",
+    "tableType": "TYPE",
+    "tableRequest": "REQUEST",
+    "tableStatus": "STATUS",
+    "tableDate": "DATE",
+    "loadingList": "Loading requests...",
+    "empty": "No requests match these filters.",
+    "detail": "Request details",
+    "loadingDetailShort": "loading details",
+    "loadingDetail": "Loading details...",
+    "channelDetail": "Channel: #{value}",
+    "contactDetail": "Contact: {value}",
+    "createdDetail": "Created: {value}",
+    "latestDetail": "Last activity: {value}",
+    "save": "Save",
+    "note": "Note",
+    "notePlaceholder": "Add a review note",
+    "addNote": "Add note",
+    "timeline": "Timeline",
+    "archiveAction": "Archive",
+    "selectDetail": "Select a request from the list to view details.",
+    "emptyTimeline": "No admin activity yet.",
+    "statusEvent": "Status: {status}",
+    "noteEvent": "Note added",
+    "archiveEvent": "Archived",
+    "types": {
+      "all": "All types",
+      "channel_request": "Channel request",
+      "feedback": "Feedback"
+    },
+    "statuses": {
+      "all": "All statuses",
+      "new": "New",
+      "reviewing": "Under review",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "done": "Completed",
+      "duplicate": "Duplicate"
+    },
+    "archives": {
+      "false": "Active",
+      "true": "Archived",
+      "all": "All"
+    },
+    "badges": {
+      "channel_request": "Channel",
+      "feedback": "Feedback"
+    }
+  }
+}

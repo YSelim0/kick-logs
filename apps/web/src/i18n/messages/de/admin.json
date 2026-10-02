@@ -1,1 +1,116 @@
-{}
+{
+  "adminShell": {
+    "operations": "Betrieb",
+    "channels": "Kanäle",
+    "requests": "Anfragen",
+    "users": "Nutzer",
+    "data": "Daten",
+    "settings": "Einstellungen",
+    "admin": "Verwaltung",
+    "checking": "Sitzung wird geprüft...",
+    "sessionError": "Sitzung konnte nicht geladen werden.",
+    "superAdmin": "SUPER-ADMIN",
+    "logout": "Abmelden",
+    "openMenu": "Menü öffnen",
+    "closeMenu": "Menü schließen"
+  },
+  "channelAdmin": {
+    "title": "Verfolgte Kanäle",
+    "activeCount": "{count, plural, one {# aktiv} other {# aktiv}}",
+    "slug": "Kanal-Slug/Nickname",
+    "placeholder": "Kanal-Slug hinzufügen",
+    "add": "Hinzufügen",
+    "channel": "KANAL",
+    "status": "STATUS",
+    "messages": "NACHRICHTEN",
+    "lastActivity": "LETZTE AKTIVITÄT",
+    "loading": "Kanäle werden geladen...",
+    "empty": "Noch keine verfolgten Kanäle.",
+    "disable": "Deaktivieren",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "messageCount": "{count} Nachrichten"
+  },
+  "userAdmin": {
+    "title": "Administratoren",
+    "count": "{count, plural, one {# Nutzer} other {# Nutzer}} · nur durch Super-Admins verwaltbar",
+    "email": "E-MAIL",
+    "password": "VORLÄUFIGES PASSWORT",
+    "passwordPlaceholder": "mindestens 8 Zeichen",
+    "create": "Erstellen",
+    "role": "ROLLE",
+    "status": "STATUS",
+    "loading": "Administratoren werden geladen...",
+    "empty": "Keine Administratoren gefunden.",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "roles": {
+      "admin": "Admin",
+      "super_admin": "Super-Admin"
+    }
+  },
+  "requestAdmin": {
+    "title": "Anfragen",
+    "description": "Kanalanfragen und Feedback",
+    "refresh": "Aktualisieren",
+    "type": "Typ",
+    "status": "Status",
+    "archive": "Archiv",
+    "search": "Suche",
+    "searchPlaceholder": "Titel, Nachricht, Kanal, Kontakt",
+    "start": "Beginn",
+    "end": "Ende",
+    "filter": "Filtern",
+    "reset": "Zurücksetzen",
+    "list": "Anfrageliste",
+    "loading": "wird geladen",
+    "count": "{count, plural, one {# Eintrag} other {# Einträge}}",
+    "tableType": "TYP",
+    "tableRequest": "ANFRAGE",
+    "tableStatus": "STATUS",
+    "tableDate": "DATUM",
+    "loadingList": "Anfragen werden geladen...",
+    "empty": "Keine Anfragen für diese Filter.",
+    "detail": "Anfragedetails",
+    "loadingDetailShort": "Details werden geladen",
+    "loadingDetail": "Details werden geladen...",
+    "channelDetail": "Kanal: #{value}",
+    "contactDetail": "Kontakt: {value}",
+    "createdDetail": "Erstellt: {value}",
+    "latestDetail": "Letzte Aktivität: {value}",
+    "save": "Speichern",
+    "note": "Notiz",
+    "notePlaceholder": "Prüfnotiz hinzufügen",
+    "addNote": "Notiz hinzufügen",
+    "timeline": "Verlauf",
+    "archiveAction": "Archivieren",
+    "selectDetail": "Wähle eine Anfrage aus der Liste, um Details anzuzeigen.",
+    "emptyTimeline": "Noch keine Verwaltungsaktivität.",
+    "statusEvent": "Status: {status}",
+    "noteEvent": "Notiz hinzugefügt",
+    "archiveEvent": "Archiviert",
+    "types": {
+      "all": "Alle Typen",
+      "channel_request": "Kanalanfrage",
+      "feedback": "Feedback"
+    },
+    "statuses": {
+      "all": "Alle Status",
+      "new": "Neu",
+      "reviewing": "In Prüfung",
+      "approved": "Genehmigt",
+      "rejected": "Abgelehnt",
+      "done": "Abgeschlossen",
+      "duplicate": "Duplikat"
+    },
+    "archives": {
+      "false": "Aktiv",
+      "true": "Archiviert",
+      "all": "Alle"
+    },
+    "badges": {
+      "channel_request": "Kanal",
+      "feedback": "Feedback"
+    }
+  }
+}
