@@ -1,9 +1,10 @@
+import { getTranslations } from "next-intl/server";
 import { UsersIndexPage } from "@/features/user-profile/users-index-page";
 
-export const metadata = {
-  title: "Users — Kick Logs",
-  description: "Loglanan Kick kullanıcılarını arayın ve keşfedin."
-};
+export async function generateMetadata() {
+  const t = await getTranslations("common.metadata.users");
+  return { title: t("title"), description: t("description") };
+}
 
 export default function Page() {
   return <UsersIndexPage />;

@@ -29,7 +29,19 @@
     "languageSwitch": "Dil yüklenemedi. Lütfen tekrar deneyin."
   },
   "metadata": {
-    "description": "Kick sohbet geçmişinde arama yapın, kanal etkinliğini ve kayıtlı abonelikleri inceleyin."
+    "description": "Kick sohbet geçmişinde arama yapın, kanal etkinliğini ve kayıtlı abonelikleri inceleyin.",
+    "channels": {
+      "title": "Kanallar - Kick Logs",
+      "description": "Kaydedilen Kick kanallarını arayın ve keşfedin."
+    },
+    "users": {
+      "title": "Kullanıcılar - Kick Logs",
+      "description": "Kaydedilen Kick kullanıcılarını arayın ve keşfedin."
+    },
+    "prediction": {
+      "title": "Tahmin - Kick Logs",
+      "description": "Bir Kick kanalının son tahmin oyununu görüntüleyin."
+    }
   },
   "navigation": {
     "title": "Ana menü",
@@ -61,5 +73,8 @@
     "prediction": "Tahmin panellerini aç",
     "request": "Kanal veya geri bildirim gönder"
   },
-  "language": { "label": "Dil", "choose": "Dili değiştir" }
+  "language": {
+    "label": "Dil",
+    "choose": "Dili değiştir"
+  }
 }

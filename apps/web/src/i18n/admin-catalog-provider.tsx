@@ -18,6 +18,12 @@ export function AdminCatalogProvider({
   const { locale, messages, timeZone } = useLocalePreference();
   const t = useTranslations("common");
   const [loaded, setLoaded] = useState({ locale: initialLocale, messages: initialMessages });
+  const [lastReady, setLastReady] = useState<{
+    locale: Locale;
+    messages: CatalogMessages;
+  } | null>(() =>
+    initialLocale === locale ? { locale, messages: { ...messages, ...initialMessages } } : null
+  );
   const [failed, setFailed] = useState(false);
   const [retry, setRetry] = useState(0);
   // A manual switch preloads the admin scope in the root provider. Navigation with blocked
@@ -29,7 +35,10 @@ export function AdminCatalogProvider({
       : null;
 
   useEffect(() => {
-    if (adminMessages) return;
+    if (adminMessages) {
+      setLastReady({ locale, messages: { ...messages, ...adminMessages } });
+      return;
+    }
     let cancelled = false;
     setFailed(false);
     void loadAdminMessages(locale).then(
@@ -43,9 +52,13 @@ export function AdminCatalogProvider({
     return () => {
       cancelled = true;
     };
-  }, [adminMessages, locale, retry]);
+  }, [adminMessages, messages, locale, retry]);
 
-  if (!adminMessages) {
+  // A public catalog can finish loading after the user has already entered admin.
+  // Keep its mounted forms alive until the matching admin catalog is ready.
+  const ready = adminMessages ? { locale, messages: { ...messages, ...adminMessages } } : lastReady;
+
+  if (!ready) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-sm text-muted-foreground">
         <p role="status">{failed ? t("errors.languageSwitch") : t("actions.loading")}</p>
@@ -58,11 +71,17 @@ export function AdminCatalogProvider({
     );
   }
   return (
-    <NextIntlClientProvider
-      locale={locale}
-      messages={{ ...messages, ...adminMessages }}
-      timeZone={timeZone}
-    >
+    <NextIntlClientProvider locale={ready.locale} messages={ready.messages} timeZone={timeZone}>
+      {!adminMessages ? (
+        <div className="flex flex-wrap items-center justify-center gap-3 px-6 py-3 text-sm text-muted-foreground">
+          <p role="status">{failed ? t("errors.languageSwitch") : t("actions.loading")}</p>
+          {failed ? (
+            <button type="button" onClick={() => setRetry((value) => value + 1)}>
+              {t("actions.retry")}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       {children}
     </NextIntlClientProvider>
   );

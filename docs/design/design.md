@@ -12,9 +12,9 @@ conversation changes search UI, admin UI, visual style, routing, or frontend beh
 
 Do not commit screenshots or exported images unless explicitly requested.
 
-## Localization (Issue 28 Target)
+## Localization (Issue 28)
 
-This is the approved interaction direction, not implemented UI yet. Full design:
+Implemented interaction and translation boundaries. Full design:
 `docs/superpowers/specs/2026-10-02-localization-design.md`.
 
 - Support English, Turkish and German without locale-prefixed URLs. Resolve saved preference,
@@ -31,6 +31,10 @@ This is the approved interaction direction, not implemented UI yet. Full design:
 - Use existing dark tokens and 6px/8px control/menu corners, without blur or glow. Respect mobile
   safe areas, reduced motion and higher-priority dialogs; ensure bottom controls remain reachable.
 - Use the supplied SVG flags through `apps/web/public/language-flags/`. Do not commit the screenshot.
+- The trigger is 48px square and uses safe-area-aware 16px edge spacing; the upward menu is 192px.
+  Reserve bottom page space so content can scroll clear of the fixed trigger. Feature dialogs sit above it.
+- German labels may wrap, and dense admin metric tiles stack on narrow screens. Do not truncate
+  required actions or source message text just to match the shorter Turkish/English layout.
 
 ## Routes
 

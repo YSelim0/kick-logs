@@ -2,6 +2,18 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (issue 28 acceptance)
+
+- Independent whole-branch review found a public-switch/admin-navigation race that remounted forms.
+  Added deferred-loader success/failure regressions and retained the mounted subtree through loading
+  and retry; both new tests failed before the fix and passed afterward.
+- Added translated server/client route metadata and regressions for in-place navigation, including
+  stale server descriptions. Public-catalog tests check actual flat admin namespace boundaries.
+- Verified production HTTP locale negotiation/cookies/no-store and all screen variants in three
+  languages at mobile/desktop widths. Source names/messages remain unchanged.
+- Added deployment/CDN/native-browser notes. Backend CI commands used separate disposable
+  databases; existing app data and running Docker services were not modified.
+
 ## 2026-10-02 (issue 28 operations and data management)
 
 - Added EN/TR/DE catalogs for operations, webhook status, failed events and retention/cleanup.

@@ -37,6 +37,6 @@ describe("catalog contracts", () => {
   });
   it("does not include admin catalogs in the public scope", async () => {
     const messages = await loadMessages("en", "public");
-    expect(messages).not.toHaveProperty("admin");
+    expect(messages).not.toHaveProperty("adminShell");
   });
 });

@@ -62,6 +62,7 @@ own their Kick chat archive instead of depending on short-lived browser chat his
 - Public search across stored messages with sender, channel, text, date, reply, and emote filters.
 - Infinite-scroll message results with reply context, clickable links, and inline emotes.
 - Public user and channel profile pages with activity summaries.
+- English, Turkish and German interfaces with automatic language detection and a saved preference.
 - Prediction pages that run client-side and do not store prediction data.
 - Public request form for channel suggestions and feedback, reviewed from the admin dashboard.
 - Admin dashboard for followed channels, requests, users, listener health, storage, and cleanup previews.
@@ -107,6 +108,7 @@ cd ../.. && pnpm format:check
 
 For UI work, read `docs/design/design.md`. For backend architecture changes, read
 `docs/architecture.md`.
+Localization deployment and CDN checks are in [Localization operations](docs/operations/localization.md).
 
 ## Self-Host It
 

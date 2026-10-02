@@ -1,6 +1,6 @@
 # Issue 28 Localization Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Localize every product-owned public/admin interface in EN/TR/DE without changing URLs, source content or data behavior.
 
@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-02-localization-design.md` (owner approved).
 
-**Status:** Owner approved inline execution. Tasks 1-3 completed; Tasks 4-10 pending.
+**Status:** Tasks 1-10 completed and locally verified. Independent review finding fixed with regression tests. Awaiting owner review; no push or merge.
 
 ## Global Constraints
 
@@ -342,26 +342,26 @@ Create `docs/operations/localization.md` with cookie, cache and rollout verifica
 
 **Interfaces:** No new product contract. This task verifies the combined behavior and deployment.
 
-- [ ] Audit all `src/app`, `src/components`, `src/features`, formatter/error helpers and metadata for
+- [x] Audit all `src/app`, `src/components`, `src/features`, formatter/error helpers and metadata for
       remaining product copy. Check `aria-label`, `title`, alt text, tooltips, constants and validation,
       including pending/error states. Catalog-native language labels and raw data are explicit exceptions.
-- [ ] Add regression assertions for any missing strings before fixing them; keep a negative fixture
+- [x] Add regression assertions for any missing strings before fixing them; keep a negative fixture
       proving catalog checks fail when a key or ICU argument is removed. Re-run the complete frontend gate.
-- [ ] Build/start a production web instance on an unused local port. Test direct requests with
+- [x] Build/start a production web instance on an unused local port. Test direct requests with
       `Accept-Language: de-DE`, `tr-TR`, unsupported `pt-BR`, no header and conflicting locale cookies.
       Assert correct HTML/lang/metadata, initial cookie attributes and no cross-visitor cache reuse.
-- [ ] Verify production HTML/RSC cache headers and middleware exclusions. Document that Cloudflare must
+- [x] Verify production HTML/RSC cache headers and middleware exclusions. Document that Cloudflare must
       bypass HTML/RSC caching; static assets remain cacheable. Do not change VPS/Cloudflare settings here.
-- [ ] Browser-check every public/admin route in EN/TR/DE at desktop and narrow mobile widths. Exercise
+- [x] Browser-check every public/admin route in EN/TR/DE at desktop and narrow mobile widths. Exercise
       reload, navigation, language switching, errors, export, menus and dialogs; check console hydration,
       horizontal overflow, bottom-button reachability, keyboard focus and reduced motion. Keep screenshots
       outside the repo. Report inaccessible tooling as incomplete verification, not success.
-- [ ] Run `go test ./...`, `go vet ./...`, gofmt and the integration/migration smoke commands from
+- [x] Run `go test ./...`, `go vet ./...`, gofmt and the integration/migration smoke commands from
       `.github/workflows/go-tests.yml` on disposable fixtures. Never reuse production/app DBs for tests.
-- [ ] Record rollout: rebuild web and API for the localized TXT path; listener/processor/ClickHouse/NATS
+- [x] Record rollout: rebuild web and API for the localized TXT path; listener/processor/ClickHouse/NATS
       need no rebuild for this issue. Existing data remains untouched. Record any unavoidable native-browser
       language behavior and cookie-blocking persistence limitations without claiming them fixed.
-- [ ] Perform a whole-branch review against the spec; resolve findings and rerun affected checks.
+- [x] Perform a whole-branch review against the spec; resolve findings and rerun affected checks.
       Commit the final verified corrections/docs, report commit list and verification, then stop for the
       owner's review. Leave the branch local, issue open and `dev` unmerged until instructed otherwise.
 

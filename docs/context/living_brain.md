@@ -8,9 +8,10 @@ implementation details, or working assumptions change.
 - Active work: issue #28 on local `feat/issue-28-localization`, based on `dev` at `d7910fe`.
   Written design is approved: `docs/superpowers/specs/2026-10-02-localization-design.md`.
   The owner approved `docs/superpowers/plans/2026-10-02-localization.md` and inline execution.
-  Shared next-intl foundation, flag selector, shared chrome, homepage, identity directories and
-  message search, profiles, subscriber dialogs and TXT exports are localized. Prediction, forms and admin remain pending. No push or merge
-  without owner approval. Feature commits are local and intermediate states are not deployment-ready.
+  Shared chrome, all public/admin screens, profiles, prediction, forms and subscriber TXT exports
+  are localized. Final acceptance and independent review are complete (288 frontend tests); the
+  review's admin-navigation race was fixed and regression-tested. No push or merge
+  without owner approval. Rollout notes: `docs/operations/localization.md`.
 - Localization targets EN/TR/DE on unchanged URLs, product copy only, cookie/browser/English
   resolution, and the owner's fixed bottom-right current-flag popover with native language names.
 - Issue #27 is closed. The owner approved the narrower SQL-only profile follow-up from #29 on

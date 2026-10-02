@@ -2,7 +2,19 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue 28 operations and data management)
+## Latest (issue 28 acceptance)
+
+- All public/admin feature groups now use EN/TR/DE catalogs. Route titles/descriptions update on
+  SSR and in-place switching; URLs, source content, filters, polling and auth behavior stay unchanged.
+- Production-mode HTTP and a 16-screen, three-language desktop/mobile browser matrix passed.
+  Backend unit/vet/ClickHouse integration/migration checks passed on disposable data.
+- Rollout: rebuild API and web only; verify CDN HTML/RSC bypass after deployment. See
+  `docs/operations/localization.md`. All 288 frontend tests, lint, typecheck, format and production
+  build passed. Independent review found one admin navigation/catalog race; regression tests
+  reproduced it and verified the mounted-form preservation fix, including retry after load failure.
+- Commits remain local. Do not push, close the issue or merge into dev without owner approval.
+
+## Previous (issue 28 operations and data management)
 
 - Localized ingestion metrics/warnings, webhook summary/details, failed-event diagnostics and
   retention/cleanup forms. Counts, dates and storage sizes follow the selected locale.

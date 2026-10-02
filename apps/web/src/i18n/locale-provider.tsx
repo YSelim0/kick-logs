@@ -45,11 +45,6 @@ export function LocaleProvider({
   }, []);
   useEffect(() => {
     document.documentElement.lang = selection.locale;
-    const common = selection.messages.common as CatalogMessages;
-    const metadata = common.metadata as CatalogMessages;
-    document
-      .querySelector('meta[name="description"]')
-      ?.setAttribute("content", String(metadata.description));
   }, [selection]);
 
   const changeLocale = useCallback(async (locale: Locale, scope: CatalogScope = "public") => {

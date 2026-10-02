@@ -1,6 +1,6 @@
 # Issue 28: Localization Design
 
-Status: written design approved by the owner. Implementation plan awaiting review:
+Status: approved and implemented; final acceptance tracked in:
 `docs/superpowers/plans/2026-10-02-localization.md`.
 
 Issue: <https://github.com/YSelim0/kick-logs/issues/28>
@@ -62,8 +62,8 @@ Do not commit the reference screenshot.
 
 ## Shared Architecture
 
-Use `next-intl` without locale routing or a `[locale]` route segment. Version 4.14.8 advertises
-Next.js 14 and React 18 peer compatibility; verify the pinned version during installation.
+Use `next-intl` without locale routing or a `[locale]` route segment. Implementation pins 4.3.12,
+compatible with Next.js 14 and React 18, to avoid a Windows native-cache issue in 4.14.8.
 Keep the current framework versions and ordinary Next links.
 
 Centralize the following responsibilities under `apps/web/src/i18n/`:

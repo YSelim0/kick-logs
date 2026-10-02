@@ -8,6 +8,7 @@ import "./globals.css";
 import { NavigationProgress } from "@/components/navigation-progress";
 import { LocaleProvider } from "@/i18n/locale-provider";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { PageMetadata } from "@/i18n/page-metadata";
 
 const sharedMetadata: Metadata = {
   title: "Kick Logs",
@@ -40,6 +41,7 @@ export default async function RootLayout({
       <body>
         <LocaleProvider initialLocale={locale} initialMessages={messages}>
           <Suspense>
+            <PageMetadata />
             <NavigationProgress />
           </Suspense>
           {children}

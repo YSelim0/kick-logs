@@ -29,7 +29,19 @@
     "languageSwitch": "Die Sprache konnte nicht geladen werden. Bitte versuche es erneut."
   },
   "metadata": {
-    "description": "Durchsuche den Kick-Chatverlauf und entdecke Kanalaktivitäten und erfasste Abonnements."
+    "description": "Durchsuche den Kick-Chatverlauf und entdecke Kanalaktivitäten und erfasste Abonnements.",
+    "channels": {
+      "title": "Kanäle - Kick Logs",
+      "description": "Suche und entdecke erfasste Kick-Kanäle."
+    },
+    "users": {
+      "title": "Nutzer - Kick Logs",
+      "description": "Suche und entdecke erfasste Kick-Nutzer."
+    },
+    "prediction": {
+      "title": "Vorhersage - Kick Logs",
+      "description": "Sieh dir die neueste Vorhersage eines Kick-Kanals an."
+    }
   },
   "navigation": {
     "title": "Hauptnavigation",
@@ -61,5 +73,8 @@
     "prediction": "Vorhersagen öffnen",
     "request": "Kanal anfragen oder Feedback senden"
   },
-  "language": { "label": "Sprache", "choose": "Sprache ändern" }
+  "language": {
+    "label": "Sprache",
+    "choose": "Sprache ändern"
+  }
 }

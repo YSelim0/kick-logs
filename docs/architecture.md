@@ -379,8 +379,10 @@ Frontend rules:
 
 The web app uses request-scoped `next-intl` without locale URL segments. The validated
 `kick_logs_locale` cookie wins over supported `Accept-Language` preferences; English is the fallback.
-Page responses are private/no-store and vary by Cookie and Accept-Language. Asset and API caches
-are not changed. Initial server/client catalogs match; browser timezone is applied after hydration.
+Page responses are private/no-store. Middleware adds language/cookie Vary values, but Next.js 14 may
+replace them in the final response; CDN HTML/RSC bypass is required, not reliance on Vary alone.
+Asset and API caches are unchanged. Initial server/client catalogs match; browser timezone applies
+after hydration. See `docs/operations/localization.md` for verified headers and rollout.
 
 `src/i18n/locale-provider.tsx` switches catalogs in place, with latest-selection-wins loading and
 best-effort cookie persistence. No page reload, route replacement or data request is needed. Common
@@ -388,6 +390,11 @@ and public catalogs are available globally; admin catalogs are loaded only for a
 Catalogs are under `src/i18n/messages/{en,tr,de}`. Add matching keys and ICU arguments in all three
 languages; tests validate raw catalog parity and syntax. Use semantic error keys for UI failures.
 Do not translate source data or derive query timestamps/timezone from the selected language.
+
+The server admin layout loads only its selected admin catalog. `admin-catalog-provider.tsx`
+honors current client preference over stale server props after navigation, including blocked cookies.
+Route metadata is localized on the server and refreshed in place with `page-metadata.tsx`.
+Only subscriber TXT export accepts an optional locale; other API payloads remain language-neutral.
 
 ## Verification
 

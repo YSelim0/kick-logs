@@ -29,7 +29,19 @@
     "languageSwitch": "The language could not be loaded. Please try again."
   },
   "metadata": {
-    "description": "Search Kick chat history, explore channel activity and track recorded subscriptions."
+    "description": "Search Kick chat history, explore channel activity and track recorded subscriptions.",
+    "channels": {
+      "title": "Channels - Kick Logs",
+      "description": "Search and explore recorded Kick channels."
+    },
+    "users": {
+      "title": "Users - Kick Logs",
+      "description": "Search and explore recorded Kick users."
+    },
+    "prediction": {
+      "title": "Prediction - Kick Logs",
+      "description": "View a Kick channel's latest prediction."
+    }
   },
   "navigation": {
     "title": "Main navigation",
@@ -61,5 +73,8 @@
     "prediction": "Open prediction panels",
     "request": "Request a channel or send feedback"
   },
-  "language": { "label": "Language", "choose": "Change language" }
+  "language": {
+    "label": "Language",
+    "choose": "Change language"
+  }
 }

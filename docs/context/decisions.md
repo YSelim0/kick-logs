@@ -1,5 +1,14 @@
 # Decisions
 
+## 2026-10-02 (issue 28 acceptance)
+
+- Localize route metadata on the server and on in-place language/path changes. The root provider
+  owns language, while the metadata component owns route descriptions to avoid overwriting them.
+- Production HTML/RSC were verified private/no-store. Next.js can overwrite middleware Vary values;
+  require CDN bypass for HTML/RSC rather than assuming Vary isolates languages.
+- Rebuild web and API only for this issue; no ingestion, database or historical-data update is needed.
+  Native browser control language and cookie-blocked reload persistence remain browser limitations.
+
 ## 2026-10-02 (issue 28 locale foundation)
 
 - Pin next-intl 4.3.12 without upgrading Next/React. Version 4.14.8's unused extraction compiler
@@ -24,8 +33,8 @@
 - **Work on one local issue branch.** `feat/issue-28-localization` starts from `dev` at `d7910fe`;
   feature-sized commits, no push, and no merge before final owner approval.
 - Written design approved in `docs/superpowers/specs/2026-10-02-localization-design.md`.
-  Task-level implementation plan is `docs/superpowers/plans/2026-10-02-localization.md`, awaiting
-  review/execution-method confirmation. No runtime code or dependencies have been added yet.
+  Task-level implementation plan is `docs/superpowers/plans/2026-10-02-localization.md`; the owner
+  subsequently approved inline execution and feature-sized local commits.
 
 ## 2026-10-02 (channel search request prompt)
 
