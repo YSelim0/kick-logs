@@ -2,6 +2,14 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (issue 28 message search)
+
+- Localized search controls, results, error states and message timestamp presentation without
+  changing query/export contracts, raw content, reply rendering, highlighting or pagination.
+- Replaced display-only preset/filter strings with semantic descriptors. Removed unused Turkish
+  summary helpers; profile timestamp consumers migrate with their profile task.
+- Added state-preservation, translated-error and cross-locale date-contract regressions.
+
 ## 2026-10-02 (issue 28 homepage and directories)
 
 - Localized homepage, metric/ranking/chart copy, footer and channel/user directory interfaces.

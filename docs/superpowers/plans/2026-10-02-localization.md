@@ -205,17 +205,17 @@ source rendering/highlighting behavior; do not mechanically replace its Turkish 
 Change display-only filter/preset descriptors to semantic keys; callers translate at render time.
 Migrate `formatMessageDate` consumers to shared explicit-locale formatting without changing instants.
 
-- [ ] Write tests that submit, paginate, edit an unsent field, change locale and assert the submitted
+- [x] Write tests that submit, paginate, edit an unsent field, change locale and assert the submitted
       results/cursor, unsent field, URL and request count are unchanged. Show a search error, change locale,
       assert its wording updates without another request. Preserve raw reply text and emote/link rendering.
-- [ ] Keep the existing `searchStateToMessageParams` date tests; add the same form fixture across all
+- [x] Keep the existing `searchStateToMessageParams` date tests; add the same form fixture across all
       three locale providers and assert deep-equal request parameters, including end `:59.999` semantics.
-- [ ] Run `pnpm --filter @kick-logs/web test -- search` and observe new localization assertions fail.
-- [ ] Migrate form, scope/summary, result counts, pagination, empty/loading/error text, export menu and
+- [x] Run `pnpm --filter @kick-logs/web test -- search` and observe new localization assertions fail.
+- [x] Migrate form, scope/summary, result counts, pagination, empty/loading/error text, export menu and
       accessibility copy. No locale in URL/search request params; JSON/CSV download behavior is unchanged.
-- [ ] Remove translated strings from async state and avoid adding `t`/locale dependencies to fetch
+- [x] Remove translated strings from async state and avoid adding `t`/locale dependencies to fetch
       effects/callbacks. Keep input values machine-readable; only their labels/display summaries localize.
-- [ ] Run search tests and frontend gate, verify state preservation in the browser, update context, commit.
+- [x] Run search tests and frontend gate, verify state preservation in the browser, update context, commit.
 
 ## Task 5: Profiles And Subscriber Dialog
 

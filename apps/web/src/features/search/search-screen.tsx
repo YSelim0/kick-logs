@@ -1,6 +1,9 @@
 "use client";
 
 import { Timer } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { getUiErrorKey, type UiErrorKey } from "@/i18n/errors";
+import { useUiFormat } from "@/i18n/use-ui-format";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -13,7 +16,6 @@ import {
   appendUniqueMessages,
   applyDatePreset,
   dedupeMessages,
-  formatMessageDate,
   getDefaultSearchState,
   readSearchState,
   searchStateToMessageParams,
@@ -32,6 +34,9 @@ export function SearchScreen() {
 }
 
 function SearchScreenInner() {
+  const t = useTranslations("search");
+  const errors = useTranslations("common.errors");
+  const format = useUiFormat();
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryKey = searchParams.toString();
@@ -43,7 +48,7 @@ function SearchScreenInner() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiErrorKey | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
   const clearResults = useCallback(() => {
@@ -76,7 +81,7 @@ function SearchScreenInner() {
       if (requestId === requestSequenceRef.current) {
         setMessages([]);
         setNextCursor(null);
-        setError(resolveSearchError(caught));
+        setError(getUiErrorKey(caught, "search"));
       }
     } finally {
       if (requestId === requestSequenceRef.current) {
@@ -109,7 +114,7 @@ function SearchScreenInner() {
       setNextCursor(page.next_cursor);
     } catch (caught) {
       if (requestId === requestSequenceRef.current) {
-        setError(resolveSearchError(caught));
+        setError(getUiErrorKey(caught, "search"));
       }
     } finally {
       if (requestId === requestSequenceRef.current) {
@@ -163,7 +168,7 @@ function SearchScreenInner() {
     const channel = submittedState.channel.trim();
     const sender = submittedState.sender.trim();
     const q = submittedState.q.trim();
-    const parts = [channel ? channel : "Tüm Kanallar", "Yeni → Eski"];
+    const parts = [channel || t("allChannels"), t("newestFirst")];
     if (sender) {
       parts.push(sender);
     }
@@ -171,22 +176,22 @@ function SearchScreenInner() {
       parts.push(q);
     }
     return parts.join(" · ");
-  }, [submittedState.channel, submittedState.sender, submittedState.q]);
+  }, [submittedState.channel, submittedState.sender, submittedState.q, t]);
 
   const resultCountLabel = useMemo(() => {
     if (!hasSearched) {
       return null;
     }
-    return `${formatCount(messages.length)} mesaj`;
-  }, [hasSearched, messages.length]);
+    return t("resultCount", { count: messages.length, value: format.number(messages.length) });
+  }, [hasSearched, messages.length, t, format]);
 
   const lastMatchLabel = useMemo(() => {
     const first = messages[0];
     if (!first) {
       return null;
     }
-    return `son eşleşme ${formatMessageDate(first.message_created_at)}`;
-  }, [messages]);
+    return t("lastMatch", { date: format.dateTime(first.message_created_at) });
+  }, [messages, t, format]);
 
   function submitSearch() {
     setSubmittedState(formState);
@@ -224,7 +229,7 @@ function SearchScreenInner() {
 
       <div className="mx-auto flex max-w-[1280px] flex-col gap-5 px-6 py-6 md:py-10">
         <header className="flex flex-wrap items-baseline gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">Search</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
           <span className="font-mono text-[11px] text-muted-foreground">{scopeLabel}</span>
         </header>
 
@@ -241,7 +246,7 @@ function SearchScreenInner() {
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-baseline gap-2">
-            <h2 className="text-[13px] font-semibold text-foreground">Sonuçlar</h2>
+            <h2 className="text-[13px] font-semibold text-foreground">{t("results")}</h2>
             {resultCountLabel ? (
               <span className="font-mono text-[11px] text-muted-foreground">
                 {resultCountLabel}
@@ -257,7 +262,7 @@ function SearchScreenInner() {
         </div>
 
         <MessageList
-          error={error}
+          error={error ? (error === "unavailable" ? t("loadError") : errors(error)) : null}
           hasMore={Boolean(nextCursor)}
           hasSearched={hasSearched}
           highlightQuery={submittedState.q}
@@ -273,26 +278,13 @@ function SearchScreenInner() {
 }
 
 function SearchScreenLoading() {
+  const t = useTranslations("search");
   return (
     <main className="min-h-screen bg-page text-foreground">
       <SiteHeader activeRoute="search" />
       <div className="mx-auto max-w-[1280px] px-6 py-10 text-[13px] text-muted-foreground">
-        Arama ekranı yükleniyor…
+        {t("screenLoading")}
       </div>
     </main>
   );
-}
-
-function resolveSearchError(error: unknown) {
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return "Mesajlar yüklenirken bir hata oluştu.";
-}
-
-const COUNT_FORMATTER = new Intl.NumberFormat("tr-TR");
-
-function formatCount(value: number) {
-  return COUNT_FORMATTER.format(value);
 }

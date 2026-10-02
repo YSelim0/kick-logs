@@ -1,5 +1,6 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
-import { createLocaleRenderer } from "@/test/render-with-locale";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { createLocaleRenderer, renderWithLocale } from "@/test/render-with-locale";
+import { LocaleTestControls } from "@/test/locale-controls";
 const render = createLocaleRenderer("tr", "admin");
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -42,6 +43,91 @@ describe("SearchScreen", () => {
     apiMocks.searchMessages.mockReset();
     apiMocks.searchMessages.mockResolvedValue({ items: [], next_cursor: null });
   });
+
+  it("preserves paginated results, drafts and submitted filters across locale changes", async () => {
+    let intersect: IntersectionObserverCallback = () => {};
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        constructor(callback: IntersectionObserverCallback) {
+          intersect = callback;
+        }
+        observe() {}
+        disconnect() {}
+      }
+    );
+    navigationMocks.query = "q=hello&sender=yavuz";
+    apiMocks.searchMessages
+      .mockResolvedValueOnce({ items: [messageFixture(1, "hello Heaven")], next_cursor: "page2" })
+      .mockResolvedValueOnce({
+        items: [messageFixture(2, "hello unchanged")],
+        next_cursor: "page3"
+      });
+    const view = render(
+      <>
+        <LocaleTestControls />
+        <SearchScreen />
+      </>
+    );
+    expect(await screen.findByText("Heaven", { exact: false })).toBeInTheDocument();
+    await act(async () =>
+      intersect(
+        [{ isIntersecting: true }] as IntersectionObserverEntry[],
+        {} as IntersectionObserver
+      )
+    );
+    await waitFor(() => expect(apiMocks.searchMessages).toHaveBeenCalledTimes(2));
+    fireEvent.change(screen.getByLabelText("Kullanıcı Adı"), { target: { value: "unsent_name" } });
+    fireEvent.click(screen.getByRole("button", { name: "Switch to de" }));
+    expect(await screen.findByLabelText("Benutzername")).toHaveValue("unsent_name");
+    expect(screen.getByText("unchanged", { exact: false })).toBeInTheDocument();
+    expect(apiMocks.searchMessages).toHaveBeenCalledTimes(2);
+    expect(apiMocks.searchMessages.mock.calls[1][0]).toMatchObject({
+      q: "hello",
+      sender: "yavuz",
+      cursor: "page2"
+    });
+    expect(navigationMocks.query).toBe("q=hello&sender=yavuz");
+    expect(navigationMocks.push).not.toHaveBeenCalled();
+    view.unmount();
+    vi.unstubAllGlobals();
+  });
+
+  it("translates an existing error without retrying or exposing server details", async () => {
+    navigationMocks.query = "q=hello";
+    apiMocks.searchMessages.mockRejectedValue(new Error("private database details"));
+    render(
+      <>
+        <LocaleTestControls />
+        <SearchScreen />
+      </>
+    );
+    expect(await screen.findByText("Mesajlar yüklenirken bir hata oluştu.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Switch to en" }));
+    expect(await screen.findByText("Messages could not be loaded.")).toBeInTheDocument();
+    expect(screen.queryByText("private database details")).not.toBeInTheDocument();
+    expect(apiMocks.searchMessages).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["en", "tr", "de"] as const)(
+    "keeps date and identity parameters locale-independent in %s",
+    async (locale) => {
+      navigationMocks.query =
+        "sender=example_user&channel=Heaven&start=2026-05-02T02%3A43&end=2026-05-09T02%3A43";
+      renderWithLocale(<SearchScreen />, { locale });
+      const end = new Date("2026-05-09T02:43");
+      end.setSeconds(59, 999);
+      await waitFor(() =>
+        expect(apiMocks.searchMessages).toHaveBeenCalledWith({
+          sender: "example_user",
+          channel: "Heaven",
+          start: new Date("2026-05-02T02:43").toISOString(),
+          end: end.toISOString(),
+          limit: DEFAULT_MESSAGE_LIMIT
+        })
+      );
+    }
+  );
 
   it("does not fetch messages on the first empty page load", async () => {
     render(<SearchScreen />);

@@ -148,7 +148,7 @@ describe("search params", () => {
     expect(state.start).toBe(toLocalMinuteValue(new Date(isoStart)));
   });
 
-  it("creates active filter labels", () => {
+  it("creates locale-independent active filter descriptors", () => {
     expect(
       getActiveFilters({
         ...EMPTY_SEARCH_STATE,
@@ -157,9 +157,9 @@ describe("search params", () => {
         replyOnly: true
       })
     ).toEqual([
-      { key: "sender", label: "Kullanıcı", value: "yavuz" },
-      { key: "channel", label: "Kanal", value: "hype" },
-      { key: "replyOnly", label: "Yanıt", value: "Açık" }
+      { key: "sender", value: "yavuz" },
+      { key: "channel", value: "hype" },
+      { key: "replyOnly", value: true }
     ]);
   });
 

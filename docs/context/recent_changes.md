@@ -2,7 +2,16 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue 28 homepage and directories)
+## Latest (issue 28 message search)
+
+- Search labels, presets, counts, dates, export menus and all empty/loading/error states use
+  EN/TR/DE catalogs. Async errors store semantic keys instead of raw server messages.
+- Locale-switch tests preserve loaded pages, cursor, unsent drafts, submitted filters and URL,
+  with no new requests. Date parameters retain their original timezone and end-minute semantics.
+- Full frontend tests, typecheck, lint and production build passed (236 tests). Remaining profiles,
+  exports, prediction, forms and admin tasks continue on the same local branch; nothing pushed.
+
+## Previous (issue 28 homepage and directories)
 
 - Homepage copy, footer, 14-day statistics, rankings, empty/loading/error states and UTC chart labels
   now use EN/TR/DE catalogs and display formatters. Query ranges and snapshot requests are unchanged.
