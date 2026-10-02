@@ -1,1 +1,54 @@
-{}
+{
+  "landing": {
+    "stale": "Die Daten sind möglicherweise nicht aktuell. Der letzte verfügbare Stand wird angezeigt.",
+    "copyright": "{year} kick-logs · Alle Rechte vorbehalten.",
+    "badge": "Selbst gehostet · Open Source",
+    "title": "Ein dauerhafter Verlauf für Kick-Chats.",
+    "description": "Erfasse, durchsuche und analysiere Nachrichten der Kick-Kanäle, denen du folgst. Deine Daten bleiben bei dir.",
+    "startSearch": "Suche starten",
+    "metrics": "Kennzahlen",
+    "range": "Letzte 14 Tage",
+    "totalMessages": "NACHRICHTEN GESAMT",
+    "channels": "KANÄLE",
+    "users": "NUTZER",
+    "emotes": "EMOTES",
+    "metricLoading": "{metric} wird geladen",
+    "volume": "Nachrichtenvolumen",
+    "topChannels": "Top-Kanäle",
+    "topUsers": "Top-Nutzer",
+    "topEmotes": "Top-Emotes",
+    "noChannels": "Noch keine Kanaldaten.",
+    "noUsers": "Noch keine Nutzerdaten.",
+    "noEmotes": "Noch keine Emote-Daten.",
+    "noData": "Noch keine Daten.",
+    "messages": "{count, plural, one {{formatted} Nachricht} other {{formatted} Nachrichten}}",
+    "loading": "Statistiken werden geladen…",
+    "initializing": "Statistiken werden vorbereitet…",
+    "error": "Statistiken sind momentan nicht verfügbar. Suche und Admin-Bereich sind weiterhin erreichbar.",
+    "volumeLoading": "Nachrichtenvolumen wird geladen",
+    "listLoading": "Liste wird geladen"
+  },
+  "directory": {
+    "users": {
+      "title": "Nutzer",
+      "search": "Nutzer suchen",
+      "placeholder": "Nutzername oder Slug",
+      "idle": "Suche nach Nutzern",
+      "empty": "Keine Nutzer für \"{query}\" gefunden.",
+      "results": "Nutzerergebnisse"
+    },
+    "channels": {
+      "title": "Kanäle",
+      "search": "Kanäle suchen",
+      "placeholder": "Kanalname oder Slug",
+      "idle": "Suche nach Kanälen",
+      "empty": "Keine Kanäle für \"{query}\" gefunden.",
+      "results": "Kanalergebnisse"
+    },
+    "searching": "Wird gesucht…",
+    "requestInfo": "Du kannst die Erfassung dieses Kanals anfragen. Deine Anfrage wird innerhalb von 6 Stunden geprüft.",
+    "request": "Anfrage senden",
+    "loadError": "Ergebnisse konnten nicht geladen werden. Bitte versuche es erneut.",
+    "loadMore": "Mehr laden"
+  }
+}

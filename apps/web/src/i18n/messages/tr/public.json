@@ -1,1 +1,54 @@
-{}
+{
+  "landing": {
+    "stale": "Veriler güncel olmayabilir. Son başarılı anlık görüntü gösteriliyor.",
+    "copyright": "{year} kick-logs · Tüm hakları saklıdır.",
+    "badge": "Self-hosted · Açık kaynak",
+    "title": "Kick chat için kalıcı log.",
+    "description": "Takip ettiğin Kick kanallarındaki tüm mesajları kaydet, ara, analiz et. Veri sende kalır.",
+    "startSearch": "Arama başlat",
+    "metrics": "Genel metrikler",
+    "range": "Son 14 gün",
+    "totalMessages": "TOPLAM MESAJ",
+    "channels": "KANAL",
+    "users": "KULLANICI",
+    "emotes": "EMOTE",
+    "metricLoading": "{metric} yükleniyor",
+    "volume": "Mesaj hacmi",
+    "topChannels": "Top kanallar",
+    "topUsers": "Top kullanıcılar",
+    "topEmotes": "Top emoteler",
+    "noChannels": "Kanal verisi henüz yok.",
+    "noUsers": "Kullanıcı verisi henüz yok.",
+    "noEmotes": "Emote verisi henüz yok.",
+    "noData": "Henüz veri yok.",
+    "messages": "{count, plural, other {{formatted} mesaj}}",
+    "loading": "Analytics verileri yükleniyor…",
+    "initializing": "Analytics verileri hazırlanıyor…",
+    "error": "Analytics verileri şu anda alınamadı. Arama ve admin bağlantıları kullanılabilir.",
+    "volumeLoading": "Mesaj hacmi yükleniyor",
+    "listLoading": "Liste yükleniyor"
+  },
+  "directory": {
+    "users": {
+      "title": "Kullanıcılar",
+      "search": "Kullanıcı ara",
+      "placeholder": "Kullanıcı adı veya slug",
+      "idle": "Kullanıcı bulmak için arama yapın",
+      "empty": "\"{query}\" için kullanıcı bulunamadı.",
+      "results": "Kullanıcı sonuçları"
+    },
+    "channels": {
+      "title": "Kanallar",
+      "search": "Kanal ara",
+      "placeholder": "Kanal adı veya slug",
+      "idle": "Kanal bulmak için arama yapın",
+      "empty": "\"{query}\" için kanal bulunamadı.",
+      "results": "Kanal sonuçları"
+    },
+    "searching": "Aranıyor…",
+    "requestInfo": "Aradığınız kanalın takip edilmesini istiyorsanız talep gönderebilirsiniz. Talebiniz en geç 6 saat içinde incelenir.",
+    "request": "Talep gönder",
+    "loadError": "Sonuçlar alınamadı. Lütfen tekrar deneyin.",
+    "loadMore": "Daha fazla yükle"
+  }
+}

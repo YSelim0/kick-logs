@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-02-localization-design.md` (owner approved).
 
-**Status:** Owner approved inline execution. Tasks 1-2 completed; Tasks 3-10 pending.
+**Status:** Owner approved inline execution. Tasks 1-3 completed; Tasks 4-10 pending.
 
 ## Global Constraints
 
@@ -184,16 +184,16 @@ passes admin scope for `/admin` and its children, public otherwise. It never con
 **Interfaces:** Use public namespaces `landing`, `directory`, common errors and shared formatters.
 Do not change landing/directory APIs, submit behavior, prefix matching or pagination contracts.
 
-- [ ] Add locale-switch tests with a loaded homepage and directory results: assert translated headings,
+- [x] Add locale-switch tests with a loaded homepage and directory results: assert translated headings,
       unchanged `Heaven`, unchanged request counts and maintained query/result state. Cover the six-hour
       review prompt and existing 14-day chart including zero-value days.
-- [ ] Run `pnpm --filter @kick-logs/web test -- landing directory channels-index-page users-index-page`;
+- [x] Run `pnpm --filter @kick-logs/web test -- landing directory channels-index-page users-index-page`;
       confirm new English/German expectations fail before migration.
-- [ ] Move hero/footer/stat/chart/ranking/loading/error/directory copy into catalogs. Keep UTC day
+- [x] Move hero/footer/stat/chart/ranking/loading/error/directory copy into catalogs. Keep UTC day
       labels explicit. Preserve the inline request link and user-facing promise of review, not acceptance.
-- [ ] Keep fetch hooks language-neutral; render notices from keys rather than capturing translator
+- [x] Keep fetch hooks language-neutral; render notices from keys rather than capturing translator
       functions in request effects. Existing messages/query strings are passed as interpolation values.
-- [ ] Run targeted tests and frontend gate; inspect German labels and empty states, update context, commit.
+- [x] Run targeted tests and frontend gate; inspect German labels and empty states, update context, commit.
 
 ## Task 4: Message Search Without State Loss
 

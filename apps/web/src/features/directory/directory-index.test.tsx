@@ -1,5 +1,7 @@
 import { act, fireEvent, screen } from "@testing-library/react";
 import { createLocaleRenderer } from "@/test/render-with-locale";
+import { renderWithLocale } from "@/test/render-with-locale";
+import { LocaleTestControls } from "@/test/locale-controls";
 const render = createLocaleRenderer("tr", "admin");
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -34,6 +36,57 @@ describe.each([
   beforeEach(() => {
     vi.resetAllMocks();
     api.mockResolvedValue(page());
+  });
+
+  it("changes language without refetching or translating identities and draft queries", async () => {
+    api.mockResolvedValue(page("Heaven", "page-two"));
+    renderWithLocale(
+      <>
+        <Component />
+        <LocaleTestControls />
+      </>,
+      { locale: "en" }
+    );
+    expect(
+      screen.getByRole("heading", { name: kind === "users" ? "Users" : "Channels" })
+    ).toBeInTheDocument();
+    const input = screen.getByRole("searchbox");
+    fireEvent.change(input, { target: { value: "He" } });
+    fireEvent.submit(input.closest("form")!);
+    await screen.findByRole("link", { name: /Heaven/ });
+    fireEvent.change(input, { target: { value: "Unsent" } });
+    fireEvent.click(screen.getByRole("button", { name: "Switch to de" }));
+    await screen.findByRole("heading", { name: kind === "users" ? "Nutzer" : "Kanäle" });
+    expect(input).toHaveValue("Unsent");
+    expect(screen.getByRole("link", { name: /Heaven/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Mehr laden" })).toBeInTheDocument();
+    expect(api).toHaveBeenCalledTimes(1);
+  });
+
+  it("translates the empty-state promise without changing the submitted name", async () => {
+    api.mockResolvedValue({ items: [], next_cursor: null });
+    renderWithLocale(
+      <>
+        <Component />
+        <LocaleTestControls />
+      </>,
+      { locale: "en" }
+    );
+    const input = screen.getByRole("searchbox");
+    fireEvent.change(input, { target: { value: "Heaven" } });
+    fireEvent.submit(input.closest("form")!);
+    await screen.findByText(
+      kind === "users" ? 'No users found for "Heaven".' : 'No channels found for "Heaven".'
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Switch to de" }));
+    await screen.findByText(
+      kind === "users"
+        ? 'Keine Nutzer für "Heaven" gefunden.'
+        : 'Keine Kanäle für "Heaven" gefunden.'
+    );
+    if (kind === "channels")
+      expect(screen.getByText(/innerhalb von 6 Stunden geprüft/)).toBeInTheDocument();
+    expect(api).toHaveBeenCalledTimes(1);
   });
 
   it("makes no idle or typing requests, even after a debounce interval", () => {

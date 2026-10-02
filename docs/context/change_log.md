@@ -2,6 +2,14 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (issue 28 homepage and directories)
+
+- Localized homepage, metric/ranking/chart copy, footer and channel/user directory interfaces.
+- Preserved the request-review promise, prefix/pagination behavior, UTC chart buckets and raw names.
+  Locale-switch regressions assert unchanged query state, source identities and API request counts.
+- Verified German mobile homepage and empty-channel prompt with read-only browser fixtures; no
+  database or API-contract changes. Full frontend validation passed (231 tests).
+
 ## 2026-10-02 (issue 28 language selector)
 
 - Added a 48px fixed flag button, upward native-language menu, selected indication, keyboard

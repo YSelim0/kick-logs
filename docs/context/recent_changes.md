@@ -2,7 +2,17 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue 28 language selector and shared chrome)
+## Latest (issue 28 homepage and directories)
+
+- Homepage copy, footer, 14-day statistics, rankings, empty/loading/error states and UTC chart labels
+  now use EN/TR/DE catalogs and display formatters. Query ranges and snapshot requests are unchanged.
+- Channel/user directories translate labels and the six-hour review prompt; source identities and
+  draft/submitted searches remain intact. Directory failures store semantic keys without refetching.
+- Validation passed: 36 files / 231 tests, typecheck, lint, production build. German mobile fixture
+  checks confirmed no horizontal overflow, unchanged Heaven/example_user names and all 14 chart bars.
+  Remaining feature screens are pending; no push, database changes or runtime API changes.
+
+## Previous (issue 28 language selector and shared chrome)
 
 - Added the owner's fixed 48px flag trigger and upward EN/TR/DE menu, with native names,
   keyboard navigation, outside/Escape dismissal, pending protection and safe-area spacing.

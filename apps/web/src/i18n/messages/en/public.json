@@ -1,1 +1,54 @@
-{}
+{
+  "landing": {
+    "stale": "The data may be out of date. Showing the last successful snapshot.",
+    "copyright": "{year} kick-logs · All rights reserved.",
+    "badge": "Self-hosted · Open source",
+    "title": "A lasting log for Kick chat.",
+    "description": "Record, search and analyze messages from the Kick channels you follow. Your data stays yours.",
+    "startSearch": "Start searching",
+    "metrics": "Overview metrics",
+    "range": "Last 14 days",
+    "totalMessages": "TOTAL MESSAGES",
+    "channels": "CHANNELS",
+    "users": "USERS",
+    "emotes": "EMOTES",
+    "metricLoading": "Loading {metric}",
+    "volume": "Message volume",
+    "topChannels": "Top channels",
+    "topUsers": "Top users",
+    "topEmotes": "Top emotes",
+    "noChannels": "No channel data yet.",
+    "noUsers": "No user data yet.",
+    "noEmotes": "No emote data yet.",
+    "noData": "No data yet.",
+    "messages": "{count, plural, one {{formatted} message} other {{formatted} messages}}",
+    "loading": "Loading analytics…",
+    "initializing": "Preparing analytics…",
+    "error": "Analytics are unavailable right now. Search and admin links are still available.",
+    "volumeLoading": "Loading message volume",
+    "listLoading": "Loading list"
+  },
+  "directory": {
+    "users": {
+      "title": "Users",
+      "search": "Search users",
+      "placeholder": "Username or slug",
+      "idle": "Search to find users",
+      "empty": "No users found for \"{query}\".",
+      "results": "User results"
+    },
+    "channels": {
+      "title": "Channels",
+      "search": "Search channels",
+      "placeholder": "Channel name or slug",
+      "idle": "Search to find channels",
+      "empty": "No channels found for \"{query}\".",
+      "results": "Channel results"
+    },
+    "searching": "Searching…",
+    "requestInfo": "You can request tracking for this channel. Your request will be reviewed within 6 hours.",
+    "request": "Send a request",
+    "loadError": "Could not load results. Please try again.",
+    "loadMore": "Load more"
+  }
+}
