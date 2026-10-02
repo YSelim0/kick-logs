@@ -2,6 +2,10 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (language menu spacing)
+
+- Separated language options with a 3px vertical gap so adjacent hover/selected backgrounds do not touch.
+
 ## 2026-10-02 (localized document titles)
 
 - Expanded metadata coverage from three index pages to homepage, search, directories, profiles,

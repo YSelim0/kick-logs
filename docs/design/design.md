@@ -519,6 +519,11 @@ work is purely a re-skin against existing endpoints. Order:
 5. Re-style `/admin` (sidebar layout + sections).
 6. Re-style `/login`.
 
+## Language Menu Spacing
+
+The language selector menu keeps a 3px vertical gap between language buttons so their selected,
+hover and focus backgrounds remain visually separate.
+
 ## Document Titles
 
 - Every page has a localized `Page Name - KickLogs` browser title, such as `Anasayfa - KickLogs`.

@@ -76,7 +76,7 @@ export function LanguageSwitcher() {
           role="menu"
           aria-label={t("language.label")}
           onKeyDown={onKeyDown}
-          className="absolute bottom-full right-0 mb-2 w-48 max-w-[calc(100vw-2rem)] rounded-lg border border-border-strong bg-panel p-2 shadow-lg"
+          className="absolute bottom-full right-0 mb-2 flex w-48 max-w-[calc(100vw-2rem)] flex-col gap-[3px] rounded-lg border border-border-strong bg-panel p-2 shadow-lg"
         >
           {LANGUAGE_OPTIONS.map((option, index) => (
             <button
