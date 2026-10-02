@@ -235,8 +235,13 @@ describe("ChannelProfilePage", () => {
     );
     expect(screen.getByRole("banner")).toBeInTheDocument();
     expect(
-      within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByText("hype")
+      within(screen.getByRole("navigation", { name: "Sayfa yolu" })).getByText("hype")
     ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("navigation", { name: "Sayfa yolu" })).getByRole("link", {
+        name: "Kanallar"
+      })
+    ).toHaveAttribute("href", "/");
     expect(screen.queryByRole("link", { name: /kanalda ara/i })).not.toBeInTheDocument();
 
     await act(async () => resolveProfile(profileFixture()));
@@ -255,7 +260,7 @@ describe("ChannelProfilePage", () => {
     expect(await screen.findByText("Kanal profili şu anda alınamadı.")).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Kanal profili" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /search'te ara/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Mesajlarda ara" })).toHaveAttribute(
       "href",
       "/search?channel=hype"
     );
@@ -295,7 +300,7 @@ describe("ChannelProfilePage", () => {
 
     expect(await screen.findByText("Kanal bulunamadı.")).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /search'e dön/i })).toHaveAttribute("href", "/search");
+    expect(screen.getByRole("link", { name: "Aramaya dön" })).toHaveAttribute("href", "/search");
   });
 });
 

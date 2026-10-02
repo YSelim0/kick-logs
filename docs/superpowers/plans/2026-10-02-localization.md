@@ -10,7 +10,9 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-02-localization-design.md` (owner approved).
 
-**Status:** Tasks 1-10 completed and locally verified. Independent review finding fixed with regression tests. Awaiting owner review; no push or merge.
+**Status:** Tasks 1-10 completed and verified. Independent review findings have regression coverage,
+including the final Turkish profile copy audit (292 passing frontend tests). The owner approved
+integration/push to `dev`, issue closure and local/remote feature-branch removal. Deployment is separate.
 
 ## Global Constraints
 

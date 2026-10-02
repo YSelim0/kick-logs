@@ -120,8 +120,13 @@ describe("UserProfilePage", () => {
     );
     expect(screen.getByRole("banner")).toBeInTheDocument();
     expect(
-      within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByText("yavuz")
+      within(screen.getByRole("navigation", { name: "Sayfa yolu" })).getByText("yavuz")
     ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("navigation", { name: "Sayfa yolu" })).getByRole("link", {
+        name: "Kullanıcılar"
+      })
+    ).toHaveAttribute("href", "/");
     expect(screen.queryByRole("link", { name: /mesajlarda ara/i })).not.toBeInTheDocument();
 
     await act(async () => resolveProfile(profileFixture()));
@@ -140,7 +145,7 @@ describe("UserProfilePage", () => {
     expect(await screen.findByText("Kullanıcı profili şu anda alınamadı.")).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Kullanıcı profili" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /search'te ara/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Mesajlarda ara" })).toHaveAttribute(
       "href",
       "/search?sender=yavuz"
     );
@@ -153,7 +158,7 @@ describe("UserProfilePage", () => {
 
     expect(await screen.findByText("Kullanıcı bulunamadı.")).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /search'e dön/i })).toHaveAttribute("href", "/search");
+    expect(screen.getByRole("link", { name: "Aramaya dön" })).toHaveAttribute("href", "/search");
   });
 });
 

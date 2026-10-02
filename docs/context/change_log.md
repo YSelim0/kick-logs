@@ -2,6 +2,17 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (issue 28 closure audit)
+
+- Rechecked the original issue and the owner's superseding flag-selector requirements. Independent
+  review found five untranslated Turkish profile navigation/accessibility strings; translated them
+  and strengthened the existing channel/user profile tests without changing routes or source slugs.
+- Confirmed the tests failed before the fix (six expected failures), then all 292 frontend tests,
+  lint and production build passed. Previous-commit GitHub Code Style, Frontend tests and Go CI are
+  green, including ClickHouse integration and SQLite/ClickHouse migration smoke checks.
+- Updated the verification/handoff records. The owner explicitly authorized merging/pushing `dev`,
+  closing issue #28 and removing the local/remote feature branch. No `main` merge or deployment.
+
 ## 2026-10-02 (language menu spacing)
 
 - Separated language options with a 3px vertical gap so adjacent hover/selected backgrounds do not touch.

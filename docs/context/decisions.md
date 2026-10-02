@@ -1,5 +1,11 @@
 # Decisions
 
+## 2026-10-02 (issue 28 integration approval)
+
+- After the final requirements audit and passing checks, integrate the issue branch into `dev`,
+  push `dev`, close issue #28 and delete the local/remote feature branch. This explicit owner approval
+  supersedes the earlier local-only restriction for these actions, not for `main` or deployment.
+
 ## 2026-10-02 (localized document titles)
 
 - Every public/admin route uses a localized `Page Name - KickLogs` document title. Profile and

@@ -2,7 +2,17 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (language menu spacing)
+## Latest (issue 28 closure audit)
+
+- Rechecked the issue against its approved flag-selector design, code, tests and production-preview
+  evidence. Finished five Turkish profile navigation/accessibility translations; six existing tests
+  reproduced the gap before the fix, then all 292 frontend tests passed. Routes and source slugs stay unchanged.
+- Frontend lint/build passed. The preceding commit's Code Style, Frontend tests and Go CI workflows
+  all passed, including ClickHouse integration and both migration smoke checks. No live data changed.
+- The owner approved fast-forward integration/push to `dev`, issue closure and local/remote feature
+  branch removal. `main` and production deployment are outside this approval.
+
+## Previous (language menu spacing)
 
 - Added a 3px vertical gap between language options. Trigger, row sizes and selection behavior are unchanged.
 
@@ -24,7 +34,8 @@ This file is the short handoff summary of the latest project changes. Keep it co
   `docs/operations/localization.md`. All 288 frontend tests, lint, typecheck, format and production
   build passed. Independent review found one admin navigation/catalog race; regression tests
   reproduced it and verified the mounted-form preservation fix, including retry after load failure.
-- Commits remain local. Do not push, close the issue or merge into dev without owner approval.
+- At that acceptance checkpoint, push/merge/closure awaited approval; the owner has since authorized
+  these actions for `dev` (see the latest entry).
 
 ## Previous (issue 28 operations and data management)
 

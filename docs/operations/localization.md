@@ -21,7 +21,7 @@
 
 ## Deploy
 
-After reviewing and pulling the issue branch's changes:
+After reviewing and pulling the integrated localization changes:
 
 ```bash
 docker compose build api web
@@ -90,8 +90,11 @@ Frontend tests cover catalog key/ICU parity, missing-key/argument negative fixtu
 rapid selection races, failures, cookie blocking, preserved drafts/pagination and unchanged polling.
 Go tests cover the optional TXT locale and legacy output. Go unit/vet, ClickHouse repository
 integration and SQLite/ClickHouse migration smoke checks ran on disposable fixtures, not app data.
-The final frontend suite contains 288 passing tests across 42 files; lint, typecheck, production
+The final frontend suite contains 292 passing tests across 42 files; lint, typecheck, production
 build and repository Prettier checks passed. Independent review's admin remount finding was
-reproduced and fixed with deferred-load/retry tests. Remote GitHub CI awaits the owner's push.
+reproduced and fixed with deferred-load/retry tests. The closure audit also translated the remaining
+Turkish profile navigation/accessibility copy, with six red-to-green regression assertions.
+GitHub Code Style, Frontend tests and Go CI all passed for `c1685b4`; the final closure commit must
+pass the same workflows after the owner-authorized `dev` push. This is not a production deployment.
 On this Windows checkout, `gofmt -l .` also traverses ignored dependency caches; checking the
 Git-tracked Go files is the equivalent clean-checkout CI source gate.
