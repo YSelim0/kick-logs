@@ -2,6 +2,11 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (localization test timing)
+
+- The full-suite repeat exposed a search test that fired its observer stub before React's effect
+  registered it. Wait for registration explicitly; application pagination code is unchanged.
+
 ## 2026-10-02 (issue 28 admin shell and management)
 
 - Split the server admin catalog loader from the existing client authentication shell.

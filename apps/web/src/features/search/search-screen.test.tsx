@@ -45,7 +45,7 @@ describe("SearchScreen", () => {
   });
 
   it("preserves paginated results, drafts and submitted filters across locale changes", async () => {
-    let intersect: IntersectionObserverCallback = () => {};
+    let intersect: IntersectionObserverCallback | undefined;
     vi.stubGlobal(
       "IntersectionObserver",
       class {
@@ -70,8 +70,9 @@ describe("SearchScreen", () => {
       </>
     );
     expect(await screen.findByText("Heaven", { exact: false })).toBeInTheDocument();
+    await waitFor(() => expect(intersect).toBeDefined());
     await act(async () =>
-      intersect(
+      intersect!(
         [{ isIntersecting: true }] as IntersectionObserverEntry[],
         {} as IntersectionObserver
       )
