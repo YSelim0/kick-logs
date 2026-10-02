@@ -2,6 +2,14 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (issue 28 operations and data management)
+
+- Added EN/TR/DE catalogs for operations, webhook status, failed events and retention/cleanup.
+- Semantic operation notices retranslate without repeating requests; stored diagnostics and
+  confirmation tokens remain untouched. Added preview/success/empty/status-switch regressions.
+- German mobile checks prompted stacked metric tiles for long numbers and a scrollable failed-event
+  modal. No backend cleanup, retry, sync or subscription behavior changed (282 frontend tests).
+
 ## 2026-10-02 (localization test timing)
 
 - The full-suite repeat exposed a search test that fired its observer stub before React's effect

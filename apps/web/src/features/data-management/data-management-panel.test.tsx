@@ -1,5 +1,6 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
-import { createLocaleRenderer } from "@/test/render-with-locale";
+import { LocaleTestControls } from "@/test/locale-controls";
+import { createLocaleRenderer, renderWithLocale } from "@/test/render-with-locale";
 const render = createLocaleRenderer("tr", "admin");
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -16,6 +17,66 @@ const dataMocks = vi.hoisted(() => ({
 vi.mock("@/features/data-management/api", () => dataMocks);
 
 describe("DataManagementPanel", () => {
+  it.each([
+    ["en", "Keep forever", "30 days", "90 days"],
+    ["tr", "Sonsuza kadar", "30 gün", "90 gün"],
+    ["de", "Unbegrenzt", "30 Tage", "90 Tage"]
+  ] as const)(
+    "translates retention options without changing values in %s",
+    async (locale, forever, thirty, ninety) => {
+      renderWithLocale(<DataManagementPanel />, { locale, scope: "admin" });
+      await screen.findByText("chat_messages");
+      for (const [label, value] of [
+        [forever, "forever"],
+        [thirty, "30"],
+        [ninety, "90"]
+      ]) {
+        for (const option of screen.getAllByRole("option", { name: label }))
+          expect(option).toHaveAttribute("value", value);
+      }
+      expect(dataMocks.updateRetentionSettings).not.toHaveBeenCalled();
+    }
+  );
+  it("keeps cleanup preview and exact typed confirmation across language changes", async () => {
+    render(
+      <>
+        <LocaleTestControls />
+        <DataManagementPanel />
+      </>
+    );
+    await screen.findByText("chat_messages");
+    fireEvent.click(screen.getByRole("button", { name: /dry-run/i }));
+    await screen.findByText("Cleanup Önizleme Sonucu");
+    fireEvent.change(screen.getByPlaceholderText("DELETE OLD MESSAGES"), {
+      target: { value: "DELETE OLD MESSAGES" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Switch to de" }));
+    expect(await screen.findByText("Bereinigungsvorschau")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("DELETE OLD MESSAGES")).toHaveValue("DELETE OLD MESSAGES");
+    expect(screen.getByText("chat_messages")).toBeInTheDocument();
+    expect(dataMocks.previewDataCleanup).toHaveBeenCalledTimes(1);
+    expect(dataMocks.getDataManagementSummary).toHaveBeenCalledTimes(1);
+    expect(dataMocks.confirmDataCleanup).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Löschen" }));
+    await waitFor(() =>
+      expect(dataMocks.confirmDataCleanup).toHaveBeenCalledWith({
+        target: "old_messages",
+        channel_slug: null,
+        sender: null,
+        confirmation_text: "DELETE OLD MESSAGES"
+      })
+    );
+    expect(
+      await screen.findByText(
+        "Bereinigung abgeschlossen: 2 Nachrichten und 1 Rohereignis(se) gelöscht."
+      )
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Switch to en" }));
+    expect(
+      await screen.findByText("Cleanup complete: 2 messages and 1 raw event(s) deleted.")
+    ).toBeInTheDocument();
+    expect(dataMocks.confirmDataCleanup).toHaveBeenCalledTimes(1);
+  });
   beforeEach(() => {
     dataMocks.confirmDataCleanup.mockReset();
     dataMocks.getDataManagementSummary.mockReset();
@@ -116,7 +177,8 @@ describe("DataManagementPanel", () => {
 
     render(<DataManagementPanel />);
 
-    expect(await screen.findByText("API down")).toBeInTheDocument();
+    expect(await screen.findByText("Bir sorun oluştu. Lütfen tekrar deneyin.")).toBeInTheDocument();
+    expect(screen.queryByText("API down")).not.toBeInTheDocument();
   });
 });
 

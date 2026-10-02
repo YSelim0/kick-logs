@@ -320,17 +320,17 @@ admin catalogs. Create `failed-events-modal.test.tsx` if absent.
 **Interfaces:** Existing operations/cleanup APIs and diagnostics remain unchanged. Use locale
 formatters for counts/bytes and semantic keys for display statuses. Confirmation tokens stay exact.
 
-- [ ] Add tests for every webhook status (active, inactive, N errors), backlog/breaker warnings,
+- [x] Add tests for every webhook status (active, inactive, N errors), backlog/breaker warnings,
       retention choices, preview/confirmation/success/error notices and empty diagnostics in EN/TR/DE.
-- [ ] Test a locale switch after cleanup preview: same preview ID, exact confirmation token and typed
+- [x] Test a locale switch after cleanup preview: same preview ID, exact confirmation token and typed
       input remain; no repeated preview or destructive request. Only a separate explicit confirm submits.
       A notice changes language while a raw diagnostic string and DB table name do not.
-- [ ] Run `pnpm --filter @kick-logs/web test -- operations webhook-health failed-events data-management`;
+- [x] Run `pnpm --filter @kick-logs/web test -- operations webhook-health failed-events data-management`;
       observe new copy/state assertions fail.
-- [ ] Migrate product labels/captions and accessible names, keeping counters/enum values/data intact.
+- [x] Migrate product labels/captions and accessible names, keeping counters/enum values/data intact.
       Replace translated async-state strings with semantic state; never translate SQL/event names or
       raw logged payloads. Do not alter retries, refresh cadence or mutations.
-- [ ] Run targeted tests and frontend gate; inspect dense German tables/modals on mobile and desktop,
+- [x] Run targeted tests and frontend gate; inspect dense German tables/modals on mobile and desktop,
       update context, commit.
 
 ## Task 10: Cross-Language Acceptance And Handoff

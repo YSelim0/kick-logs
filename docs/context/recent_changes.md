@@ -2,7 +2,16 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue 28 admin shell and management)
+## Latest (issue 28 operations and data management)
+
+- Localized ingestion metrics/warnings, webhook summary/details, failed-event diagnostics and
+  retention/cleanup forms. Counts, dates and storage sizes follow the selected locale.
+- Cleanup targets, confirmation tokens and typed input are unchanged. Raw errors, event identifiers
+  and table names remain intact. Failed-event loading failures no longer masquerade as an empty list.
+- 282 frontend tests pass. German desktop/mobile fixtures covered dense metrics, dialogs and cleanup
+  preview without issuing real mutations. Final whole-site acceptance and independent review remain.
+
+## Previous (issue 28 admin shell and management)
 
 - Added request-scoped admin catalogs and a client provider that honors session language even when
   cookies are blocked or server props are stale. Public pages do not receive admin catalogs.

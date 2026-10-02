@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { LocaleTestControls } from "@/test/locale-controls";
 import { createLocaleRenderer } from "@/test/render-with-locale";
 const render = createLocaleRenderer("tr", "admin");
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,6 +16,29 @@ vi.mock("@/features/operations/api", () => ({
 }));
 
 describe("OperationsDashboard", () => {
+  it("retranslates notices but keeps raw diagnostics without refreshing", async () => {
+    const summary = summaryFixture();
+    operationsApiMocks.getOperationsSummary.mockResolvedValue({
+      ...summary,
+      ingestion: {
+        ...summary.ingestion,
+        breaker_state: "open",
+        breaker_current_delay_ms: 5000,
+        stream_error: "NATS_TIMEOUT raw diagnostic"
+      }
+    });
+    render(
+      <>
+        <LocaleTestControls />
+        <OperationsDashboard />
+      </>
+    );
+    await screen.findByText(/circuit breaker açık/i);
+    fireEvent.click(screen.getByRole("button", { name: "Switch to de" }));
+    expect(await screen.findByText(/ClickHouse-Schutzschaltung ist offen/)).toBeInTheDocument();
+    expect(screen.getByText(/NATS_TIMEOUT raw diagnostic/)).toBeInTheDocument();
+    expect(operationsApiMocks.getOperationsSummary).toHaveBeenCalledTimes(1);
+  });
   beforeEach(() => {
     operationsApiMocks.getOperationsSummary.mockReset();
   });
@@ -103,7 +127,7 @@ describe("OperationsDashboard", () => {
 
     render(<OperationsDashboard />);
 
-    expect(await screen.findByText("API kapalı")).toBeInTheDocument();
+    expect(await screen.findByText("Bir sorun oluştu. Lütfen tekrar deneyin.")).toBeInTheDocument();
   });
 
   it("renders ingestion cards including queue backlog and breaker state", async () => {
@@ -143,8 +167,8 @@ describe("OperationsDashboard", () => {
     render(<OperationsDashboard />);
 
     expect(await screen.findByText("1.200")).toBeInTheDocument();
-    expect(screen.getByText("Stream pending")).toBeInTheDocument();
-    expect(screen.getByText("Ack pending")).toBeInTheDocument();
+    expect(screen.getByText("Akışta bekleyen")).toBeInTheDocument();
+    expect(screen.getByText("Onay bekleyen")).toBeInTheDocument();
     expect(screen.getByText("Kapalı")).toBeInTheDocument();
   });
 
