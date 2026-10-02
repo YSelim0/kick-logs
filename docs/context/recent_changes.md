@@ -2,7 +2,15 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue 28 profiles and subscribers)
+## Latest (issue 28 subscriber TXT export)
+
+- Subscriber TXT downloads accept optional `locale=en|tr|de`. Missing/empty locale preserves the
+  legacy Turkish report; invalid TXT locale returns 422 before queries. JSON/CSV ignore locale.
+- Frontend supplies selected language for TXT only. Source names, UTC timestamps, filenames,
+  subscription selection and ordering are unchanged. No migration or live-data operations.
+- Passed: Go tests, vet, changed-file gofmt; 252 frontend tests, lint, typecheck, build and format.
+
+## Previous (issue 28 profiles and subscribers)
 
 - Channel/user profile copy, metrics, UTC chart labels, relative activity times and message dates
   now follow EN/TR/DE. Subscriber modal labels, pagination and states translate without refetching.

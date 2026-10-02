@@ -6,6 +6,7 @@ import { Download, FileJson, FileText, Gift, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useUiFormat } from "@/i18n/use-ui-format";
+import { useLocalePreference } from "@/i18n/locale-provider";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 
@@ -43,6 +44,7 @@ export function ChannelSubscribersDialog({
   onOpenChange
 }: ChannelSubscribersDialogProps) {
   const t = useTranslations("subscribers");
+  const { locale } = useLocalePreference();
   const format = useUiFormat();
   const open = mode !== null;
   const giftOnly = mode === "gifted";
@@ -135,7 +137,7 @@ export function ChannelSubscribersDialog({
     }
     setIsExportMenuOpen(false);
     window.open(
-      buildChannelSubscribersExportUrl(channelSlug, giftOnly, format),
+      buildChannelSubscribersExportUrl(channelSlug, giftOnly, format, undefined, locale),
       "_blank",
       "noopener,noreferrer"
     );

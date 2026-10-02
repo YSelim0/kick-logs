@@ -2,6 +2,13 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (issue 28 subscriber TXT export)
+
+- Extracted the TXT presentation formatter into a dedicated route helper with EN/TR/DE report copy.
+- Kept the legacy Turkish wrapper and byte-compatible no-locale report. JSON/CSV are locale-independent.
+- Added formatter/route/URL regressions for headings, gift/empty reports, unchanged source identities,
+  UTC timestamps and invalid-locale rejection before subscription queries. Go and frontend checks passed.
+
 ## 2026-10-02 (issue 28 profiles and subscribers)
 
 - Localized profile and subscriber-list presentation while preserving list filters and data contracts.

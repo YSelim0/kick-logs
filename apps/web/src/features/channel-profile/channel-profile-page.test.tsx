@@ -182,6 +182,14 @@ describe("ChannelProfilePage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Abone listesini indir" }));
     fireEvent.click(screen.getByRole("button", { name: "TXT indir" }));
 
+    expect(profileMocks.buildChannelSubscribersExportUrl).toHaveBeenCalledWith(
+      "hype",
+      true,
+      "txt",
+      undefined,
+      "tr"
+    );
+
     expect(openSpy).toHaveBeenCalledWith(
       "http://localhost:8000/channels/hype/subscribers/export?format=txt&gift_only=true",
       "_blank",

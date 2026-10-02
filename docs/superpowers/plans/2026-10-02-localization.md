@@ -251,15 +251,15 @@ items []domain.ChannelSubscriber, locale string) string` for validated inputs.
 Extend `buildChannelSubscribersExportUrl(slug, giftOnly, format, baseUrl = API_BASE_URL, locale?)`
 with an optional fifth `Locale` argument; existing fourth-argument test/custom-base callers remain valid.
 
-- [ ] Add backend tests for absent locale (existing Turkish output), EN/TR/DE headings, gift-only and
+- [x] Add backend tests for absent locale (existing Turkish output), EN/TR/DE headings, gift-only and
       empty cases, unchanged usernames/timestamps and invalid nonempty TXT locale returning 422. Assert
       JSON/CSV bytes/schema remain unchanged even when a locale query parameter is supplied.
-- [ ] Add frontend URL tests: `locale` is sent only for TXT; JSON/CSV URLs and filter params remain stable.
-- [ ] Run `go test ./internal/http/... -run 'Subscriber|Subscribers' -count=1` and the relevant frontend
+- [x] Add frontend URL tests: `locale` is sent only for TXT; JSON/CSV URLs and filter params remain stable.
+- [x] Run `go test ./internal/http/... -run 'Subscriber|Subscribers' -count=1` and the relevant frontend
       tests; verify new localization cases fail before implementation.
-- [ ] Extract the TXT formatter, localize only report labels and validate locale before querying for
+- [x] Extract the TXT formatter, localize only report labels and validate locale before querying for
       TXT. JSON/CSV ignore locale. Preserve existing UTC RFC3339 output, filenames, schemas and row order.
-- [ ] Wire the current UI locale into TXT downloads only. Run backend and frontend gates; no migration
+- [x] Wire the current UI locale into TXT downloads only. Run backend and frontend gates; no migration
       or live-data modification. Update the API/localization documentation and context, then commit.
 
 ## Task 7: Prediction, Public Requests And Login

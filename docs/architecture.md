@@ -1,5 +1,14 @@
 # Kick Logs Architecture
 
+## Localized Subscriber Reports
+
+`GET /channels/{slug}/subscribers/export?format=txt&locale=en|tr|de` localizes TXT headings and
+labels only. Omitting `locale` (or passing an empty value) preserves the legacy Turkish report.
+Invalid nonempty TXT locale values return 422 before channel/subscriber queries. The frontend
+sends its active locale only for TXT. JSON/CSV ignore locale and keep their schemas, values and
+CSV encoding unchanged. All export timestamps remain UTC RFC3339; filenames, source identities,
+subscription filtering and row ordering do not depend on the UI language.
+
 ## Overview
 
 Kick Logs is a self-hosted Kick chat logging application. The default runtime is now:
