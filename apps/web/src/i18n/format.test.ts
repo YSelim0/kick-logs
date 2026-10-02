@@ -3,6 +3,14 @@ import { describe, expect, it } from "vitest";
 import { createFormatters } from "./format";
 
 describe("localized display formats", () => {
+  it("formats profile dates and elapsed time in the selected locale", () => {
+    const date = "2026-10-01T00:00:00Z";
+    const now = new Date("2026-10-01T02:00:00Z").getTime();
+    expect(createFormatters("en", "UTC").relativeTime(date, now)).toBe("2 hours ago");
+    expect(createFormatters("de", "UTC").relativeTime(date, now)).toBe("vor 2 Stunden");
+    expect(createFormatters("tr", "UTC").shortDate(date)).toContain("2026");
+    expect(createFormatters("en", "UTC").relativeTime("invalid", now)).toBe("—");
+  });
   it("formats numbers and percentages without changing their values", () => {
     expect(createFormatters("en", "UTC").number(1234.5)).toBe("1,234.5");
     expect(createFormatters("de", "UTC").number(1234.5)).toBe("1.234,5");

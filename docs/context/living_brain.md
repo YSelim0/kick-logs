@@ -9,7 +9,7 @@ implementation details, or working assumptions change.
   Written design is approved: `docs/superpowers/specs/2026-10-02-localization-design.md`.
   The owner approved `docs/superpowers/plans/2026-10-02-localization.md` and inline execution.
   Shared next-intl foundation, flag selector, shared chrome, homepage, identity directories and
-  message search are localized. Profiles, exports, prediction, forms and admin remain pending. No push or merge
+  message search, profiles and subscriber dialogs are localized. Exports, prediction, forms and admin remain pending. No push or merge
   without owner approval. Feature commits are local and intermediate states are not deployment-ready.
 - Localization targets EN/TR/DE on unchanged URLs, product copy only, cookie/browser/English
   resolution, and the owner's fixed bottom-right current-flag popover with native language names.

@@ -27,6 +27,24 @@ export function createFormatters(locale: Locale, timeZone: string) {
   return {
     number,
     compact: (value: number) => compactNumbers.format(value),
+    shortDate(value: string | null) {
+      if (!value || Number.isNaN(new Date(value).getTime())) return "—";
+      return new Intl.DateTimeFormat(locale, {
+        timeZone,
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      }).format(new Date(value));
+    },
+    relativeTime(value: string | null, now = Date.now()) {
+      if (!value || Number.isNaN(new Date(value).getTime())) return "—";
+      const seconds = Math.trunc((new Date(value).getTime() - now) / 1000);
+      const abs = Math.abs(seconds);
+      const unit = abs < 60 ? "second" : abs < 3600 ? "minute" : abs < 86400 ? "hour" : "day";
+      const divisor =
+        unit === "second" ? 1 : unit === "minute" ? 60 : unit === "hour" ? 3600 : 86400;
+      return new Intl.RelativeTimeFormat(locale).format(Math.trunc(seconds / divisor), unit);
+    },
     percent: (value: number, maximumFractionDigits = 0) =>
       new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits }).format(value),
     dateTime(value: string | null | undefined, options?: Intl.DateTimeFormatOptions) {

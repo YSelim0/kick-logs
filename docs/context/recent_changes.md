@@ -2,7 +2,16 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (issue 28 message search)
+## Latest (issue 28 profiles and subscribers)
+
+- Channel/user profile copy, metrics, UTC chart labels, relative activity times and message dates
+  now follow EN/TR/DE. Subscriber modal labels, pagination and states translate without refetching.
+- Source identities/messages/replies and subscription calculations are unchanged. The remaining
+  Turkish-only search date helper was removed after migrating both profile consumers.
+- All 249 frontend tests, lint, typecheck and production build passed. German 390px modal preview
+  kept its scroll area and footer inside the viewport. TXT export localization is the next task.
+
+## Previous (issue 28 message search)
 
 - Search labels, presets, counts, dates, export menus and all empty/loading/error states use
   EN/TR/DE catalogs. Async errors store semantic keys instead of raw server messages.

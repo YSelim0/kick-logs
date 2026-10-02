@@ -226,16 +226,16 @@ tests; create `channel-subscribers-dialog.test.tsx`; update public profile/subsc
 **Interfaces:** Consume shared formatters/common loading; keep profile API DTOs, subscription math,
 identity links, list `limit/offset/gift_only` and display-only date timezone rules unchanged.
 
-- [ ] Add tests for locale changes with an open populated subscriber dialog, appended subscriber page
+- [x] Add tests for locale changes with an open populated subscriber dialog, appended subscriber page
       and profile latest messages. Assert modal stays open, rows/source usernames stay unchanged and API
       mocks receive no extra calls. Cover loading, 404, generic failure and empty list in EN/TR/DE.
-- [ ] Run `pnpm --filter @kick-logs/web test -- profile channel-subscribers-dialog`; new copy assertions fail.
-- [ ] Migrate identity captions, statistics, chart labels/tooltips, rankings, message timestamps and
+- [x] Run `pnpm --filter @kick-logs/web test -- profile channel-subscribers-dialog`; new copy assertions fail.
+- [x] Migrate identity captions, statistics, chart labels/tooltips, rankings, message timestamps and
       subscriber controls. Share UTC chart-day formatting without replacing browser-local message times.
       Keep source names and quote/reply contents out of the translation catalogs.
-- [ ] Preserve existing modal scrolling/footer bounds and profile layout while allowing German text
+- [x] Preserve existing modal scrolling/footer bounds and profile layout while allowing German text
       to wrap. Keep backend-generated TXT localization for Task 6, not a client-side second export system.
-- [ ] Run targeted tests and frontend gate; verify mobile dialog bounds, update context, commit.
+- [x] Run targeted tests and frontend gate; verify mobile dialog bounds, update context, commit.
 
 ## Task 6: Localized Subscriber TXT Export
 

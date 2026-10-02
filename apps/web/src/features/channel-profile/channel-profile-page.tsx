@@ -3,6 +3,8 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { Search } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useUiFormat } from "@/i18n/use-ui-format";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
@@ -17,7 +19,6 @@ import {
   type ChannelSubscriberMode
 } from "@/features/channel-profile/channel-subscribers-dialog";
 import { MessageContent } from "@/features/search/message-content";
-import { formatMessageDate } from "@/features/search/search-params";
 import { ApiClientError } from "@/lib/api-client";
 import { buildKickProfileUrl, buildUserProfileHref } from "@/lib/kick-profile-slugs";
 import type {
@@ -32,6 +33,7 @@ import type {
 type ProfileStatus = "loading" | "ready" | "not-found" | "error";
 
 export function ChannelProfilePage({ slug }: { slug: string }) {
+  const t = useTranslations("profiles");
   const [profile, setProfile] = useState<ChannelProfile | null>(null);
   const [status, setStatus] = useState<ProfileStatus>("loading");
   const [subscription, setSubscription] = useState<ChannelSubscriptionSummary | null>(null);
@@ -83,16 +85,16 @@ export function ChannelProfilePage({ slug }: { slug: string }) {
           {status === "not-found" ? (
             <ProfileState
               actionHref="/search"
-              actionLabel="Search'e dön"
-              message="Kanal bulunamadı."
+              actionLabel={t("backSearch")}
+              message={t("channelMissing")}
               tone="warning"
             />
           ) : null}
           {status === "error" ? (
             <ProfileState
               actionHref={`/search?channel=${encodeURIComponent(slug)}`}
-              actionLabel="Search'te ara"
-              message="Kanal profili şu anda alınamadı."
+              actionLabel={t("searchAction")}
+              message={t("channelError")}
               tone="danger"
             />
           ) : null}
@@ -106,11 +108,12 @@ export function ChannelProfilePage({ slug }: { slug: string }) {
 }
 
 function Breadcrumb({ slug }: { slug: string }) {
+  const t = useTranslations("profiles");
   return (
-    <nav aria-label="Breadcrumb">
+    <nav aria-label={t("breadcrumb")}>
       <p className="font-mono text-[12px] uppercase tracking-wider text-muted-foreground">
         <Link className="hover:text-foreground" href="/">
-          channels
+          {t("channels")}
         </Link>{" "}
         <span className="text-faint">/</span> <span className="text-foreground">{slug}</span>
       </p>
@@ -125,6 +128,8 @@ function ProfileContent({
   profile: ChannelProfile;
   subscription: ChannelSubscriptionSummary | null;
 }) {
+  const t = useTranslations("profiles");
+  const format = useUiFormat();
   const searchHref = `/search?channel=${encodeURIComponent(profile.channel.slug)}`;
   const kickProfileUrl = buildKickProfileUrl(profile.channel.slug);
   const [subscriberMode, setSubscriberMode] = useState<ChannelSubscriberMode | null>(null);
@@ -145,13 +150,13 @@ function ProfileContent({
                 <LoggingPill />
               </div>
               <p className="mt-2 font-mono text-[11px] text-muted-foreground">
-                ilk log{" "}
+                {t("firstLog")}{" "}
                 <span className="text-muted-foreground">
-                  {formatShortDate(profile.overview.first_message_at)}
+                  {format.shortDate(profile.overview.first_message_at)}
                 </span>{" "}
-                · son aktivite{" "}
+                · {t("lastActivity")}{" "}
                 <span className="text-muted-foreground">
-                  {formatRelativeTime(profile.overview.latest_message_at)}
+                  {format.relativeTime(profile.overview.latest_message_at)}
                 </span>
               </p>
             </div>
@@ -162,7 +167,7 @@ function ProfileContent({
             <Button asChild className="w-full sm:w-auto">
               <Link href={searchHref}>
                 <Search className="h-4 w-4" />
-                Kanalda ara
+                {t("searchChannel")}
               </Link>
             </Button>
           </div>
@@ -172,20 +177,20 @@ function ProfileContent({
       {/* Stats bar */}
       <ProfileStatsBar
         cells={[
-          { label: "MESAJ", value: formatCompactNumber(profile.overview.total_messages) },
-          { label: "KULLANICI", value: formatCompactNumber(profile.overview.total_senders) },
-          { label: "EMOTE", value: formatCompactNumber(profile.overview.total_emote_usages) },
-          { label: "İLK LOG", value: formatShortDate(profile.overview.first_message_at) },
+          { label: t("messages"), value: format.compact(profile.overview.total_messages) },
+          { label: t("senders"), value: format.compact(profile.overview.total_senders) },
+          { label: t("emotes"), value: format.compact(profile.overview.total_emote_usages) },
+          { label: t("firstLogStat"), value: format.shortDate(profile.overview.first_message_at) },
           {
-            label: "AKTİF ABONE",
-            value: subscription ? formatCompactNumber(subscription.active_count) : "—",
-            actionLabel: "Aktif aboneleri görüntüle",
+            label: t("active"),
+            value: subscription ? format.compact(subscription.active_count) : "—",
+            actionLabel: t("showActive"),
             onSelect: canOpenSubscribers ? () => setSubscriberMode("all") : undefined
           },
           {
-            label: "HEDİYE ABONE",
-            value: subscription ? formatCompactNumber(subscription.active_gifted_count) : "—",
-            actionLabel: "Hediye aktif aboneleri görüntüle",
+            label: t("gifted"),
+            value: subscription ? format.compact(subscription.active_gifted_count) : "—",
+            actionLabel: t("showGifted"),
             onSelect: canOpenSubscribers ? () => setSubscriberMode("gifted") : undefined
           }
         ]}
@@ -200,19 +205,19 @@ function ProfileContent({
 
       {/* 3-column analytics grid */}
       <section
-        aria-label="Kanal analitiği"
+        aria-label={t("channelAnalytics")}
         className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:[&>*]:min-h-0"
         style={{ alignItems: "stretch" }}
       >
-        <AnalyticsPanel title="Mesaj hacmi" subtitle="son 14 gün">
+        <AnalyticsPanel title={t("volume")} subtitle={t("period")}>
           <VolumeChart points={profile.message_volume} />
         </AnalyticsPanel>
 
-        <AnalyticsPanel title="Top kullanıcılar" subtitle="mesaj sayısı">
+        <AnalyticsPanel title={t("topUsers")} subtitle={t("messageCount")}>
           <TopSenders senders={profile.top_senders} />
         </AnalyticsPanel>
 
-        <AnalyticsPanel title="Top emoteler" subtitle="kullanım">
+        <AnalyticsPanel title={t("topEmotes")} subtitle={t("usage")}>
           <TopEmotes emotes={profile.top_emotes} />
         </AnalyticsPanel>
       </section>
@@ -221,14 +226,18 @@ function ProfileContent({
       <section className="rounded-lg border border-border bg-panel p-5">
         <header className="mb-4 flex items-baseline justify-between gap-3">
           <div>
-            <h2 className="text-[15px] font-semibold leading-none text-foreground">Son mesajlar</h2>
-            <p className="mt-0.5 font-mono text-2xs uppercase text-muted-foreground">en son 20</p>
+            <h2 className="text-[15px] font-semibold leading-none text-foreground">
+              {t("latest")}
+            </h2>
+            <p className="mt-0.5 font-mono text-2xs uppercase text-muted-foreground">
+              {t("latestLimit")}
+            </p>
           </div>
           <Link
             className="font-mono text-[12px] text-accent hover:text-accent-hover"
             href={`/search?channel=${encodeURIComponent(profile.channel.slug)}`}
           >
-            tümünü ara →
+            {t("searchAll")}
           </Link>
         </header>
         <LatestMessages messages={profile.latest_messages} />
@@ -238,10 +247,11 @@ function ProfileContent({
 }
 
 function LoggingPill() {
+  const t = useTranslations("profiles");
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-elevated px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-accent">
       <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />
-      LOGGING
+      {t("logging")}
     </span>
   );
 }
@@ -254,7 +264,7 @@ function ChannelAvatar({ profile }: { profile: ChannelProfile }) {
   if (imageUrl && !failed) {
     return (
       <img
-        alt={`${profile.channel.display_name} kanal`}
+        alt={profile.channel.display_name}
         className="h-[72px] w-[72px] rounded-md border border-border object-cover"
         height={72}
         onError={() => setFailed(true)}
@@ -282,6 +292,7 @@ function ProfileState({
   message: string;
   tone?: "default" | "warning" | "danger";
 }) {
+  const t = useTranslations("profiles");
   const toneClass =
     tone === "danger"
       ? "text-danger"
@@ -292,9 +303,7 @@ function ProfileState({
   return (
     <section className="rounded-lg border border-border bg-panel p-6">
       <p className={`text-sm font-medium ${toneClass}`}>{message}</p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Public kanal profilleri loglanan mesaj verileriyle oluşur.
-      </p>
+      <p className="mt-1 text-xs text-muted-foreground">{t("channelDescription")}</p>
       {actionHref && actionLabel ? (
         <Button asChild className="mt-4" size="sm">
           <Link href={actionHref}>{actionLabel}</Link>
@@ -307,9 +316,10 @@ function ProfileState({
 type StatCell = { actionLabel?: string; label: string; onSelect?: () => void; value: string };
 
 function ProfileStatsBar({ cells }: { cells: StatCell[] }) {
+  const t = useTranslations("profiles");
   return (
     <section
-      aria-label="Kanal metrikleri"
+      aria-label={t("channelMetrics")}
       className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-3 xl:grid-cols-6"
     >
       {cells.map((cell) => (
@@ -370,8 +380,10 @@ function AnalyticsPanel({
 }
 
 function VolumeChart({ points }: { points: MessageVolumePoint[] }) {
+  const t = useTranslations("profiles");
+  const format = useUiFormat();
   if (points.length === 0) {
-    return <SmallEmpty text="Mesaj hacmi verisi henüz yok." />;
+    return <SmallEmpty text={t("emptyVolume")} />;
   }
 
   const max = points.reduce((acc, p) => Math.max(acc, p.message_count), 0);
@@ -392,14 +404,18 @@ function VolumeChart({ points }: { points: MessageVolumePoint[] }) {
               style={{ bottom: `calc(${heightPct}% + 8px)` }}
             >
               <span className="font-mono text-[11px] font-semibold text-foreground">
-                {formatCompactNumber(point.message_count)}
+                {format.compact(point.message_count)}
               </span>
               <span className="font-mono text-[10px] uppercase text-muted-foreground">
-                {formatShortDate(point.bucket_start)}
+                {format.dayLabel(point.bucket_start)}
               </span>
             </div>
             <div
-              aria-label={`${formatShortDate(point.bucket_start)} · ${formatCompactNumber(point.message_count)} mesaj`}
+              aria-label={t("volumeLabel", {
+                date: format.dayLabel(point.bucket_start),
+                count: point.message_count,
+                value: format.compact(point.message_count)
+              })}
               className="rounded-t-sm bg-accent transition-opacity duration-100 group-hover:opacity-80"
               style={{ height: `${heightPct}%` }}
             />
@@ -411,8 +427,10 @@ function VolumeChart({ points }: { points: MessageVolumePoint[] }) {
 }
 
 function TopSenders({ senders }: { senders: TopSenderAnalytics[] }) {
+  const t = useTranslations("profiles");
+  const format = useUiFormat();
   if (senders.length === 0) {
-    return <SmallEmpty text="Kullanıcı aktivitesi henüz yok." />;
+    return <SmallEmpty text={t("emptyUsers")} />;
   }
 
   return (
@@ -429,7 +447,7 @@ function TopSenders({ senders }: { senders: TopSenderAnalytics[] }) {
             </span>
             <span className="flex-1 truncate text-[13px] text-foreground">@{sender.username}</span>
             <span className="shrink-0 font-mono text-[13px] text-muted-foreground">
-              {formatCompactNumber(sender.message_count)}
+              {format.compact(sender.message_count)}
             </span>
           </>
         );
@@ -454,8 +472,10 @@ function TopSenders({ senders }: { senders: TopSenderAnalytics[] }) {
 }
 
 function TopEmotes({ emotes }: { emotes: TopEmoteAnalytics[] }) {
+  const t = useTranslations("profiles");
+  const format = useUiFormat();
   if (emotes.length === 0) {
-    return <SmallEmpty text="Emote verisi henüz yok." />;
+    return <SmallEmpty text={t("emptyEmotes")} />;
   }
 
   return (
@@ -472,7 +492,7 @@ function TopEmotes({ emotes }: { emotes: TopEmoteAnalytics[] }) {
           />
           <span className="flex-1 truncate text-[13px] text-foreground">{emote.name}</span>
           <span className="shrink-0 font-mono text-[13px] text-muted-foreground">
-            {formatCompactNumber(emote.usage_count)}
+            {format.compact(emote.usage_count)}
           </span>
         </li>
       ))}
@@ -481,8 +501,10 @@ function TopEmotes({ emotes }: { emotes: TopEmoteAnalytics[] }) {
 }
 
 function LatestMessages({ messages }: { messages: Message[] }) {
+  const t = useTranslations("profiles");
+  const format = useUiFormat();
   if (messages.length === 0) {
-    return <SmallEmpty text="Son mesaj bulunamadı." />;
+    return <SmallEmpty text={t("emptyMessages")} />;
   }
 
   return (
@@ -520,7 +542,7 @@ function LatestMessages({ messages }: { messages: Message[] }) {
 
             {/* timestamp */}
             <div className="text-right font-mono text-[11px] text-muted-foreground md:whitespace-nowrap">
-              {formatMessageDate(message.message_created_at)}
+              {format.dateTime(message.message_created_at)}
             </div>
           </div>
         );
@@ -538,35 +560,4 @@ function senderColorStyle(color: string | null): CSSProperties | undefined {
     return undefined;
   }
   return { color };
-}
-
-const COMPACT_FORMATTER = new Intl.NumberFormat("tr-TR", {
-  notation: "compact",
-  maximumFractionDigits: 1
-});
-
-function formatCompactNumber(value: number) {
-  return COMPACT_FORMATTER.format(value);
-}
-
-function formatShortDate(value: string | null) {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("tr-TR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric"
-  }).format(new Date(value));
-}
-
-function formatRelativeTime(value: string | null) {
-  if (!value) return "—";
-  const diff = Date.now() - new Date(value).getTime();
-  const seconds = Math.floor(diff / 1000);
-  if (seconds < 60) return `${seconds}s önce`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m önce`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}s önce`;
-  const days = Math.floor(hours / 24);
-  return `${days}g önce`;
 }

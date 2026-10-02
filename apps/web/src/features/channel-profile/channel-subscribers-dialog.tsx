@@ -4,6 +4,8 @@
 
 import { Download, FileJson, FileText, Gift, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { useUiFormat } from "@/i18n/use-ui-format";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 
@@ -40,6 +42,8 @@ export function ChannelSubscribersDialog({
   mode,
   onOpenChange
 }: ChannelSubscribersDialogProps) {
+  const t = useTranslations("subscribers");
+  const format = useUiFormat();
   const open = mode !== null;
   const giftOnly = mode === "gifted";
   const [items, setItems] = useState<ChannelSubscriber[]>([]);
@@ -139,7 +143,7 @@ export function ChannelSubscribersDialog({
 
   const hasMore = items.length < count;
   const isInitialLoading = status === "loading";
-  const title = giftOnly ? "Hediye aktif aboneler" : "Aktif aboneler";
+  const title = t(giftOnly ? "gifted" : "active");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -151,18 +155,18 @@ export function ChannelSubscribersDialog({
               <DialogHeader>
                 <DialogTitle className="text-[18px]">{title}</DialogTitle>
                 <DialogDescription className="text-[12px] text-muted-foreground">
-                  #{channelSlug} · {formatCompactNumber(count)} kayıt
+                  #{channelSlug} · {t("recordCount", { count, value: format.number(count) })}
                 </DialogDescription>
               </DialogHeader>
 
               <div className="relative shrink-0" ref={exportMenuRef}>
                 <button
                   aria-expanded={isExportMenuOpen}
-                  aria-label="Abone listesini indir"
+                  aria-label={t("download")}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-elevated text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={isInitialLoading}
                   onClick={() => setIsExportMenuOpen((current) => !current)}
-                  title="Abone listesini indir"
+                  title={t("download")}
                   type="button"
                 >
                   <Download className="h-4 w-4" />
@@ -172,17 +176,17 @@ export function ChannelSubscribersDialog({
                   <div className="absolute right-0 z-20 mt-2 grid min-w-[160px] gap-1 rounded-md border border-border bg-panel p-1.5 shadow-lg">
                     <ExportButton
                       icon={<FileJson className="h-4 w-4 text-muted-foreground" />}
-                      label="JSON indir"
+                      label={t("json")}
                       onClick={() => exportSubscribers("json")}
                     />
                     <ExportButton
                       icon={<FileText className="h-4 w-4 text-muted-foreground" />}
-                      label="CSV indir"
+                      label={t("csv")}
                       onClick={() => exportSubscribers("csv")}
                     />
                     <ExportButton
                       icon={<FileText className="h-4 w-4 text-muted-foreground" />}
-                      label="TXT indir"
+                      label={t("txt")}
                       onClick={() => exportSubscribers("txt")}
                     />
                   </div>
@@ -195,16 +199,14 @@ export function ChannelSubscribersDialog({
             {isInitialLoading ? (
               <StateMessage
                 icon={<Loader2 className="h-4 w-4 animate-spin" />}
-                text="Aboneler yükleniyor..."
+                text={t("loading")}
               />
             ) : null}
 
-            {status === "error" ? (
-              <StateMessage text="Abone listesi şu anda alınamadı." tone="danger" />
-            ) : null}
+            {status === "error" ? <StateMessage text={t("error")} tone="danger" /> : null}
 
             {status !== "loading" && status !== "error" && items.length === 0 ? (
-              <StateMessage text="Bu kanal için henüz aktif abonelik kaydı yok." />
+              <StateMessage text={t("empty")} />
             ) : null}
 
             {items.length > 0 ? (
@@ -220,7 +222,7 @@ export function ChannelSubscribersDialog({
             <div className="shrink-0 border-t border-border px-5 py-4">
               <div className="flex items-center justify-between gap-3">
                 <p className="font-mono text-[11px] text-muted-foreground">
-                  {formatCompactNumber(items.length)} / {formatCompactNumber(count)}
+                  {format.number(items.length)} / {format.number(count)}
                 </p>
                 <button
                   className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-elevated px-3 text-[13px] font-medium text-foreground transition-colors hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-50"
@@ -231,7 +233,7 @@ export function ChannelSubscribersDialog({
                   {status === "loading-more" ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : null}
-                  Daha fazla yükle
+                  {t("more")}
                 </button>
               </div>
             </div>
@@ -243,6 +245,7 @@ export function ChannelSubscribersDialog({
 }
 
 function SubscriberRow({ subscriber }: { subscriber: ChannelSubscriber }) {
+  const t = useTranslations("subscribers");
   const href = buildUserProfileHref(subscriber.slug);
   const gifterHref = subscriber.gifter_slug ? buildUserProfileHref(subscriber.gifter_slug) : null;
   const username =
@@ -265,12 +268,12 @@ function SubscriberRow({ subscriber }: { subscriber: ChannelSubscriber }) {
             {subscriber.is_gift ? (
               <span className="inline-flex items-center gap-1 text-accent">
                 <Gift className="h-3 w-3" />
-                Hediye
+                {t("gift")}
               </span>
             ) : null}
             {subscriber.is_gift && subscriber.gifter_username ? (
               <span className="min-w-0 normal-case">
-                veren{" "}
+                {t("by")}{" "}
                 {gifterHref ? (
                   <Link className="text-muted-foreground hover:text-foreground" href={gifterHref}>
                     {subscriber.gifter_username}
@@ -284,8 +287,8 @@ function SubscriberRow({ subscriber }: { subscriber: ChannelSubscriber }) {
         </div>
       </div>
 
-      <DateBlock label="Başlangıç" value={subscriber.started_at} />
-      <DateBlock label="Bitiş" value={subscriber.expires_at} />
+      <DateBlock label={t("start")} value={subscriber.started_at} />
+      <DateBlock label={t("end")} value={subscriber.expires_at} />
     </div>
   );
 }
@@ -303,7 +306,7 @@ function SubscriberAvatar({
   if (imageUrl && !failed) {
     return (
       <img
-        alt={`${username} profil`}
+        alt={username}
         className="h-9 w-9 shrink-0 rounded-full border border-border object-cover"
         height={36}
         onError={() => setFailed(true)}
@@ -321,10 +324,11 @@ function SubscriberAvatar({
 }
 
 function DateBlock({ label, value }: { label: string; value: string }) {
+  const format = useUiFormat();
   return (
     <div>
       <div className="font-mono text-[10px] uppercase text-muted-foreground">{label}</div>
-      <div className="mt-1 font-mono text-[12px] text-foreground">{formatDateTime(value)}</div>
+      <div className="mt-1 font-mono text-[12px] text-foreground">{format.dateTime(value)}</div>
     </div>
   );
 }
@@ -370,23 +374,4 @@ function StateMessage({
       {text}
     </div>
   );
-}
-
-const COMPACT_FORMATTER = new Intl.NumberFormat("tr-TR", {
-  notation: "compact",
-  maximumFractionDigits: 1
-});
-
-function formatCompactNumber(value: number) {
-  return COMPACT_FORMATTER.format(value);
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("tr-TR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(new Date(value));
 }

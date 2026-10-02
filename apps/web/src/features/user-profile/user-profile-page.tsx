@@ -3,6 +3,8 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { Search } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useUiFormat } from "@/i18n/use-ui-format";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -13,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { getUserProfile } from "@/features/user-profile/api";
 import { MessageContent } from "@/features/search/message-content";
 import { getReplyContext } from "@/features/search/reply-metadata";
-import { formatMessageDate } from "@/features/search/search-params";
 import { ApiClientError } from "@/lib/api-client";
 import { buildKickProfileUrl, buildUserProfileHref } from "@/lib/kick-profile-slugs";
 import type {
@@ -27,6 +28,7 @@ import type {
 type ProfileStatus = "loading" | "ready" | "not-found" | "error";
 
 export function UserProfilePage({ slug }: { slug: string }) {
+  const t = useTranslations("profiles");
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [status, setStatus] = useState<ProfileStatus>("loading");
 
@@ -73,16 +75,16 @@ export function UserProfilePage({ slug }: { slug: string }) {
           {status === "not-found" ? (
             <ProfileState
               actionHref="/search"
-              actionLabel="Search'e dön"
-              message="Kullanıcı bulunamadı."
+              actionLabel={t("backSearch")}
+              message={t("userMissing")}
               tone="warning"
             />
           ) : null}
           {status === "error" ? (
             <ProfileState
               actionHref={`/search?sender=${encodeURIComponent(slug)}`}
-              actionLabel="Search'te ara"
-              message="Kullanıcı profili şu anda alınamadı."
+              actionLabel={t("searchAction")}
+              message={t("userError")}
               tone="danger"
             />
           ) : null}
@@ -94,11 +96,12 @@ export function UserProfilePage({ slug }: { slug: string }) {
 }
 
 function Breadcrumb({ slug }: { slug: string }) {
+  const t = useTranslations("profiles");
   return (
-    <nav aria-label="Breadcrumb">
+    <nav aria-label={t("breadcrumb")}>
       <p className="font-mono text-[12px] uppercase tracking-wider text-muted-foreground">
         <Link className="hover:text-foreground" href="/">
-          users
+          {t("users")}
         </Link>{" "}
         <span className="text-faint">/</span> <span className="text-foreground">{slug}</span>
       </p>
@@ -107,6 +110,8 @@ function Breadcrumb({ slug }: { slug: string }) {
 }
 
 function ProfileContent({ profile }: { profile: UserProfile }) {
+  const t = useTranslations("profiles");
+  const format = useUiFormat();
   const searchHref = `/search?sender=${encodeURIComponent(profile.sender.slug)}`;
   const kickProfileUrl = buildKickProfileUrl(profile.sender.slug);
 
@@ -125,13 +130,13 @@ function ProfileContent({ profile }: { profile: UserProfile }) {
                 @{profile.sender.slug}
               </p>
               <p className="mt-2 font-mono text-[11px] text-muted-foreground">
-                ilk mesaj{" "}
+                {t("firstMessage")}{" "}
                 <span className="text-muted-foreground">
-                  {formatShortDate(profile.overview.first_message_at)}
+                  {format.shortDate(profile.overview.first_message_at)}
                 </span>{" "}
-                · son aktivite{" "}
+                · {t("lastActivity")}{" "}
                 <span className="text-muted-foreground">
-                  {formatRelativeTime(profile.overview.latest_message_at)}
+                  {format.relativeTime(profile.overview.latest_message_at)}
                 </span>
               </p>
             </div>
@@ -142,7 +147,7 @@ function ProfileContent({ profile }: { profile: UserProfile }) {
             <Button asChild className="w-full sm:w-auto">
               <Link href={searchHref}>
                 <Search className="h-4 w-4" />
-                Mesajlarda ara
+                {t("searchUser")}
               </Link>
             </Button>
           </div>
@@ -152,28 +157,31 @@ function ProfileContent({ profile }: { profile: UserProfile }) {
       {/* Stats bar */}
       <ProfileStatsBar
         cells={[
-          { label: "MESAJ", value: formatCompactNumber(profile.overview.total_messages) },
-          { label: "KANAL", value: String(profile.overview.total_channels) },
-          { label: "EMOTE", value: formatCompactNumber(profile.overview.total_emote_usages) },
-          { label: "İLK MESAJ", value: formatShortDate(profile.overview.first_message_at) }
+          { label: t("messages"), value: format.compact(profile.overview.total_messages) },
+          { label: t("channelCount"), value: format.number(profile.overview.total_channels) },
+          { label: t("emotes"), value: format.compact(profile.overview.total_emote_usages) },
+          {
+            label: t("firstMessageStat"),
+            value: format.shortDate(profile.overview.first_message_at)
+          }
         ]}
       />
 
       {/* 3-column analytics grid */}
       <section
-        aria-label="Kullanıcı analitiği"
+        aria-label={t("userAnalytics")}
         className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:[&>*]:min-h-0"
         style={{ alignItems: "stretch" }}
       >
-        <AnalyticsPanel title="Mesaj hacmi" subtitle="son 14 gün">
+        <AnalyticsPanel title={t("volume")} subtitle={t("period")}>
           <VolumeChart points={profile.message_volume} />
         </AnalyticsPanel>
 
-        <AnalyticsPanel title="Top kanallar" subtitle="mesaj sayısı">
+        <AnalyticsPanel title={t("topChannels")} subtitle={t("messageCount")}>
           <TopChannels channels={profile.top_channels} senderSlug={profile.sender.slug} />
         </AnalyticsPanel>
 
-        <AnalyticsPanel title="Top emoteler" subtitle="kullanım">
+        <AnalyticsPanel title={t("topEmotes")} subtitle={t("usage")}>
           <TopEmotes emotes={profile.top_emotes} />
         </AnalyticsPanel>
       </section>
@@ -182,14 +190,18 @@ function ProfileContent({ profile }: { profile: UserProfile }) {
       <section className="rounded-lg border border-border bg-panel p-5">
         <header className="mb-4 flex items-baseline justify-between gap-3">
           <div>
-            <h2 className="text-[15px] font-semibold leading-none text-foreground">Son mesajlar</h2>
-            <p className="mt-0.5 font-mono text-2xs uppercase text-muted-foreground">en son 20</p>
+            <h2 className="text-[15px] font-semibold leading-none text-foreground">
+              {t("latest")}
+            </h2>
+            <p className="mt-0.5 font-mono text-2xs uppercase text-muted-foreground">
+              {t("latestLimit")}
+            </p>
           </div>
           <Link
             className="font-mono text-[12px] text-accent hover:text-accent-hover"
             href={`/search?sender=${encodeURIComponent(profile.sender.slug)}`}
           >
-            tümünü ara →
+            {t("searchAll")}
           </Link>
         </header>
         <LatestMessages messages={profile.latest_messages} />
@@ -206,7 +218,7 @@ function ProfileAvatar({ profile }: { profile: UserProfile }) {
   if (imageUrl && !failed) {
     return (
       <img
-        alt={`${profile.sender.username} profil`}
+        alt={profile.sender.username}
         className="h-[72px] w-[72px] min-w-[72px] rounded-full border border-border object-cover"
         height={72}
         onError={() => setFailed(true)}
@@ -234,6 +246,7 @@ function ProfileState({
   message: string;
   tone?: "default" | "warning" | "danger";
 }) {
+  const t = useTranslations("profiles");
   const toneClass =
     tone === "danger"
       ? "text-danger"
@@ -244,9 +257,7 @@ function ProfileState({
   return (
     <section className="rounded-lg border border-border bg-panel p-6">
       <p className={`text-sm font-medium ${toneClass}`}>{message}</p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Public kullanıcı profilleri loglanan mesaj verileriyle oluşur.
-      </p>
+      <p className="mt-1 text-xs text-muted-foreground">{t("userDescription")}</p>
       {actionHref && actionLabel ? (
         <Button asChild className="mt-4" size="sm">
           <Link href={actionHref}>{actionLabel}</Link>
@@ -259,9 +270,10 @@ function ProfileState({
 type StatCell = { label: string; value: string };
 
 function ProfileStatsBar({ cells }: { cells: StatCell[] }) {
+  const t = useTranslations("profiles");
   return (
     <section
-      aria-label="Kullanıcı metrikleri"
+      aria-label={t("userMetrics")}
       className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-4"
     >
       {cells.map((cell) => (
@@ -301,8 +313,10 @@ function AnalyticsPanel({
 }
 
 function VolumeChart({ points }: { points: MessageVolumePoint[] }) {
+  const t = useTranslations("profiles");
+  const format = useUiFormat();
   if (points.length === 0) {
-    return <SmallEmpty text="Mesaj hacmi verisi henüz yok." />;
+    return <SmallEmpty text={t("emptyVolume")} />;
   }
 
   const max = points.reduce((acc, p) => Math.max(acc, p.message_count), 0);
@@ -323,14 +337,18 @@ function VolumeChart({ points }: { points: MessageVolumePoint[] }) {
               style={{ bottom: `calc(${heightPct}% + 8px)` }}
             >
               <span className="font-mono text-[11px] font-semibold text-foreground">
-                {formatCompactNumber(point.message_count)}
+                {format.compact(point.message_count)}
               </span>
               <span className="font-mono text-[10px] uppercase text-muted-foreground">
-                {formatShortDate(point.bucket_start)}
+                {format.dayLabel(point.bucket_start)}
               </span>
             </div>
             <div
-              aria-label={`${formatShortDate(point.bucket_start)} · ${formatCompactNumber(point.message_count)} mesaj`}
+              aria-label={t("volumeLabel", {
+                date: format.dayLabel(point.bucket_start),
+                count: point.message_count,
+                value: format.compact(point.message_count)
+              })}
               className="rounded-t-sm bg-accent transition-opacity duration-100 group-hover:opacity-80"
               style={{ height: `${heightPct}%` }}
             />
@@ -348,8 +366,10 @@ function TopChannels({
   channels: TopChannelAnalytics[];
   senderSlug: string;
 }) {
+  const t = useTranslations("profiles");
+  const format = useUiFormat();
   if (channels.length === 0) {
-    return <SmallEmpty text="Kanal aktivitesi henüz yok." />;
+    return <SmallEmpty text={t("emptyChannels")} />;
   }
 
   return (
@@ -376,7 +396,7 @@ function TopChannels({
             )}
             <span className="flex-1 truncate text-[13px] text-foreground">{channel.slug}</span>
             <span className="shrink-0 font-mono text-[13px] text-muted-foreground">
-              {formatCompactNumber(channel.message_count)}
+              {format.compact(channel.message_count)}
             </span>
           </Link>
         </li>
@@ -386,8 +406,10 @@ function TopChannels({
 }
 
 function TopEmotes({ emotes }: { emotes: TopEmoteAnalytics[] }) {
+  const t = useTranslations("profiles");
+  const format = useUiFormat();
   if (emotes.length === 0) {
-    return <SmallEmpty text="Emote verisi henüz yok." />;
+    return <SmallEmpty text={t("emptyEmotes")} />;
   }
 
   return (
@@ -404,7 +426,7 @@ function TopEmotes({ emotes }: { emotes: TopEmoteAnalytics[] }) {
           />
           <span className="flex-1 truncate text-[13px] text-foreground">{emote.name}</span>
           <span className="shrink-0 font-mono text-[13px] text-muted-foreground">
-            {formatCompactNumber(emote.usage_count)}
+            {format.compact(emote.usage_count)}
           </span>
         </li>
       ))}
@@ -413,8 +435,10 @@ function TopEmotes({ emotes }: { emotes: TopEmoteAnalytics[] }) {
 }
 
 function LatestMessages({ messages }: { messages: Message[] }) {
+  const t = useTranslations("profiles");
+  const format = useUiFormat();
   if (messages.length === 0) {
-    return <SmallEmpty text="Son mesaj bulunamadı." />;
+    return <SmallEmpty text={t("emptyMessages")} />;
   }
 
   return (
@@ -469,7 +493,7 @@ function LatestMessages({ messages }: { messages: Message[] }) {
 
             {/* timestamp */}
             <div className="text-right font-mono text-[11px] text-muted-foreground md:whitespace-nowrap">
-              {formatMessageDate(message.message_created_at)}
+              {format.dateTime(message.message_created_at)}
             </div>
           </div>
         );
@@ -480,35 +504,4 @@ function LatestMessages({ messages }: { messages: Message[] }) {
 
 function SmallEmpty({ text }: { text: string }) {
   return <p className="text-[13px] text-muted-foreground">{text}</p>;
-}
-
-const COMPACT_FORMATTER = new Intl.NumberFormat("tr-TR", {
-  notation: "compact",
-  maximumFractionDigits: 1
-});
-
-function formatCompactNumber(value: number) {
-  return COMPACT_FORMATTER.format(value);
-}
-
-function formatShortDate(value: string | null) {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("tr-TR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric"
-  }).format(new Date(value));
-}
-
-function formatRelativeTime(value: string | null) {
-  if (!value) return "—";
-  const diff = Date.now() - new Date(value).getTime();
-  const seconds = Math.floor(diff / 1000);
-  if (seconds < 60) return `${seconds}s önce`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m önce`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}s önce`;
-  const days = Math.floor(hours / 24);
-  return `${days}g önce`;
 }

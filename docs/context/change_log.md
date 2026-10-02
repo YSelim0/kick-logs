@@ -2,6 +2,13 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (issue 28 profiles and subscribers)
+
+- Localized profile and subscriber-list presentation while preserving list filters and data contracts.
+- Added shared short-date/relative-time display formatting; UTC day labels do not change with browser timezone.
+- Regression tests cover open/appended subscriber lists, raw reply/profile content and three-language
+  loading/not-found/error/empty states. Mobile German modal footer stays visible (249 frontend tests pass).
+
 ## 2026-10-02 (issue 28 message search)
 
 - Localized search controls, results, error states and message timestamp presentation without
