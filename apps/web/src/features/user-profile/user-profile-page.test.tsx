@@ -1,4 +1,7 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { LocaleTestControls } from "@/test/locale-controls";
+import { createLocaleRenderer, renderWithLocale } from "@/test/render-with-locale";
+const render = createLocaleRenderer("tr", "admin");
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { UserProfilePage } from "@/features/user-profile/user-profile-page";
@@ -16,6 +19,39 @@ vi.mock("next/image", () => ({
 vi.mock("@/features/user-profile/api", () => profileMocks);
 
 describe("UserProfilePage", () => {
+  it.each(["en", "tr", "de"] as const)(
+    "localizes loading and failure states in %s",
+    async (locale) => {
+      const copy = {
+        en: {
+          loading: "Loading user profile...",
+          missing: "User not found.",
+          error: "The user profile could not be loaded."
+        },
+        tr: {
+          loading: "Kullanıcı profili yükleniyor...",
+          missing: "Kullanıcı bulunamadı.",
+          error: "Kullanıcı profili şu anda alınamadı."
+        },
+        de: {
+          loading: "Nutzerprofil wird geladen...",
+          missing: "Benutzer nicht gefunden.",
+          error: "Das Benutzerprofil konnte nicht geladen werden."
+        }
+      }[locale];
+      profileMocks.getUserProfile.mockReturnValue(new Promise(() => {}));
+      const loading = renderWithLocale(<UserProfilePage slug="Heaven" />, { locale });
+      expect(screen.getByRole("status")).toHaveTextContent(copy.loading);
+      loading.unmount();
+      profileMocks.getUserProfile.mockRejectedValue(new ApiClientError(404, { detail: "private" }));
+      const missing = renderWithLocale(<UserProfilePage slug="Heaven" />, { locale });
+      expect(await screen.findByText(copy.missing)).toBeInTheDocument();
+      missing.unmount();
+      profileMocks.getUserProfile.mockRejectedValue(new ApiClientError(500, { detail: "private" }));
+      renderWithLocale(<UserProfilePage slug="Heaven" />, { locale });
+      expect(await screen.findByText(copy.error)).toBeInTheDocument();
+    }
+  );
   beforeEach(() => {
     profileMocks.getUserProfile.mockReset();
     profileMocks.getUserProfile.mockResolvedValue(profileFixture());
@@ -48,6 +84,25 @@ describe("UserProfilePage", () => {
     );
   });
 
+  it("preserves raw messages, replies and profile identity when switching locale", async () => {
+    render(
+      <>
+        <LocaleTestControls />
+        <UserProfilePage slug="yavuz" />
+      </>
+    );
+    expect(await screen.findByText("hello profile message")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Switch to de" }));
+    expect(await screen.findByRole("heading", { name: "Letzte Nachrichten" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Yavuz" })).toBeInTheDocument();
+    expect(screen.getByText("older profile context")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "@reply_user:" })).toHaveAttribute(
+      "href",
+      "/users/reply-user"
+    );
+    expect(profileMocks.getUserProfile).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps the header and breadcrumb available while loading, then replaces the skeleton", async () => {
     let resolveProfile!: (profile: UserProfile) => void;
     profileMocks.getUserProfile.mockReturnValue(
@@ -65,8 +120,13 @@ describe("UserProfilePage", () => {
     );
     expect(screen.getByRole("banner")).toBeInTheDocument();
     expect(
-      within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByText("yavuz")
+      within(screen.getByRole("navigation", { name: "Sayfa yolu" })).getByText("yavuz")
     ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("navigation", { name: "Sayfa yolu" })).getByRole("link", {
+        name: "Kullanıcılar"
+      })
+    ).toHaveAttribute("href", "/");
     expect(screen.queryByRole("link", { name: /mesajlarda ara/i })).not.toBeInTheDocument();
 
     await act(async () => resolveProfile(profileFixture()));
@@ -85,7 +145,7 @@ describe("UserProfilePage", () => {
     expect(await screen.findByText("Kullanıcı profili şu anda alınamadı.")).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Kullanıcı profili" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /search'te ara/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Mesajlarda ara" })).toHaveAttribute(
       "href",
       "/search?sender=yavuz"
     );
@@ -98,7 +158,7 @@ describe("UserProfilePage", () => {
 
     expect(await screen.findByText("Kullanıcı bulunamadı.")).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /search'e dön/i })).toHaveAttribute("href", "/search");
+    expect(screen.getByRole("link", { name: "Aramaya dön" })).toHaveAttribute("href", "/search");
   });
 });
 

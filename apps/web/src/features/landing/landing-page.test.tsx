@@ -1,4 +1,8 @@
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { createLocaleRenderer } from "@/test/render-with-locale";
+import { renderWithLocale } from "@/test/render-with-locale";
+import { LocaleTestControls } from "@/test/locale-controls";
+const render = createLocaleRenderer("tr", "admin");
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { HomepageResponse, HomepageSnapshot } from "@/features/landing/api";
@@ -12,6 +16,24 @@ vi.mock("next/image", () => ({
 }));
 
 describe("LandingPage", () => {
+  it("switches loaded analytics copy without restarting requests or translating channel names", async () => {
+    vi.useRealTimers();
+    renderWithLocale(
+      <>
+        <LandingPage />
+        <LocaleTestControls />
+      </>,
+      { locale: "en" }
+    );
+    await flush();
+    expect(screen.getAllByText("Last 14 days")).toHaveLength(5);
+    expect(screen.getByRole("heading", { name: "Message volume" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Switch to de" }));
+    expect(await screen.findAllByText("Letzte 14 Tage")).toHaveLength(5);
+    expect(screen.getByText("Hype")).toBeInTheDocument();
+    expect(screen.getByText("Yavuz")).toBeInTheDocument();
+    expect(homepageMocks.getHomepage).toHaveBeenCalledTimes(1);
+  });
   beforeEach(() => {
     vi.useFakeTimers();
     homepageMocks.getHomepage.mockReset();

@@ -1,0 +1,95 @@
+{
+  "actions": {
+    "close": "Schließen",
+    "retry": "Erneut versuchen",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "saving": "Wird gespeichert…",
+    "search": "Suchen",
+    "reset": "Zurücksetzen",
+    "download": "Herunterladen",
+    "refresh": "Aktualisieren",
+    "loading": "Wird geladen…",
+    "back": "Zurück",
+    "next": "Weiter",
+    "previous": "Zurück",
+    "open": "Öffnen",
+    "logout": "Abmelden"
+  },
+  "errors": {
+    "invalidCredentials": "Die E-Mail-Adresse oder das Passwort ist falsch.",
+    "sessionExpired": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
+    "forbidden": "Du hast keine Berechtigung für diese Aktion.",
+    "notFound": "Der angeforderte Eintrag wurde nicht gefunden.",
+    "conflict": "Diese Änderung steht im Konflikt mit einem bestehenden Eintrag.",
+    "invalidInput": "Überprüfe deine Angaben.",
+    "rateLimited": "Zu viele Anfragen. Bitte warte, bevor du es erneut versuchst.",
+    "network": "Keine Verbindung möglich. Überprüfe deine Verbindung und versuche es erneut.",
+    "unavailable": "Ein Fehler ist aufgetreten. Bitte versuche es erneut.",
+    "languageSwitch": "Die Sprache konnte nicht geladen werden. Bitte versuche es erneut."
+  },
+  "metadata": {
+    "titles": {
+      "home": "Startseite",
+      "search": "Chat-Suche",
+      "channels": "Kanäle",
+      "users": "Nutzer",
+      "prediction": "Vorhersage",
+      "request": "Anfrage senden",
+      "login": "Admin-Anmeldung",
+      "channelProfile": "{slug} Kanalprofil",
+      "userProfile": "{slug} Nutzerprofil",
+      "predictionAnalysis": "{slug} Vorhersageanalyse",
+      "adminOperations": "Betrieb - Admin",
+      "adminChannels": "Verfolgte Kanäle - Admin",
+      "adminUsers": "Administratoren - Admin",
+      "adminRequests": "Anfragen - Admin",
+      "adminData": "Datenverwaltung - Admin",
+      "notFound": "Seite nicht gefunden"
+    },
+    "description": "Durchsuche den Kick-Chatverlauf und entdecke Kanalaktivitäten und erfasste Abonnements.",
+    "channels": {
+      "description": "Suche und entdecke erfasste Kick-Kanäle."
+    },
+    "users": {
+      "description": "Suche und entdecke erfasste Kick-Nutzer."
+    },
+    "prediction": {
+      "description": "Sieh dir die neueste Vorhersage eines Kick-Kanals an."
+    }
+  },
+  "navigation": {
+    "title": "Hauptnavigation",
+    "search": "Suche",
+    "channels": "Kanäle",
+    "users": "Nutzer",
+    "prediction": "Vorhersage",
+    "request": "Anfrage",
+    "admin": "Admin",
+    "openMenu": "Menü öffnen",
+    "closeMenu": "Menü schließen"
+  },
+  "profile": {
+    "visitKick": "Kick-Konto besuchen",
+    "channel": "Kanalprofil",
+    "user": "Nutzerprofil",
+    "channelLoading": "Kanalprofil wird geladen...",
+    "userLoading": "Nutzerprofil wird geladen..."
+  },
+  "notFound": {
+    "title": "Seite nicht gefunden.",
+    "description": "Dieser Link wurde möglicherweise verschoben oder entfernt oder hat nie existiert. Kehre zur Chatsuche zurück oder entdecke erfasste Kanäle und Nutzer.",
+    "search": "Zur Suche",
+    "home": "Zur Startseite",
+    "quickLinks": "Direktlinks",
+    "navigation": "404-Direktlinks",
+    "channels": "Erfasste Kanäle entdecken",
+    "users": "Nutzerprofile ansehen",
+    "prediction": "Vorhersagen öffnen",
+    "request": "Kanal anfragen oder Feedback senden"
+  },
+  "language": {
+    "label": "Sprache",
+    "choose": "Sprache ändern"
+  }
+}

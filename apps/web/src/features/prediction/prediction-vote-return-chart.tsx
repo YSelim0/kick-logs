@@ -1,5 +1,8 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+import { useUiFormat } from "@/i18n/use-ui-format";
+
 import {
   Bar,
   BarChart,
@@ -11,17 +14,14 @@ import {
   YAxis
 } from "recharts";
 
-import {
-  formatCompactNumber,
-  formatMultiplier,
-  RETURN_RATE_COLOR,
-  VOTE_COUNT_COLOR
-} from "@/features/prediction/format";
+import { RETURN_RATE_COLOR, VOTE_COUNT_COLOR } from "@/features/prediction/format";
 import type { PredictionOutcome } from "@/types/api";
 
 const CHART_INITIAL_DIMENSION = { width: 640, height: 224 };
 
 export function PredictionVoteReturnChart({ outcomes }: { outcomes: PredictionOutcome[] }) {
+  const t = useTranslations("prediction");
+  const f = useUiFormat();
   const data = outcomes.map((outcome) => ({
     name: outcome.title,
     voteCount: outcome.voteCount,
@@ -29,7 +29,7 @@ export function PredictionVoteReturnChart({ outcomes }: { outcomes: PredictionOu
   }));
 
   if (data.length === 0) {
-    return <p className="text-[13px] text-muted-foreground">Oy ve oran verisi yok.</p>;
+    return <p className="text-[13px] text-muted-foreground">{t("emptyVotes")}</p>;
   }
 
   return (
@@ -51,7 +51,7 @@ export function PredictionVoteReturnChart({ outcomes }: { outcomes: PredictionOu
           <YAxis
             yAxisId="votes"
             axisLine={false}
-            tickFormatter={(value) => formatCompactNumber(Number(value))}
+            tickFormatter={(value) => f.compact(Number(value))}
             tick={{ fill: "#9ca3af", fontSize: 11 }}
             tickLine={false}
             width={48}
@@ -60,7 +60,7 @@ export function PredictionVoteReturnChart({ outcomes }: { outcomes: PredictionOu
             yAxisId="return"
             axisLine={false}
             orientation="right"
-            tickFormatter={(value) => formatMultiplier(Number(value))}
+            tickFormatter={(value) => t("multiplier", { value: f.number(Number(value), 2) })}
             tick={{ fill: "#9ca3af", fontSize: 11 }}
             tickLine={false}
             width={48}
@@ -73,10 +73,10 @@ export function PredictionVoteReturnChart({ outcomes }: { outcomes: PredictionOu
               fontSize: 12
             }}
             cursor={{ fill: "#24272c", opacity: 0.4 }}
-            formatter={(value, name) =>
-              name === "Getiri oranı"
-                ? [formatMultiplier(Number(value)), name]
-                : [formatCompactNumber(Number(value)), name]
+            formatter={(value, name, item) =>
+              item.dataKey === "returnRate"
+                ? [t("multiplier", { value: f.number(Number(value), 2) }), name]
+                : [f.compact(Number(value)), name]
             }
             itemStyle={{ color: "#ffffff" }}
             labelStyle={{ color: "#9ca3af" }}
@@ -86,14 +86,14 @@ export function PredictionVoteReturnChart({ outcomes }: { outcomes: PredictionOu
             yAxisId="votes"
             dataKey="voteCount"
             fill={VOTE_COUNT_COLOR}
-            name="Oy sayısı"
+            name={t("voteCount")}
             radius={[3, 3, 0, 0]}
           />
           <Bar
             yAxisId="return"
             dataKey="returnRate"
             fill={RETURN_RATE_COLOR}
-            name="Getiri oranı"
+            name={t("returnRate")}
             radius={[3, 3, 0, 0]}
           />
         </BarChart>

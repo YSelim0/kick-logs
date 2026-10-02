@@ -1,0 +1,95 @@
+{
+  "actions": {
+    "close": "Close",
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "search": "Search",
+    "reset": "Reset",
+    "download": "Download",
+    "refresh": "Refresh",
+    "loading": "Loading…",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "open": "Open",
+    "logout": "Sign out"
+  },
+  "errors": {
+    "invalidCredentials": "The email or password is incorrect.",
+    "sessionExpired": "Your session has expired. Please sign in again.",
+    "forbidden": "You do not have permission to perform this action.",
+    "notFound": "The requested record was not found.",
+    "conflict": "This change conflicts with an existing record.",
+    "invalidInput": "Check the information you entered.",
+    "rateLimited": "Too many requests. Please wait before trying again.",
+    "network": "Unable to connect. Check your connection and try again.",
+    "unavailable": "Something went wrong. Please try again.",
+    "languageSwitch": "The language could not be loaded. Please try again."
+  },
+  "metadata": {
+    "titles": {
+      "home": "Home",
+      "search": "Chat Search",
+      "channels": "Channels",
+      "users": "Users",
+      "prediction": "Prediction",
+      "request": "Submit a Request",
+      "login": "Admin Sign In",
+      "channelProfile": "{slug} Channel Profile",
+      "userProfile": "{slug} User Profile",
+      "predictionAnalysis": "{slug} Prediction Analysis",
+      "adminOperations": "Operations - Admin",
+      "adminChannels": "Followed Channels - Admin",
+      "adminUsers": "Administrators - Admin",
+      "adminRequests": "Requests - Admin",
+      "adminData": "Data Management - Admin",
+      "notFound": "Page Not Found"
+    },
+    "description": "Search Kick chat history, explore channel activity and track recorded subscriptions.",
+    "channels": {
+      "description": "Search and explore recorded Kick channels."
+    },
+    "users": {
+      "description": "Search and explore recorded Kick users."
+    },
+    "prediction": {
+      "description": "View a Kick channel's latest prediction."
+    }
+  },
+  "navigation": {
+    "title": "Main navigation",
+    "search": "Search",
+    "channels": "Channels",
+    "users": "Users",
+    "prediction": "Prediction",
+    "request": "Request",
+    "admin": "Admin",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "profile": {
+    "visitKick": "Visit Kick account",
+    "channel": "Channel profile",
+    "user": "User profile",
+    "channelLoading": "Loading channel profile...",
+    "userLoading": "Loading user profile..."
+  },
+  "notFound": {
+    "title": "Page not found.",
+    "description": "This link may have moved, been removed or never existed. Return to chat search or explore recorded channels and users.",
+    "search": "Search page",
+    "home": "Back to home",
+    "quickLinks": "Quick links",
+    "navigation": "404 quick links",
+    "channels": "Explore recorded channels",
+    "users": "View user profiles",
+    "prediction": "Open prediction panels",
+    "request": "Request a channel or send feedback"
+  },
+  "language": {
+    "label": "Language",
+    "choose": "Change language"
+  }
+}

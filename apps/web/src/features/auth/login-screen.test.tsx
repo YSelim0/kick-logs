@@ -1,4 +1,7 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { createLocaleRenderer } from "@/test/render-with-locale";
+import { LocaleTestControls } from "@/test/locale-controls";
+const render = createLocaleRenderer("tr", "admin");
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoginScreen } from "@/features/auth/login-screen";
@@ -91,6 +94,26 @@ describe("LoginScreen", () => {
     fireEvent.click(screen.getByRole("button", { name: /giriş yap/i }));
 
     expect(await screen.findByText("E-posta veya parola hatalı.")).toBeInTheDocument();
+    expect(navigationMocks.replace).not.toHaveBeenCalled();
+  });
+
+  it("preserves credentials and translates an existing error without resubmitting", async () => {
+    apiMocks.login.mockRejectedValue(new ApiClientError(401, { detail: "private" }));
+    render(
+      <>
+        <LocaleTestControls />
+        <LoginScreen />
+      </>
+    );
+    fireEvent.change(screen.getByLabelText("E-POSTA"), { target: { value: "test@example.com" } });
+    fireEvent.change(screen.getByLabelText("ŞİFRE"), { target: { value: "not-a-real-password" } });
+    fireEvent.click(screen.getByRole("button", { name: "Giriş yap" }));
+    expect(await screen.findByText("E-posta veya parola hatalı.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Switch to de" }));
+    expect(await screen.findByLabelText("PASSWORT")).toHaveValue("not-a-real-password");
+    expect(screen.getByLabelText("E-MAIL")).toHaveValue("test@example.com");
+    expect(screen.queryByText("E-posta veya parola hatalı.")).not.toBeInTheDocument();
+    expect(apiMocks.login).toHaveBeenCalledTimes(1);
     expect(navigationMocks.replace).not.toHaveBeenCalled();
   });
 });

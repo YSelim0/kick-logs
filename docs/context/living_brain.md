@@ -5,10 +5,22 @@ implementation details, or working assumptions change.
 
 ## Current State
 
-- Integration target: `dev`; issue #27's approved first-pass changes were developed on
-  `feat/issue-27-analytics-performance` from `dev`.
-- Issue #27 is closed. The owner approved the narrower SQL-only profile follow-up from #29 directly
-  on `dev`, in the existing workspace. Issue #29's broader acceptance/backfill work remains open.
+- Localization implementation: issue #28, developed on `feat/issue-28-localization` from `dev` at `d7910fe`.
+  Written design is approved: `docs/superpowers/specs/2026-10-02-localization-design.md`.
+  The owner approved `docs/superpowers/plans/2026-10-02-localization.md` and inline execution.
+  Shared chrome, all public/admin screens, profiles, prediction, forms and subscriber TXT exports
+  are localized. Final acceptance and independent review are complete (292 frontend tests); the
+  admin-navigation race and remaining Turkish profile navigation copy have regression coverage.
+  The owner authorized integration and push to `dev`, issue closure and local/remote feature-branch
+  removal. Do not merge into `main` or deploy as part of this approval.
+  Rollout notes: `docs/operations/localization.md`; production CDN verification remains a deploy step.
+- Localization targets EN/TR/DE on unchanged URLs, product copy only, cookie/browser/English
+  resolution, and the owner's fixed bottom-right current-flag popover with native language names.
+- Every route has a localized `Page Name - KickLogs` document title on initial HTML, client navigation
+  and in-place locale changes. Detail titles preserve the route slug without extra data fetching.
+- Issue #27 is closed. The owner approved the narrower SQL-only profile follow-up from #29 on
+  `dev`, then closed #29 in favor of manual production observation. Broader follow-ups are deferred,
+  not claimed implemented. Existing query improvements remain in place.
 - Active architecture: JetStream durable ingestion (see `docs/implementation_plan.md`, issue #23).
   Live chat ingestion now runs as `listener -> NATS JetStream -> processor -> ClickHouse`, with
   SQLite used for control-plane state only.

@@ -1,5 +1,9 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+import { getUiErrorKey, type UiErrorKey } from "@/i18n/errors";
+import { useUiFormat } from "@/i18n/use-ui-format";
+
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Archive,
@@ -50,29 +54,23 @@ const DEFAULT_FILTERS: FilterState = {
   end: ""
 };
 
-const TYPE_OPTIONS: Array<{ value: "" | UserRequestType; label: string }> = [
-  { value: "", label: "Tüm tipler" },
-  { value: "channel_request", label: "Kanal Talebi" },
-  { value: "feedback", label: "Geri Bildirim" }
+const TYPES: Array<"" | UserRequestType> = ["", "channel_request", "feedback"];
+
+const STATUSES: Array<"" | UserRequestStatus> = [
+  "",
+  "new",
+  "reviewing",
+  "approved",
+  "rejected",
+  "done",
+  "duplicate"
 ];
 
-const STATUS_OPTIONS: Array<{ value: "" | UserRequestStatus; label: string }> = [
-  { value: "", label: "Tüm durumlar" },
-  { value: "new", label: "Yeni" },
-  { value: "reviewing", label: "İncelemede" },
-  { value: "approved", label: "Onaylandı" },
-  { value: "rejected", label: "Reddedildi" },
-  { value: "done", label: "Tamamlandı" },
-  { value: "duplicate", label: "Tekrar" }
-];
-
-const ARCHIVE_OPTIONS: Array<{ value: FilterState["archived"]; label: string }> = [
-  { value: "false", label: "Aktif" },
-  { value: "true", label: "Arşiv" },
-  { value: "all", label: "Tümü" }
-];
+const ARCHIVES: FilterState["archived"][] = ["false", "true", "all"];
 
 export function RequestAdmin() {
+  const t = useTranslations("requestAdmin");
+  const errors = useTranslations("common.errors");
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [requests, setRequests] = useState<UserRequest[]>([]);
@@ -81,8 +79,8 @@ export function RequestAdmin() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [note, setNote] = useState("");
   const [nextStatus, setNextStatus] = useState<UserRequestStatus>("reviewing");
-  const [error, setError] = useState<string | null>(null);
-  const [detailError, setDetailError] = useState<string | null>(null);
+  const [error, setError] = useState<UiErrorKey | null>(null);
+  const [detailError, setDetailError] = useState<UiErrorKey | null>(null);
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isSavingStatus, setIsSavingStatus] = useState(false);
@@ -99,7 +97,7 @@ export function RequestAdmin() {
       const response = await listUserRequests(queryParams);
       setRequests(response.items);
     } catch (caught) {
-      setError(resolveRequestAdminError(caught));
+      setError(getUiErrorKey(caught, "adminMutation"));
       setRequests([]);
     } finally {
       setIsLoadingList(false);
@@ -122,7 +120,7 @@ export function RequestAdmin() {
       applyDetail(nextDetail);
     } catch (caught) {
       setDetail(null);
-      setDetailError(resolveRequestAdminError(caught));
+      setDetailError(getUiErrorKey(caught, "adminMutation"));
     } finally {
       setIsLoadingDetail(false);
     }
@@ -158,7 +156,7 @@ export function RequestAdmin() {
         })
       );
     } catch (caught) {
-      setDetailError(resolveRequestAdminError(caught));
+      setDetailError(getUiErrorKey(caught, "adminMutation"));
     } finally {
       setIsSavingStatus(false);
     }
@@ -175,7 +173,7 @@ export function RequestAdmin() {
       applyDetail(await addUserRequestNote(detail.request.request_id, { note: note.trim() }));
       setNote("");
     } catch (caught) {
-      setDetailError(resolveRequestAdminError(caught));
+      setDetailError(getUiErrorKey(caught, "adminMutation"));
     } finally {
       setIsAddingNote(false);
     }
@@ -192,7 +190,7 @@ export function RequestAdmin() {
       applyDetail(nextDetail);
       await loadRequests();
     } catch (caught) {
-      setDetailError(resolveRequestAdminError(caught));
+      setDetailError(getUiErrorKey(caught, "adminMutation"));
     } finally {
       setIsArchiving(false);
     }
@@ -209,10 +207,8 @@ export function RequestAdmin() {
     <section className="flex flex-col gap-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-0.5">
-          <h1 className="text-[22px] font-semibold text-foreground">Talepler</h1>
-          <span className="font-mono text-[11px] text-faint">
-            Kanal talepleri ve geri bildirim akışı
-          </span>
+          <h1 className="text-[22px] font-semibold text-foreground">{t("title")}</h1>
+          <span className="font-mono text-[11px] text-faint">{t("description")}</span>
         </div>
         <Button
           disabled={isLoadingList}
@@ -225,51 +221,51 @@ export function RequestAdmin() {
           ) : (
             <RefreshCcw className="h-3 w-3" />
           )}
-          Yenile
+          {t("refresh")}
         </Button>
       </header>
 
       <form className="rounded-lg border border-border bg-panel p-4" onSubmit={submitFilters}>
-        <div className="grid gap-3 lg:grid-cols-[160px_160px_140px_minmax(0,1fr)_170px_170px_auto]">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <FilterSelect
-            label="Tip"
+            label={t("type")}
             onChange={(value) =>
               setFilters((current) => ({ ...current, type: value as FilterState["type"] }))
             }
-            options={TYPE_OPTIONS}
+            options={TYPES.map((value) => ({ value, label: t(`types.${value || "all"}`) }))}
             value={filters.type}
           />
           <FilterSelect
-            label="Durum"
+            label={t("status")}
             onChange={(value) =>
               setFilters((current) => ({ ...current, status: value as FilterState["status"] }))
             }
-            options={STATUS_OPTIONS}
+            options={STATUSES.map((value) => ({ value, label: t(`statuses.${value || "all"}`) }))}
             value={filters.status}
           />
           <FilterSelect
-            label="Arşiv"
+            label={t("archive")}
             onChange={(value) =>
               setFilters((current) => ({ ...current, archived: value as FilterState["archived"] }))
             }
-            options={ARCHIVE_OPTIONS}
+            options={ARCHIVES.map((value) => ({ value, label: t(`archives.${value}`) }))}
             value={filters.archived}
           />
           <FilterInput
             icon={<Search className="h-3.5 w-3.5" />}
-            label="Arama"
+            label={t("search")}
             onChange={(value) => setFilters((current) => ({ ...current, q: value }))}
-            placeholder="başlık, mesaj, kanal, iletişim"
+            placeholder={t("searchPlaceholder")}
             value={filters.q}
           />
           <FilterInput
-            label="Başlangıç"
+            label={t("start")}
             onChange={(value) => setFilters((current) => ({ ...current, start: value }))}
             type="datetime-local"
             value={filters.start}
           />
           <FilterInput
-            label="Bitiş"
+            label={t("end")}
             onChange={(value) => setFilters((current) => ({ ...current, end: value }))}
             type="datetime-local"
             value={filters.end}
@@ -277,10 +273,10 @@ export function RequestAdmin() {
           <div className="flex items-end gap-2">
             <Button className="h-[38px]" disabled={isLoadingList} type="submit">
               <Search className="h-4 w-4" />
-              Filtrele
+              {t("filter")}
             </Button>
             <Button className="h-[38px]" onClick={resetFilters} type="button" variant="outline">
-              Sıfırla
+              {t("reset")}
             </Button>
           </div>
         </div>
@@ -288,38 +284,38 @@ export function RequestAdmin() {
 
       {error ? (
         <div className="rounded-md border border-danger bg-elevated px-4 py-3 text-[13px]">
-          {error}
+          {errors(error)}
         </div>
       ) : null}
 
       <section className="rounded-lg border border-border bg-panel">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex flex-col gap-0.5">
-            <h2 className="text-[14px] font-semibold text-foreground">Talep Listesi</h2>
+            <h2 className="text-[14px] font-semibold text-foreground">{t("list")}</h2>
             <span className="font-mono text-[11px] text-faint">
-              {isLoadingList ? "yükleniyor" : `${requests.length} kayıt`}
+              {isLoadingList ? t("loading") : t("count", { count: requests.length })}
             </span>
           </div>
         </div>
 
         <div className="hidden items-center border-b border-border px-3 py-2 md:flex">
           <span className="w-28 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
-            TİP
+            {t("tableType")}
           </span>
           <span className="min-w-0 flex-1 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
-            TALEP
+            {t("tableRequest")}
           </span>
           <span className="w-28 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
-            DURUM
+            {t("tableStatus")}
           </span>
           <span className="w-32 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
-            TARİH
+            {t("tableDate")}
           </span>
         </div>
 
         {isLoadingList ? (
           <div className="px-4 py-12 text-center text-[13px] text-muted-foreground">
-            Talepler yükleniyor...
+            {t("loadingList")}
           </div>
         ) : requests.length ? (
           requests.map((request) => (
@@ -332,14 +328,14 @@ export function RequestAdmin() {
           ))
         ) : (
           <div className="px-4 py-12 text-center text-[13px] text-muted-foreground">
-            Bu filtrelerle talep bulunamadı.
+            {t("empty")}
           </div>
         )}
       </section>
 
       <RequestDetailModal
         detail={detail}
-        detailError={detailError}
+        detailError={detailError ? errors(detailError) : null}
         isAddingNote={isAddingNote}
         isArchiving={isArchiving}
         isLoadingDetail={isLoadingDetail}
@@ -367,6 +363,7 @@ function RequestRow({
   onSelect: () => void;
   request: UserRequest;
 }) {
+  const f = useUiFormat();
   return (
     <button
       className={cn(
@@ -391,7 +388,7 @@ function RequestRow({
           <StatusBadge status={request.current_status} archived={request.is_archived} />
         </div>
         <div className="w-32 font-mono text-[11px] text-faint">
-          {formatDate(request.created_at)}
+          {f.dateTime(request.created_at)}
         </div>
       </div>
 
@@ -404,7 +401,7 @@ function RequestRow({
           <div className="text-[13px] font-medium text-foreground">{request.title}</div>
           <div className="mt-0.5 font-mono text-[11px] text-faint">
             {request.channel_slug ? `#${request.channel_slug} · ` : ""}
-            {formatDate(request.created_at)}
+            {f.dateTime(request.created_at)}
           </div>
         </div>
       </div>
@@ -445,20 +442,22 @@ function RequestDetailModal({
   onSubmitNote: (event: FormEvent<HTMLFormElement>) => void;
   onSubmitStatus: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const t = useTranslations("requestAdmin");
+  const f = useUiFormat();
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto border-border bg-panel p-0 text-foreground shadow-none">
         <DialogClose onClose={() => onOpenChange(false)} />
         <div className="border-b border-border px-5 py-4 pr-12">
-          <h2 className="text-[16px] font-semibold text-foreground">Talep Detayı</h2>
+          <h2 className="text-[16px] font-semibold text-foreground">{t("detail")}</h2>
           <span className="font-mono text-[11px] text-faint">
-            {detail ? detail.request.request_id : "detay yükleniyor"}
+            {detail ? detail.request.request_id : t("loadingDetailShort")}
           </span>
         </div>
 
         {isLoadingDetail ? (
           <div className="px-5 py-12 text-center text-[13px] text-muted-foreground">
-            Detay yükleniyor...
+            {t("loadingDetail")}
           </div>
         ) : detail ? (
           <div className="flex flex-col gap-5 p-5">
@@ -486,11 +485,15 @@ function RequestDetailModal({
               </div>
               <div className="grid gap-2 rounded-md border border-border bg-elevated p-3 font-mono text-[11px] text-muted-foreground sm:grid-cols-2">
                 {detail.request.channel_slug ? (
-                  <span>Kanal: #{detail.request.channel_slug}</span>
+                  <span>{t("channelDetail", { value: detail.request.channel_slug })}</span>
                 ) : null}
-                {detail.request.contact ? <span>İletişim: {detail.request.contact}</span> : null}
-                <span>Oluşturulma: {formatDate(detail.request.created_at)}</span>
-                <span>Son hareket: {formatDate(detail.request.latest_event_at)}</span>
+                {detail.request.contact ? (
+                  <span>{t("contactDetail", { value: detail.request.contact })}</span>
+                ) : null}
+                <span>{t("createdDetail", { value: f.dateTime(detail.request.created_at) })}</span>
+                <span>
+                  {t("latestDetail", { value: f.dateTime(detail.request.latest_event_at) })}
+                </span>
               </div>
             </div>
 
@@ -500,23 +503,24 @@ function RequestDetailModal({
             >
               <div className="mb-3 flex items-center gap-2">
                 <CheckCircle2 className="h-3.5 w-3.5 text-accent" />
-                <span className="text-[13px] font-semibold text-foreground">Durum</span>
+                <span className="text-[13px] font-semibold text-foreground">{t("status")}</span>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <select
+                  aria-label={t("status")}
                   className="h-[38px] flex-1 rounded-md border border-border-strong bg-panel px-3 text-[13px] text-foreground outline-none focus:border-accent"
                   onChange={(event) => onStatusChange(event.target.value as UserRequestStatus)}
                   value={nextStatus}
                 >
-                  {STATUS_OPTIONS.filter((option) => option.value !== "").map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
+                  {STATUSES.filter((value) => value !== "").map((value) => (
+                    <option key={value} value={value}>
+                      {t(`statuses.${value}`)}
                     </option>
                   ))}
                 </select>
                 <Button disabled={isSavingStatus} type="submit">
                   {isSavingStatus ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  Kaydet
+                  {t("save")}
                 </Button>
               </div>
             </form>
@@ -527,13 +531,13 @@ function RequestDetailModal({
             >
               <div className="mb-3 flex items-center gap-2">
                 <MessageSquarePlus className="h-3.5 w-3.5 text-accent" />
-                <span className="text-[13px] font-semibold text-foreground">Not</span>
+                <span className="text-[13px] font-semibold text-foreground">{t("note")}</span>
               </div>
               <textarea
                 className="min-h-[96px] w-full resize-y rounded-md border border-border-strong bg-panel px-3 py-2.5 text-[13px] text-foreground outline-none placeholder:text-faint focus:border-accent"
                 maxLength={1000}
                 onChange={(event) => onNoteChange(event.target.value)}
-                placeholder="İnceleme notu ekle"
+                placeholder={t("notePlaceholder")}
                 value={note}
               />
               <div className="mt-2 flex justify-end">
@@ -543,7 +547,7 @@ function RequestDetailModal({
                   ) : (
                     <Send className="h-4 w-4" />
                   )}
-                  Not ekle
+                  {t("addNote")}
                 </Button>
               </div>
             </form>
@@ -551,7 +555,7 @@ function RequestDetailModal({
             <div className="rounded-md border border-border bg-elevated p-3">
               <div className="mb-3 flex items-center gap-2">
                 <Clock3 className="h-3.5 w-3.5 text-accent" />
-                <span className="text-[13px] font-semibold text-foreground">Timeline</span>
+                <span className="text-[13px] font-semibold text-foreground">{t("timeline")}</span>
               </div>
               <Timeline events={detail.events} />
             </div>
@@ -568,15 +572,13 @@ function RequestDetailModal({
               ) : (
                 <Archive className="h-4 w-4" />
               )}
-              Arşivle
+              {t("archiveAction")}
             </Button>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 px-5 py-12 text-center">
             <FileText className="h-6 w-6 text-faint" />
-            <p className="text-[13px] text-muted-foreground">
-              {detailError ?? "Detay görüntülemek için listeden bir talep seç."}
-            </p>
+            <p className="text-[13px] text-muted-foreground">{detailError ?? t("selectDetail")}</p>
           </div>
         )}
       </DialogContent>
@@ -585,8 +587,10 @@ function RequestDetailModal({
 }
 
 function Timeline({ events }: { events: UserRequestEvent[] }) {
+  const t = useTranslations("requestAdmin");
+  const f = useUiFormat();
   if (!events.length) {
-    return <p className="text-[13px] text-muted-foreground">Henüz admin hareketi yok.</p>;
+    return <p className="text-[13px] text-muted-foreground">{t("emptyTimeline")}</p>;
   }
 
   return (
@@ -594,8 +598,16 @@ function Timeline({ events }: { events: UserRequestEvent[] }) {
       {events.map((event) => (
         <li className="border-l border-border pl-3" key={event.event_id}>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[12px] font-medium text-foreground">{eventLabel(event)}</span>
-            <span className="font-mono text-[10px] text-faint">{formatDate(event.created_at)}</span>
+            <span className="text-[12px] font-medium text-foreground">
+              {event.event_type === "status_changed"
+                ? t("statusEvent", { status: event.status ? t(`statuses.${event.status}`) : "-" })
+                : event.event_type === "note_added"
+                  ? t("noteEvent")
+                  : event.event_type === "archived"
+                    ? t("archiveEvent")
+                    : event.event_type}
+            </span>
+            <span className="font-mono text-[10px] text-faint">{f.dateTime(event.created_at)}</span>
           </div>
           {event.note ? (
             <p className="mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-muted-foreground">
@@ -678,14 +690,16 @@ function FilterInput({
 }
 
 function TypeBadge({ type }: { type: UserRequestType }) {
+  const t = useTranslations("requestAdmin");
   return (
     <span className="inline-flex h-6 items-center rounded-full border border-border bg-elevated px-2.5 font-mono text-[10px] uppercase text-muted-foreground">
-      {typeLabel(type)}
+      {t(`badges.${type}`)}
     </span>
   );
 }
 
 function StatusBadge({ archived, status }: { archived: boolean; status: UserRequestStatus }) {
+  const t = useTranslations("requestAdmin");
   return (
     <span
       className={cn(
@@ -701,7 +715,7 @@ function StatusBadge({ archived, status }: { archived: boolean; status: UserRequ
         aria-hidden
         className={cn("h-1.5 w-1.5 rounded-full", archived ? "bg-faint" : "bg-accent")}
       />
-      {archived ? "Arşiv" : statusLabel(status)}
+      {archived ? t("archive") : t(`statuses.${status}`)}
     </span>
   );
 }
@@ -731,41 +745,4 @@ function optionalValue(value: string) {
 function mergeRequest(current: UserRequest[], request: UserRequest) {
   const next = current.map((item) => (item.request_id === request.request_id ? request : item));
   return next.some((item) => item.request_id === request.request_id) ? next : [request, ...next];
-}
-
-function typeLabel(type: UserRequestType) {
-  return type === "channel_request" ? "Kanal" : "Feedback";
-}
-
-function statusLabel(status: UserRequestStatus) {
-  const match = STATUS_OPTIONS.find((option) => option.value === status);
-  return match?.label ?? status;
-}
-
-function eventLabel(event: UserRequestEvent) {
-  if (event.event_type === "status_changed") {
-    return `Durum: ${event.status ? statusLabel(event.status) : "-"}`;
-  }
-  if (event.event_type === "note_added") {
-    return "Not eklendi";
-  }
-  if (event.event_type === "archived") {
-    return "Arşivlendi";
-  }
-  return event.event_type;
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("tr-TR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(new Date(value));
-}
-
-function resolveRequestAdminError(error: unknown) {
-  if (error instanceof Error) return error.message;
-  return "Talep işlemi tamamlanamadı.";
 }

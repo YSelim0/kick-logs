@@ -117,6 +117,15 @@ func channelSubscribers(w http.ResponseWriter, r *http.Request, deps Dependencie
 }
 
 func exportChannelSubscribers(w http.ResponseWriter, r *http.Request, deps Dependencies) {
+	locale := r.URL.Query().Get("locale")
+	requestedFormat := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("format")))
+	if (requestedFormat == "" || requestedFormat == "txt") && locale != "" && locale != "en" && locale != "tr" && locale != "de" {
+		writeError(w, http.StatusUnprocessableEntity, "Invalid export locale.")
+		return
+	}
+	if locale == "" {
+		locale = "tr"
+	}
 	ch, ok := resolvePublicChannel(w, r, deps)
 	if !ok {
 		return
@@ -170,7 +179,7 @@ func exportChannelSubscribers(w http.ResponseWriter, r *http.Request, deps Depen
 	default:
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(channelSubscribersTXT(ch.Slug, giftOnly, generatedAt, items)))
+		_, _ = w.Write([]byte(channelSubscribersTXTForLocale(ch.Slug, giftOnly, generatedAt, items, locale)))
 	}
 }
 
@@ -292,63 +301,6 @@ func channelSubscribersCSV(channelSlug string, items []domain.ChannelSubscriber)
 		})
 	}
 	writer.Flush()
-	return builder.String()
-}
-
-func channelSubscribersTXT(
-	channelSlug string,
-	giftOnly bool,
-	generatedAt time.Time,
-	items []domain.ChannelSubscriber,
-) string {
-	var builder strings.Builder
-	builder.WriteString("Kick Logs Aktif Abone Listesi\n")
-	builder.WriteString("Kanal: #")
-	builder.WriteString(channelSlug)
-	builder.WriteString("\n")
-	builder.WriteString("Filtre: ")
-	if giftOnly {
-		builder.WriteString("Hediye aboneler")
-	} else {
-		builder.WriteString("Tüm aktif aboneler")
-	}
-	builder.WriteString("\n")
-	builder.WriteString("Olusturulma: ")
-	builder.WriteString(generatedAt.UTC().Format(time.RFC3339))
-	builder.WriteString("\n")
-	builder.WriteString("Toplam: ")
-	builder.WriteString(strconv.Itoa(len(items)))
-	builder.WriteString("\n\n")
-
-	if len(items) == 0 {
-		builder.WriteString("Bu kanal için henüz aktif abonelik kaydı yok.\n")
-		return builder.String()
-	}
-
-	for i, item := range items {
-		builder.WriteString(strconv.Itoa(i + 1))
-		builder.WriteString(". ")
-		builder.WriteString(item.Username)
-		builder.WriteString(" (ID: ")
-		builder.WriteString(strconv.FormatInt(item.SubscriberKickUserID, 10))
-		builder.WriteString(")")
-		if item.Slug != "" {
-			builder.WriteString(" - kick.com/")
-			builder.WriteString(item.Slug)
-		}
-		builder.WriteString("\n")
-		if item.IsGift && item.GifterUsername != "" {
-			builder.WriteString("   Hediye eden: ")
-			builder.WriteString(item.GifterUsername)
-			builder.WriteString("\n")
-		}
-		builder.WriteString("   Baslangic: ")
-		builder.WriteString(item.StartedAt.UTC().Format(time.RFC3339))
-		builder.WriteString("\n")
-		builder.WriteString("   Bitis: ")
-		builder.WriteString(item.ExpiresAt.UTC().Format(time.RFC3339))
-		builder.WriteString("\n\n")
-	}
 	return builder.String()
 }
 

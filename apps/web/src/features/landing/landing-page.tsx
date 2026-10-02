@@ -5,6 +5,8 @@
 import { Copyright, Github, RotateCw, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { useUiFormat } from "@/i18n/use-ui-format";
 
 import { getHomepage, type HomepageSnapshot } from "@/features/landing/api";
 import { Button } from "@/components/ui/button";
@@ -24,6 +26,7 @@ const MAX_ATTEMPTS = 24;
 const LOAD_TIMEOUT_MS = 120000;
 
 export function LandingPage() {
+  const t = useTranslations("landing");
   const [analytics, setAnalytics] = useState<HomepageSnapshot | null>(null);
   const [status, setStatus] = useState<HomepageStatus>("loading");
   const [requestVersion, setRequestVersion] = useState(0);
@@ -98,7 +101,7 @@ export function LandingPage() {
           />
           {analytics?.stale ? (
             <p className="font-mono text-[12px] text-warning" role="status">
-              Veriler güncel olmayabilir. Son başarılı anlık görüntü gösteriliyor.
+              {t("stale")}
             </p>
           ) : null}
           {status !== "error" ? (
@@ -121,18 +124,20 @@ export function LandingPage() {
 }
 
 function Footer() {
+  const t = useTranslations("landing");
+  const nav = useTranslations("common.navigation");
   return (
     <footer className="border-t border-border py-3">
       <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-4 px-6">
         <p className="flex items-center gap-1.5 font-mono text-2xs uppercase text-muted-foreground">
           <Copyright className="h-3 w-3 shrink-0" aria-hidden />
-          {new Date().getFullYear()} kick-logs · Tüm hakları saklıdır.
+          {t("copyright", { year: String(new Date().getUTCFullYear()) })}
         </p>
         <Link
           className="font-mono text-2xs uppercase text-muted-foreground transition-colors hover:text-foreground"
           href="/request"
         >
-          Talep
+          {nav("request")}
         </Link>
       </div>
     </footer>
@@ -140,23 +145,24 @@ function Footer() {
 }
 
 function Hero() {
+  const t = useTranslations("landing");
   return (
     <section className="flex flex-col gap-5">
       <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-border bg-panel px-2.5 py-1 font-mono text-2xs uppercase tracking-wider text-muted-foreground">
         <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />
-        Self-hosted · Açık kaynak
+        {t("badge")}
       </span>
       <h1 className="max-w-3xl text-4xl font-semibold leading-[1.1] tracking-[-0.02em] text-foreground md:text-[48px]">
-        Kick chat için kalıcı log.
+        {t("title")}
       </h1>
       <p className="max-w-[720px] text-base leading-relaxed text-muted-foreground">
-        Takip ettiğin Kick kanallarındaki tüm mesajları kaydet, ara, analiz et. Veri sende kalır.
+        {t("description")}
       </p>
       <div className="mt-1 flex flex-wrap items-center gap-2.5">
         <Button asChild>
           <Link href="/search">
             <Search className="h-4 w-4" />
-            Arama başlat
+            {t("startSearch")}
           </Link>
         </Button>
         <Button asChild variant="outline">
@@ -171,28 +177,30 @@ function Hero() {
 }
 
 function StatsBar({ overview }: { overview: AnalyticsOverview | null }) {
+  const t = useTranslations("landing");
+  const format = useUiFormat();
   const cells = [
-    { label: "TOPLAM MESAJ", value: overview?.total_messages },
-    { label: "KANAL", value: overview?.total_channels },
-    { label: "KULLANICI", value: overview?.total_senders },
-    { label: "EMOTE", value: overview?.total_emote_usages }
+    { key: "totalMessages", label: t("totalMessages"), value: overview?.total_messages },
+    { key: "channels", label: t("channels"), value: overview?.total_channels },
+    { key: "users", label: t("users"), value: overview?.total_senders },
+    { key: "emotes", label: t("emotes"), value: overview?.total_emote_usages }
   ];
 
   return (
-    <section aria-label="Genel metrikler" aria-busy={!overview} className="space-y-3">
-      <p className="font-mono text-2xs uppercase text-muted-foreground">Son 14 gün</p>
+    <section aria-label={t("metrics")} aria-busy={!overview} className="space-y-3">
+      <p className="font-mono text-2xs uppercase text-muted-foreground">{t("range")}</p>
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-4">
         {cells.map((cell) => (
-          <div key={cell.label} className="bg-panel px-6 py-5">
+          <div key={cell.key} className="min-w-0 bg-panel px-6 py-5">
             <div className="font-mono text-2xs uppercase text-muted-foreground">{cell.label}</div>
             {cell.value === undefined ? (
               <SkeletonBlock
-                ariaLabel={`${cell.label} yükleniyor`}
+                ariaLabel={t("metricLoading", { metric: cell.label })}
                 className="mt-2 h-[26px] w-24"
               />
             ) : (
               <div className="mt-2 text-[26px] font-semibold leading-none text-foreground">
-                {formatCompactNumber(cell.value)}
+                {format.compact(cell.value)}
               </div>
             )}
           </div>
@@ -215,49 +223,51 @@ function AnalyticsGrid({
   topSenders: TopSenderAnalytics[];
   topEmotes: TopEmoteAnalytics[];
 }) {
+  const t = useTranslations("landing");
+  const format = useUiFormat();
   return (
     <div aria-busy={isLoading} className="grid grid-cols-1 gap-5 md:grid-cols-2">
-      <Panel title="Mesaj hacmi" subtitle="Son 14 gün">
+      <Panel title={t("volume")} subtitle={t("range")}>
         <MessageVolumeChart isLoading={isLoading} points={volume} />
       </Panel>
-      <Panel title="Top kanallar" subtitle="Son 14 gün">
+      <Panel title={t("topChannels")} subtitle={t("range")}>
         <TopList
           isLoading={isLoading}
           rows={topChannels.map((channel) => ({
             key: String(channel.channel_id),
             label: channel.display_name,
-            value: formatCompactNumber(channel.message_count),
+            value: format.compact(channel.message_count),
             href: `/channels/${encodeURIComponent(channel.slug)}`,
             image: channel.profile_image_url ?? undefined,
             initial: getInitial(channel.display_name)
           }))}
-          emptyText="Kanal verisi henüz yok."
+          emptyText={t("noChannels")}
         />
       </Panel>
-      <Panel title="Top kullanıcılar" subtitle="Son 14 gün">
+      <Panel title={t("topUsers")} subtitle={t("range")}>
         <TopList
           isLoading={isLoading}
           rows={topSenders.map((sender) => ({
             key: String(sender.sender_id),
             label: sender.username,
-            value: formatCompactNumber(sender.message_count),
+            value: format.compact(sender.message_count),
             href: `/users/${encodeURIComponent(sender.slug)}`,
             image: sender.profile_image_url ?? undefined,
             initial: getInitial(sender.username)
           }))}
-          emptyText="Kullanıcı verisi henüz yok."
+          emptyText={t("noUsers")}
         />
       </Panel>
-      <Panel title="Top emoteler" subtitle="Son 14 gün">
+      <Panel title={t("topEmotes")} subtitle={t("range")}>
         <TopList
           isLoading={isLoading}
           rows={topEmotes.map((emote) => ({
             key: emote.id,
             label: emote.name,
-            value: formatCompactNumber(emote.usage_count),
+            value: format.compact(emote.usage_count),
             image: emote.image_url
           }))}
-          emptyText="Emote verisi henüz yok."
+          emptyText={t("noEmotes")}
         />
       </Panel>
     </div>
@@ -291,12 +301,14 @@ function MessageVolumeChart({
   isLoading: boolean;
   points: MessageVolumePoint[];
 }) {
+  const t = useTranslations("landing");
+  const format = useUiFormat();
   if (isLoading) {
     return <MessageVolumeSkeleton />;
   }
 
   if (!points.length) {
-    return <EmptyHint text="Henüz veri yok." />;
+    return <EmptyHint text={t("noData")} />;
   }
 
   const max = points.reduce((acc, point) => Math.max(acc, point.message_count), 0);
@@ -317,14 +329,17 @@ function MessageVolumeChart({
               aria-hidden
             >
               <span className="font-mono text-[11px] font-semibold text-foreground">
-                {formatCompactNumber(point.message_count)} mesaj
+                {t("messages", {
+                  count: point.message_count,
+                  formatted: format.compact(point.message_count)
+                })}
               </span>
               <span className="font-mono text-2xs uppercase text-muted-foreground">
-                {formatShortDate(point.bucket_start)}
+                {format.dayLabel(point.bucket_start)}
               </span>
             </div>
             <div
-              aria-label={`${formatShortDate(point.bucket_start)} · ${formatCompactNumber(point.message_count)} mesaj`}
+              aria-label={`${format.dayLabel(point.bucket_start)} · ${t("messages", { count: point.message_count, formatted: format.compact(point.message_count) })}`}
               className="rounded-sm bg-accent transition-opacity duration-100 group-hover:opacity-80"
               style={{ height: `${heightPct}%` }}
             />
@@ -423,6 +438,8 @@ function TopList({
 }
 
 function StatusBanner({ status, onRetry }: { status: HomepageStatus; onRetry: () => void }) {
+  const t = useTranslations("landing");
+  const common = useTranslations("common.actions");
   if (status === "ready") {
     return null;
   }
@@ -434,15 +451,15 @@ function StatusBanner({ status, onRetry }: { status: HomepageStatus; onRetry: ()
     >
       <p>
         {status === "loading"
-          ? "Analytics verileri yükleniyor…"
+          ? t("loading")
           : status === "initializing"
-            ? "Analytics verileri hazırlanıyor…"
-            : "Analytics verileri şu anda alınamadı. Arama ve admin bağlantıları kullanılabilir."}
+            ? t("initializing")
+            : t("error")}
       </p>
       {status === "error" ? (
         <Button onClick={onRetry} size="sm" variant="outline">
           <RotateCw aria-hidden className="h-4 w-4" />
-          Tekrar dene
+          {common("retry")}
         </Button>
       ) : null}
     </div>
@@ -475,11 +492,12 @@ function SkeletonBlock({
 }
 
 function MessageVolumeSkeleton() {
+  const t = useTranslations("landing");
   const heights = [34, 54, 42, 68, 48, 74, 38, 58, 46, 84, 52, 70, 44, 62];
 
   return (
     <div
-      aria-label="Mesaj hacmi yükleniyor"
+      aria-label={t("volumeLoading")}
       className="relative flex h-44 items-end gap-1.5"
       role="status"
     >
@@ -493,8 +511,9 @@ function MessageVolumeSkeleton() {
 }
 
 function TopListSkeleton() {
+  const t = useTranslations("landing");
   return (
-    <div aria-label="Liste yükleniyor" className="flex flex-col gap-2.5" role="status">
+    <div aria-label={t("listLoading")} className="flex flex-col gap-2.5" role="status">
       {Array.from({ length: 5 }).map((_, index) => (
         <div className="flex items-center gap-3 px-1 py-1 -mx-1" key={index}>
           <SkeletonBlock className="h-3 w-5" />
@@ -505,21 +524,4 @@ function TopListSkeleton() {
       ))}
     </div>
   );
-}
-
-const COMPACT_FORMATTER = new Intl.NumberFormat("tr-TR", {
-  notation: "compact",
-  maximumFractionDigits: 1
-});
-
-function formatCompactNumber(value: number) {
-  return COMPACT_FORMATTER.format(value);
-}
-
-function formatShortDate(value: string) {
-  return new Intl.DateTimeFormat("tr-TR", {
-    day: "2-digit",
-    month: "short",
-    timeZone: "UTC"
-  }).format(new Date(value));
 }

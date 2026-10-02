@@ -1,4 +1,7 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { createLocaleRenderer, renderWithLocale } from "@/test/render-with-locale";
+import { LocaleTestControls } from "@/test/locale-controls";
+const render = createLocaleRenderer("tr", "admin");
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PredictionAnalysisPage } from "@/features/prediction/prediction-analysis-page";
@@ -33,6 +36,53 @@ describe("PredictionAnalysisPage", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("changes language without remounting charts or resetting the five-second poll", async () => {
+    vi.useFakeTimers();
+    apiMocks.getPrediction.mockResolvedValue(predictionFixture({ state: "ACTIVE" }));
+    render(
+      <>
+        <LocaleTestControls />
+        <PredictionAnalysisPage slug="nuriben" />
+      </>
+    );
+    await flushPromises();
+    const chart = screen.getByTestId("distribution-chart");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Switch to de" }));
+      await vi.dynamicImportSettled();
+    });
+    expect(screen.getByText("Aktiv")).toBeInTheDocument();
+    expect(screen.getByTestId("distribution-chart")).toBe(chart);
+    expect(screen.getByText("mac bitis suresi")).toBeInTheDocument();
+    expect(screen.getByText("Evet")).toBeInTheDocument();
+    expect(screen.getByText("alice")).toBeInTheDocument();
+    expect(apiMocks.getPrediction).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3999);
+    });
+    expect(apiMocks.getPrediction).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(apiMocks.getPrediction).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    ["ACTIVE", "Active"],
+    ["LOCKED", "Locked"],
+    ["RESOLVED", "Resolved"],
+    ["CANCELLED", "Cancelled"],
+    ["CANCELED", "Cancelled"],
+    ["SOURCE_UNKNOWN", "SOURCE_UNKNOWN"]
+  ])("localizes %s while retaining unknown source states", async (state, label) => {
+    apiMocks.getPrediction.mockResolvedValue(predictionFixture({ state }));
+    renderWithLocale(<PredictionAnalysisPage slug="nuriben" />, { locale: "en" });
+    expect(await screen.findByText(label)).toBeInTheDocument();
   });
 
   it("renders the summary, state pill, and winner badge when data resolves", async () => {

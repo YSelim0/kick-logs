@@ -1,4 +1,6 @@
+"use client";
 import { LoaderCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { ComponentProps } from "react";
 
 import { cn } from "@/lib/utils";
@@ -6,8 +8,9 @@ import { cn } from "@/lib/utils";
 const BAR_HEIGHTS = [34, 54, 42, 68, 48, 74, 38, 58, 46, 84, 52, 70, 44, 62];
 
 export function ProfileLoading({ kind }: { kind: "channel" | "user" }) {
+  const t = useTranslations("common.profile");
   const isChannel = kind === "channel";
-  const label = isChannel ? "Kanal profili" : "Kullan\u0131c\u0131 profili";
+  const label = t(kind);
 
   return (
     <div className="space-y-5">
@@ -21,7 +24,7 @@ export function ProfileLoading({ kind }: { kind: "channel" | "user" }) {
           aria-hidden="true"
           className="h-4 w-4 shrink-0 text-accent motion-safe:animate-spin motion-reduce:animate-none"
         />
-        {`${label} y\u00fckleniyor...`}
+        {t(isChannel ? "channelLoading" : "userLoading")}
       </p>
 
       {/* Keep the live announcement outside the busy region so it is not deferred. */}

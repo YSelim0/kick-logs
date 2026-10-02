@@ -12,6 +12,30 @@ conversation changes search UI, admin UI, visual style, routing, or frontend beh
 
 Do not commit screenshots or exported images unless explicitly requested.
 
+## Localization (Issue 28)
+
+Implemented interaction and translation boundaries. Full design:
+`docs/superpowers/specs/2026-10-02-localization-design.md`.
+
+- Support English, Turkish and German without locale-prefixed URLs. Resolve saved preference,
+  then supported device/browser language, then English. Persist the preference in a cookie.
+- Translate product-owned copy only; never translate chat, replies, channel/user names or Kick
+  prediction titles/outcomes. All public and admin screens are in scope.
+- Use one fixed square flag button at the bottom-right. Its collapsed state shows the current
+  language's flag only. Clicking opens a compact menu above it, aligned right.
+- Menu rows show a flag plus `Türkçe`, `English`, or `Deutsch`, with a highlighted current choice.
+  Selecting a row changes language and trigger flag, saves the preference and closes the menu.
+- Close on outside click, Escape or trigger toggle. Support keyboard navigation and accessible
+  labels/selected state. This is a popover, not a blocking dialog or fullscreen overlay.
+- Preserve current URL, entered filters/forms and loaded data. Do not hard-reload on language change.
+- Use existing dark tokens and 6px/8px control/menu corners, without blur or glow. Respect mobile
+  safe areas, reduced motion and higher-priority dialogs; ensure bottom controls remain reachable.
+- Use the supplied SVG flags through `apps/web/public/language-flags/`. Do not commit the screenshot.
+- The trigger is 48px square and uses safe-area-aware 16px edge spacing; the upward menu is 192px.
+  Reserve bottom page space so content can scroll clear of the fixed trigger. Feature dialogs sit above it.
+- German labels may wrap, and dense admin metric tiles stack on narrow screens. Do not truncate
+  required actions or source message text just to match the shorter Turkish/English layout.
+
 ## Routes
 
 - `/search`: public primary application search screen. No login required.
@@ -46,6 +70,14 @@ Landing must stay product-focused and must not turn into a marketing site.
 - Fetch 50 identities per page. `Daha fazla yükle` appends the next cursor page while preserving
   existing rows; a new submitted query resets pagination.
 - Empty-results state quotes the last submitted query, not the current input value.
+- On `/channels`, successful empty results render an inline dark bordered panel in place of the
+  plain message. Keep the quoted query, explain that channel tracking can be requested, and say
+  `Talebiniz en geç 6 saat içinde incelenir.` This promises review, not channel acceptance.
+- The panel has a primary `Talep gönder` link to `/request`, full-width within its content on mobile.
+  It is not a modal and has no dismiss/open state. Show it only for a completed empty first page,
+  never on initial load, errors, loading or exhausted pagination. New searches replace it normally.
+- `/users` keeps its existing plain empty-result message. No prefilled form or automatic request
+  submission is added by the channel panel.
 - Loading, empty-results, and error states are all handled.
 - Each result row links to the corresponding profile page.
 
@@ -486,6 +518,18 @@ work is purely a re-skin against existing endpoints. Order:
 4. Re-style `/`, `/users/[slug]`, `/channels/[slug]`.
 5. Re-style `/admin` (sidebar layout + sections).
 6. Re-style `/login`.
+
+## Language Menu Spacing
+
+The language selector menu keeps a 3px vertical gap between language buttons so their selected,
+hover and focus backgrounds remain visually separate.
+
+## Document Titles
+
+- Every page has a localized `Page Name - KickLogs` browser title, such as `Anasayfa - KickLogs`.
+- Channel/user profiles and prediction analysis include the unchanged route slug. Public pages,
+  admin sections and 404 have distinct titles, updated on navigation and in-place language changes.
+- Titles are also present in server-rendered HTML; do not wait for profile/data requests to set them.
 
 ## Update Policy
 

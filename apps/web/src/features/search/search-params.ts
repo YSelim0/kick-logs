@@ -12,8 +12,7 @@ export type SearchFormState = {
 
 export type ActiveFilter = {
   key: keyof SearchFormState;
-  label: string;
-  value: string;
+  value: string | boolean;
 };
 
 export type DatePresetKey = "1h" | "24h" | "7d" | "30d";
@@ -33,25 +32,14 @@ export const EMPTY_SEARCH_STATE: SearchFormState = {
 
 export const DEFAULT_SEARCH_RANGE_DAYS = 7;
 
-export const DATE_PRESETS: Array<{ key: DatePresetKey; label: string }> = [
-  { key: "1h", label: "1 saat" },
-  { key: "24h", label: "24 saat" },
-  { key: "7d", label: "7 gün" },
-  { key: "30d", label: "30 gün" }
+export const DATE_PRESETS: Array<{ key: DatePresetKey }> = [
+  { key: "1h" },
+  { key: "24h" },
+  { key: "7d" },
+  { key: "30d" }
 ];
 
-const textFilterLabels: Record<TextSearchKey, string> = {
-  sender: "Kullanıcı",
-  channel: "Kanal",
-  q: "Kelime",
-  start: "Başlangıç",
-  end: "Bitiş"
-};
-
-const booleanFilterLabels: Record<BooleanSearchKey, string> = {
-  replyOnly: "Yanıt",
-  emoteOnly: "Emote"
-};
+const textFilterKeys: TextSearchKey[] = ["sender", "channel", "q", "start", "end"];
 
 const booleanUrlKeys: Record<BooleanSearchKey, "reply_only" | "emote_only"> = {
   replyOnly: "reply_only",
@@ -104,7 +92,7 @@ export function searchStateToMessageParams(state: SearchFormState): MessageSearc
 export function searchStateToUrlSearchParams(state: SearchFormState) {
   const params = new URLSearchParams();
 
-  for (const key of Object.keys(textFilterLabels) as TextSearchKey[]) {
+  for (const key of textFilterKeys) {
     const value = state[key].trim();
     if (value) {
       params.set(key, value);
@@ -121,24 +109,14 @@ export function searchStateToUrlSearchParams(state: SearchFormState) {
 }
 
 export function getActiveFilters(state: SearchFormState): ActiveFilter[] {
-  const textFilters = (Object.keys(textFilterLabels) as TextSearchKey[])
-    .map((key) => ({ key, label: textFilterLabels[key], value: state[key].trim() }))
+  const textFilters = textFilterKeys
+    .map((key) => ({ key, value: state[key].trim() }))
     .filter((item) => item.value.length > 0);
-  const booleanFilters = (Object.keys(booleanFilterLabels) as BooleanSearchKey[])
+  const booleanFilters = (Object.keys(booleanUrlKeys) as BooleanSearchKey[])
     .filter((key) => state[key])
-    .map((key) => ({ key, label: booleanFilterLabels[key], value: "Açık" }));
+    .map((key) => ({ key, value: true }));
 
   return [...textFilters, ...booleanFilters];
-}
-
-export function getScopeText(state: SearchFormState) {
-  const channel = state.channel.trim();
-  return channel ? `#${channel}` : "Tüm kanallar";
-}
-
-export function getLastMatchTime(messages: Message[]) {
-  const firstMessage = messages[0];
-  return firstMessage ? formatMessageDate(firstMessage.message_created_at) : "-";
 }
 
 export function dedupeMessages(messages: Message[]) {
@@ -157,22 +135,6 @@ export function appendUniqueMessages(current: Message[], incoming: Message[]) {
       return true;
     })
   ];
-}
-
-export function formatMessageDate(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("tr-TR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(date);
 }
 
 export function normalizeDateInputValue(value: string) {

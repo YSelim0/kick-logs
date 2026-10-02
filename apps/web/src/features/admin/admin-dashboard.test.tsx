@@ -1,7 +1,9 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import { createLocaleRenderer } from "@/test/render-with-locale";
+const render = createLocaleRenderer("tr", "admin");
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import AdminLayout from "@/app/admin/layout";
+import { AdminShell as AdminLayout } from "@/features/admin/admin-shell";
 import type { AdminUser } from "@/types/api";
 
 const navigationMocks = vi.hoisted(() => ({
@@ -79,7 +81,7 @@ describe("AdminLayout", () => {
     expect(screen.getByText("admin@kicklogs.local")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /kick logs/i })).toHaveAttribute("href", "/");
     expect(screen.getByRole("button", { name: /çıkış/i })).toBeInTheDocument();
-    expect(screen.getByText("SUPER ADMIN")).toBeInTheDocument();
+    expect(screen.getByText("SÜPER ADMİN")).toBeInTheDocument();
     expect(screen.getByText("page content")).toBeInTheDocument();
   });
 
@@ -97,9 +99,9 @@ describe("AdminLayout", () => {
 
     render(<AdminLayout>content</AdminLayout>);
 
-    expect(screen.getByText("Operations")).toBeInTheDocument();
-    expect(screen.getByText("Channels")).toBeInTheDocument();
-    expect(screen.queryByText("Users")).not.toBeInTheDocument();
-    expect(screen.getByText("Data")).toBeInTheDocument();
+    expect(screen.getByText("Operasyonlar")).toBeInTheDocument();
+    expect(screen.getByText("Kanallar")).toBeInTheDocument();
+    expect(screen.queryByText("Kullanıcılar")).not.toBeInTheDocument();
+    expect(screen.getByText("Veri")).toBeInTheDocument();
   });
 });

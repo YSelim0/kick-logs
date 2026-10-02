@@ -1,0 +1,95 @@
+{
+  "actions": {
+    "close": "Kapat",
+    "retry": "Tekrar dene",
+    "cancel": "Vazgeç",
+    "save": "Kaydet",
+    "saving": "Kaydediliyor…",
+    "search": "Ara",
+    "reset": "Sıfırla",
+    "download": "İndir",
+    "refresh": "Yenile",
+    "loading": "Yükleniyor…",
+    "back": "Geri",
+    "next": "Sonraki",
+    "previous": "Önceki",
+    "open": "Aç",
+    "logout": "Çıkış yap"
+  },
+  "errors": {
+    "invalidCredentials": "E-posta veya parola hatalı.",
+    "sessionExpired": "Oturumunuz sona erdi. Lütfen yeniden giriş yapın.",
+    "forbidden": "Bu işlem için yetkiniz yok.",
+    "notFound": "İstenen kayıt bulunamadı.",
+    "conflict": "Bu değişiklik mevcut bir kayıtla çakışıyor.",
+    "invalidInput": "Girdiğiniz bilgileri kontrol edin.",
+    "rateLimited": "Çok fazla istek gönderildi. Tekrar denemeden önce biraz bekleyin.",
+    "network": "Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.",
+    "unavailable": "Bir sorun oluştu. Lütfen tekrar deneyin.",
+    "languageSwitch": "Dil yüklenemedi. Lütfen tekrar deneyin."
+  },
+  "metadata": {
+    "titles": {
+      "home": "Anasayfa",
+      "search": "Sohbet Arama",
+      "channels": "Kanallar",
+      "users": "Kullanıcılar",
+      "prediction": "Tahmin",
+      "request": "Talep Gönder",
+      "login": "Yönetici Girişi",
+      "channelProfile": "{slug} Kanal Profili",
+      "userProfile": "{slug} Kullanıcı Profili",
+      "predictionAnalysis": "{slug} Tahmin Analizi",
+      "adminOperations": "Operasyonlar - Yönetim",
+      "adminChannels": "Takip Edilen Kanallar - Yönetim",
+      "adminUsers": "Yöneticiler - Yönetim",
+      "adminRequests": "Talepler - Yönetim",
+      "adminData": "Veri Yönetimi - Yönetim",
+      "notFound": "Sayfa Bulunamadı"
+    },
+    "description": "Kick sohbet geçmişinde arama yapın, kanal etkinliğini ve kayıtlı abonelikleri inceleyin.",
+    "channels": {
+      "description": "Kaydedilen Kick kanallarını arayın ve keşfedin."
+    },
+    "users": {
+      "description": "Kaydedilen Kick kullanıcılarını arayın ve keşfedin."
+    },
+    "prediction": {
+      "description": "Bir Kick kanalının son tahmin oyununu görüntüleyin."
+    }
+  },
+  "navigation": {
+    "title": "Ana menü",
+    "search": "Arama",
+    "channels": "Kanallar",
+    "users": "Kullanıcılar",
+    "prediction": "Tahmin",
+    "request": "Talep",
+    "admin": "Admin",
+    "openMenu": "Menüyü aç",
+    "closeMenu": "Menüyü kapat"
+  },
+  "profile": {
+    "visitKick": "Kick hesabını ziyaret",
+    "channel": "Kanal profili",
+    "user": "Kullanıcı profili",
+    "channelLoading": "Kanal profili yükleniyor...",
+    "userLoading": "Kullanıcı profili yükleniyor..."
+  },
+  "notFound": {
+    "title": "Aradığın sayfa bulunamadı.",
+    "description": "Bu bağlantı taşınmış, silinmiş veya hiç oluşmamış olabilir. Log aramasına dönebilir ya da kayıtlı kanal ve kullanıcı sayfalarını inceleyebilirsin.",
+    "search": "Arama sayfası",
+    "home": "Ana sayfaya dön",
+    "quickLinks": "Hızlı bağlantılar",
+    "navigation": "404 hızlı bağlantılar",
+    "channels": "Loglanan kanalları keşfet",
+    "users": "Kullanıcı profillerine bak",
+    "prediction": "Tahmin panellerini aç",
+    "request": "Kanal veya geri bildirim gönder"
+  },
+  "language": {
+    "label": "Dil",
+    "choose": "Dili değiştir"
+  }
+}

@@ -1,4 +1,6 @@
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
+import { createLocaleRenderer } from "@/test/render-with-locale";
+const render = createLocaleRenderer("tr", "admin");
 import { describe, expect, it } from "vitest";
 
 import { ProfileLoading } from "@/components/profile-loading";

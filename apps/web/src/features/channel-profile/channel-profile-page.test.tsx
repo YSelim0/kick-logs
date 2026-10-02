@@ -1,4 +1,7 @@
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { createLocaleRenderer, renderWithLocale } from "@/test/render-with-locale";
+import { LocaleTestControls } from "@/test/locale-controls";
+const render = createLocaleRenderer("tr", "admin");
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ChannelProfilePage } from "@/features/channel-profile/channel-profile-page";
@@ -19,6 +22,43 @@ vi.mock("next/image", () => ({
 vi.mock("@/features/channel-profile/api", () => profileMocks);
 
 describe("ChannelProfilePage", () => {
+  it.each(["en", "tr", "de"] as const)(
+    "localizes loading and failure states in %s",
+    async (locale) => {
+      const copy = {
+        en: {
+          loading: "Loading channel profile...",
+          missing: "Channel not found.",
+          error: "The channel profile could not be loaded."
+        },
+        tr: {
+          loading: "Kanal profili yükleniyor...",
+          missing: "Kanal bulunamadı.",
+          error: "Kanal profili şu anda alınamadı."
+        },
+        de: {
+          loading: "Kanalprofil wird geladen...",
+          missing: "Kanal nicht gefunden.",
+          error: "Das Kanalprofil konnte nicht geladen werden."
+        }
+      }[locale];
+      profileMocks.getChannelProfile.mockReturnValue(new Promise(() => {}));
+      const loading = renderWithLocale(<ChannelProfilePage slug="Heaven" />, { locale });
+      expect(screen.getByRole("status")).toHaveTextContent(copy.loading);
+      loading.unmount();
+      profileMocks.getChannelProfile.mockRejectedValue(
+        new ApiClientError(404, { detail: "private" })
+      );
+      const missing = renderWithLocale(<ChannelProfilePage slug="Heaven" />, { locale });
+      expect(await screen.findByText(copy.missing)).toBeInTheDocument();
+      missing.unmount();
+      profileMocks.getChannelProfile.mockRejectedValue(
+        new ApiClientError(500, { detail: "private" })
+      );
+      renderWithLocale(<ChannelProfilePage slug="Heaven" />, { locale });
+      expect(await screen.findByText(copy.error)).toBeInTheDocument();
+    }
+  );
   beforeEach(() => {
     profileMocks.getChannelProfile.mockReset();
     profileMocks.getChannelSubscribers.mockReset();
@@ -80,6 +120,25 @@ describe("ChannelProfilePage", () => {
     expect(screen.getByRole("link", { name: /@alpha/ })).toHaveAttribute("href", "/users/alpha");
   });
 
+  it("keeps the open subscriber dialog and profile data when language changes", async () => {
+    render(
+      <>
+        <LocaleTestControls />
+        <ChannelProfilePage slug="hype" />
+      </>
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Aktif aboneleri görüntüle" }));
+    expect(await screen.findByText("subscriber_one")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Switch to de", hidden: true }));
+    expect(await screen.findByRole("heading", { name: "Aktive Abonnenten" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Schließen" })).toBeInTheDocument();
+    expect(screen.getByText("subscriber_one")).toBeInTheDocument();
+    expect(screen.getByText("latest channel message")).toBeInTheDocument();
+    expect(profileMocks.getChannelProfile).toHaveBeenCalledTimes(1);
+    expect(profileMocks.getChannelSubscriptionSummary).toHaveBeenCalledTimes(1);
+    expect(profileMocks.getChannelSubscribers).toHaveBeenCalledTimes(1);
+  });
+
   it("opens the active subscriber modal from the stat cell", async () => {
     render(<ChannelProfilePage slug="hype" />);
 
@@ -122,6 +181,14 @@ describe("ChannelProfilePage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Abone listesini indir" }));
     fireEvent.click(screen.getByRole("button", { name: "TXT indir" }));
+
+    expect(profileMocks.buildChannelSubscribersExportUrl).toHaveBeenCalledWith(
+      "hype",
+      true,
+      "txt",
+      undefined,
+      "tr"
+    );
 
     expect(openSpy).toHaveBeenCalledWith(
       "http://localhost:8000/channels/hype/subscribers/export?format=txt&gift_only=true",
@@ -168,8 +235,13 @@ describe("ChannelProfilePage", () => {
     );
     expect(screen.getByRole("banner")).toBeInTheDocument();
     expect(
-      within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByText("hype")
+      within(screen.getByRole("navigation", { name: "Sayfa yolu" })).getByText("hype")
     ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("navigation", { name: "Sayfa yolu" })).getByRole("link", {
+        name: "Kanallar"
+      })
+    ).toHaveAttribute("href", "/");
     expect(screen.queryByRole("link", { name: /kanalda ara/i })).not.toBeInTheDocument();
 
     await act(async () => resolveProfile(profileFixture()));
@@ -188,7 +260,7 @@ describe("ChannelProfilePage", () => {
     expect(await screen.findByText("Kanal profili şu anda alınamadı.")).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Kanal profili" })).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /search'te ara/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Mesajlarda ara" })).toHaveAttribute(
       "href",
       "/search?channel=hype"
     );
@@ -228,7 +300,7 @@ describe("ChannelProfilePage", () => {
 
     expect(await screen.findByText("Kanal bulunamadı.")).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /search'e dön/i })).toHaveAttribute("href", "/search");
+    expect(screen.getByRole("link", { name: "Aramaya dön" })).toHaveAttribute("href", "/search");
   });
 });
 

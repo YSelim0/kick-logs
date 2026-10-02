@@ -62,6 +62,7 @@ own their Kick chat archive instead of depending on short-lived browser chat his
 - Public search across stored messages with sender, channel, text, date, reply, and emote filters.
 - Infinite-scroll message results with reply context, clickable links, and inline emotes.
 - Public user and channel profile pages with activity summaries.
+- English, Turkish and German interfaces with automatic language detection and a saved preference.
 - Prediction pages that run client-side and do not store prediction data.
 - Public request form for channel suggestions and feedback, reviewed from the admin dashboard.
 - Admin dashboard for followed channels, requests, users, listener health, storage, and cleanup previews.
@@ -88,6 +89,9 @@ admins, followed channels, sender profiles, retention settings, and heartbeats i
 Contributions are welcome. Keep pull requests focused, explain the user-facing change, and update
 tests or docs when behavior changes.
 
+For interface copy, update all EN/TR/DE catalogs in `apps/web/src/i18n/messages` and run the frontend
+tests. User messages, names and other source content must stay unchanged.
+
 ```bash
 git clone https://github.com/YSelim0/kick-logs.git
 cd kick-logs
@@ -104,6 +108,7 @@ cd ../.. && pnpm format:check
 
 For UI work, read `docs/design/design.md`. For backend architecture changes, read
 `docs/architecture.md`.
+Localization deployment and CDN checks are in [Localization operations](docs/operations/localization.md).
 
 ## Self-Host It
 

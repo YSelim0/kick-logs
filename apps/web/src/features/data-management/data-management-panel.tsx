@@ -1,5 +1,9 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+import { useUiFormat } from "@/i18n/use-ui-format";
+import { getUiErrorKey, type UiErrorKey } from "@/i18n/errors";
+
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, RefreshCcw, Save, ShieldAlert, TriangleAlert, Trash2 } from "lucide-react";
 
@@ -24,20 +28,19 @@ type CleanupFormState = {
   sender: string;
 };
 
-const RETENTION_OPTIONS: Array<{ label: string; value: string }> = [
-  { label: "Sonsuza kadar", value: "forever" },
-  { label: "30 gün", value: "30" },
-  { label: "90 gün", value: "90" }
-];
+const RETENTION_OPTIONS = ["forever", "30", "90"] as const;
 
-const CLEANUP_TARGETS: Array<{ label: string; value: DataCleanupTarget }> = [
-  { label: "Eski mesajlar", value: "old_messages" },
-  { label: "Eski raw eventler", value: "old_raw_events" },
-  { label: "Kanal", value: "channel" },
-  { label: "Gönderen", value: "sender" }
+const CLEANUP_TARGETS: DataCleanupTarget[] = [
+  "old_messages",
+  "old_raw_events",
+  "channel",
+  "sender"
 ];
 
 export function DataManagementPanel() {
+  const t = useTranslations("dataManagement");
+  const f = useUiFormat();
+  const errors = useTranslations("common.errors");
   const [summary, setSummary] = useState<DataManagementSummary | null>(null);
   const [messageRetention, setMessageRetention] = useState<RetentionDays>(null);
   const [rawEventRetention, setRawEventRetention] = useState<RetentionDays>(null);
@@ -49,7 +52,7 @@ export function DataManagementPanel() {
   const [preview, setPreview] = useState<DataCleanupPreview | null>(null);
   const [confirmationText, setConfirmationText] = useState("");
   const [result, setResult] = useState<DataCleanupResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiErrorKey | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
@@ -65,7 +68,7 @@ export function DataManagementPanel() {
       setMessageRetention(nextSummary.retention_settings.message_retention_days);
       setRawEventRetention(nextSummary.retention_settings.raw_event_retention_days);
     } catch (caught) {
-      setError(resolveDataError(caught));
+      setError(getUiErrorKey(caught, "cleanup"));
     } finally {
       setIsLoading(false);
     }
@@ -96,7 +99,7 @@ export function DataManagementPanel() {
       setPreview(null);
       setConfirmationText("");
     } catch (caught) {
-      setError(resolveDataError(caught));
+      setError(getUiErrorKey(caught, "cleanup"));
     } finally {
       setIsSaving(false);
     }
@@ -113,7 +116,7 @@ export function DataManagementPanel() {
       setPreview(await previewDataCleanup(cleanupRequest));
     } catch (caught) {
       setPreview(null);
-      setError(resolveDataError(caught));
+      setError(getUiErrorKey(caught, "cleanup"));
     } finally {
       setIsPreviewing(false);
     }
@@ -135,7 +138,7 @@ export function DataManagementPanel() {
       setConfirmationText("");
       await loadSummary();
     } catch (caught) {
-      setError(resolveDataError(caught));
+      setError(getUiErrorKey(caught, "cleanup"));
     } finally {
       setIsConfirming(false);
     }
@@ -145,10 +148,8 @@ export function DataManagementPanel() {
     <section className="rounded-lg border border-border bg-panel p-5">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-0.5">
-          <h2 className="text-[14px] font-semibold text-foreground">Veri Yönetimi</h2>
-          <span className="font-mono text-[11px] text-faint">
-            Retention ayarları ve kontrollü cleanup
-          </span>
+          <h2 className="text-[14px] font-semibold text-foreground">{t("title")}</h2>
+          <span className="font-mono text-[11px] text-faint">{t("description")}</span>
         </div>
         <Button
           disabled={isLoading}
@@ -162,19 +163,19 @@ export function DataManagementPanel() {
           ) : (
             <RefreshCcw className="h-3 w-3" />
           )}
-          Yenile
+          {t("refresh")}
         </Button>
       </div>
 
       {isLoading && !summary ? (
         <div className="rounded-md border border-border bg-elevated px-4 py-8 text-center text-[13px] text-muted-foreground">
-          Veri yönetimi bilgileri yükleniyor...
+          {t("loading")}
         </div>
       ) : null}
 
       {error ? (
         <div className="mb-4 rounded-md border border-danger bg-elevated px-3 py-2 text-[13px]">
-          {error}
+          {errors(error)}
         </div>
       ) : null}
 
@@ -182,9 +183,9 @@ export function DataManagementPanel() {
         <div className="flex flex-col gap-5">
           {/* Stats */}
           <div className="grid gap-3 md:grid-cols-3">
-            <StatCard label="Veritabanı" value={formatBytes(summary.database_bytes)} />
-            <StatCard label="Mesaj" value={formatNumber(summary.counts.messages)} />
-            <StatCard label="Raw Event" value={formatNumber(summary.counts.raw_events)} />
+            <StatCard label={t("database")} value={f.bytes(summary.database_bytes)} />
+            <StatCard label={t("messages")} value={f.number(summary.counts.messages)} />
+            <StatCard label={t("rawEvents")} value={f.number(summary.counts.raw_events)} />
           </div>
 
           {/* Tables */}
@@ -192,13 +193,13 @@ export function DataManagementPanel() {
             <div className="min-w-[360px]">
               <div className="flex items-center border-b border-border px-3 py-2">
                 <span className="flex-1 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
-                  TABLO
+                  {t("table")}
                 </span>
                 <span className="w-28 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
-                  SATIR
+                  {t("rows")}
                 </span>
                 <span className="w-24 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
-                  BOYUT
+                  {t("size")}
                 </span>
               </div>
               {summary.tables.map((table) => (
@@ -210,10 +211,10 @@ export function DataManagementPanel() {
                     {table.table_name}
                   </span>
                   <span className="w-28 font-mono text-[12px] text-muted-foreground">
-                    {formatNumber(table.row_count)}
+                    {f.number(table.row_count)}
                   </span>
                   <span className="w-24 font-mono text-[12px] text-muted-foreground">
-                    {formatBytes(table.total_bytes)}
+                    {f.bytes(table.total_bytes)}
                   </span>
                 </div>
               ))}
@@ -228,17 +229,17 @@ export function DataManagementPanel() {
             <div className="mb-4 flex items-center gap-2">
               <Save className="h-3.5 w-3.5 text-accent" />
               <span className="font-sans text-[13px] font-semibold text-foreground">
-                Retention Ayarları
+                {t("retention")}
               </span>
             </div>
             <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto]">
               <RetentionSelect
-                label="Mesajlar"
+                label={t("messageRetention")}
                 onChange={setMessageRetention}
                 value={messageRetention}
               />
               <RetentionSelect
-                label="Raw Eventler"
+                label={t("rawRetention")}
                 onChange={setRawEventRetention}
                 value={rawEventRetention}
               />
@@ -249,7 +250,7 @@ export function DataManagementPanel() {
                   ) : (
                     <Save className="h-4 w-4" />
                   )}
-                  Kaydet
+                  {t("save")}
                 </Button>
               </div>
             </div>
@@ -263,7 +264,7 @@ export function DataManagementPanel() {
             <div className="mb-4 flex items-center gap-2">
               <ShieldAlert className="h-3.5 w-3.5 text-accent" />
               <span className="font-sans text-[13px] font-semibold text-foreground">
-                Cleanup Önizleme
+                {t("previewForm")}
               </span>
             </div>
             <div className="grid gap-3 md:grid-cols-[minmax(140px,180px)_minmax(0,1fr)_auto]">
@@ -272,7 +273,7 @@ export function DataManagementPanel() {
                   className="font-mono text-[11px] font-medium tracking-[0.5px] text-muted-foreground"
                   htmlFor="cleanup-target"
                 >
-                  HEDEF
+                  {t("target")}
                 </label>
                 <select
                   className="h-[38px] rounded-md border border-border-strong bg-panel px-3 font-sans text-[13px] text-foreground outline-none focus:border-accent"
@@ -282,9 +283,9 @@ export function DataManagementPanel() {
                   }
                   value={cleanupForm.target}
                 >
-                  {CLEANUP_TARGETS.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
+                  {CLEANUP_TARGETS.map((value) => (
+                    <option key={value} value={value}>
+                      {t(`targets.${value}`)}
                     </option>
                   ))}
                 </select>
@@ -296,7 +297,7 @@ export function DataManagementPanel() {
                     className="font-mono text-[11px] font-medium tracking-[0.5px] text-muted-foreground"
                     htmlFor="cleanup-channel"
                   >
-                    KANAL SLUG
+                    {t("channelSlug")}
                   </label>
                   <input
                     className="h-[38px] rounded-md border border-border-strong bg-panel px-3 font-sans text-[13px] text-foreground outline-none focus:border-accent placeholder:text-faint"
@@ -304,7 +305,7 @@ export function DataManagementPanel() {
                     onChange={(e) =>
                       setCleanupForm((c) => ({ ...c, channel_slug: e.target.value }))
                     }
-                    placeholder="örn. hype"
+                    placeholder={t("channelPlaceholder")}
                     value={cleanupForm.channel_slug}
                   />
                 </div>
@@ -314,19 +315,19 @@ export function DataManagementPanel() {
                     className="font-mono text-[11px] font-medium tracking-[0.5px] text-muted-foreground"
                     htmlFor="cleanup-sender"
                   >
-                    GÖNDEREN
+                    {t("sender")}
                   </label>
                   <input
                     className="h-[38px] rounded-md border border-border-strong bg-panel px-3 font-sans text-[13px] text-foreground outline-none focus:border-accent placeholder:text-faint"
                     id="cleanup-sender"
                     onChange={(e) => setCleanupForm((c) => ({ ...c, sender: e.target.value }))}
-                    placeholder="örn. yavuz"
+                    placeholder={t("senderPlaceholder")}
                     value={cleanupForm.sender}
                   />
                 </div>
               ) : (
                 <div className="flex items-center rounded-md border border-border bg-panel px-3 py-2 font-sans text-[12px] text-muted-foreground">
-                  Mevcut retention ayarını kullanır. Sonsuza kadar seçiliyse delete çalışmaz.
+                  {t("retentionHint")}
                 </div>
               )}
 
@@ -337,7 +338,7 @@ export function DataManagementPanel() {
                   ) : (
                     <Trash2 className="h-4 w-4 text-accent" />
                   )}
-                  Dry-run
+                  {t("dryRun")}
                 </Button>
               </div>
             </div>
@@ -349,16 +350,23 @@ export function DataManagementPanel() {
               <div className="mb-3 flex items-center gap-2">
                 <TriangleAlert className="h-3.5 w-3.5 text-warning" />
                 <span className="font-sans text-[13px] font-semibold text-foreground">
-                  Cleanup Önizleme Sonucu
+                  {t("previewTitle")}
                 </span>
               </div>
               <div className="mb-4 grid gap-3 md:grid-cols-3">
-                <StatCard label="MESAJ" value={formatNumber(preview.affected.messages)} />
-                <StatCard label="RAW EVENT" value={formatNumber(preview.affected.raw_events)} />
-                <StatCard label="TOPLAM" value={formatNumber(preview.affected.total)} />
+                <StatCard
+                  label={t("previewMessages")}
+                  value={f.number(preview.affected.messages)}
+                />
+                <StatCard label={t("previewRaw")} value={f.number(preview.affected.raw_events)} />
+                <StatCard label={t("total")} value={f.number(preview.affected.total)} />
               </div>
               {preview.reason ? (
-                <p className="mb-4 font-sans text-[12px] text-muted-foreground">{preview.reason}</p>
+                <p className="mb-4 font-sans text-[12px] text-muted-foreground">
+                  {preview.reason === "Retention is set to keep forever."
+                    ? t("foreverReason")
+                    : preview.reason}
+                </p>
               ) : null}
               <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
                 <div className="flex flex-col gap-1.5">
@@ -366,7 +374,7 @@ export function DataManagementPanel() {
                     className="font-mono text-[11px] font-medium tracking-[0.5px] text-muted-foreground"
                     htmlFor="confirm-text"
                   >
-                    ONAY METNİ:{" "}
+                    {t("confirmation")}{" "}
                     <span className="font-mono text-accent">{preview.confirmation_text}</span>
                   </label>
                   <input
@@ -390,7 +398,7 @@ export function DataManagementPanel() {
                     ) : (
                       <Trash2 className="h-4 w-4" />
                     )}
-                    Sil
+                    {t("delete")}
                   </Button>
                 </div>
               </div>
@@ -399,8 +407,10 @@ export function DataManagementPanel() {
 
           {result ? (
             <div className="rounded-lg border border-accent bg-elevated px-4 py-3 font-sans text-[13px] text-foreground">
-              Cleanup tamamlandı: {formatNumber(result.deleted.messages)} mesaj,{" "}
-              {formatNumber(result.deleted.raw_events)} raw event silindi.
+              {t("complete", {
+                messages: f.number(result.deleted.messages),
+                rawEvents: f.number(result.deleted.raw_events)
+              })}
             </div>
           ) : null}
         </div>
@@ -429,6 +439,7 @@ function RetentionSelect({
   onChange: (value: RetentionDays) => void;
   value: RetentionDays;
 }) {
+  const t = useTranslations("dataManagement");
   const id = `retention-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div className="flex flex-col gap-1.5">
@@ -444,9 +455,9 @@ function RetentionSelect({
         onChange={(e) => onChange(parseRetentionValue(e.target.value))}
         value={value ?? "forever"}
       >
-        {RETENTION_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
+        {RETENTION_OPTIONS.map((value) => (
+          <option key={value} value={value}>
+            {value === "forever" ? t("forever") : t("days", { days: Number(value) })}
           </option>
         ))}
       </select>
@@ -466,21 +477,4 @@ function parseRetentionValue(value: string): RetentionDays {
   if (value === "30") return 30;
   if (value === "90") return 90;
   return null;
-}
-
-function formatNumber(value: number) {
-  return new Intl.NumberFormat("tr-TR").format(value);
-}
-
-function formatBytes(value: number) {
-  if (value <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
-  const amount = value / 1024 ** index;
-  return `${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: index === 0 ? 0 : 2 }).format(amount)} ${units[index]}`;
-}
-
-function resolveDataError(error: unknown) {
-  if (error instanceof Error) return error.message;
-  return "Veri yönetimi işlemi tamamlanamadı.";
 }

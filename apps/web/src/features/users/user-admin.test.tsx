@@ -1,4 +1,7 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { LocaleTestControls } from "@/test/locale-controls";
+import { createLocaleRenderer } from "@/test/render-with-locale";
+const render = createLocaleRenderer("tr", "admin");
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { UserAdmin } from "@/features/users/user-admin";
@@ -15,6 +18,28 @@ vi.mock("@/features/users/api", () => ({
 }));
 
 describe("UserAdmin", () => {
+  it("keeps unsaved credentials and localizes role presentation only", async () => {
+    userApiMocks.listAdminUsers.mockResolvedValue([adminFixture()]);
+    render(
+      <>
+        <LocaleTestControls />
+        <UserAdmin />
+      </>
+    );
+    await screen.findByText("admin@kicklogs.local");
+    fireEvent.change(screen.getByLabelText("E-POSTA"), {
+      target: { value: "operator@example.com" }
+    });
+    fireEvent.change(screen.getByLabelText("GEÇİCİ PAROLA"), {
+      target: { value: "not-a-real-password" }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Switch to en" }));
+    expect(await screen.findByLabelText("TEMPORARY PASSWORD")).toHaveValue("not-a-real-password");
+    expect(screen.getByLabelText("EMAIL")).toHaveValue("operator@example.com");
+    expect(screen.getAllByText("Super admin").length).toBeGreaterThan(0);
+    expect(userApiMocks.listAdminUsers).toHaveBeenCalledTimes(1);
+    expect(userApiMocks.createAdminUser).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     userApiMocks.createAdminUser.mockReset();
     userApiMocks.listAdminUsers.mockReset();
@@ -26,7 +51,7 @@ describe("UserAdmin", () => {
     render(<UserAdmin />);
 
     expect(await screen.findByText("admin@kicklogs.local")).toBeInTheDocument();
-    expect(screen.getAllByText("super_admin")).not.toHaveLength(0);
+    expect(screen.getAllByText("Süper admin")).not.toHaveLength(0);
     expect(screen.getAllByText("Aktif")).not.toHaveLength(0);
     expect(screen.queryByText(/password/i)).not.toBeInTheDocument();
   });

@@ -1,13 +1,18 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+import { useUiFormat } from "@/i18n/use-ui-format";
+
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
-import { formatCompactNumber, formatPercent, outcomeColor } from "@/features/prediction/format";
+import { outcomeColor } from "@/features/prediction/format";
 import type { PredictionOutcome } from "@/types/api";
 
 const CHART_INITIAL_DIMENSION = { width: 640, height: 224 };
 
 export function PredictionDistributionChart({ outcomes }: { outcomes: PredictionOutcome[] }) {
+  const t = useTranslations("prediction");
+  const f = useUiFormat();
   const data = outcomes.map((outcome, index) => ({
     name: outcome.title,
     value: outcome.totalVoteAmount,
@@ -17,7 +22,7 @@ export function PredictionDistributionChart({ outcomes }: { outcomes: Prediction
 
   const hasData = data.some((entry) => entry.value > 0);
   if (!hasData) {
-    return <p className="text-[13px] text-muted-foreground">Puan dağılımı verisi yok.</p>;
+    return <p className="text-[13px] text-muted-foreground">{t("emptyDistribution")}</p>;
   }
 
   return (
@@ -55,7 +60,10 @@ export function PredictionDistributionChart({ outcomes }: { outcomes: Prediction
               formatter={(value, _name, item) => {
                 const payload = (item as { payload?: { share: number; name: string } }).payload;
                 return [
-                  `${formatCompactNumber(Number(value))} puan · ${formatPercent(payload?.share ?? 0)}`,
+                  t("distributionTooltip", {
+                    points: f.compact(Number(value)),
+                    share: f.percent(payload?.share ?? 0, 1)
+                  }),
                   payload?.name ?? ""
                 ];
               }}
@@ -78,7 +86,7 @@ export function PredictionDistributionChart({ outcomes }: { outcomes: Prediction
               style={{ backgroundColor: entry.color }}
             />
             <span className="truncate text-foreground">{entry.name}</span>
-            <span className="font-mono">{formatPercent(entry.share)}</span>
+            <span className="font-mono">{f.percent(entry.share, 1)}</span>
           </li>
         ))}
       </ul>

@@ -81,5 +81,6 @@
 
   body {
     @apply min-h-screen bg-page text-foreground antialiased font-sans;
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
   }
 }

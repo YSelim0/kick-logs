@@ -1,5 +1,6 @@
 import { apiClient, type ApiClient } from "@/lib/api-client";
 import { API_BASE_URL } from "@/lib/constants";
+import type { Locale } from "@/i18n/locales";
 import type {
   ChannelProfile,
   ChannelSubscriberExportFormat,
@@ -42,12 +43,14 @@ export function buildChannelSubscribersExportUrl(
   slug: string,
   giftOnly: boolean,
   format: ChannelSubscriberExportFormat,
-  baseUrl = API_BASE_URL
+  baseUrl = API_BASE_URL,
+  locale?: Locale
 ) {
   const url = new URL(
     `${baseUrl.replace(/\/+$/, "")}/channels/${encodeURIComponent(slug)}/subscribers/export`
   );
   url.searchParams.set("format", format);
+  if (format === "txt" && locale) url.searchParams.set("locale", locale);
   if (giftOnly) {
     url.searchParams.set("gift_only", "true");
   }

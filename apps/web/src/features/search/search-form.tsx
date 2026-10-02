@@ -1,6 +1,7 @@
 "use client";
 
 import { CalendarDays, Download, FileJson, FileText } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
@@ -35,6 +36,8 @@ export function SearchForm({
   onReset,
   onSubmit
 }: SearchFormProps) {
+  const t = useTranslations("search");
+  const actions = useTranslations("common.actions");
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
@@ -74,37 +77,37 @@ export function SearchForm({
       }}
     >
       <div className="grid gap-3 md:grid-cols-3">
-        <Field id="sender" label="Kullanıcı Adı">
+        <Field id="sender" label={t("sender")}>
           <Input
             id="sender"
             maxLength={160}
             onChange={(event) => onChange({ ...value, sender: event.target.value })}
-            placeholder="yavuz"
+            placeholder={t("senderPlaceholder")}
             value={value.sender}
           />
         </Field>
-        <Field id="channel" label="Kanal Adı">
+        <Field id="channel" label={t("channel")}>
           <Input
             id="channel"
             maxLength={160}
             onChange={(event) => onChange({ ...value, channel: event.target.value })}
-            placeholder="exampleChannel"
+            placeholder={t("channelPlaceholder")}
             value={value.channel}
           />
         </Field>
-        <Field id="q" label="İçerik">
+        <Field id="q" label={t("content")}>
           <Input
             id="q"
             maxLength={500}
             onChange={(event) => onChange({ ...value, q: event.target.value })}
-            placeholder="selam"
+            placeholder={t("contentPlaceholder")}
             value={value.q}
           />
         </Field>
       </div>
 
       <div className="grid gap-3 md:grid-cols-3">
-        <Field id="start" label="Başlangıç" icon={<CalendarDays className="h-3.5 w-3.5" />}>
+        <Field id="start" label={t("start")} icon={<CalendarDays className="h-3.5 w-3.5" />}>
           <Input
             id="start"
             onChange={(event) => onChange({ ...value, start: event.target.value })}
@@ -112,7 +115,7 @@ export function SearchForm({
             value={value.start}
           />
         </Field>
-        <Field id="end" label="Bitiş" icon={<CalendarDays className="h-3.5 w-3.5" />}>
+        <Field id="end" label={t("end")} icon={<CalendarDays className="h-3.5 w-3.5" />}>
           <Input
             id="end"
             onChange={(event) => onChange({ ...value, end: event.target.value })}
@@ -120,7 +123,7 @@ export function SearchForm({
             value={value.end}
           />
         </Field>
-        <Field id="datePreset" label="Hızlı aralık">
+        <Field id="datePreset" label={t("quickRange")}>
           <select
             className="flex h-10 w-full rounded-md border border-border bg-elevated px-3 py-2 text-[13px] text-foreground outline-none transition-colors focus:border-border-strong"
             defaultValue=""
@@ -134,10 +137,10 @@ export function SearchForm({
               event.target.value = "";
             }}
           >
-            <option value="">Seç</option>
+            <option value="">{t("chooseRange")}</option>
             {DATE_PRESETS.map((preset) => (
               <option key={preset.key} value={preset.key}>
-                Son {preset.label}
+                {t(`presets.${preset.key}`)}
               </option>
             ))}
           </select>
@@ -147,23 +150,23 @@ export function SearchForm({
       <div className="flex flex-wrap items-center gap-3">
         <TogglePill
           checked={value.replyOnly}
-          label="Sadece yanıtlar"
+          label={t("replyOnly")}
           onChange={(checked) => onChange({ ...value, replyOnly: checked })}
         />
         <TogglePill
           checked={value.emoteOnly}
-          label="Sadece emote"
+          label={t("emoteOnly")}
           onChange={(checked) => onChange({ ...value, emoteOnly: checked })}
         />
         <div className="flex flex-1 justify-end gap-2">
           <div className="relative" ref={exportMenuRef}>
             <button
               aria-expanded={isExportMenuOpen}
-              aria-label="Dışa aktar"
+              aria-label={t("export")}
               className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-elevated text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
               disabled={isLoading || !canExport}
               onClick={() => setIsExportMenuOpen((current) => !current)}
-              title="Dışa aktar"
+              title={t("export")}
               type="button"
             >
               <Download className="h-4 w-4" />
@@ -177,7 +180,7 @@ export function SearchForm({
                   type="button"
                 >
                   <FileJson className="h-4 w-4 text-muted-foreground" />
-                  JSON indir
+                  {t("downloadFormat", { format: "JSON" })}
                 </button>
                 <button
                   className="inline-flex h-8 items-center gap-2 rounded-sm px-2 text-[13px] text-foreground hover:bg-elevated"
@@ -185,7 +188,7 @@ export function SearchForm({
                   type="button"
                 >
                   <FileText className="h-4 w-4 text-muted-foreground" />
-                  CSV indir
+                  {t("downloadFormat", { format: "CSV" })}
                 </button>
               </div>
             ) : null}
@@ -198,7 +201,7 @@ export function SearchForm({
             type="button"
             variant="outline"
           >
-            Sıfırla
+            {actions("reset")}
           </Button>
           <Button
             className="h-9 bg-accent px-4 text-accent-foreground hover:bg-accent-hover"
@@ -206,7 +209,7 @@ export function SearchForm({
             size="sm"
             type="submit"
           >
-            Ara
+            {actions("search")}
           </Button>
         </div>
       </div>

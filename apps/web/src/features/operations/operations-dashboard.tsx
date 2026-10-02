@@ -1,5 +1,9 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+import { useUiFormat } from "@/i18n/use-ui-format";
+import { getUiErrorKey, type UiErrorKey } from "@/i18n/errors";
+
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import {
@@ -46,8 +50,11 @@ const EMPTY_INGESTION: IngestionHealth = {
 };
 
 export function OperationsDashboard() {
+  const t = useTranslations("operations");
+  const f = useUiFormat();
+  const errors = useTranslations("common.errors");
   const [summary, setSummary] = useState<OperationsSummary | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiErrorKey | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [failedModalOpen, setFailedModalOpen] = useState(false);
@@ -63,7 +70,7 @@ export function OperationsDashboard() {
     try {
       setSummary(await getOperationsSummary());
     } catch (caught) {
-      setError(resolveOperationsError(caught));
+      setError(getUiErrorKey(caught, "adminRead"));
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -82,10 +89,8 @@ export function OperationsDashboard() {
     <section className="rounded-lg border border-border bg-panel p-5">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h2 className="text-[22px] font-semibold tracking-tight text-foreground">Operations</h2>
-          <p className="font-sans text-[13px] text-muted-foreground">
-            Listener, processor, JetStream backlog, ClickHouse geçmişi, depolama özeti
-          </p>
+          <h2 className="text-[22px] font-semibold tracking-tight text-foreground">{t("title")}</h2>
+          <p className="font-sans text-[13px] text-muted-foreground">{t("description")}</p>
         </div>
         <Button
           disabled={isLoading || isRefreshing}
@@ -99,19 +104,19 @@ export function OperationsDashboard() {
           ) : (
             <RefreshCcw className="h-3 w-3" />
           )}
-          Yenile
+          {t("refresh")}
         </Button>
       </div>
 
       {isLoading && !summary ? (
         <div className="rounded-md border border-border bg-elevated px-4 py-8 text-center text-[13px] text-muted-foreground">
-          Operasyon metrikleri yükleniyor...
+          {t("loading")}
         </div>
       ) : null}
 
       {error ? (
         <div className="mb-4 rounded-md border border-danger bg-elevated px-3 py-2 text-[13px]">
-          {error}
+          {errors(error)}
         </div>
       ) : null}
 
@@ -120,49 +125,53 @@ export function OperationsDashboard() {
           {!summary.listener.is_fresh ? (
             <OperationsNotice
               icon={<TriangleAlert className="h-4 w-4" />}
-              message="Listener heartbeat bayat. Listener çalışmıyor olabilir veya DB'ye yazamıyor olabilir."
+              message={t("listenerWarning")}
               tone="warning"
             />
           ) : null}
           {!summary.processor.is_fresh ? (
             <OperationsNotice
               icon={<TriangleAlert className="h-4 w-4" />}
-              message="Processor heartbeat bayat. JetStream backlog ClickHouse'a yazılamıyor olabilir."
+              message={t("processorWarning")}
               tone="warning"
             />
           ) : null}
           {failedRawEvents > 0 ? (
             <OperationsNotice
               icon={<TriangleAlert className="h-4 w-4" />}
-              message="ClickHouse failed raw event attempt kaydı var. JetStream redelivery otomatik; backend loglarını incelemek gerekebilir."
+              message={t("failedWarning")}
               tone="danger"
             />
           ) : null}
           {isBreakerOpen ? (
             <OperationsNotice
               icon={<TriangleAlert className="h-4 w-4" />}
-              message={`ClickHouse circuit breaker açık. Bekleme ${Math.round(ingestion.breaker_current_delay_ms)} ms.`}
+              message={t("breakerWarning", {
+                delay: f.number(Math.round(ingestion.breaker_current_delay_ms))
+              })}
               tone="danger"
             />
           ) : null}
           {ingestion.write_drop_count > 0 ? (
             <OperationsNotice
               icon={<TriangleAlert className="h-4 w-4" />}
-              message={`Legacy buffered writer ${formatNumber(ingestion.write_drop_count)} event düşürdü. Bu metrik yeni JetStream hot path'te sıfır kalmalı.`}
+              message={t("dropWarning", { count: f.number(ingestion.write_drop_count) })}
               tone="warning"
             />
           ) : null}
           {ingestion.stream_consumer_redelivered > 0 ? (
             <OperationsNotice
               icon={<TriangleAlert className="h-4 w-4" />}
-              message={`JetStream ${formatNumber(ingestion.stream_consumer_redelivered)} redelivery bildiriyor. Processor yavaşlaması veya geçici ClickHouse hatası olabilir.`}
+              message={t("redeliveryWarning", {
+                count: f.number(ingestion.stream_consumer_redelivered)
+              })}
               tone="warning"
             />
           ) : null}
           {ingestion.stream_error ? (
             <OperationsNotice
               icon={<TriangleAlert className="h-4 w-4" />}
-              message={`JetStream metrikleri okunamadı: ${ingestion.stream_error}`}
+              message={t("streamError", { error: ingestion.stream_error })}
               tone="warning"
             />
           ) : null}
@@ -177,46 +186,44 @@ export function OperationsDashboard() {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
-              detail={`${formatNumber(summary.counts.senders)} gönderici`}
+              detail={t("senders", { count: f.number(summary.counts.senders) })}
               icon={<MessageSquareText className="h-3.5 w-3.5" />}
               iconTone="accent"
-              label="MESAJ"
-              value={formatNumber(summary.counts.messages)}
+              label={t("messages")}
+              value={f.number(summary.counts.messages)}
             />
             <MetricCard
-              detail={`ack bekleyen ${formatNumber(ingestion.stream_consumer_ack_pending)}`}
+              detail={t("ackWaiting", { count: f.number(ingestion.stream_consumer_ack_pending) })}
               icon={<HardDrive className="h-3.5 w-3.5" />}
               iconTone="muted"
-              label="JETSTREAM BACKLOG"
-              value={formatNumber(ingestion.queue_depth)}
+              label={t("backlog")}
+              value={f.number(ingestion.queue_depth)}
             />
             <MetricCard
-              detail={failedRawEvents > 0 ? "İnceleme gerekli" : "Temiz"}
+              detail={failedRawEvents > 0 ? t("review") : t("clean")}
               detailTone={failedRawEvents > 0 ? "danger" : "muted"}
               icon={<TriangleAlert className="h-3.5 w-3.5" />}
               iconTone={failedRawEvents > 0 ? "danger" : "muted"}
-              label="BAŞARISIZ RAW"
+              label={t("failed")}
               onDetailClick={failedRawEvents > 0 ? () => setFailedModalOpen(true) : undefined}
-              value={formatNumber(failedRawEvents)}
+              value={f.number(failedRawEvents)}
             />
             <MetricCard
-              detail={`${summary.storage.tables.length} tablo`}
+              detail={t("tables", { count: f.number(summary.storage.tables.length) })}
               icon={<Database className="h-3.5 w-3.5" />}
               iconTone="muted"
-              label="DB BOYUTU"
-              value={formatBytes(summary.storage.database_bytes)}
+              label={t("dbSize")}
+              value={f.bytes(summary.storage.database_bytes)}
             />
           </div>
 
           <div className="rounded-lg border border-border bg-panel p-5">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex flex-col gap-0.5">
-                <span className="text-[14px] font-semibold text-foreground">Aktif Ingestion</span>
-                <span className="font-mono text-[11px] text-faint">
-                  JetStream consumer, processor breaker, legacy SQLite queue
-                </span>
+                <span className="text-[14px] font-semibold text-foreground">{t("ingestion")}</span>
+                <span className="font-mono text-[11px] text-faint">{t("ingestionDetail")}</span>
               </div>
               <div
                 className={`flex items-center gap-1.5 rounded-full bg-elevated px-2.5 py-1 font-mono text-[10px] font-semibold tracking-[0.8px] ${
@@ -226,38 +233,37 @@ export function OperationsDashboard() {
                 <span
                   className={`h-1.5 w-1.5 rounded-full ${isBreakerOpen ? "bg-danger" : "bg-accent"}`}
                 />
-                {isBreakerOpen ? "Açık" : "Kapalı"}
+                {isBreakerOpen ? t("open") : t("closed")}
               </div>
             </div>
             <div className="overflow-x-auto rounded-md border border-border">
               <div className="flex min-w-[720px] divide-x divide-border">
                 <IngestionCell
-                  label="Stream pending"
-                  value={formatNumber(ingestion.stream_consumer_pending)}
+                  label={t("streamPending")}
+                  value={f.number(ingestion.stream_consumer_pending)}
                 />
                 <IngestionCell
-                  label="Ack pending"
-                  value={formatNumber(ingestion.stream_consumer_ack_pending)}
+                  label={t("ackPending")}
+                  value={f.number(ingestion.stream_consumer_ack_pending)}
                 />
                 <IngestionCell
-                  label="Redelivery"
-                  value={formatNumber(ingestion.stream_consumer_redelivered)}
+                  label={t("redelivery")}
+                  value={f.number(ingestion.stream_consumer_redelivered)}
                 />
                 <IngestionCell
-                  label="En eski"
+                  label={t("oldest")}
                   value={
                     ingestion.stream_oldest_pending_age_seconds > 0
-                      ? `${formatNumber(ingestion.stream_oldest_pending_age_seconds)}s`
+                      ? t("seconds", {
+                          value: f.number(ingestion.stream_oldest_pending_age_seconds)
+                        })
                       : "—"
                   }
                 />
+                <IngestionCell label={t("legacy")} value={f.number(ingestion.legacy_queue_depth)} />
                 <IngestionCell
-                  label="Legacy SQLite"
-                  value={formatNumber(ingestion.legacy_queue_depth)}
-                />
-                <IngestionCell
-                  label="CH failures"
-                  value={formatNumber(ingestion.clickhouse_insert_failures)}
+                  label={t("chFailures")}
+                  value={f.number(ingestion.clickhouse_insert_failures)}
                 />
               </div>
             </div>
@@ -281,18 +287,22 @@ function HeartbeatSummary({
   heartbeat: OperationsSummary["listener"];
   label: string;
 }) {
+  const t = useTranslations("operations");
+  const f = useUiFormat();
   return (
     <div className="flex min-w-0 items-center gap-2">
       <span
         className={`h-2 w-2 shrink-0 rounded-full ${heartbeat.is_fresh ? "bg-accent" : "bg-warning"}`}
       />
-      <span className="min-w-0 truncate text-[13px] font-medium text-foreground">
-        {label}: {heartbeat.is_fresh ? "Canlı" : "Bayat"}
-        {" · son sinyal "}
-        {heartbeat.seconds_since_last_seen !== null
-          ? `${heartbeat.seconds_since_last_seen}s`
-          : "yok"}
-        {" önce"}
+      <span className="min-w-0 break-words text-[13px] font-medium text-foreground">
+        {t("heartbeat", {
+          label,
+          state: heartbeat.is_fresh ? t("fresh") : t("stale"),
+          age:
+            heartbeat.seconds_since_last_seen !== null
+              ? t("signalAge", { seconds: f.number(heartbeat.seconds_since_last_seen) })
+              : t("noSignal")
+        })}
       </span>
     </div>
   );
@@ -324,14 +334,14 @@ function MetricCard({
   const detailClass = detailTone === "danger" ? "text-danger" : "text-muted-foreground";
 
   return (
-    <div className="flex flex-col gap-2.5 rounded-lg border border-border bg-panel p-4">
+    <div className="flex min-w-0 flex-col gap-2.5 rounded-lg border border-border bg-panel p-4">
       <div className="flex items-center justify-between">
         <span className="font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
           {label}
         </span>
         <span className={iconClass}>{icon}</span>
       </div>
-      <span className="text-[26px] font-semibold leading-none tracking-tight text-foreground">
+      <span className="break-words text-[22px] font-semibold leading-tight tracking-tight text-foreground">
         {value}
       </span>
       {onDetailClick ? (
@@ -373,7 +383,7 @@ function OperationsNotice({
         tone === "danger" ? "border-danger text-danger" : "border-warning text-warning"
       }`}
     >
-      {icon}
+      <span className="shrink-0">{icon}</span>
       <span className="text-foreground">{message}</span>
     </div>
   );
@@ -381,21 +391,4 @@ function OperationsNotice({
 
 function getStatusCount(summary: OperationsSummary, status: string) {
   return summary.raw_event_status_counts[status] ?? 0;
-}
-
-function formatNumber(value: number) {
-  return new Intl.NumberFormat("tr-TR").format(value);
-}
-
-function formatBytes(value: number) {
-  if (value <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const index = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
-  const amount = value / 1024 ** index;
-  return `${new Intl.NumberFormat("tr-TR", { maximumFractionDigits: index === 0 ? 0 : 2 }).format(amount)} ${units[index]}`;
-}
-
-function resolveOperationsError(error: unknown) {
-  if (error instanceof Error) return error.message;
-  return "Operasyon metrikleri alınamadı.";
 }

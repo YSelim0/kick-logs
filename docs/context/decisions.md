@@ -1,5 +1,61 @@
 # Decisions
 
+## 2026-10-02 (issue 28 integration approval)
+
+- After the final requirements audit and passing checks, integrate the issue branch into `dev`,
+  push `dev`, close issue #28 and delete the local/remote feature branch. This explicit owner approval
+  supersedes the earlier local-only restriction for these actions, not for `main` or deployment.
+
+## 2026-10-02 (localized document titles)
+
+- Every public/admin route uses a localized `Page Name - KickLogs` document title. Profile and
+  prediction detail titles include the unchanged route slug, with no extra identity/data request.
+- Use the same route resolver for server metadata and in-place client updates. Keep existing URLs,
+  descriptions and page content; this is title coverage, not a broader SEO or indexing redesign.
+
+## 2026-10-02 (issue 28 acceptance)
+
+- Localize route metadata on the server and on in-place language/path changes. The root provider
+  owns language, while the metadata component owns route descriptions to avoid overwriting them.
+- Production HTML/RSC were verified private/no-store. Next.js can overwrite middleware Vary values;
+  require CDN bypass for HTML/RSC rather than assuming Vary isolates languages.
+- Rebuild web and API only for this issue; no ingestion, database or historical-data update is needed.
+  Native browser control language and cookie-blocked reload persistence remain browser limitations.
+
+## 2026-10-02 (issue 28 locale foundation)
+
+- Pin next-intl 4.3.12 without upgrading Next/React. Version 4.14.8's unused extraction compiler
+  loads SWC native bindings that reject the host's Windows cache ACL. The selected compatible
+  version avoids that dependency rather than weakening filesystem security. Translate through request-scoped catalogs,
+  with a stable client provider and host-only preference cookie; blocked cookies do not break switching.
+- Latest selection wins concurrent catalog loads. Failed loads retain the previous working locale.
+  SSR begins with UTC formatting and matching locale/messages; browser timezone applies after hydration.
+- Protect personalized HTML/RSC from shared caches, but do not alter API/asset cache behavior.
+- Add frontend CI alongside existing checks. Tests use real language providers and validate raw ICU
+  catalogs, including invalid fixtures; no global translation mocks.
+
+## 2026-10-02 (issue 28 localization design)
+
+- **No locale URLs.** English, Turkish and German use the existing routes; preference cookie wins
+  over supported browser language, with English fallback. Translate interface copy, not source data.
+- **Use the owner's flag popover interaction.** One fixed square current-flag button at bottom-right
+  opens upward to native language names and flags. Selecting closes it and updates the trigger.
+  This supersedes the issue's older text-only navigation selector requirement.
+- **Keep language switching independent of data fetching.** Preserve route/query/form/result state,
+  datetime boundaries and prediction polling. Use the existing dark tokens, not the reference hue.
+- **Work on one local issue branch.** `feat/issue-28-localization` starts from `dev` at `d7910fe`;
+  feature-sized commits, no push, and no merge before final owner approval.
+- Written design approved in `docs/superpowers/specs/2026-10-02-localization-design.md`.
+  Task-level implementation plan is `docs/superpowers/plans/2026-10-02-localization.md`; the owner
+  subsequently approved inline execution and feature-sized local commits.
+
+## 2026-10-02 (channel search request prompt)
+
+- **Use an inline empty-result panel, not a modal.** Only a successful empty `/channels` search
+  offers a link to `/request`. Keep loading, errors, user search and pagination behavior unchanged.
+- **Promise review, not acceptance.** Copy says the request is reviewed within six hours. The link
+  opens the existing form; it does not submit a request or prefill fields.
+
 ## 2026-10-02 (SQL-only profile optimization)
 
 - **Preserve displayed results and all-time scope.** The owner approved query changes, not new

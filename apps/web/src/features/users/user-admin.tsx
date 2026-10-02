@@ -1,5 +1,8 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+import { getUiErrorKey, type UiErrorKey } from "@/i18n/errors";
+
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Loader2, LockKeyhole, Mail, Plus } from "lucide-react";
 
@@ -8,10 +11,12 @@ import { createAdminUser, listAdminUsers } from "@/features/users/api";
 import type { AdminUser } from "@/types/api";
 
 export function UserAdmin() {
+  const t = useTranslations("userAdmin");
+  const errors = useTranslations("common.errors");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiErrorKey | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -22,7 +27,7 @@ export function UserAdmin() {
     try {
       setUsers(await listAdminUsers());
     } catch (caught) {
-      setError(resolveUserAdminError(caught));
+      setError(getUiErrorKey(caught, "adminMutation"));
       setUsers([]);
     } finally {
       setIsLoading(false);
@@ -48,7 +53,7 @@ export function UserAdmin() {
       setPassword("");
       setUsers((current) => mergeUser(current, createdUser));
     } catch (caught) {
-      setError(resolveUserAdminError(caught));
+      setError(getUiErrorKey(caught, "adminMutation"));
     } finally {
       setIsCreating(false);
     }
@@ -57,9 +62,9 @@ export function UserAdmin() {
   return (
     <section className="rounded-lg border border-border bg-panel p-5">
       <div className="mb-5 flex flex-col gap-0.5">
-        <span className="text-[14px] font-semibold text-foreground">Admin Kullanıcıları</span>
+        <span className="text-[14px] font-semibold text-foreground">{t("title")}</span>
         <span className="font-mono text-[11px] text-faint">
-          {users.length} kullanıcı · sadece super admin yönetebilir
+          {t("count", { count: users.length })}
         </span>
       </div>
 
@@ -72,13 +77,13 @@ export function UserAdmin() {
             className="font-mono text-[11px] font-medium tracking-[0.5px] text-muted-foreground"
             htmlFor="admin-email"
           >
-            E-POSTA
+            {t("email")}
           </label>
           <div className="flex h-[38px] items-center gap-2 rounded-md border border-border-strong bg-elevated px-3">
             <Mail className="h-3.5 w-3.5 shrink-0 text-faint" />
             <input
               autoComplete="off"
-              className="flex-1 bg-transparent text-[13px] text-foreground outline-none placeholder:text-faint"
+              className="min-w-0 flex-1 bg-transparent text-[13px] text-foreground outline-none placeholder:text-faint"
               id="admin-email"
               maxLength={320}
               onChange={(e) => setEmail(e.target.value)}
@@ -94,18 +99,18 @@ export function UserAdmin() {
             className="font-mono text-[11px] font-medium tracking-[0.5px] text-muted-foreground"
             htmlFor="admin-password"
           >
-            GEÇİCİ PAROLA
+            {t("password")}
           </label>
           <div className="flex h-[38px] items-center gap-2 rounded-md border border-border-strong bg-elevated px-3">
             <LockKeyhole className="h-3.5 w-3.5 shrink-0 text-faint" />
             <input
               autoComplete="new-password"
-              className="flex-1 bg-transparent text-[13px] text-foreground outline-none placeholder:text-faint"
+              className="min-w-0 flex-1 bg-transparent text-[13px] text-foreground outline-none placeholder:text-faint"
               id="admin-password"
               maxLength={256}
               minLength={8}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="en az 8 karakter"
+              placeholder={t("passwordPlaceholder")}
               type="password"
               value={password}
             />
@@ -119,39 +124,39 @@ export function UserAdmin() {
             ) : (
               <Plus className="h-4 w-4" />
             )}
-            Oluştur
+            {t("create")}
           </Button>
         </div>
       </form>
 
       {error ? (
         <div className="mb-4 rounded-md border border-danger bg-elevated px-3 py-2 text-[13px]">
-          {error}
+          {errors(error)}
         </div>
       ) : null}
 
       <div className="rounded-lg border border-border">
         <div className="flex items-center border-b border-border px-3 py-2">
           <span className="flex-1 font-mono text-[10px] font-medium tracking-[0.8px] text-faint">
-            E-POSTA
+            {t("email")}
           </span>
           <span className="hidden w-36 font-mono text-[10px] font-medium tracking-[0.8px] text-faint sm:block">
-            ROL
+            {t("role")}
           </span>
           <span className="hidden w-20 font-mono text-[10px] font-medium tracking-[0.8px] text-faint sm:block">
-            DURUM
+            {t("status")}
           </span>
         </div>
 
         {isLoading ? (
           <div className="px-4 py-10 text-center text-[13px] text-muted-foreground">
-            Admin kullanıcıları yükleniyor...
+            {t("loading")}
           </div>
         ) : users.length ? (
           users.map((user) => <UserRow key={user.id} user={user} />)
         ) : (
           <div className="px-4 py-10 text-center text-[13px] text-muted-foreground">
-            Admin kullanıcısı bulunamadı.
+            {t("empty")}
           </div>
         )}
       </div>
@@ -160,6 +165,7 @@ export function UserAdmin() {
 }
 
 function UserRow({ user }: { user: AdminUser }) {
+  const t = useTranslations("userAdmin");
   const statusBadge = (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] font-medium ${
@@ -167,7 +173,7 @@ function UserRow({ user }: { user: AdminUser }) {
       }`}
     >
       <span className={`h-1 w-1 rounded-full ${user.is_active ? "bg-accent" : "bg-faint"}`} />
-      {user.is_active ? "Aktif" : "Pasif"}
+      {user.is_active ? t("active") : t("inactive")}
     </span>
   );
 
@@ -176,12 +182,16 @@ function UserRow({ user }: { user: AdminUser }) {
       <div className="min-w-0 flex-1">
         <span className="truncate font-sans text-[13px] text-foreground">{user.email}</span>
         <div className="mt-1 flex items-center gap-2 sm:hidden">
-          <span className="font-mono text-[11px] text-muted-foreground">{user.role}</span>
+          <span className="font-mono text-[11px] text-muted-foreground">
+            {t(`roles.${user.role}`)}
+          </span>
           {statusBadge}
         </div>
       </div>
       <div className="hidden w-36 sm:block">
-        <span className="font-mono text-[12px] text-muted-foreground">{user.role}</span>
+        <span className="font-mono text-[12px] text-muted-foreground">
+          {t(`roles.${user.role}`)}
+        </span>
       </div>
       <div className="hidden w-20 sm:block">{statusBadge}</div>
     </div>
@@ -191,9 +201,4 @@ function UserRow({ user }: { user: AdminUser }) {
 function mergeUser(current: AdminUser[], user: AdminUser) {
   const next = current.filter((item) => item.id !== user.id);
   return [...next, user].sort((a, b) => a.email.localeCompare(b.email));
-}
-
-function resolveUserAdminError(error: unknown) {
-  if (error instanceof Error) return error.message;
-  return "Kullanıcı işlemi tamamlanırken hata oluştu.";
 }

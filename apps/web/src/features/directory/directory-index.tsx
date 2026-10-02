@@ -2,11 +2,13 @@
 
 /* eslint-disable @next/next/no-img-element */
 
-import { ChevronDown, Hash, Loader2, Search, User } from "lucide-react";
+import { ChevronDown, Hash, Loader2, MessageSquarePlus, Search, SearchX, User } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 import { SiteHeader } from "@/components/site-header";
+import { Button } from "@/components/ui/button";
 import {
   useDirectorySearch,
   validDirectoryPrefix
@@ -16,19 +18,20 @@ import { buildUserProfileHref } from "@/lib/kick-profile-slugs";
 import type { DirectoryIdentity, DirectoryKind } from "@/types/directory";
 
 export function DirectoryIndex({ kind }: { kind: DirectoryKind }) {
+  const t = useTranslations("directory");
+  const common = useTranslations("common");
   const [query, setQuery] = useState("");
   const directory = useDirectorySearch(kind);
   const users = kind === "users";
   const Icon = users ? User : Hash;
   const loading = directory.state === "loading";
-  const label = users ? "Kullanıcı" : "Kanal";
 
   return (
     <main className="min-h-screen bg-page text-foreground">
       <SiteHeader activeRoute={kind} />
       <div className="mx-auto max-w-[1280px] px-6 py-6">
         <h1 className="mb-5 text-[22px] font-semibold leading-none text-foreground">
-          {users ? "Users" : "Channels"}
+          {t(`${kind}.title`)}
         </h1>
         <form
           className="mb-5 flex max-w-lg gap-2"
@@ -43,14 +46,14 @@ export function DirectoryIndex({ kind }: { kind: DirectoryKind }) {
               className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
             />
             <input
-              aria-label={`${label} ara`}
+              aria-label={t(`${kind}.search`)}
               autoComplete="off"
               className="h-10 w-full rounded-md border border-border bg-elevated pl-9 pr-3 text-[13px] text-foreground placeholder:text-muted-foreground focus:border-border-strong focus:outline-none"
               id={`${kind}-search-input`}
               minLength={2}
               maxLength={160}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={`${label} adı veya slug`}
+              placeholder={t(`${kind}.placeholder`)}
               spellCheck={false}
               type="search"
               value={query}
@@ -69,16 +72,14 @@ export function DirectoryIndex({ kind }: { kind: DirectoryKind }) {
             ) : (
               <Search aria-hidden className="h-4 w-4" />
             )}
-            {loading ? "Aranıyor…" : "Ara"}
+            {loading ? t("searching") : common("actions.search")}
           </button>
         </form>
 
         {directory.state === "idle" ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <Icon aria-hidden className="mb-4 h-6 w-6 text-muted-foreground" />
-            <p className="text-[15px] font-medium text-foreground">
-              {label} bulmak için arama yapın
-            </p>
+            <p className="text-[15px] font-medium text-foreground">{t(`${kind}.idle`)}</p>
           </div>
         ) : null}
         {loading ? (
@@ -90,17 +91,44 @@ export function DirectoryIndex({ kind }: { kind: DirectoryKind }) {
               aria-hidden
               className="h-4 w-4 motion-safe:animate-spin motion-reduce:animate-none"
             />{" "}
-            Aranıyor…
+            {t("searching")}
           </p>
         ) : null}
-        {directory.state === "empty" ? (
+        {directory.state === "empty" && users ? (
           <p className="py-8 text-[13px] text-muted-foreground" role="status">
-            &quot;{directory.submittedQuery}&quot; için {users ? "kullanıcı" : "kanal"} bulunamadı.
+            {t("users.empty", { query: directory.submittedQuery })}
           </p>
+        ) : null}
+        {directory.state === "empty" && !users ? (
+          <section
+            aria-labelledby="channel-empty-title"
+            className="flex max-w-lg gap-3 rounded-lg border border-border bg-panel p-5 sm:p-6"
+          >
+            <SearchX aria-hidden className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
+            <div className="min-w-0 flex-1">
+              <h2
+                className="text-[14px] font-semibold leading-6 text-foreground [overflow-wrap:anywhere]"
+                id="channel-empty-title"
+                role="status"
+              >
+                {t("channels.empty", { query: directory.submittedQuery })}
+              </h2>
+              <p className="mt-2 text-[13px] leading-6 text-muted-foreground">{t("requestInfo")}</p>
+              <Button
+                asChild
+                className="mt-4 w-full bg-accent text-[13px] text-accent-foreground hover:bg-accent-hover sm:w-auto"
+              >
+                <Link href="/request">
+                  <MessageSquarePlus aria-hidden className="h-4 w-4" />
+                  {t("request")}
+                </Link>
+              </Button>
+            </div>
+          </section>
         ) : null}
         {directory.items.length > 0 ? (
           <section
-            aria-label={`${label} sonuçları`}
+            aria-label={t(`${kind}.results`)}
             className="divide-y divide-border border-y border-border"
           >
             {directory.items.map((identity) => (
@@ -110,7 +138,9 @@ export function DirectoryIndex({ kind }: { kind: DirectoryKind }) {
         ) : null}
         {directory.error ? (
           <p className="py-4 text-[13px] text-danger" role="alert">
-            Sonuçlar alınamadı. Lütfen tekrar deneyin.
+            {directory.error === "unavailable"
+              ? t("loadError")
+              : common(`errors.${directory.error}`)}
           </p>
         ) : null}
         {directory.nextCursor ? (
@@ -129,7 +159,7 @@ export function DirectoryIndex({ kind }: { kind: DirectoryKind }) {
               ) : (
                 <ChevronDown aria-hidden className="h-4 w-4" />
               )}
-              {directory.loadingMore ? "Yükleniyor…" : "Daha fazla yükle"}
+              {directory.loadingMore ? common("actions.loading") : t("loadMore")}
             </button>
           </div>
         ) : null}

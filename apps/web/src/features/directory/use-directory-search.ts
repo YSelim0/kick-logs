@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { getDirectoryChannels, getDirectoryUsers } from "@/features/directory/api";
 import type { DirectoryIdentity, DirectoryKind } from "@/types/directory";
+import { getUiErrorKey, type UiErrorKey } from "@/i18n/errors";
 
 type SearchState = "idle" | "loading" | "ready" | "empty" | "error";
 type ActiveRequest = { prefix: string; append: boolean; controller: AbortController };
@@ -24,7 +25,7 @@ export function useDirectorySearch(kind: DirectoryKind) {
   const [state, setState] = useState<SearchState>("idle");
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<UiErrorKey | null>(null);
   const active = useRef<ActiveRequest | null>(null);
 
   useEffect(
@@ -44,7 +45,7 @@ export function useDirectorySearch(kind: DirectoryKind) {
     active.current?.controller.abort();
     const request: ActiveRequest = { prefix, append, controller: new AbortController() };
     active.current = request;
-    setError(false);
+    setError(null);
     setLoadingMore(append);
     if (!append) {
       setSubmittedQuery(prefix);
@@ -68,9 +69,9 @@ export function useDirectorySearch(kind: DirectoryKind) {
       });
       setNextCursor(data.next_cursor);
       setState(append || data.items.length > 0 ? "ready" : "empty");
-    } catch {
+    } catch (cause) {
       if (active.current !== request) return;
-      setError(true);
+      setError(getUiErrorKey(cause, "directory"));
       if (!append) setState("error");
     } finally {
       if (active.current === request) {

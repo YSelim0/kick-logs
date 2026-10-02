@@ -1,12 +1,13 @@
 "use client";
 
 import { Search } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useUiFormat } from "@/i18n/use-ui-format";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 
 import { MessageContent } from "@/features/search/message-content";
 import { getReplyContext } from "@/features/search/reply-metadata";
-import { formatMessageDate } from "@/features/search/search-params";
 import { buildUserProfileHref } from "@/lib/kick-profile-slugs";
 import { buildChannelProfileHref } from "@/lib/channel-profile-slugs";
 import type { Message } from "@/types/api";
@@ -34,6 +35,8 @@ export function MessageList({
   sentinelRef,
   onRetry
 }: MessageListProps) {
+  const t = useTranslations("search");
+  const actions = useTranslations("common.actions");
   const emptyShell = !hasSearched && !isInitialLoading && !error;
 
   return (
@@ -44,9 +47,7 @@ export function MessageList({
             <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-elevated text-muted-foreground">
               <Search className="h-4 w-4" />
             </div>
-            <p className="text-[13px] text-muted-foreground">
-              Arama yapmak için yukarıdaki formu kullanın.
-            </p>
+            <p className="text-[13px] text-muted-foreground">{t("idle")}</p>
           </div>
         ) : (
           <>
@@ -56,7 +57,7 @@ export function MessageList({
 
             {!isInitialLoading && !error && messages.length === 0 ? (
               <div className="px-4 py-10 text-center text-[13px] text-muted-foreground">
-                Bu filtrelerle mesaj bulunamadı.
+                {t("empty")}
               </div>
             ) : null}
           </>
@@ -64,7 +65,7 @@ export function MessageList({
 
         {isInitialLoading ? (
           <div className="px-4 py-10 text-center text-[13px] text-muted-foreground">
-            Mesajlar yükleniyor…
+            {t("loading")}
           </div>
         ) : null}
 
@@ -76,7 +77,7 @@ export function MessageList({
               onClick={onRetry}
               type="button"
             >
-              Tekrar dene
+              {actions("retry")}
             </button>
           </div>
         ) : null}
@@ -86,13 +87,13 @@ export function MessageList({
         {isLoadingMore ? (
           <div className="inline-flex items-center gap-2 px-3 py-2 font-mono text-[11px] text-muted-foreground">
             <span className="h-2 w-2 rounded-full bg-accent" />
-            daha eski mesajlar yükleniyor…
+            {t("loadingMore")}
           </div>
         ) : null}
 
         {!isLoadingMore && !hasMore && messages.length > 0 ? (
           <div className="inline-flex items-center px-3 py-2 font-mono text-[11px] text-muted-foreground">
-            sonuçların sonuna ulaşıldı
+            {t("endOfResults")}
           </div>
         ) : null}
       </div>
@@ -101,6 +102,7 @@ export function MessageList({
 }
 
 function MessageRow({ message, highlightQuery }: { message: Message; highlightQuery: string }) {
+  const format = useUiFormat();
   const replyContext = getReplyContext(message);
   const replyTitle = replyContext
     ? `@${replyContext.senderUsername}: ${replyContext.content}`
@@ -176,7 +178,7 @@ function MessageRow({ message, highlightQuery }: { message: Message; highlightQu
       </div>
 
       <div className="text-right font-mono text-[11px] text-faint md:whitespace-nowrap">
-        {formatMessageDate(message.message_created_at)}
+        {format.dateTime(message.message_created_at)}
       </div>
     </div>
   );

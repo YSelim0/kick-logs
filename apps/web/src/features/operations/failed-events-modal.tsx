@@ -1,5 +1,8 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+import { useUiFormat } from "@/i18n/use-ui-format";
+
 import { AlertTriangle, Loader2, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -26,20 +29,25 @@ export function FailedEventsModal({
   onOpenChange: (open: boolean) => void;
   onActionComplete?: () => void;
 }) {
+  const t = useTranslations("failedEvents");
+  const f = useUiFormat();
   const [events, setEvents] = useState<FailedRawEvent[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [clearState, setClearState] = useState<ActionState>("idle");
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [clearedCount, setClearedCount] = useState<number | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   const load = useCallback(async () => {
     setIsLoading(true);
+    setLoadFailed(false);
     try {
       const res = await getFailedEvents();
       setEvents(res.events ?? []);
       setTotal(res.total ?? 0);
     } catch {
       setEvents([]);
+      setLoadFailed(true);
     } finally {
       setIsLoading(false);
     }
@@ -49,44 +57,43 @@ export function FailedEventsModal({
     if (open) {
       void load();
       setClearState("idle");
-      setActionMessage(null);
+      setClearedCount(null);
     }
   }, [open, load]);
 
   const handleClear = async () => {
     setClearState("loading");
-    setActionMessage(null);
+    setClearedCount(null);
     try {
       const res = await clearFailedEvents();
       setClearState("success");
-      setActionMessage(`${res.affected} başarısız attempt temizlendi.`);
+      setClearedCount(res.affected);
       onActionComplete?.();
       void load();
     } catch {
       setClearState("error");
-      setActionMessage("Temizleme başarısız.");
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] max-w-3xl overflow-hidden border-accent bg-black">
+      <DialogContent className="flex max-h-[80vh] max-w-3xl flex-col overflow-hidden border-accent bg-black">
         <DialogClose onClose={() => onOpenChange(false)} />
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-foreground">
-            <AlertTriangle className="h-4 w-4 text-accent" />
-            Başarısız Raw Eventler
-          </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            ClickHouse diagnostic failed raw event kayıtları. Terminal ignored eventler bu listede
-            gösterilmez.
-          </DialogDescription>
-        </DialogHeader>
+        <div className="shrink-0 pr-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-foreground">
+              <AlertTriangle className="h-4 w-4 text-accent" />
+              {t("title")}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              {t("description")}
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <div className="flex flex-col gap-4 overflow-hidden">
+        <div className="flex min-h-0 flex-col gap-4 overflow-y-auto">
           <p className="rounded-md border border-border bg-elevated px-3 py-2 text-xs text-muted-foreground">
-            JetStream failed eventleri otomatik redelivery ile tekrar işler. Bu liste yalnızca
-            ClickHouse üzerinde kalan diagnostic failed attempt kayıtlarını gösterir.
+            {t("explanation")}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -100,39 +107,49 @@ export function FailedEventsModal({
               ) : (
                 <Trash2 className="h-4 w-4 text-accent" />
               )}
-              Tümünü Temizle
+              {t("clear")}
             </Button>
-            {actionMessage ? (
+            {clearedCount !== null || clearState === "error" ? (
               <span
                 className={`text-xs ${clearState === "error" ? "text-accent" : "text-primary"}`}
               >
-                {actionMessage}
+                {clearState === "error"
+                  ? t("clearError")
+                  : t("cleared", { count: clearedCount ?? 0 })}
               </span>
             ) : null}
-            <span className="ml-auto text-xs text-muted-foreground">{total} kayıt</span>
+            <span className="ml-auto text-xs text-muted-foreground">
+              {t("count", { count: total })}
+            </span>
           </div>
 
-          <div className="overflow-y-auto rounded-md border border-border">
+          <div className="shrink-0 overflow-x-auto rounded-md border border-border">
             {isLoading ? (
               <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Yükleniyor...
+                {t("loading")}
               </div>
+            ) : loadFailed ? (
+              <p role="alert" className="p-4 text-sm text-danger">
+                {t("loadError")}
+              </p>
             ) : events.length === 0 ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                Başarısız event yok.
-              </div>
+              <div className="py-8 text-center text-sm text-muted-foreground">{t("empty")}</div>
             ) : (
-              <table className="w-full text-xs">
+              <table className="w-full min-w-[520px] text-xs">
                 <thead className="sticky top-0 border-b border-border bg-kick-background">
                   <tr>
-                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">Kanal</th>
-                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">Hata</th>
+                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">
+                      {t("channel")}
+                    </th>
+                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">
+                      {t("error")}
+                    </th>
                     <th className="px-3 py-2 text-center font-medium text-muted-foreground">
-                      Deneme
+                      {t("attempts")}
                     </th>
                     <th className="px-3 py-2 text-right font-medium text-muted-foreground">
-                      Son Hata
+                      {t("lastError")}
                     </th>
                   </tr>
                 </thead>
@@ -151,9 +168,11 @@ export function FailedEventsModal({
                       >
                         {ev.error_message || "-"}
                       </td>
-                      <td className="px-3 py-2 text-center text-muted-foreground">{ev.attempts}</td>
+                      <td className="px-3 py-2 text-center text-muted-foreground">
+                        {f.number(ev.attempts)}
+                      </td>
                       <td className="px-3 py-2 text-right text-muted-foreground">
-                        {formatShortDate(ev.failed_at)}
+                        {f.dateTime(ev.failed_at)}
                       </td>
                     </tr>
                   ))}
@@ -165,14 +184,4 @@ export function FailedEventsModal({
       </DialogContent>
     </Dialog>
   );
-}
-
-function formatShortDate(value: string) {
-  if (!value) return "-";
-  return new Intl.DateTimeFormat("tr-TR", {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "2-digit"
-  }).format(new Date(value));
 }

@@ -1,12 +1,14 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+import { getUiErrorKey, type UiErrorKey } from "@/i18n/errors";
+
 import { CheckCircle2, Hash, Mail, MessageSquareText, Send, Type } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { SiteHeader } from "@/components/site-header";
 import { Button } from "@/components/ui/button";
 import { createUserRequest } from "@/features/requests/api";
-import { ApiClientError } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import type { UserRequestType } from "@/types/api";
 
@@ -28,23 +30,14 @@ const INITIAL_FORM: FormState = {
   website: ""
 };
 
-const MODES: { value: UserRequestType; label: string; description: string }[] = [
-  {
-    value: "channel_request",
-    label: "Kanal Talebi",
-    description: "Takip edilmesini istediğin Kick kanalını gönder."
-  },
-  {
-    value: "feedback",
-    label: "Geri Bildirim",
-    description: "Uygulama fikri, hata bildirimi veya genel mesaj gönder."
-  }
-];
+const MODES: UserRequestType[] = ["channel_request", "feedback"];
 
 export function RequestPage() {
+  const t = useTranslations("request");
+  const errors = useTranslations("common.errors");
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiErrorKey | null>(null);
   const [requestID, setRequestID] = useState<string | null>(null);
 
   const isChannelRequest = form.type === "channel_request";
@@ -79,7 +72,7 @@ export function RequestPage() {
       setStatus("success");
       setForm({ ...INITIAL_FORM, type: form.type });
     } catch (caught) {
-      setError(resolveRequestError(caught));
+      setError(getUiErrorKey(caught, "requestSubmit"));
       setStatus("error");
     }
   }
@@ -90,10 +83,9 @@ export function RequestPage() {
 
       <div className="mx-auto flex max-w-[1280px] flex-col gap-6 px-6 py-8 md:py-10">
         <header className="flex flex-col gap-1">
-          <h1 className="text-[24px] font-semibold tracking-tight text-foreground">Talep</h1>
+          <h1 className="text-[24px] font-semibold tracking-tight text-foreground">{t("title")}</h1>
           <p className="max-w-2xl text-[13px] leading-relaxed text-muted-foreground">
-            Takip edilmesini istediğin kanalı veya uygulama hakkında iletmek istediğin mesajı
-            gönder.
+            {t("description")}
           </p>
         </header>
 
@@ -108,21 +100,21 @@ export function RequestPage() {
             }}
           >
             <fieldset className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <legend className="sr-only">Talep tipi</legend>
+              <legend className="sr-only">{t("type")}</legend>
               {MODES.map((mode) => (
                 <button
-                  key={mode.value}
+                  key={mode}
                   className={cn(
                     "flex min-h-[86px] flex-col items-start justify-center gap-1 rounded-md border px-4 py-3 text-left transition-colors",
-                    form.type === mode.value
+                    form.type === mode
                       ? "border-accent bg-accent/10 text-foreground"
                       : "border-border bg-elevated text-muted-foreground hover:border-border-strong hover:text-foreground"
                   )}
                   onClick={() => {
                     setForm((current) => ({
                       ...current,
-                      type: mode.value,
-                      channelSlug: mode.value === "feedback" ? "" : current.channelSlug
+                      type: mode,
+                      channelSlug: mode === "feedback" ? "" : current.channelSlug
                     }));
                     setStatus("idle");
                     setError(null);
@@ -135,13 +127,13 @@ export function RequestPage() {
                       aria-hidden
                       className={cn(
                         "h-2 w-2 rounded-full",
-                        form.type === mode.value ? "bg-accent" : "bg-faint"
+                        form.type === mode ? "bg-accent" : "bg-faint"
                       )}
                     />
-                    {mode.label}
+                    {t(`modes.${mode}.label`)}
                   </span>
                   <span className="text-[12px] leading-relaxed text-muted-foreground">
-                    {mode.description}
+                    {t(`modes.${mode}.description`)}
                   </span>
                 </button>
               ))}
@@ -149,7 +141,11 @@ export function RequestPage() {
 
             <div className="mt-5 grid grid-cols-1 gap-4">
               {isChannelRequest ? (
-                <Field label="Kanal adı" htmlFor="channel-slug" icon={<Hash className="h-4 w-4" />}>
+                <Field
+                  label={t("channel")}
+                  htmlFor="channel-slug"
+                  icon={<Hash className="h-4 w-4" />}
+                >
                   <input
                     autoComplete="off"
                     className={inputClassName}
@@ -158,13 +154,17 @@ export function RequestPage() {
                     onChange={(event) =>
                       setForm((current) => ({ ...current, channelSlug: event.target.value }))
                     }
-                    placeholder="Kanal adı veya Kick kanal URL'i"
+                    placeholder={t("channelPlaceholder")}
                     value={form.channelSlug}
                   />
                 </Field>
               ) : null}
 
-              <Field label="Başlık" htmlFor="request-title" icon={<Type className="h-4 w-4" />}>
+              <Field
+                label={t("subject")}
+                htmlFor="request-title"
+                icon={<Type className="h-4 w-4" />}
+              >
                 <input
                   className={inputClassName}
                   id="request-title"
@@ -173,14 +173,14 @@ export function RequestPage() {
                     setForm((current) => ({ ...current, title: event.target.value }))
                   }
                   placeholder={
-                    isChannelRequest ? "Kanal takip listesine eklensin" : "Kısa bir konu yaz"
+                    isChannelRequest ? t("channelTitlePlaceholder") : t("feedbackTitlePlaceholder")
                   }
                   value={form.title}
                 />
               </Field>
 
               <Field
-                label="Mesaj"
+                label={t("message")}
                 htmlFor="request-message"
                 icon={<MessageSquareText className="h-4 w-4" />}
               >
@@ -193,17 +193,17 @@ export function RequestPage() {
                   }
                   placeholder={
                     isChannelRequest
-                      ? "Bu kanal neden takip edilmeli?"
-                      : "Görüşünü, hata bildirimini veya istediğin geliştirmeyi yaz."
+                      ? t("channelMessagePlaceholder")
+                      : t("feedbackMessagePlaceholder")
                   }
                   value={form.message}
                 />
               </Field>
 
               <Field
-                label="İletişim"
+                label={t("contact")}
                 htmlFor="request-contact"
-                hint="Opsiyonel"
+                hint={t("optional")}
                 icon={<Mail className="h-4 w-4" />}
               >
                 <input
@@ -213,13 +213,13 @@ export function RequestPage() {
                   onChange={(event) =>
                     setForm((current) => ({ ...current, contact: event.target.value }))
                   }
-                  placeholder="E-posta veya Discord"
+                  placeholder={t("contactPlaceholder")}
                   value={form.contact}
                 />
               </Field>
 
               <label className="hidden" htmlFor="request-website">
-                Website
+                {t("website")}
                 <input
                   autoComplete="off"
                   id="request-website"
@@ -237,7 +237,7 @@ export function RequestPage() {
                 <div className="flex items-start gap-2">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
                   <div className="flex flex-col gap-1">
-                    <span className="font-semibold">Talebin alındı.</span>
+                    <span className="font-semibold">{t("success")}</span>
                     {requestID ? (
                       <span className="font-mono text-2xs uppercase text-muted-foreground">
                         ID {requestID}
@@ -250,17 +250,17 @@ export function RequestPage() {
 
             {status === "error" && error ? (
               <div className="mt-5 rounded-md border border-danger bg-elevated px-4 py-3 text-[13px] text-foreground">
-                {error}
+                {error === "invalidInput" || error === "rateLimited" || error === "unavailable"
+                  ? t(error)
+                  : errors(error)}
               </div>
             ) : null}
 
             <div className="mt-5 flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-[12px] leading-relaxed text-muted-foreground">
-                Gönderimler spam koruması ile korunur.
-              </p>
+              <p className="text-[12px] leading-relaxed text-muted-foreground">{t("spam")}</p>
               <Button className="w-full sm:w-auto" disabled={!canSubmit} type="submit">
                 <Send className="h-4 w-4" />
-                {status === "submitting" ? "Gönderiliyor..." : "Gönder"}
+                {status === "submitting" ? t("submitting") : t("submit")}
               </Button>
             </div>
           </form>
@@ -268,25 +268,16 @@ export function RequestPage() {
           <aside className="h-fit rounded-lg border border-border bg-panel p-5">
             <div className="flex flex-col gap-4">
               <div>
-                <p className="font-mono text-2xs uppercase text-muted-foreground">Süreç</p>
+                <p className="font-mono text-2xs uppercase text-muted-foreground">{t("process")}</p>
                 <h2 className="mt-1 text-[15px] font-semibold text-foreground">
-                  Talebin nasıl değerlendirilir?
+                  {t("processTitle")}
                 </h2>
               </div>
               <div className="grid gap-3 text-[13px] leading-relaxed text-muted-foreground">
-                <p>
-                  Kanal talepleri uygunluk, tekrar durumu ve izlenebilirlik açısından kontrol
-                  edilir.
-                </p>
-                <p>
-                  Geri bildirimler hata düzeltmeleri, arama deneyimi ve yeni özellik planlaması için
-                  dikkate alınır.
-                </p>
-                <p>
-                  İletişim bilgisi bırakırsan yalnızca talebin hakkında ek bilgi gerektiğinde geri
-                  dönüş yapılır.
-                </p>
-                <p>Gönderim yapmak, talebin kesin olarak kabul edildiği anlamına gelmez.</p>
+                <p>{t("processChannel")}</p>
+                <p>{t("processFeedback")}</p>
+                <p>{t("processContact")}</p>
+                <p>{t("processDisclaimer")}</p>
               </div>
             </div>
           </aside>
@@ -332,17 +323,4 @@ const inputClassName =
 function optionalValue(value: string) {
   const trimmed = value.trim();
   return trimmed ? trimmed : undefined;
-}
-
-function resolveRequestError(error: unknown) {
-  if (error instanceof ApiClientError) {
-    if (error.status === 429) {
-      return "Çok fazla talep gönderdin. Kısa süre sonra tekrar dene.";
-    }
-    if (error.status === 400) {
-      return "Form alanlarını kontrol edip tekrar gönder.";
-    }
-  }
-
-  return "Talep gönderilemedi. Biraz sonra tekrar dene.";
 }

@@ -2,6 +2,144 @@
 
 This is a living implementation log. Add new entries for each meaningful project change.
 
+## 2026-10-02 (issue 28 closure audit)
+
+- Rechecked the original issue and the owner's superseding flag-selector requirements. Independent
+  review found five untranslated Turkish profile navigation/accessibility strings; translated them
+  and strengthened the existing channel/user profile tests without changing routes or source slugs.
+- Confirmed the tests failed before the fix (six expected failures), then all 292 frontend tests,
+  lint and production build passed. Previous-commit GitHub Code Style, Frontend tests and Go CI are
+  green, including ClickHouse integration and SQLite/ClickHouse migration smoke checks.
+- Updated the verification/handoff records. The owner explicitly authorized merging/pushing `dev`,
+  closing issue #28 and removing the local/remote feature branch. No `main` merge or deployment.
+
+## 2026-10-02 (language menu spacing)
+
+- Separated language options with a 3px vertical gap so adjacent hover/selected backgrounds do not touch.
+
+## 2026-10-02 (localized document titles)
+
+- Expanded metadata coverage from three index pages to homepage, search, directories, profiles,
+  prediction, request/login, all admin sections and 404. Titles use the `KickLogs` suffix.
+- Shared one EN/TR/DE route resolver between Next.js server metadata and browser navigation/locale
+  effects. Dynamic slugs are URL-decoded once and remain untranslated; no backend requests added.
+- Added route-matrix and same-section navigation regressions. The 404 presentation now lives in a
+  client component under a server route wrapper so its first HTML response also has metadata.
+
+## 2026-10-02 (issue 28 acceptance)
+
+- Independent whole-branch review found a public-switch/admin-navigation race that remounted forms.
+  Added deferred-loader success/failure regressions and retained the mounted subtree through loading
+  and retry; both new tests failed before the fix and passed afterward.
+- Added translated server/client route metadata and regressions for in-place navigation, including
+  stale server descriptions. Public-catalog tests check actual flat admin namespace boundaries.
+- Verified production HTTP locale negotiation/cookies/no-store and all screen variants in three
+  languages at mobile/desktop widths. Source names/messages remain unchanged.
+- Added deployment/CDN/native-browser notes. Backend CI commands used separate disposable
+  databases; existing app data and running Docker services were not modified.
+
+## 2026-10-02 (issue 28 operations and data management)
+
+- Added EN/TR/DE catalogs for operations, webhook status, failed events and retention/cleanup.
+- Semantic operation notices retranslate without repeating requests; stored diagnostics and
+  confirmation tokens remain untouched. Added preview/success/empty/status-switch regressions.
+- German mobile checks prompted stacked metric tiles for long numbers and a scrollable failed-event
+  modal. No backend cleanup, retry, sync or subscription behavior changed (282 frontend tests).
+
+## 2026-10-02 (localization test timing)
+
+- The full-suite repeat exposed a search test that fired its observer stub before React's effect
+  registered it. Wait for registration explicitly; application pagination code is unchanged.
+
+## 2026-10-02 (issue 28 admin shell and management)
+
+- Split the server admin catalog loader from the existing client authentication shell.
+- Added stale-server/cookie-blocked locale regressions and localized management screens without
+  resetting drafts, open request details or pending mutations. Semantic errors retranslate in place.
+- Preserved authorization and source content. German mobile smoke checks and 269 frontend tests pass.
+
+## 2026-10-02 (issue 28 prediction, requests and login)
+
+- Localized prediction states, chart legends/tooltips, request modes/forms and login presentation.
+- Unknown prediction states and all source/user text remain raw; API bodies and polling are unchanged.
+- Added language-switch regressions for polling cadence, chart identity, request validation/rate-limit/
+  success states and login credentials. Mobile German previews have no horizontal overflow.
+
+## 2026-10-02 (issue 28 subscriber TXT export)
+
+- Extracted the TXT presentation formatter into a dedicated route helper with EN/TR/DE report copy.
+- Kept the legacy Turkish wrapper and byte-compatible no-locale report. JSON/CSV are locale-independent.
+- Added formatter/route/URL regressions for headings, gift/empty reports, unchanged source identities,
+  UTC timestamps and invalid-locale rejection before subscription queries. Go and frontend checks passed.
+
+## 2026-10-02 (issue 28 profiles and subscribers)
+
+- Localized profile and subscriber-list presentation while preserving list filters and data contracts.
+- Added shared short-date/relative-time display formatting; UTC day labels do not change with browser timezone.
+- Regression tests cover open/appended subscriber lists, raw reply/profile content and three-language
+  loading/not-found/error/empty states. Mobile German modal footer stays visible (249 frontend tests pass).
+
+## 2026-10-02 (issue 28 message search)
+
+- Localized search controls, results, error states and message timestamp presentation without
+  changing query/export contracts, raw content, reply rendering, highlighting or pagination.
+- Replaced display-only preset/filter strings with semantic descriptors. Removed unused Turkish
+  summary helpers; profile timestamp consumers migrate with their profile task.
+- Added state-preservation, translated-error and cross-locale date-contract regressions.
+
+## 2026-10-02 (issue 28 homepage and directories)
+
+- Localized homepage, metric/ranking/chart copy, footer and channel/user directory interfaces.
+- Preserved the request-review promise, prefix/pagination behavior, UTC chart buckets and raw names.
+  Locale-switch regressions assert unchanged query state, source identities and API request counts.
+- Verified German mobile homepage and empty-channel prompt with read-only browser fixtures; no
+  database or API-contract changes. Full frontend validation passed (231 tests).
+
+## 2026-10-02 (issue 28 language selector)
+
+- Added a 48px fixed flag button, upward native-language menu, selected indication, keyboard
+  controls and outside dismissal. Kept original supplied assets, dark theme and existing route paths.
+- Translated shared navigation, 404, profile-link/loading copy and modal close accessibility label.
+  Reserved bottom scroll space; selector stays below mobile navigation and dialogs.
+- Added switcher/shared-copy tests; checked desktop/mobile rendering and loaded flag assets.
+
+## 2026-10-02 (issue 28 locale foundation)
+
+- Added pinned next-intl, validated cookie/header/English negotiation, public/admin catalog scopes,
+  stable client state and SSR configuration without changing URLs. Added localized metadata support.
+- Added timezone-aware display formatters, semantic UI error mapping, ICU/parity checks and real
+  provider tests covering hydration, request races, failed loads and blocked cookies.
+- Prepared existing component tests with explicit locale wrappers and added frontend validation CI.
+- No source-content translation, database changes, ingestion changes or production deployment.
+
+## 2026-10-02 (issue 28 implementation plan)
+
+- Owner approved the localization design. Added ten task-sized implementation/verification units
+  covering shared locale/catalog contracts, flag popover, all public/admin screens and TXT exports.
+- Defined state-preservation, race, cookie-disabled, catalog-parity, polling and cache-isolation tests,
+  plus frontend CI and backend verification gates. Product code remains unchanged.
+- Linked the active plan from `docs/implementation_plan.md` without deleting the historical subscriber
+  plan. Plan review and execution-method confirmation are the next step; no push or merge.
+
+## 2026-10-02 (issue 28 localization design)
+
+- Created local `feat/issue-28-localization` from `dev` at `d7910fe`; baseline frontend validation
+  passed with 28 files and 168 tests before documentation changes.
+- Inspected shared layout, public/admin chrome, fixed-locale formatters, API errors, subscriber TXT
+  export and supplied flags. Recorded the unchanged-URL localization design for written review.
+- Recorded the owner's reference interaction: collapsed current flag, upward language-name/flag
+  menu, selected-row highlight, in-place language switch and cookie persistence.
+- Updated design/context guidance only; no product code, dependencies, data or running containers
+  changed. The reference screenshot and external flag assets were not added to the repository.
+
+## 2026-10-02 (channel search empty-result prompt)
+
+- Replaced the plain `/channels` no-results message with a compact inline panel, quoted submitted
+  query, six-hour review explanation, and primary `Talep gönder` link to the existing `/request`.
+- No modal, additional API call, automatic submission or form prefill. `/users` remains unchanged.
+- Added regression assertions for the link, non-modal behavior and removal on a new search; guarded
+  idle/loading/error/success/pagination cases against incorrectly showing the request prompt.
+
 ## 2026-10-02 (all-time profile query pair)
 
 - Added optional combined profile summary queries using WITH TOTALS and tuple argMax. Overview

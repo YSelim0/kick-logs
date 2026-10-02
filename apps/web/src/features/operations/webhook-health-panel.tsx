@@ -1,5 +1,8 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+import { useUiFormat } from "@/i18n/use-ui-format";
+
 import {
   CheckCircle2,
   CircleAlert,
@@ -23,8 +26,9 @@ import { getWebhookHealth, triggerWebhookSync } from "@/features/operations/api"
 import type { ChannelSyncStatus, EventSubStatus, WebhookHealth } from "@/types/api";
 
 export function WebhookHealthPanel() {
+  const t = useTranslations("webhooks");
   const [health, setHealth] = useState<WebhookHealth | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<"loadError" | "syncError" | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -36,7 +40,7 @@ export function WebhookHealthPanel() {
     try {
       setHealth(await getWebhookHealth());
     } catch {
-      setError("Webhook durumu alınamadı.");
+      setError("loadError");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -53,7 +57,7 @@ export function WebhookHealthPanel() {
       await triggerWebhookSync();
       await load("refresh");
     } catch {
-      setError("Senkronizasyon tetiklenemedi.");
+      setError("syncError");
     } finally {
       setIsSyncing(false);
     }
@@ -63,12 +67,10 @@ export function WebhookHealthPanel() {
     <section className="rounded-lg border border-border bg-panel p-5">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h2 className="text-[22px] font-semibold tracking-tight text-foreground">Webhooks</h2>
-          <p className="font-sans text-[13px] text-muted-foreground">
-            Abonelik senkronizasyonu ve inbox durumu
-          </p>
+          <h2 className="text-[22px] font-semibold tracking-tight text-foreground">{t("title")}</h2>
+          <p className="font-sans text-[13px] text-muted-foreground">{t("description")}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             disabled={isLoading || isRefreshing}
             onClick={() => void load("refresh")}
@@ -81,7 +83,7 @@ export function WebhookHealthPanel() {
             ) : (
               <RefreshCcw className="h-3 w-3" />
             )}
-            Yenile
+            {t("refresh")}
           </Button>
           <Button
             disabled={isLoading || isSyncing}
@@ -95,20 +97,20 @@ export function WebhookHealthPanel() {
             ) : (
               <Webhook className="h-3 w-3" />
             )}
-            Senkronize Et
+            {t("sync")}
           </Button>
         </div>
       </div>
 
       {isLoading && !health ? (
         <div className="rounded-md border border-border bg-elevated px-4 py-8 text-center text-[13px] text-muted-foreground">
-          Webhook durumu yükleniyor...
+          {t("loading")}
         </div>
       ) : null}
 
       {error ? (
         <div className="mb-4 rounded-md border border-danger bg-elevated px-3 py-2 text-[13px] text-danger">
-          {error}
+          {t(error)}
         </div>
       ) : null}
 
@@ -124,13 +126,11 @@ export function WebhookHealthPanel() {
 }
 
 function ConfigWarnings({ health }: { health: WebhookHealth }) {
+  const t = useTranslations("webhooks");
   const warnings: string[] = [];
-  if (health.missing_client_credentials)
-    warnings.push("Kick client credentials eksik — abonelik senkronizasyonu devre dışı.");
-  if (health.missing_webhook_public_key)
-    warnings.push("Webhook public key eksik — POST /webhooks/kick tüm istekleri reddediyor.");
-  if (!health.webhook_sync_enabled)
-    warnings.push("KICK_WEBHOOK_SYNC_ENABLED=false — senkronizasyon devre dışı.");
+  if (health.missing_client_credentials) warnings.push(t("missingCredentials"));
+  if (health.missing_webhook_public_key) warnings.push(t("missingKey"));
+  if (!health.webhook_sync_enabled) warnings.push(t("syncDisabled"));
 
   if (warnings.length === 0) return null;
   return (
@@ -149,36 +149,30 @@ function ConfigWarnings({ health }: { health: WebhookHealth }) {
 }
 
 function InboxCounts({ health }: { health: WebhookHealth }) {
+  const t = useTranslations("webhooks");
+  const f = useUiFormat();
   const counts = health.inbox_counts;
   const cells: { label: string; value: number; tone?: "danger" | "warning" }[] = [
-    { label: "Pending", value: counts["pending"] ?? 0 },
-    { label: "İşlendi", value: counts["processed"] ?? 0 },
+    { label: t("pending"), value: counts["pending"] ?? 0 },
+    { label: t("processed"), value: counts["processed"] ?? 0 },
     {
-      label: "Başarısız",
+      label: t("failed"),
       value: counts["failed"] ?? 0,
       tone: (counts["failed"] ?? 0) > 0 ? "danger" : undefined
     },
-    { label: "Yoksayıldı", value: counts["ignored"] ?? 0 }
+    { label: t("ignored"), value: counts["ignored"] ?? 0 }
   ];
 
   return (
     <div className="rounded-lg border border-border bg-panel p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <span className="text-[14px] font-semibold text-foreground">Inbox</span>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <span className="text-[14px] font-semibold text-foreground">{t("inbox")}</span>
         {health.latest_webhook_received_at ? (
           <span className="font-mono text-[11px] text-muted-foreground">
-            son webhook:{" "}
-            {new Intl.DateTimeFormat("tr-TR", {
-              day: "2-digit",
-              month: "short",
-              hour: "2-digit",
-              minute: "2-digit"
-            }).format(new Date(health.latest_webhook_received_at))}
+            {t("latest", { date: f.dateTime(health.latest_webhook_received_at) })}
           </span>
         ) : (
-          <span className="font-mono text-[11px] text-muted-foreground">
-            henüz webhook alınmadı
-          </span>
+          <span className="font-mono text-[11px] text-muted-foreground">{t("noneReceived")}</span>
         )}
       </div>
       <div className="overflow-x-auto rounded-md border border-border">
@@ -191,7 +185,7 @@ function InboxCounts({ health }: { health: WebhookHealth }) {
               <span
                 className={`text-[18px] font-semibold ${cell.tone === "danger" ? "text-danger" : "text-foreground"}`}
               >
-                {new Intl.NumberFormat("tr-TR").format(cell.value)}
+                {f.number(cell.value)}
               </span>
             </div>
           ))}
@@ -208,12 +202,13 @@ function ChannelSyncTable({
   channels: ChannelSyncStatus[];
   eventTypes: string[];
 }) {
+  const t = useTranslations("webhooks");
   const [selectedChannel, setSelectedChannel] = useState<ChannelSyncStatus | null>(null);
 
   if (channels.length === 0) {
     return (
       <div className="rounded-md border border-border bg-elevated px-4 py-4 text-[13px] text-muted-foreground">
-        Takip edilen kanal yok.
+        {t("noChannels")}
       </div>
     );
   }
@@ -221,20 +216,20 @@ function ChannelSyncTable({
   return (
     <div className="rounded-lg border border-border bg-panel p-4">
       <div className="mb-3">
-        <span className="text-[14px] font-semibold text-foreground">Kanal Abonelikleri</span>
+        <span className="text-[14px] font-semibold text-foreground">{t("subscriptions")}</span>
       </div>
       <div className="overflow-x-auto rounded-md border border-border">
         <table className="w-full min-w-[520px] text-[13px]">
           <thead>
             <tr className="border-b border-border bg-elevated">
               <th className="px-3 py-2 text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                Kanal
+                {t("channel")}
               </th>
               <th className="px-3 py-2 text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                Broadcaster ID
+                {t("broadcasterId")}
               </th>
               <th className="px-3 py-2 text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                Webhook Durumu
+                {t("status")}
               </th>
             </tr>
           </thead>
@@ -275,6 +270,7 @@ function ChannelSyncSummaryButton({
   eventTypes: string[];
   onClick: () => void;
 }) {
+  const t = useTranslations("webhooks");
   const state = getChannelSyncState(channel, eventTypes);
   const isHealthy = state.kind === "active";
   const isInactive = state.kind === "inactive";
@@ -298,7 +294,7 @@ function ChannelSyncSummaryButton({
       ) : (
         <CircleAlert className="h-3 w-3" />
       )}
-      {state.label}
+      {state.kind === "error" ? t("errorCount", { count: state.errorCount }) : t(state.kind)}
     </button>
   );
 }
@@ -312,6 +308,8 @@ function ChannelSyncDetailsDialog({
   eventTypes: string[];
   onClose: () => void;
 }) {
+  const t = useTranslations("webhooks");
+  const f = useUiFormat();
   if (!channel) return null;
 
   const rows = buildEventRows(channel, eventTypes);
@@ -321,23 +319,27 @@ function ChannelSyncDetailsDialog({
     <Dialog open={Boolean(channel)} onOpenChange={(open) => (!open ? onClose() : undefined)}>
       <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto border-border bg-panel p-0 text-foreground shadow-none">
         <DialogClose onClose={onClose} />
-        <div className="border-b border-border px-5 py-4">
+        <div className="border-b border-border px-5 py-4 pr-12">
           <DialogHeader>
-            <DialogTitle className="text-[18px]">Webhook Detayı</DialogTitle>
+            <DialogTitle className="text-[18px]">{t("detail")}</DialogTitle>
             <DialogDescription className="text-[12px] text-muted-foreground">
-              Kanal bilgileri ve beklenen Kick abonelik event durumları
+              {t("detailDescription")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-2 sm:grid-cols-3">
-            <DetailCell label="KANAL" value={channel.slug} />
+            <DetailCell label={t("channelLabel")} value={channel.slug} />
             <DetailCell
-              label="BROADCASTER ID"
+              label={t("broadcasterLabel")}
               value={channel.broadcaster_user_id > 0 ? String(channel.broadcaster_user_id) : "—"}
             />
             <DetailCell
-              label="GENEL DURUM"
-              value={state.kind === "active" ? "aktif" : state.label.toLocaleLowerCase("tr-TR")}
+              label={t("overall")}
+              value={
+                state.kind === "error"
+                  ? t("errorCount", { count: state.errorCount })
+                  : t(state.kind)
+              }
             />
           </div>
         </div>
@@ -364,7 +366,7 @@ function ChannelSyncDetailsDialog({
                     <span title={row.subscription?.kick_subscription_id || undefined}>
                       ID: {row.subscription?.kick_subscription_id || "—"}
                     </span>
-                    <span>Sync: {formatDateTime(row.subscription?.synced_at)}</span>
+                    <span>{t("synced", { date: f.dateTime(row.subscription?.synced_at) })}</span>
                   </div>
                   {row.subscription?.latest_sync_error ? (
                     <p className="mt-2 rounded-md border border-danger/40 bg-danger/10 px-2 py-1 text-[12px] text-danger">
@@ -403,6 +405,7 @@ function SubStatusPill({
   error?: string | null;
   missing?: boolean;
 }) {
+  const t = useTranslations("webhooks");
   const hasError = Boolean(error) || status === "error";
   const isActive = status === "active" && !hasError;
   const color = isActive
@@ -412,11 +415,11 @@ function SubStatusPill({
       : "bg-warning/10 text-warning";
 
   const label = isActive
-    ? "aktif"
+    ? t("active")
     : hasError
-      ? "hata"
+      ? t("error")
       : missing || status === "deleted" || status === "missing"
-        ? "aktif değil"
+        ? t("inactive")
         : status;
 
   return (
@@ -451,14 +454,14 @@ function getChannelSyncState(channel: ChannelSyncStatus, eventTypes: string[]) {
   ).length;
 
   if (errorCount > 0) {
-    return { kind: "error" as const, label: `${errorCount} Hata` };
+    return { kind: "error" as const, errorCount };
   }
 
   if (inactiveCount > 0) {
-    return { kind: "inactive" as const, label: "Aktif değil" };
+    return { kind: "inactive" as const, errorCount: 0 };
   }
 
-  return { kind: "active" as const, label: "aktif" };
+  return { kind: "active" as const, errorCount: 0 };
 }
 
 function isSubscriptionError(subscription?: EventSubStatus) {
@@ -471,14 +474,4 @@ function isSubscriptionInactive(subscription?: EventSubStatus) {
 
 function formatEventType(eventType: string) {
   return eventType.replace("channel.subscription.", "");
-}
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("tr-TR", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(new Date(value));
 }

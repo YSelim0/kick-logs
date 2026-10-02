@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+import { getUiErrorKey, type UiErrorKey } from "@/i18n/errors";
 import { useCallback, useEffect, useState } from "react";
 
 import { getCurrentUser } from "@/features/auth/api";
@@ -9,9 +11,10 @@ import type { AdminUser } from "@/types/api";
 type AuthStatus = "loading" | "authenticated" | "unauthenticated" | "error";
 
 export function useCurrentUser() {
+  const errors = useTranslations("common.errors");
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [user, setUser] = useState<AdminUser | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiErrorKey | null>(null);
 
   const refresh = useCallback(async () => {
     setStatus("loading");
@@ -31,7 +34,7 @@ export function useCurrentUser() {
       }
 
       setStatus("error");
-      setError(caught instanceof Error ? caught.message : "Oturum bilgisi alınamadı.");
+      setError(getUiErrorKey(caught, "session"));
       return null;
     }
   }, []);
@@ -41,7 +44,7 @@ export function useCurrentUser() {
   }, [refresh]);
 
   return {
-    error,
+    error: error ? errors(error) : null,
     refresh,
     setUser,
     status,

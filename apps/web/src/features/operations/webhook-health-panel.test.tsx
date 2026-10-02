@@ -1,4 +1,7 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { createLocaleRenderer, renderWithLocale } from "@/test/render-with-locale";
+import { LocaleTestControls } from "@/test/locale-controls";
+const render = createLocaleRenderer("tr", "admin");
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -64,6 +67,52 @@ function healthFixture(overrides: Partial<WebhookHealth> = {}): WebhookHealth {
 }
 
 describe("WebhookHealthPanel", () => {
+  it.each([
+    ["en", "Active", "Inactive", "1 Error"],
+    ["tr", "aktif", "aktif değil", "1 Hata"],
+    ["de", "Aktiv", "Inaktiv", "1 Fehler"]
+  ] as const)(
+    "localizes webhook summaries in %s and preserves diagnostics",
+    async (locale, active, inactive, error) => {
+      const health = healthFixture();
+      const channel = health.channels[0];
+      opsMocks.getWebhookHealth.mockResolvedValue({
+        ...health,
+        channels: [
+          channel,
+          { ...channel, followed_channel_id: 2, slug: "Heaven", subscriptions: [] },
+          {
+            ...channel,
+            followed_channel_id: 3,
+            slug: "example_user",
+            subscriptions: channel.subscriptions.map((sub, index) =>
+              index === 0 ? { ...sub, status: "error", latest_sync_error: "RAW KICK 429" } : sub
+            )
+          }
+        ]
+      });
+      renderWithLocale(
+        <>
+          <LocaleTestControls />
+          <WebhookHealthPanel />
+        </>,
+        { locale, scope: "admin" }
+      );
+      expect(await screen.findByRole("button", { name: active })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: inactive })).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: error }));
+      expect(screen.getByText("RAW KICK 429")).toBeInTheDocument();
+      fireEvent.click(
+        screen.getByRole("button", { name: locale === "de" ? "Switch to en" : "Switch to de" })
+      );
+      await waitFor(() =>
+        expect(document.documentElement.lang).toBe(locale === "de" ? "en" : "de")
+      );
+      expect(screen.getByText("RAW KICK 429")).toBeInTheDocument();
+      expect(screen.getByText(/sub-123/)).toBeInTheDocument();
+      expect(opsMocks.getWebhookHealth).toHaveBeenCalledTimes(1);
+    }
+  );
   beforeEach(() => {
     opsMocks.getWebhookHealth.mockReset();
     opsMocks.triggerWebhookSync.mockReset();
@@ -74,7 +123,7 @@ describe("WebhookHealthPanel", () => {
   it("renders inbox counts", async () => {
     render(<WebhookHealthPanel />);
     await waitFor(() => expect(opsMocks.getWebhookHealth).toHaveBeenCalled());
-    expect(await screen.findByText("Inbox")).toBeInTheDocument();
+    expect(await screen.findByText("Gelen kutusu")).toBeInTheDocument();
     expect(screen.getByText("100")).toBeInTheDocument();
   });
 

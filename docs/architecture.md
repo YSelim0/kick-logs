@@ -1,5 +1,14 @@
 # Kick Logs Architecture
 
+## Localized Subscriber Reports
+
+`GET /channels/{slug}/subscribers/export?format=txt&locale=en|tr|de` localizes TXT headings and
+labels only. Omitting `locale` (or passing an empty value) preserves the legacy Turkish report.
+Invalid nonempty TXT locale values return 422 before channel/subscriber queries. The frontend
+sends its active locale only for TXT. JSON/CSV ignore locale and keep their schemas, values and
+CSV encoding unchanged. All export timestamps remain UTC RFC3339; filenames, source identities,
+subscription filtering and row ordering do not depend on the UI language.
+
 ## Overview
 
 Kick Logs is a self-hosted Kick chat logging application. The default runtime is now:
@@ -365,6 +374,30 @@ Frontend rules:
 - `/users/[slug]` and `/channels/[slug]` are public profile/analytics pages.
 - `lib/api-client.ts` owns base URL, credentials, and response handling.
 - UI work must follow `docs/design/design.md`.
+
+## Localization
+
+The web app uses request-scoped `next-intl` without locale URL segments. The validated
+`kick_logs_locale` cookie wins over supported `Accept-Language` preferences; English is the fallback.
+Page responses are private/no-store. Middleware adds language/cookie Vary values, but Next.js 14 may
+replace them in the final response; CDN HTML/RSC bypass is required, not reliance on Vary alone.
+Asset and API caches are unchanged. Initial server/client catalogs match; browser timezone applies
+after hydration. See `docs/operations/localization.md` for verified headers and rollout.
+
+`src/i18n/locale-provider.tsx` switches catalogs in place, with latest-selection-wins loading and
+best-effort cookie persistence. No page reload, route replacement or data request is needed. Common
+and public catalogs are available globally; admin catalogs are loaded only for admin scope.
+Catalogs are under `src/i18n/messages/{en,tr,de}`. Add matching keys and ICU arguments in all three
+languages; tests validate raw catalog parity and syntax. Use semantic error keys for UI failures.
+Do not translate source data or derive query timestamps/timezone from the selected language.
+
+The server admin layout loads only its selected admin catalog. `admin-catalog-provider.tsx`
+honors current client preference over stale server props after navigation, including blocked cookies.
+Route metadata is localized on the server and refreshed in place with `page-metadata.tsx`.
+All public/admin pages export metadata through `server-metadata.ts`; its shared `route-metadata.ts`
+resolver also powers client updates. EN/TR/DE titles use `Page Name - KickLogs`, with untranslated
+slugs for profile/prediction details. No additional API call is needed to construct a title.
+Only subscriber TXT export accepts an optional locale; other API payloads remain language-neutral.
 
 ## Verification
 

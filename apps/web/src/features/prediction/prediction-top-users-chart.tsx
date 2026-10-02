@@ -1,18 +1,23 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+import { useUiFormat } from "@/i18n/use-ui-format";
+
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-import { flattenTopUsers, formatCompactNumber, outcomeColor } from "@/features/prediction/format";
+import { flattenTopUsers, outcomeColor } from "@/features/prediction/format";
 import type { PredictionOutcome } from "@/types/api";
 
 const MAX_BARS = 12;
 const CHART_INITIAL_WIDTH = 960;
 
 export function PredictionTopUsersChart({ outcomes }: { outcomes: PredictionOutcome[] }) {
+  const t = useTranslations("prediction");
+  const f = useUiFormat();
   const bars = flattenTopUsers(outcomes).slice(0, MAX_BARS);
 
   if (bars.length === 0) {
-    return <p className="text-[13px] text-muted-foreground">Üst kullanıcı verisi yok.</p>;
+    return <p className="text-[13px] text-muted-foreground">{t("emptyUsers")}</p>;
   }
 
   const height = Math.max(bars.length * 28, 120);
@@ -50,7 +55,10 @@ export function PredictionTopUsersChart({ outcomes }: { outcomes: PredictionOutc
               cursor={{ fill: "#24272c", opacity: 0.4 }}
               formatter={(value, _name, item) => {
                 const payload = (item as { payload?: { outcomeTitle: string } }).payload;
-                return [`${formatCompactNumber(Number(value))} puan`, payload?.outcomeTitle ?? ""];
+                return [
+                  t("pointsValue", { value: f.compact(Number(value)) }),
+                  payload?.outcomeTitle ?? ""
+                ];
               }}
               itemStyle={{ color: "#ffffff" }}
               labelStyle={{ color: "#9ca3af" }}

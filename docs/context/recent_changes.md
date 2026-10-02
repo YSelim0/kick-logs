@@ -2,7 +2,158 @@
 
 This file is the short handoff summary of the latest project changes. Keep it concise and update it after each meaningful change so the next agent can quickly see what just happened.
 
-## Latest (all-time profile query optimization, issue #29)
+## Latest (issue 28 closure audit)
+
+- Rechecked the issue against its approved flag-selector design, code, tests and production-preview
+  evidence. Finished five Turkish profile navigation/accessibility translations; six existing tests
+  reproduced the gap before the fix, then all 292 frontend tests passed. Routes and source slugs stay unchanged.
+- Frontend lint/build passed. The preceding commit's Code Style, Frontend tests and Go CI workflows
+  all passed, including ClickHouse integration and both migration smoke checks. No live data changed.
+- The owner approved fast-forward integration/push to `dev`, issue closure and local/remote feature
+  branch removal. `main` and production deployment are outside this approval.
+
+## Previous (language menu spacing)
+
+- Added a 3px vertical gap between language options. Trigger, row sizes and selection behavior are unchanged.
+
+## Previous (localized document titles)
+
+- All public/admin routes now use localized `Page Name - KickLogs` titles, including profile slugs
+  and 404. One shared resolver keeps initial HTML and client navigation/language changes aligned.
+- No API/data/query, URL or visual layout changes. Existing descriptions remain unchanged.
+- Verified 292 frontend tests, TypeScript, lint, formatting and production build; 48 raw HTML title
+  checks (16 routes x three languages), plus browser locale switching and client navigation passed.
+
+## Previous (issue 28 acceptance)
+
+- All public/admin feature groups now use EN/TR/DE catalogs. Route titles/descriptions update on
+  SSR and in-place switching; URLs, source content, filters, polling and auth behavior stay unchanged.
+- Production-mode HTTP and a 16-screen, three-language desktop/mobile browser matrix passed.
+  Backend unit/vet/ClickHouse integration/migration checks passed on disposable data.
+- Rollout: rebuild API and web only; verify CDN HTML/RSC bypass after deployment. See
+  `docs/operations/localization.md`. All 288 frontend tests, lint, typecheck, format and production
+  build passed. Independent review found one admin navigation/catalog race; regression tests
+  reproduced it and verified the mounted-form preservation fix, including retry after load failure.
+- At that acceptance checkpoint, push/merge/closure awaited approval; the owner has since authorized
+  these actions for `dev` (see the latest entry).
+
+## Previous (issue 28 operations and data management)
+
+- Localized ingestion metrics/warnings, webhook summary/details, failed-event diagnostics and
+  retention/cleanup forms. Counts, dates and storage sizes follow the selected locale.
+- Cleanup targets, confirmation tokens and typed input are unchanged. Raw errors, event identifiers
+  and table names remain intact. Failed-event loading failures no longer masquerade as an empty list.
+- 282 frontend tests pass. German desktop/mobile fixtures covered dense metrics, dialogs and cleanup
+  preview without issuing real mutations. Final whole-site acceptance and independent review remain.
+
+## Previous (issue 28 admin shell and management)
+
+- Added request-scoped admin catalogs and a client provider that honors session language even when
+  cookies are blocked or server props are stale. Public pages do not receive admin catalogs.
+- Localized admin navigation, channel/user management and request filters/details/timeline.
+  Raw feedback, notes, identity data and role/status payload values remain unchanged.
+- 269 frontend tests, lint and production build passed. German mobile channel/request/user screens
+  have no horizontal overflow; an anonymous admin visit still redirects to login.
+
+## Previous (issue 28 prediction, requests and login)
+
+- Prediction copy, chart legends/tooltips and number/date formatting use EN/TR/DE catalogs.
+  Locale switches preserve chart identity and the existing five-second polling schedule.
+- Request/login drafts and visible success/error states translate in place without resubmission.
+  Async failures store semantic keys; raw prediction titles, outcomes and submitted text stay intact.
+- 262 frontend tests, lint, typecheck and production build passed. German 390px previews cover
+  request/login and populated prediction charts. Nothing pushed; admin localization follows.
+
+## Previous (issue 28 subscriber TXT export)
+
+- Subscriber TXT downloads accept optional `locale=en|tr|de`. Missing/empty locale preserves the
+  legacy Turkish report; invalid TXT locale returns 422 before queries. JSON/CSV ignore locale.
+- Frontend supplies selected language for TXT only. Source names, UTC timestamps, filenames,
+  subscription selection and ordering are unchanged. No migration or live-data operations.
+- Passed: Go tests, vet, changed-file gofmt; 252 frontend tests, lint, typecheck, build and format.
+
+## Previous (issue 28 profiles and subscribers)
+
+- Channel/user profile copy, metrics, UTC chart labels, relative activity times and message dates
+  now follow EN/TR/DE. Subscriber modal labels, pagination and states translate without refetching.
+- Source identities/messages/replies and subscription calculations are unchanged. The remaining
+  Turkish-only search date helper was removed after migrating both profile consumers.
+- All 249 frontend tests, lint, typecheck and production build passed. German 390px modal preview
+  kept its scroll area and footer inside the viewport. TXT export localization is the next task.
+
+## Previous (issue 28 message search)
+
+- Search labels, presets, counts, dates, export menus and all empty/loading/error states use
+  EN/TR/DE catalogs. Async errors store semantic keys instead of raw server messages.
+- Locale-switch tests preserve loaded pages, cursor, unsent drafts, submitted filters and URL,
+  with no new requests. Date parameters retain their original timezone and end-minute semantics.
+- Full frontend tests, typecheck, lint and production build passed (236 tests). Remaining profiles,
+  exports, prediction, forms and admin tasks continue on the same local branch; nothing pushed.
+
+## Previous (issue 28 homepage and directories)
+
+- Homepage copy, footer, 14-day statistics, rankings, empty/loading/error states and UTC chart labels
+  now use EN/TR/DE catalogs and display formatters. Query ranges and snapshot requests are unchanged.
+- Channel/user directories translate labels and the six-hour review prompt; source identities and
+  draft/submitted searches remain intact. Directory failures store semantic keys without refetching.
+- Validation passed: 36 files / 231 tests, typecheck, lint, production build. German mobile fixture
+  checks confirmed no horizontal overflow, unchanged Heaven/example_user names and all 14 chart bars.
+  Remaining feature screens are pending; no push, database changes or runtime API changes.
+
+## Previous (issue 28 language selector and shared chrome)
+
+- Added the owner's fixed 48px flag trigger and upward EN/TR/DE menu, with native names,
+  keyboard navigation, outside/Escape dismissal, pending protection and safe-area spacing.
+- Copied supplied flags unchanged; originals and reference screenshot remain outside the repo.
+  Header links, 404, Kick profile link, profile skeleton announcements and modal close labels now
+  translate in place. Existing routes/source names are unchanged.
+- Desktop and mobile selector visuals were inspected on a separate local preview at port 3102.
+  Full page copy is not yet translated; remaining tasks continue on the same local issue branch.
+- Verification passed: 36 test files / 226 tests, typecheck, lint, production build, Prettier and
+  diff check. Browser checks covered 1440px desktop and 390px mobile, loaded assets and unchanged URL.
+
+## Previous (issue 28 locale foundation)
+
+- Owner approved inline execution of the ten-task plan. Task 1 adds next-intl, request-scoped locale
+  resolution, EN/TR/DE catalogs, atomic client switching, cookie persistence and cache safeguards.
+- Shared formatting preserves timezone/query semantics; errors map HTTP status/context to product
+  keys. Component tests now use explicit Turkish providers, and a frontend CI workflow was added.
+- Screen translations and the visible flag selector follow in later commits. This is an intermediate
+  branch state, not the completed issue. No backend/database/container changes or push.
+- Verification: 34 frontend test files / 221 tests, typecheck, lint, production build, repository
+  Prettier and diff checks passed. next-intl is pinned to 4.3.12 to avoid an unused newer SWC compiler
+  dependency that failed the Windows native-cache ACL check; no filesystem permissions were weakened.
+
+## Previous (issue 28 plan)
+
+- Active branch: `feat/issue-28-localization`, created from local `dev` at `d7910fe`. No push;
+  owner approval is required before merging back to `dev`.
+- Written design approved: `docs/superpowers/specs/2026-10-02-localization-design.md`.
+- Implementation plan: `docs/superpowers/plans/2026-10-02-localization.md`, awaiting owner review
+  and execution-method confirmation. Ten feature/verification tasks define files, contracts, tests
+  and local commit gates; no implementation boxes are checked yet.
+- Owner confirmed a fixed bottom-right square current-flag button that opens upward to native
+  language names and flags. Selecting updates the interface/flag, saves preference and closes it.
+  Keep existing URLs, user content, form/query state and dark theme. Languages: EN/TR/DE.
+- Baseline frontend tests passed: 28 files / 168 tests. No source/dependency/database/runtime
+  changes yet. Supplied SVG assets remain in the external `language-flags` folder for later copying.
+- Issue #29 was closed at the owner's request; production performance observation is manual,
+  not a claim that every former follow-up task was implemented.
+
+## Latest (channel search request prompt)
+
+- `/channels` now shows an inline panel when a submitted search succeeds with zero results. It
+  quotes the submitted query, promises review within six hours (not guaranteed addition), and links
+  to `/request` through `Talep gönder`. There is no modal, dismissal or new backend request.
+- Mobile CTA fills the content width; long queries wrap. User search and other search states keep
+  their behavior. The request form itself is unchanged and receives no automatic prefill/submission.
+- Design rules and regression coverage were updated in the same change.
+- Validation: 168 frontend tests, typecheck, lint, production Docker build and full Prettier passed.
+  Desktop empty-result rendering was inspected in the browser. Mobile screenshot verification was
+  blocked by an unresponsive browser tool; do not treat it as visually signed off. Local web was
+  rebuilt at `http://localhost:3101/channels`. The owner approved committing this change on `dev`.
+
+## Previous (all-time profile query optimization, issue #29)
 
 - Work continues directly on `dev` in the same folder at the owner's request.
 - Profile overview and top-five counterpart ranking share one ClickHouse history scan through an

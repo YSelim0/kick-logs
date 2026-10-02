@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -260,6 +261,57 @@ func TestChannelSubscribersExportCSV(t *testing.T) {
 	}
 }
 
+func TestChannelSubscribersExportLocale(t *testing.T) {
+	ch := domain.FollowedChannel{ID: 1, Slug: "hype"}
+	repo := &fakeSubPeriodRepo{}
+	router := httpapi.NewRouter(config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)), routes.Dependencies{Channels: channelsusecase.NewService(newAdminFakeChannelRepo(ch), &nopResolver{}), SubscriptionPeriods: repo})
+	request := func(query string) *httptest.ResponseRecorder {
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/channels/hype/subscribers/export?"+query, nil))
+		return w
+	}
+	for _, locale := range []string{"pt", "en-US", "EN", "de%20"} {
+		w := request("format=txt&locale=" + locale)
+		if w.Code != 422 {
+			t.Fatalf("locale %s: status %d", locale, w.Code)
+		}
+	}
+	if repo.exportCalls != 0 {
+		t.Fatal("invalid locale must not query subscriptions")
+	}
+	for locale, title := range map[string]string{"en": "Active Subscriber List", "de": "Liste aktiver Abonnenten", "tr": "Aktif Abone Listesi"} {
+		w := request("format=txt&locale=" + locale)
+		if w.Code != 200 || !strings.Contains(w.Body.String(), title) {
+			t.Fatalf("locale %s: %s", locale, w.Body.String())
+		}
+	}
+	for _, format := range []string{"json", "csv"} {
+		baseline := request("format=" + format)
+		withLocale := request("format=" + format + "&locale=invalid")
+		if withLocale.Code != 200 {
+			t.Fatalf("%s locale must be ignored", format)
+		}
+		if format == "csv" {
+			if baseline.Body.String() != withLocale.Body.String() {
+				t.Fatal("CSV bytes changed")
+			}
+		} else {
+			var a, b map[string]any
+			if err := json.Unmarshal(baseline.Body.Bytes(), &a); err != nil {
+				t.Fatal(err)
+			}
+			if err := json.Unmarshal(withLocale.Body.Bytes(), &b); err != nil {
+				t.Fatal(err)
+			}
+			delete(a, "generated_at")
+			delete(b, "generated_at")
+			if !reflect.DeepEqual(a, b) {
+				t.Fatal("JSON schema/data changed")
+			}
+		}
+	}
+}
+
 func TestChannelSubscribersExportRejectsInvalidFormat(t *testing.T) {
 	ch := domain.FollowedChannel{ID: 1, Slug: "hype", DisplayName: "Hype", BroadcasterUserID: 9000, IsEnabled: true, RawPayloadJSON: "{}"}
 	channelSvc := channelsusecase.NewService(newAdminFakeChannelRepo(ch), &nopResolver{})
@@ -350,6 +402,7 @@ type fakeSubPeriodRepo struct {
 	exportItems        []domain.ChannelSubscriber
 	lastFilter         domain.ChannelSubscriberFilter
 	activeSummaryCalls int
+	exportCalls        int
 }
 
 func (r *fakeSubPeriodRepo) InsertBatch(_ context.Context, _ []domain.ChannelSubscriptionPeriod) error {
@@ -374,6 +427,7 @@ func (r *fakeSubPeriodRepo) ExportActiveSubscribers(
 	_ int64,
 	_ bool,
 ) ([]domain.ChannelSubscriber, error) {
+	r.exportCalls++
 	return r.exportItems, nil
 }
 

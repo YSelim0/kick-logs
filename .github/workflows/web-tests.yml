@@ -1,0 +1,32 @@
+name: Frontend tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Frontend validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.11.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @kick-logs/web test
+      - run: pnpm --filter @kick-logs/web lint
+      - run: pnpm --filter @kick-logs/web build
+      - run: pnpm --filter @kick-logs/web typecheck
+      - run: pnpm format:check

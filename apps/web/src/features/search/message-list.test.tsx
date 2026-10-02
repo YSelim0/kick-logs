@@ -1,4 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
+import { createLocaleRenderer } from "@/test/render-with-locale";
+const render = createLocaleRenderer("tr", "admin");
 import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 
